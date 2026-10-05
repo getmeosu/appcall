@@ -2,10 +2,10 @@
  * Greenhouse object normalization.
  *
  * jobs.list uses the public Job Board shape ({ jobs: [...] }).
- * jobs.get uses authenticated Harvest GET /v3/jobs/{id} (name/offices).
- * Authenticated Harvest list/get ops return bare JSON
+ * jobs.get uses authenticated Harvest GET /v3/jobs?ids= (name/offices).
+ * Authenticated Harvest list/get ops return bare JSON arrays
  * (GET /v3/candidates, /v3/applications, /v3/users, /v3/interviews,
- *  /v3/job_interview_stages).
+ *  /v3/job_interview_stages). By-id reads use ?ids=&per_page=1.
  */
 
 export interface NormalizedJob {
@@ -335,26 +335,28 @@ export function parseUsersResponse(raw: unknown): {
   return { users: items.map(normalizeUser) };
 }
 
-/** Harvest GET /v3/candidates/{id} returns the candidate object at the top level. */
+/** Harvest by-id via GET /v3/candidates?ids= returns a list; take the first row. */
 export function parseCandidateGetResponse(raw: unknown): {
   candidate: NormalizedCandidate | null;
 } {
-  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+  const row = Array.isArray(raw) ? raw[0] : raw;
+  if (!row || typeof row !== "object" || Array.isArray(row)) {
     return { candidate: null };
   }
-  const candidate = raw as GreenhouseCandidate;
+  const candidate = row as GreenhouseCandidate;
   if (candidate.id == null || asStringId(candidate.id) == null) {
     return { candidate: null };
   }
   return { candidate: normalizeCandidate(candidate) };
 }
 
-/** Harvest GET /v3/jobs/{id} returns the job object at the top level. */
+/** Harvest by-id via GET /v3/jobs?ids= returns a list; take the first row. */
 export function parseJobGetResponse(raw: unknown): { job: NormalizedJob | null } {
-  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+  const row = Array.isArray(raw) ? raw[0] : raw;
+  if (!row || typeof row !== "object" || Array.isArray(row)) {
     return { job: null };
   }
-  const job = raw as GreenhouseJob;
+  const job = row as GreenhouseJob;
   if (job.id == null || asStringId(job.id) == null) {
     return { job: null };
   }
@@ -477,10 +479,11 @@ export function parseJobInterviewStagesResponse(raw: unknown): {
 export function parseApplicationGetResponse(raw: unknown): {
   application: NormalizedApplication | null;
 } {
-  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+  const row = Array.isArray(raw) ? raw[0] : raw;
+  if (!row || typeof row !== "object" || Array.isArray(row)) {
     return { application: null };
   }
-  const application = raw as GreenhouseApplication;
+  const application = row as GreenhouseApplication;
   if (application.id == null || asStringId(application.id) == null) {
     return { application: null };
   }
@@ -488,10 +491,11 @@ export function parseApplicationGetResponse(raw: unknown): {
 }
 
 export function parseUserGetResponse(raw: unknown): { user: NormalizedUser | null } {
-  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+  const row = Array.isArray(raw) ? raw[0] : raw;
+  if (!row || typeof row !== "object" || Array.isArray(row)) {
     return { user: null };
   }
-  const user = raw as GreenhouseUser;
+  const user = row as GreenhouseUser;
   if (user.id == null || asStringId(user.id) == null) {
     return { user: null };
   }
@@ -550,10 +554,11 @@ export function parseOffersResponse(raw: unknown): { offers: NormalizedOffer[] }
 }
 
 export function parseOfferGetResponse(raw: unknown): { offer: NormalizedOffer | null } {
-  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+  const row = Array.isArray(raw) ? raw[0] : raw;
+  if (!row || typeof row !== "object" || Array.isArray(row)) {
     return { offer: null };
   }
-  const offer = raw as GreenhouseOffer;
+  const offer = row as GreenhouseOffer;
   if (offer.id == null || asStringId(offer.id) == null) {
     return { offer: null };
   }
@@ -615,10 +620,11 @@ export function parseScorecardsResponse(raw: unknown): { scorecards: NormalizedS
 }
 
 export function parseScorecardGetResponse(raw: unknown): { scorecard: NormalizedScorecard | null } {
-  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+  const row = Array.isArray(raw) ? raw[0] : raw;
+  if (!row || typeof row !== "object" || Array.isArray(row)) {
     return { scorecard: null };
   }
-  const scorecard = raw as GreenhouseScorecard;
+  const scorecard = row as GreenhouseScorecard;
   if (scorecard.id == null || asStringId(scorecard.id) == null) {
     return { scorecard: null };
   }

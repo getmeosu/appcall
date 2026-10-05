@@ -2,9 +2,9 @@
  * Greenhouse list/get/write syncs (Harvest v3 + boards v1).
  *
  * jobs.list                    → public GET /v1/boards/{boardToken}/jobs
- * jobs.get                     → authenticated Harvest GET /v3/jobs/{id}
+ * jobs.get                     → authenticated Harvest GET /v3/jobs?ids=
  * candidates.list              → authenticated GET /v3/candidates
- * candidates.get               → authenticated GET /v3/candidates/{id}
+ * candidates.get               → authenticated GET /v3/candidates?ids=
  * applications.list            → authenticated GET /v3/applications
  * applications.get             → authenticated GET /v3/applications/{id}
  * applications.move            → POST /v3/applications/{id}/move
@@ -71,7 +71,10 @@ export async function executeJobsListSync(
 }
 
 export interface GreenhouseAuthInput {
-  apiKey: string;
+  clientId: string;
+  clientSecret: string;
+  /** Optional Greenhouse user id for the OAuth `sub` claim (Site Admin). */
+  userId?: string;
   /** Injected by tests; production leaves it unset. */
   fetch?: typeof fetch;
 }
@@ -84,6 +87,42 @@ function buildQuery(params: Record<string, string | undefined>): string {
   const encoded = qs.toString();
   return encoded.length > 0 ? `?${encoded}` : "";
 }
+
+
+function requireCursorNotPage(input: { page?: number; cursor?: string }, label: string): void {
+  if (input.page != null) {
+    throw new Error(`${label}: page is not supported on Harvest v3; pass cursor instead`);
+  }
+}
+
+function createdAtFilter(input: { createdBefore?: string; createdAfter?: string }): string | undefined {
+  if (input.createdAfter && input.createdBefore) {
+    throw new Error("createdAfter and createdBefore cannot both be set on Harvest v3");
+  }
+  if (input.createdAfter) return `gte|${input.createdAfter}`;
+  if (input.createdBefore) return `lt|${input.createdBefore}`;
+  return undefined;
+}
+
+function updatedAtFilter(input: { updatedBefore?: string; updatedAfter?: string }): string | undefined {
+  if (input.updatedAfter && input.updatedBefore) {
+    throw new Error("updatedAfter and updatedBefore cannot both be set on Harvest v3");
+  }
+  if (input.updatedAfter) return `gte|${input.updatedAfter}`;
+  if (input.updatedBefore) return `lt|${input.updatedBefore}`;
+  return undefined;
+}
+
+function authClientOpts(input: GreenhouseAuthInput, operation: string) {
+  return {
+    clientId: input.clientId,
+    clientSecret: input.clientSecret,
+    userId: input.userId,
+    fetch: input.fetch,
+    operation,
+  };
+}
+
 
 function asStageId(value: string | number | undefined, field: string): number {
   if (typeof value === "number" && Number.isFinite(value)) return Math.trunc(value);
@@ -106,6 +145,9 @@ function optionalStageId(value: string | number | undefined): number | undefined
 
 export interface ExecuteCandidatesListSyncInput extends GreenhouseAuthInput {
   perPage?: number;
+  /** Harvest v3 cursor (from Link rel=next). */
+  cursor?: string;
+  /** @deprecated Harvest v3 removed page; passing page throws. */
   page?: number;
   createdBefore?: string;
   createdAfter?: string;
@@ -118,31 +160,27 @@ export interface ExecuteCandidatesListSyncInput extends GreenhouseAuthInput {
 
 export interface ExecuteCandidatesListSyncOutput {
   candidates: NormalizedCandidate[];
+  nextCursor: string | null;
 }
 
 export async function executeCandidatesListSync(
   input: ExecuteCandidatesListSyncInput,
 ): Promise<ExecuteCandidatesListSyncOutput> {
-  const client = createAuthClient({
-    apiKey: input.apiKey,
-    fetch: input.fetch,
-    operation: "candidates.list",
-  });
+  requireCursorNotPage(input, "candidates.list");
+  const client = createAuthClient(authClientOpts(input, "candidates.list"));
   const path =
     "/candidates" +
     buildQuery({
       per_page: input.perPage != null ? String(input.perPage) : undefined,
-      page: input.page != null ? String(input.page) : undefined,
-      created_before: input.createdBefore,
-      created_after: input.createdAfter,
-      updated_before: input.updatedBefore,
-      updated_after: input.updatedAfter,
-      job_id: input.jobId != null ? String(input.jobId) : undefined,
+      cursor: input.cursor,
+      created_at: createdAtFilter(input),
+      updated_at: updatedAtFilter(input),
+      job_ids: input.jobId != null ? String(input.jobId) : undefined,
       email: input.email,
       candidate_ids: input.candidateIds,
     });
-  const raw = await client.getJSON(path);
-  return parseCandidatesResponse(raw);
+  const { body, nextCursor } = await client.getJSONWithMeta(path);
+  return { ...parseCandidatesResponse(body), nextCursor };
 }
 
 // ---------------------------------------------------------------------------
@@ -162,12 +200,8 @@ export async function executeCandidatesGetSync(
   input: ExecuteCandidatesGetSyncInput,
 ): Promise<ExecuteCandidatesGetSyncOutput> {
   const id = assertSafePathSegment(input.id, "id");
-  const client = createAuthClient({
-    apiKey: input.apiKey,
-    fetch: input.fetch,
-    operation: "candidates.get",
-  });
-  const raw = await client.getJSON(`/candidates/${id}`);
+  const client = createAuthClient(authClientOpts(input, "candidates.get"));
+  const raw = await client.getJSON(`/candidates?ids=${encodeURIComponent(id)}&per_page=1`);
   return parseCandidateGetResponse(raw);
 }
 
@@ -177,6 +211,8 @@ export async function executeCandidatesGetSync(
 
 export interface ExecuteApplicationsListSyncInput extends GreenhouseAuthInput {
   perPage?: number;
+  cursor?: string;
+  /** @deprecated Harvest v3 removed page; passing page throws. */
   page?: number;
   createdBefore?: string;
   createdAfter?: string;
@@ -187,29 +223,26 @@ export interface ExecuteApplicationsListSyncInput extends GreenhouseAuthInput {
 
 export interface ExecuteApplicationsListSyncOutput {
   applications: NormalizedApplication[];
+  nextCursor: string | null;
 }
 
 export async function executeApplicationsListSync(
   input: ExecuteApplicationsListSyncInput,
 ): Promise<ExecuteApplicationsListSyncOutput> {
-  const client = createAuthClient({
-    apiKey: input.apiKey,
-    fetch: input.fetch,
-    operation: "applications.list",
-  });
+  requireCursorNotPage(input, "applications.list");
+  const client = createAuthClient(authClientOpts(input, "applications.list"));
   const path =
     "/applications" +
     buildQuery({
       per_page: input.perPage != null ? String(input.perPage) : undefined,
-      page: input.page != null ? String(input.page) : undefined,
-      created_before: input.createdBefore,
-      created_after: input.createdAfter,
-      last_activity_after: input.lastActivityAfter,
-      job_id: input.jobId != null ? String(input.jobId) : undefined,
+      cursor: input.cursor,
+      created_at: createdAtFilter(input),
+      last_activity_at: input.lastActivityAfter ? `gte|${input.lastActivityAfter}` : undefined,
+      job_ids: input.jobId != null ? String(input.jobId) : undefined,
       status: input.status,
     });
-  const raw = await client.getJSON(path);
-  return parseApplicationsResponse(raw);
+  const { body, nextCursor } = await client.getJSONWithMeta(path);
+  return { ...parseApplicationsResponse(body), nextCursor };
 }
 
 // ---------------------------------------------------------------------------
@@ -229,12 +262,8 @@ export async function executeApplicationsGetSync(
   input: ExecuteApplicationsGetSyncInput,
 ): Promise<ExecuteApplicationsGetSyncOutput> {
   const id = assertSafePathSegment(input.id, "id");
-  const client = createAuthClient({
-    apiKey: input.apiKey,
-    fetch: input.fetch,
-    operation: "applications.get",
-  });
-  const raw = await client.getJSON(`/applications/${id}`);
+  const client = createAuthClient(authClientOpts(input, "applications.get"));
+  const raw = await client.getJSON(`/applications?ids=${encodeURIComponent(id)}&per_page=1`);
   return parseApplicationGetResponse(raw);
 }
 
@@ -274,11 +303,7 @@ export async function executeApplicationsMoveSync(
   if (toJobId != null) body.to_job_id = toJobId;
   if (emailFromUserId != null) body.email_from_user_id = emailFromUserId;
 
-  const client = createAuthClient({
-    apiKey: input.apiKey,
-    fetch: input.fetch,
-    operation: "applications.move",
-  });
+  const client = createAuthClient(authClientOpts(input, "applications.move"));
   await client.postJSON(`/applications/${id}/move`, body);
   return { application: null };
 }
@@ -332,11 +357,7 @@ export async function executeApplicationsCreateSync(
   if (coordinatorId != null) body.coordinator_id = coordinatorId;
   if (referrerId != null) body.referrer_id = referrerId;
 
-  const client = createAuthClient({
-    apiKey: input.apiKey,
-    fetch: input.fetch,
-    operation: "applications.create",
-  });
+  const client = createAuthClient(authClientOpts(input, "applications.create"));
   // POST only — runner EffectPolicy Idempotent observes via applications.get.
   return (await client.postJSON("/applications", body)) as ExecuteApplicationsCreateSyncOutput;
 }
@@ -347,41 +368,38 @@ export async function executeApplicationsCreateSync(
 
 export interface ExecuteUsersListSyncInput extends GreenhouseAuthInput {
   perPage?: number;
+  cursor?: string;
   page?: number;
-  email?: string;
-  employeeId?: string;
   createdBefore?: string;
   createdAfter?: string;
   updatedBefore?: string;
   updatedAfter?: string;
+  email?: string;
+  employeeId?: string;
 }
 
 export interface ExecuteUsersListSyncOutput {
   users: NormalizedUser[];
+  nextCursor: string | null;
 }
 
 export async function executeUsersListSync(
   input: ExecuteUsersListSyncInput,
 ): Promise<ExecuteUsersListSyncOutput> {
-  const client = createAuthClient({
-    apiKey: input.apiKey,
-    fetch: input.fetch,
-    operation: "users.list",
-  });
+  requireCursorNotPage(input, "users.list");
+  const client = createAuthClient(authClientOpts(input, "users.list"));
   const path =
     "/users" +
     buildQuery({
       per_page: input.perPage != null ? String(input.perPage) : undefined,
-      page: input.page != null ? String(input.page) : undefined,
+      cursor: input.cursor,
+      created_at: createdAtFilter(input),
+      updated_at: updatedAtFilter(input),
       email: input.email,
       employee_id: input.employeeId,
-      created_before: input.createdBefore,
-      created_after: input.createdAfter,
-      updated_before: input.updatedBefore,
-      updated_after: input.updatedAfter,
     });
-  const raw = await client.getJSON(path);
-  return parseUsersResponse(raw);
+  const { body, nextCursor } = await client.getJSONWithMeta(path);
+  return { ...parseUsersResponse(body), nextCursor };
 }
 
 // ---------------------------------------------------------------------------
@@ -401,12 +419,8 @@ export async function executeJobsGetSync(
   input: ExecuteJobsGetSyncInput,
 ): Promise<ExecuteJobsGetSyncOutput> {
   const id = assertSafePathSegment(input.id, "id");
-  const client = createAuthClient({
-    apiKey: input.apiKey,
-    fetch: input.fetch,
-    operation: "jobs.get",
-  });
-  const raw = await client.getJSON(`/jobs/${id}`);
+  const client = createAuthClient(authClientOpts(input, "jobs.get"));
+  const raw = await client.getJSON(`/jobs?ids=${encodeURIComponent(id)}&per_page=1`);
   return parseJobGetResponse(raw);
 }
 
@@ -416,6 +430,7 @@ export async function executeJobsGetSync(
 
 export interface ExecuteInterviewsListSyncInput extends GreenhouseAuthInput {
   perPage?: number;
+  cursor?: string;
   page?: number;
   applicationId?: string | number;
   jobId?: string | number;
@@ -427,30 +442,26 @@ export interface ExecuteInterviewsListSyncInput extends GreenhouseAuthInput {
 
 export interface ExecuteInterviewsListSyncOutput {
   interviews: NormalizedInterview[];
+  nextCursor: string | null;
 }
 
 export async function executeInterviewsListSync(
   input: ExecuteInterviewsListSyncInput,
 ): Promise<ExecuteInterviewsListSyncOutput> {
-  const client = createAuthClient({
-    apiKey: input.apiKey,
-    fetch: input.fetch,
-    operation: "interviews.list",
-  });
+  requireCursorNotPage(input, "interviews.list");
+  const client = createAuthClient(authClientOpts(input, "interviews.list"));
   const path =
     "/interviews" +
     buildQuery({
       per_page: input.perPage != null ? String(input.perPage) : undefined,
-      page: input.page != null ? String(input.page) : undefined,
-      application_id: input.applicationId != null ? String(input.applicationId) : undefined,
-      job_id: input.jobId != null ? String(input.jobId) : undefined,
-      created_before: input.createdBefore,
-      created_after: input.createdAfter,
-      updated_before: input.updatedBefore,
-      updated_after: input.updatedAfter,
+      cursor: input.cursor,
+      application_ids: input.applicationId != null ? String(input.applicationId) : undefined,
+      job_ids: input.jobId != null ? String(input.jobId) : undefined,
+      created_at: createdAtFilter(input),
+      updated_at: updatedAtFilter(input),
     });
-  const raw = await client.getJSON(path);
-  return parseInterviewsResponse(raw);
+  const { body, nextCursor } = await client.getJSONWithMeta(path);
+  return { ...parseInterviewsResponse(body), nextCursor };
 }
 
 // ---------------------------------------------------------------------------
@@ -471,11 +482,7 @@ export interface ExecuteJobInterviewStagesListSyncOutput {
 export async function executeJobInterviewStagesListSync(
   input: ExecuteJobInterviewStagesListSyncInput,
 ): Promise<ExecuteJobInterviewStagesListSyncOutput> {
-  const client = createAuthClient({
-    apiKey: input.apiKey,
-    fetch: input.fetch,
-    operation: "job_interview_stages.list",
-  });
+  const client = createAuthClient(authClientOpts(input, "job_interview_stages.list"));
   const path =
     "/job_interview_stages" +
     buildQuery({
@@ -528,11 +535,7 @@ export async function executeCandidatesCreateSync(
   const jobId = optionalStageId(input.jobId);
   if (jobId != null) body.applications = [{ job_id: jobId }];
 
-  const client = createAuthClient({
-    apiKey: input.apiKey,
-    fetch: input.fetch,
-    operation: "candidates.create",
-  });
+  const client = createAuthClient(authClientOpts(input, "candidates.create"));
   return (await client.postJSON("/candidates", body)) as ExecuteCandidatesCreateSyncOutput;
 }
 
@@ -557,46 +560,45 @@ export async function executeCandidatesUpdateSync(
   if (typeof input.lastName === "string" && input.lastName.length > 0) body.last_name = input.lastName;
   if (typeof input.company === "string" && input.company.length > 0) body.company = input.company;
   if (typeof input.title === "string" && input.title.length > 0) body.title = input.title;
-  const client = createAuthClient({
-    apiKey: input.apiKey,
-    fetch: input.fetch,
-    operation: "candidates.update",
-  });
+  const client = createAuthClient(authClientOpts(input, "candidates.update"));
   await client.patchJSON(`/candidates/${id}`, body);
   return { candidate: null };
 }
 
 export interface ExecuteOffersListSyncInput extends GreenhouseAuthInput {
   perPage?: number;
+  cursor?: string;
   page?: number;
-  jobId?: string | number;
+  createdBefore?: string;
+  createdAfter?: string;
+  updatedBefore?: string;
+  updatedAfter?: string;
   applicationId?: string | number;
-  status?: string;
+  jobId?: string | number;
 }
 
 export interface ExecuteOffersListSyncOutput {
   offers: NormalizedOffer[];
+  nextCursor: string | null;
 }
 
 export async function executeOffersListSync(
   input: ExecuteOffersListSyncInput,
 ): Promise<ExecuteOffersListSyncOutput> {
-  const client = createAuthClient({
-    apiKey: input.apiKey,
-    fetch: input.fetch,
-    operation: "offers.list",
-  });
+  requireCursorNotPage(input, "offers.list");
+  const client = createAuthClient(authClientOpts(input, "offers.list"));
   const path =
     "/offers" +
     buildQuery({
       per_page: input.perPage != null ? String(input.perPage) : undefined,
-      page: input.page != null ? String(input.page) : undefined,
-      job_id: input.jobId != null ? String(input.jobId) : undefined,
-      application_id: input.applicationId != null ? String(input.applicationId) : undefined,
-      status: input.status,
+      cursor: input.cursor,
+      created_at: createdAtFilter(input),
+      updated_at: updatedAtFilter(input),
+      application_ids: input.applicationId != null ? String(input.applicationId) : undefined,
+      job_ids: input.jobId != null ? String(input.jobId) : undefined,
     });
-  const raw = await client.getJSON(path);
-  return parseOffersResponse(raw);
+  const { body, nextCursor } = await client.getJSONWithMeta(path);
+  return { ...parseOffersResponse(body), nextCursor };
 }
 
 export interface ExecuteOffersGetSyncInput extends GreenhouseAuthInput {
@@ -611,44 +613,43 @@ export async function executeOffersGetSync(
   input: ExecuteOffersGetSyncInput,
 ): Promise<ExecuteOffersGetSyncOutput> {
   const id = assertSafePathSegment(input.id, "id");
-  const client = createAuthClient({
-    apiKey: input.apiKey,
-    fetch: input.fetch,
-    operation: "offers.get",
-  });
-  const raw = await client.getJSON(`/offers/${id}`);
+  const client = createAuthClient(authClientOpts(input, "offers.get"));
+  const raw = await client.getJSON(`/offers?ids=${encodeURIComponent(id)}&per_page=1`);
   return parseOfferGetResponse(raw);
 }
 
 export interface ExecuteScorecardsListSyncInput extends GreenhouseAuthInput {
   perPage?: number;
+  cursor?: string;
   page?: number;
+  createdBefore?: string;
+  createdAfter?: string;
+  updatedBefore?: string;
+  updatedAfter?: string;
   applicationId?: string | number;
-  jobId?: string | number;
 }
 
 export interface ExecuteScorecardsListSyncOutput {
   scorecards: NormalizedScorecard[];
+  nextCursor: string | null;
 }
 
 export async function executeScorecardsListSync(
   input: ExecuteScorecardsListSyncInput,
 ): Promise<ExecuteScorecardsListSyncOutput> {
-  const client = createAuthClient({
-    apiKey: input.apiKey,
-    fetch: input.fetch,
-    operation: "scorecards.list",
-  });
+  requireCursorNotPage(input, "scorecards.list");
+  const client = createAuthClient(authClientOpts(input, "scorecards.list"));
   const path =
     "/scorecards" +
     buildQuery({
       per_page: input.perPage != null ? String(input.perPage) : undefined,
-      page: input.page != null ? String(input.page) : undefined,
-      application_id: input.applicationId != null ? String(input.applicationId) : undefined,
-      job_id: input.jobId != null ? String(input.jobId) : undefined,
+      cursor: input.cursor,
+      created_at: createdAtFilter(input),
+      updated_at: updatedAtFilter(input),
+      application_ids: input.applicationId != null ? String(input.applicationId) : undefined,
     });
-  const raw = await client.getJSON(path);
-  return parseScorecardsResponse(raw);
+  const { body, nextCursor } = await client.getJSONWithMeta(path);
+  return { ...parseScorecardsResponse(body), nextCursor };
 }
 
 export interface ExecuteScorecardsGetSyncInput extends GreenhouseAuthInput {
@@ -663,12 +664,8 @@ export async function executeScorecardsGetSync(
   input: ExecuteScorecardsGetSyncInput,
 ): Promise<ExecuteScorecardsGetSyncOutput> {
   const id = assertSafePathSegment(input.id, "id");
-  const client = createAuthClient({
-    apiKey: input.apiKey,
-    fetch: input.fetch,
-    operation: "scorecards.get",
-  });
-  const raw = await client.getJSON(`/scorecards/${id}`);
+  const client = createAuthClient(authClientOpts(input, "scorecards.get"));
+  const raw = await client.getJSON(`/scorecards?ids=${encodeURIComponent(id)}&per_page=1`);
   return parseScorecardGetResponse(raw);
 }
 
@@ -683,11 +680,7 @@ export interface ExecuteDepartmentsListSyncOutput {
 export async function executeDepartmentsListSync(
   input: ExecuteDepartmentsListSyncInput,
 ): Promise<ExecuteDepartmentsListSyncOutput> {
-  const client = createAuthClient({
-    apiKey: input.apiKey,
-    fetch: input.fetch,
-    operation: "departments.list",
-  });
+  const client = createAuthClient(authClientOpts(input, "departments.list"));
   const path =
     "/departments" +
     buildQuery({
@@ -708,11 +701,7 @@ export interface ExecuteOfficesListSyncOutput {
 export async function executeOfficesListSync(
   input: ExecuteOfficesListSyncInput,
 ): Promise<ExecuteOfficesListSyncOutput> {
-  const client = createAuthClient({
-    apiKey: input.apiKey,
-    fetch: input.fetch,
-    operation: "offices.list",
-  });
+  const client = createAuthClient(authClientOpts(input, "offices.list"));
   const path =
     "/offices" +
     buildQuery({
@@ -733,11 +722,7 @@ export interface ExecuteSourcesListSyncOutput {
 export async function executeSourcesListSync(
   input: ExecuteSourcesListSyncInput,
 ): Promise<ExecuteSourcesListSyncOutput> {
-  const client = createAuthClient({
-    apiKey: input.apiKey,
-    fetch: input.fetch,
-    operation: "sources.list",
-  });
+  const client = createAuthClient(authClientOpts(input, "sources.list"));
   const path =
     "/sources" +
     buildQuery({
@@ -758,11 +743,7 @@ export interface ExecuteCloseReasonsListSyncOutput {
 export async function executeCloseReasonsListSync(
   input: ExecuteCloseReasonsListSyncInput,
 ): Promise<ExecuteCloseReasonsListSyncOutput> {
-  const client = createAuthClient({
-    apiKey: input.apiKey,
-    fetch: input.fetch,
-    operation: "close_reasons.list",
-  });
+  const client = createAuthClient(authClientOpts(input, "close_reasons.list"));
   const path =
     "/close_reasons" +
     buildQuery({
@@ -784,19 +765,18 @@ export async function executeUsersGetSync(
   input: ExecuteUsersGetSyncInput,
 ): Promise<ExecuteUsersGetSyncOutput> {
   const id = assertSafePathSegment(input.id, "id");
-  const client = createAuthClient({
-    apiKey: input.apiKey,
-    fetch: input.fetch,
-    operation: "users.get",
-  });
-  const raw = await client.getJSON(`/users/${id}`);
+  const client = createAuthClient(authClientOpts(input, "users.get"));
+  const raw = await client.getJSON(`/users?ids=${encodeURIComponent(id)}&per_page=1`);
   return parseUserGetResponse(raw);
 }
 
 export interface ExecuteApplicationsRejectSyncInput extends GreenhouseAuthInput {
   id: string;
-  rejectionReasonId?: string | number;
+  /** Required on Harvest v3. */
+  rejectionReasonId: string | number;
   notes?: string;
+  /** Optional rejection email payload (v3). */
+  rejectionEmail?: Record<string, unknown>;
 }
 
 export interface ExecuteApplicationsRejectSyncOutput {
@@ -807,15 +787,16 @@ export async function executeApplicationsRejectSync(
   input: ExecuteApplicationsRejectSyncInput,
 ): Promise<ExecuteApplicationsRejectSyncOutput> {
   const id = assertSafePathSegment(input.id, "id");
-  const body: Record<string, unknown> = {};
   const rejectionReasonId = optionalStageId(input.rejectionReasonId);
-  if (rejectionReasonId != null) body.rejection_reason_id = rejectionReasonId;
+  if (rejectionReasonId == null) {
+    throw new Error("rejectionReasonId is required");
+  }
+  const body: Record<string, unknown> = { rejection_reason_id: rejectionReasonId };
   if (typeof input.notes === "string" && input.notes.length > 0) body.notes = input.notes;
-  const client = createAuthClient({
-    apiKey: input.apiKey,
-    fetch: input.fetch,
-    operation: "applications.reject",
-  });
+  if (input.rejectionEmail && typeof input.rejectionEmail === "object") {
+    body.rejection_email = input.rejectionEmail;
+  }
+  const client = createAuthClient(authClientOpts(input, "applications.reject"));
   await client.postJSON(`/applications/${id}/reject`, body);
   return { application: null };
 }

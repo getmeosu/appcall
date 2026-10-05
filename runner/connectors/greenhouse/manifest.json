@@ -1,7 +1,7 @@
 {
   "key": "greenhouse",
   "name": "Greenhouse",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "runtime": "bun",
   "categories": [
     "ats-recruitment"
@@ -13,10 +13,22 @@
       "mode": "api_key",
       "fields": [
         {
-          "key": "apiKey",
-          "label": "Harvest API key",
+          "key": "clientId",
+          "label": "OAuth client ID",
+          "required": true,
+          "secret": false
+        },
+        {
+          "key": "clientSecret",
+          "label": "OAuth client secret",
           "required": true,
           "secret": true
+        },
+        {
+          "key": "userId",
+          "label": "Harvest user id (OAuth sub / Site Admin)",
+          "required": false,
+          "secret": false
         }
       ]
     }
@@ -24,7 +36,8 @@
   "network": {
     "allowedHosts": [
       "harvest.greenhouse.io",
-      "boards-api.greenhouse.io"
+      "boards-api.greenhouse.io",
+      "auth.greenhouse.io"
     ]
   },
   "http": {
@@ -32,11 +45,7 @@
     "auth": {
       "in": "header",
       "name": "Authorization",
-      "field": "apiKey",
-      "basic": {
-        "username": "{{apiKey}}",
-        "password": ""
-      }
+      "value": "Bearer {{accessToken}}"
     },
     "headers": {
       "Accept": "application/json"
@@ -288,7 +297,7 @@
       "maxInputBytes": 4096,
       "maxResponseBytes": 65536,
       "title": "Healthcheck",
-      "description": "Validate Greenhouse Harvest credentials with GET /users?per_page=1.",
+      "description": "Mint an OAuth client-credentials token then GET /v3/users?per_page=1 (proves Bearer auth and optional Site Admin sub).",
       "inputSchema": {
         "type": "object",
         "properties": {},
@@ -309,17 +318,6 @@
           }
         }
       },
-      "request": {
-        "method": "GET",
-        "path": "/users",
-        "query": {
-          "per_page": 1
-        },
-        "success": [
-          200
-        ]
-      },
-      "responseFormat": "json",
       "enforceOutputSchema": true,
       "validationMode": "strict-generated"
     },
@@ -528,7 +526,7 @@
       "maxInputBytes": 65536,
       "maxResponseBytes": 1048576,
       "title": "Reject application",
-      "description": "Reject an application via authenticated Harvest POST /v3/applications/{id}/reject. EffectPolicy Reconcile observes via applications.get (reject itself may return 204).",
+      "description": "Reject an application (POST /v3/applications/{id}/reject). rejectionReasonId is required on Harvest v3.",
       "inputSchema": {
         "type": "object",
         "additionalProperties": false,
@@ -540,17 +538,22 @@
           "rejectionReasonId": {
             "type": [
               "string",
-              "integer"
+              "number"
             ],
-            "description": "Harvest rejection reason id."
+            "description": "Required Harvest rejection reason id (v3)."
           },
           "notes": {
             "type": "string",
             "description": "Optional private rejection notes."
+          },
+          "rejectionEmail": {
+            "type": "object",
+            "description": "Optional rejection email payload."
           }
         },
         "required": [
-          "id"
+          "id",
+          "rejectionReasonId"
         ]
       },
       "outputSchema": {
