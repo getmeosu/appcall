@@ -33,9 +33,9 @@ const N7_READS = [
 ] as const;
 
 describe("github N7 actions rules", () => {
-  test("manifest is v0.63.0 with 649 ops and the N7 policies", () => {
-    expect(manifest.version).toBe("0.63.0");
-    expect(Object.keys(manifest.operations).length).toBe(649);
+  test("manifest is v0.64.0 with 656 ops and the N7 policies", () => {
+    expect(manifest.version).toBe("0.64.0");
+    expect(Object.keys(manifest.operations).length).toBe(656);
     for (const key of N7_READS) {
       const op = manifest.operations[key] as Record<string, unknown>;
       expect(op.sideEffect).toBe("read");
@@ -65,7 +65,7 @@ describe("github N7 actions rules", () => {
     expect(manifest.operations["contents.delete"]).toBeUndefined();
     expect(manifest.operations["contents.push_files"]).toBeUndefined();
     expect(manifest.operations["repos.delete"]).toBeDefined();
-    expect(manifest.operations["repos.rulesets.create"]).toBeUndefined();
+    expect(manifest.operations["repos.rulesets.create"]).toBeDefined();
   });
 
   test("workflow runs list is a separate op and job rerun pre-checks without treating 403 as success", async () => {
