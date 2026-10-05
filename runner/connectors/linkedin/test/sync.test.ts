@@ -1,12 +1,23 @@
 import { describe, expect, it } from "bun:test";
 import { executeProfileGetSync, executePostsListSync, executeOrganizationsListSync } from "../src/sync";
 import profileFixture from "../fixtures/profile.json";
+import userinfoFixture from "../fixtures/profile_userinfo.json";
 import postsList from "../fixtures/posts_list.json";
 import postsListNoPage from "../fixtures/posts_list_no_page.json";
 import orgsList from "../fixtures/organizations_list.json";
 
 describe("profile.get sync", () => {
-  it("returns normalized profile", () => {
+  it("returns normalized profile from OpenID userinfo", () => {
+    const result = executeProfileGetSync({ response: userinfoFixture });
+    expect(result.provider).toBe("linkedin");
+    expect(result.operation).toBe("profile.get");
+    expect(result.items).toHaveLength(1);
+    expect(result.items[0].id).toBe("li-profile:abc123def");
+    expect(result.items[0].firstName).toBe("Jane");
+    expect(result.items[0].email).toBe("jane@techco.com");
+  });
+
+  it("still returns normalized profile from a legacy /v2/me response", () => {
     const result = executeProfileGetSync({ response: profileFixture });
     expect(result.provider).toBe("linkedin");
     expect(result.operation).toBe("profile.get");
