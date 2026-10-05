@@ -34,9 +34,9 @@ const READS = [
 ] as const;
 
 describe("github N9 actions permissions and deployment branch policies", () => {
-  test("manifest is v0.50.0 with 516 ops and the N9 effect policies", () => {
-    expect(manifest.version).toBe("0.50.0");
-    expect(Object.keys(manifest.operations).length).toBe(516);
+  test("manifest is v0.51.0 with 532 ops and the N9 effect policies", () => {
+    expect(manifest.version).toBe("0.51.0");
+    expect(Object.keys(manifest.operations).length).toBe(532);
     for (const key of READS) {
       const op = manifest.operations[key] as Record<string, unknown>;
       expect(op.sideEffect).toBe("read");

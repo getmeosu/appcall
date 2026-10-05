@@ -1,7 +1,7 @@
 {
   "key": "github",
   "name": "GitHub",
-  "version": "0.50.0",
+  "version": "0.51.0",
   "runtime": "bun",
   "categories": [
     "dev-tools"
@@ -25524,6 +25524,813 @@
         "type": "object",
         "properties": {
           "organization": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "user.repository_invitations.accept": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 65536,
+      "sideEffect": "write",
+      "title": "Accept a repository invitation",
+      "description": "PATCH /user/repository_invitations/{invitation_id}. kind=action, sideEffect=write. Success is 204. No effectPolicy, no reconcile, and no effect. A 404 is CONNECTOR_UPSTREAM_ERROR, not success.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "invitationId": {
+            "type": "integer",
+            "description": "The unique identifier of the invitation."
+          }
+        },
+        "required": [
+          "invitationId"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "accepted": {
+            "type": "boolean"
+          },
+          "invitationId": {
+            "type": "integer"
+          }
+        }
+      }
+    },
+    "repos.autolinks.create": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 65536,
+      "sideEffect": "write",
+      "title": "Create an autolink reference for a repository",
+      "description": "POST /repos/{owner}/{repo}/autolinks. kind=action, sideEffect=write. Success is 201. No effectPolicy, no reconcile, and no effect. A 404 is CONNECTOR_UPSTREAM_ERROR, not success.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "The account owner of the repository. The name is not case sensitive."
+          },
+          "repo": {
+            "type": "string",
+            "description": "The name of the repository without the .git extension. The name is not case sensitive."
+          },
+          "keyPrefix": {
+            "type": "string",
+            "description": "Prefix that generates a link when found in an issue, pull request, or commit."
+          },
+          "urlTemplate": {
+            "type": "string",
+            "description": "URL template containing <num> for the reference."
+          },
+          "isAlphanumeric": {
+            "type": "boolean",
+            "description": "Whether the reference matches alphanumeric characters. Default true."
+          }
+        },
+        "required": [
+          "owner",
+          "repo",
+          "keyPrefix",
+          "urlTemplate"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "autolink": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "repos.generate": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Create a repository using a template",
+      "description": "POST /repos/{template_owner}/{template_repo}/generate. kind=action, sideEffect=write. Success is 201. No effectPolicy, no reconcile, and no effect. A 404 is CONNECTOR_UPSTREAM_ERROR, not success.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "templateOwner": {
+            "type": "string",
+            "description": "The account owner of the template repository. The name is not case sensitive."
+          },
+          "templateRepo": {
+            "type": "string",
+            "description": "The name of the template repository without the .git extension. The name is not case sensitive."
+          },
+          "owner": {
+            "type": "string",
+            "description": "The organization or person who will own the new repository."
+          },
+          "name": {
+            "type": "string",
+            "description": "The name of the new repository."
+          },
+          "description": {
+            "type": "string",
+            "description": "A short description of the new repository."
+          },
+          "includeAllBranches": {
+            "type": "boolean",
+            "description": "Include the directory structure and files from all branches, not just the default branch."
+          },
+          "private": {
+            "type": "boolean",
+            "description": "Whether the new repository is private."
+          }
+        },
+        "required": [
+          "templateOwner",
+          "templateRepo",
+          "name"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "repository": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "repos.dependency_graph.snapshots.create": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Create a snapshot of dependencies for a repository",
+      "description": "POST /repos/{owner}/{repo}/dependency-graph/snapshots. kind=action, sideEffect=write. Success is 201. No effectPolicy, no reconcile, and no effect. A 404 is CONNECTOR_UPSTREAM_ERROR, not success.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "The account owner of the repository. The name is not case sensitive."
+          },
+          "repo": {
+            "type": "string",
+            "description": "The name of the repository without the .git extension. The name is not case sensitive."
+          },
+          "version": {
+            "type": "integer",
+            "description": "The version of the repository snapshot submission."
+          },
+          "sha": {
+            "type": "string",
+            "description": "The commit SHA associated with this dependency snapshot. Maximum length 64 characters."
+          },
+          "ref": {
+            "type": "string",
+            "description": "The repository branch that triggered this snapshot."
+          },
+          "job": {
+            "type": "object",
+            "description": "The job that produced the snapshot.",
+            "properties": {
+              "id": {
+                "type": "string",
+                "description": "The external ID of the job."
+              },
+              "correlator": {
+                "type": "string",
+                "description": "Key used to group snapshots submitted over time."
+              },
+              "htmlUrl": {
+                "type": "string",
+                "description": "The URL for the job."
+              }
+            },
+            "required": [
+              "id",
+              "correlator"
+            ],
+            "additionalProperties": false
+          },
+          "detector": {
+            "type": "object",
+            "description": "The detector used to find dependencies.",
+            "properties": {
+              "name": {
+                "type": "string",
+                "description": "The name of the detector used."
+              },
+              "version": {
+                "type": "string",
+                "description": "The version of the detector used."
+              },
+              "url": {
+                "type": "string",
+                "description": "The URL of the detector used."
+              }
+            },
+            "required": [
+              "name",
+              "version",
+              "url"
+            ],
+            "additionalProperties": false
+          },
+          "scanned": {
+            "type": "string",
+            "description": "The time at which the snapshot was scanned."
+          },
+          "manifests": {
+            "type": "object",
+            "description": "Package manifests for the snapshot.",
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "owner",
+          "repo",
+          "version",
+          "sha",
+          "ref",
+          "job",
+          "detector",
+          "scanned"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "snapshot": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "user.repository_invitations.decline": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 65536,
+      "sideEffect": "write",
+      "title": "Decline a repository invitation",
+      "description": "DELETE /user/repository_invitations/{invitation_id}. kind=action, sideEffect=write. Success is 204. No effectPolicy, no reconcile, and no effect. A 404 from the DELETE is CONNECTOR_UPSTREAM_ERROR, not success.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "invitationId": {
+            "type": "integer",
+            "description": "The unique identifier of the invitation."
+          }
+        },
+        "required": [
+          "invitationId"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "declined": {
+            "type": "boolean"
+          },
+          "invitationId": {
+            "type": "integer"
+          }
+        }
+      }
+    },
+    "repos.delete": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 65536,
+      "sideEffect": "write",
+      "title": "Delete a repository",
+      "description": "DELETE /repos/{owner}/{repo}. kind=action, sideEffect=write. Success is 204. repos.get is not an observe for this delete. No effectPolicy, no reconcile, and no effect. A 404 from the DELETE is CONNECTOR_UPSTREAM_ERROR, not success.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "The account owner of the repository. The name is not case sensitive."
+          },
+          "repo": {
+            "type": "string",
+            "description": "The name of the repository without the .git extension. The name is not case sensitive."
+          }
+        },
+        "required": [
+          "owner",
+          "repo"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "deleted": {
+            "type": "boolean"
+          },
+          "owner": {
+            "type": "string"
+          },
+          "repo": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "repos.invitations.delete": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 65536,
+      "sideEffect": "write",
+      "title": "Delete a repository invitation",
+      "description": "DELETE /repos/{owner}/{repo}/invitations/{invitation_id}. kind=action, sideEffect=write. Success is 204. No effectPolicy, no reconcile, and no effect. A 404 from the DELETE is CONNECTOR_UPSTREAM_ERROR, not success.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "The account owner of the repository. The name is not case sensitive."
+          },
+          "repo": {
+            "type": "string",
+            "description": "The name of the repository without the .git extension. The name is not case sensitive."
+          },
+          "invitationId": {
+            "type": "integer",
+            "description": "The unique identifier of the invitation."
+          }
+        },
+        "required": [
+          "owner",
+          "repo",
+          "invitationId"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "deleted": {
+            "type": "boolean"
+          },
+          "owner": {
+            "type": "string"
+          },
+          "repo": {
+            "type": "string"
+          },
+          "invitationId": {
+            "type": "integer"
+          }
+        }
+      }
+    },
+    "repos.subscription.delete": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 65536,
+      "sideEffect": "write",
+      "title": "Delete a repository subscription",
+      "description": "DELETE /repos/{owner}/{repo}/subscription. kind=action, sideEffect=write. Success is 204. repos.subscription.get is not an observe for this delete. No effectPolicy, no reconcile, and no effect. A 404 from the DELETE is CONNECTOR_UPSTREAM_ERROR, not success.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "The account owner of the repository. The name is not case sensitive."
+          },
+          "repo": {
+            "type": "string",
+            "description": "The name of the repository without the .git extension. The name is not case sensitive."
+          }
+        },
+        "required": [
+          "owner",
+          "repo"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "deleted": {
+            "type": "boolean"
+          },
+          "owner": {
+            "type": "string"
+          },
+          "repo": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "repos.notifications.mark_read": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 65536,
+      "sideEffect": "write",
+      "title": "Mark repository notifications as read",
+      "description": "PUT /repos/{owner}/{repo}/notifications. kind=action, sideEffect=write. Success is 202 or 205. No effectPolicy, no reconcile, and no effect. A 404 is CONNECTOR_UPSTREAM_ERROR, not success.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "The account owner of the repository. The name is not case sensitive."
+          },
+          "repo": {
+            "type": "string",
+            "description": "The name of the repository without the .git extension. The name is not case sensitive."
+          },
+          "lastReadAt": {
+            "type": "string",
+            "description": "ISO 8601 timestamp. Anything updated since this time is not marked as read. Omit to mark all notifications in the repository as read."
+          }
+        },
+        "required": [
+          "owner",
+          "repo"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "marked": {
+            "type": "boolean"
+          },
+          "owner": {
+            "type": "string"
+          },
+          "repo": {
+            "type": "string"
+          },
+          "status": {
+            "type": "integer"
+          }
+        }
+      }
+    },
+    "repos.interaction_limits.delete": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 65536,
+      "sideEffect": "write",
+      "title": "Remove interaction restrictions for a repository",
+      "description": "DELETE /repos/{owner}/{repo}/interaction-limits. kind=action, sideEffect=write. Success is 204. repos.interaction_limits.get is not an observe for this delete. No effectPolicy, no reconcile, and no effect. A 404 from the DELETE is CONNECTOR_UPSTREAM_ERROR, not success.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "The account owner of the repository. The name is not case sensitive."
+          },
+          "repo": {
+            "type": "string",
+            "description": "The name of the repository without the .git extension. The name is not case sensitive."
+          }
+        },
+        "required": [
+          "owner",
+          "repo"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "deleted": {
+            "type": "boolean"
+          },
+          "owner": {
+            "type": "string"
+          },
+          "repo": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "repos.transfer": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Transfer a repository",
+      "description": "POST /repos/{owner}/{repo}/transfer. kind=action, sideEffect=write. Success is 202. No effectPolicy, no reconcile, and no effect. A 404 is CONNECTOR_UPSTREAM_ERROR, not success.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "The account owner of the repository. The name is not case sensitive."
+          },
+          "repo": {
+            "type": "string",
+            "description": "The name of the repository without the .git extension. The name is not case sensitive."
+          },
+          "newOwner": {
+            "type": "string",
+            "description": "The username or organization name the repository will be transferred to."
+          },
+          "newName": {
+            "type": "string",
+            "description": "The new name to be given to the repository."
+          },
+          "teamIds": {
+            "type": "array",
+            "description": "IDs of teams to add. Teams can only be added to organization-owned repositories.",
+            "items": {
+              "type": "integer"
+            }
+          }
+        },
+        "required": [
+          "owner",
+          "repo",
+          "newOwner"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "repository": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "repos.invitations.update": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Update a repository invitation",
+      "description": "PATCH /repos/{owner}/{repo}/invitations/{invitation_id}. kind=action, sideEffect=write. Success is 200. No effectPolicy, no reconcile, and no effect. A 404 is CONNECTOR_UPSTREAM_ERROR, not success.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "The account owner of the repository. The name is not case sensitive."
+          },
+          "repo": {
+            "type": "string",
+            "description": "The name of the repository without the .git extension. The name is not case sensitive."
+          },
+          "invitationId": {
+            "type": "integer",
+            "description": "The unique identifier of the invitation."
+          },
+          "permissions": {
+            "type": "string",
+            "description": "Permissions the invited user will have on the repository.",
+            "enum": [
+              "read",
+              "write",
+              "maintain",
+              "triage",
+              "admin"
+            ]
+          }
+        },
+        "required": [
+          "owner",
+          "repo",
+          "invitationId"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "invitation": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "repos.check_suites.preferences.update": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 65536,
+      "sideEffect": "write",
+      "title": "Update repository preferences for check suites",
+      "description": "PATCH /repos/{owner}/{repo}/check-suites/preferences. kind=action, sideEffect=write. Success is 200. No effectPolicy, no reconcile, and no effect. A 404 is CONNECTOR_UPSTREAM_ERROR, not success.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "The account owner of the repository. The name is not case sensitive."
+          },
+          "repo": {
+            "type": "string",
+            "description": "The name of the repository without the .git extension. The name is not case sensitive."
+          },
+          "autoTriggerChecks": {
+            "type": "array",
+            "description": "Enables or disables automatic creation of check suites on push.",
+            "items": {
+              "type": "object",
+              "properties": {
+                "appId": {
+                  "type": "integer",
+                  "description": "The id of the GitHub App."
+                },
+                "setting": {
+                  "type": "boolean",
+                  "description": "True to enable automatic check suite creation, false to disable it."
+                }
+              },
+              "required": [
+                "appId",
+                "setting"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "owner",
+          "repo"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "preferences": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "repos.topics.replace": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 65536,
+      "sideEffect": "write",
+      "effectPolicy": "Reconcile",
+      "reconcile": "repos.topics.get",
+      "title": "Replace all repository topics",
+      "description": "PUT /repos/{owner}/{repo}/topics. kind=action, sideEffect=write. Success is 200. effectPolicy Reconcile, reconcile repos.topics.get. repos.topics.get is GET /repos/{owner}/{repo}/topics for the same owner and repo.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "The account owner of the repository. The name is not case sensitive."
+          },
+          "repo": {
+            "type": "string",
+            "description": "The name of the repository without the .git extension. The name is not case sensitive."
+          },
+          "names": {
+            "type": "array",
+            "description": "Topics that replace the existing set. An empty array clears all topics.",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "owner",
+          "repo",
+          "names"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "topics": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "repos.subscription.set": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 65536,
+      "sideEffect": "write",
+      "effectPolicy": "Reconcile",
+      "reconcile": "repos.subscription.get",
+      "title": "Set a repository subscription",
+      "description": "PUT /repos/{owner}/{repo}/subscription. kind=action, sideEffect=write. Success is 200. effectPolicy Reconcile, reconcile repos.subscription.get. repos.subscription.get is GET /repos/{owner}/{repo}/subscription for the same owner and repo.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "The account owner of the repository. The name is not case sensitive."
+          },
+          "repo": {
+            "type": "string",
+            "description": "The name of the repository without the .git extension. The name is not case sensitive."
+          },
+          "subscribed": {
+            "type": "boolean",
+            "description": "Whether notifications should be received from this repository."
+          },
+          "ignored": {
+            "type": "boolean",
+            "description": "Whether all notifications should be blocked from this repository."
+          }
+        },
+        "required": [
+          "owner",
+          "repo"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "subscription": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "repos.interaction_limits.set": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 65536,
+      "sideEffect": "write",
+      "effectPolicy": "Reconcile",
+      "reconcile": "repos.interaction_limits.get",
+      "title": "Set interaction restrictions for a repository",
+      "description": "PUT /repos/{owner}/{repo}/interaction-limits. kind=action, sideEffect=write. Success is 200. effectPolicy Reconcile, reconcile repos.interaction_limits.get. repos.interaction_limits.get is GET /repos/{owner}/{repo}/interaction-limits for the same owner and repo.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "The account owner of the repository. The name is not case sensitive."
+          },
+          "repo": {
+            "type": "string",
+            "description": "The name of the repository without the .git extension. The name is not case sensitive."
+          },
+          "limit": {
+            "type": "string",
+            "description": "Who can comment, open issues, or create pull requests while the limit is in effect.",
+            "enum": [
+              "existing_users",
+              "contributors_only",
+              "collaborators_only"
+            ]
+          },
+          "expiry": {
+            "type": "string",
+            "description": "How long the interaction restriction lasts.",
+            "enum": [
+              "one_day",
+              "three_days",
+              "one_week",
+              "one_month",
+              "six_months"
+            ]
+          }
+        },
+        "required": [
+          "owner",
+          "repo",
+          "limit"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "limits": {
             "type": "object"
           }
         }
