@@ -596,6 +596,14 @@ import {
   validateDeleteIssueReactionInput,
 } from "./write_card10";
 
+import {
+  createWriteCard11Client,
+  validateDeletePullReviewCommentReactionInput,
+  validateDeleteOrgActionsRunnerInput,
+  validateDeleteRepoActionsRunnerInput,
+  validateFollowUserInput,
+} from "./write_card11";
+
 
 
 import {
@@ -7954,6 +7962,57 @@ export function deleteIssueReaction(input: unknown): Record<string, unknown> | P
     });
   }
   return { connector: "github", action: "issues.reactions.delete", source: "connector", validated: validateDeleteIssueReactionInput(input) };
+}
+
+// ─── write card 11: PR reaction delete, runner deletes, and follow ────────────
+
+function liveWriteCard11Client(input: Record<string, unknown>, operation: string) {
+  const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
+  return createWriteCard11Client({
+    accessToken: input.accessToken as string,
+    fetch: fetchFn,
+    githubClient: createGitHubClient({ accessToken: input.accessToken as string, fetch: fetchFn, operation }),
+  });
+}
+
+export function deletePullReviewCommentReaction(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveWriteCard11Client(input, "pull_requests.review_comments.reactions.delete").deletePullReviewCommentReaction(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "pull_requests.review_comments.reactions.delete", source: "connector", deleted: result.deleted, owner: result.owner, repo: result.repo, commentId: result.commentId, reactionId: result.reactionId };
+    });
+  }
+  return { connector: "github", action: "pull_requests.review_comments.reactions.delete", source: "connector", validated: validateDeletePullReviewCommentReactionInput(input) };
+}
+
+export function deleteOrgActionsRunner(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveWriteCard11Client(input, "orgs.actions.runners.delete").deleteOrgActionsRunner(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "orgs.actions.runners.delete", source: "connector", deleted: result.deleted, org: result.org, runnerId: result.runnerId };
+    });
+  }
+  return { connector: "github", action: "orgs.actions.runners.delete", source: "connector", validated: validateDeleteOrgActionsRunnerInput(input) };
+}
+
+export function deleteRepoActionsRunner(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveWriteCard11Client(input, "repos.actions.runners.delete").deleteRepoActionsRunner(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "repos.actions.runners.delete", source: "connector", deleted: result.deleted, owner: result.owner, repo: result.repo, runnerId: result.runnerId };
+    });
+  }
+  return { connector: "github", action: "repos.actions.runners.delete", source: "connector", validated: validateDeleteRepoActionsRunnerInput(input) };
+}
+
+export function followUser(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveWriteCard11Client(input, "user.following.follow").followUser(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "user.following.follow", source: "connector", followed: result.followed, username: result.username };
+    });
+  }
+  return { connector: "github", action: "user.following.follow", source: "connector", validated: validateFollowUserInput(input) };
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────

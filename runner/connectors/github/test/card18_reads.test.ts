@@ -8,9 +8,9 @@ const OP = "repos.pulls.comments.list";
 const PATH = "/repos/{owner}/{repo}/pulls/comments";
 
 describe("github card-18 reads", () => {
-  test("manifest stays v0.59.0 at 619 ops and this read omits effect policy", () => {
-    expect(manifest.version).toBe("0.59.0");
-    expect(Object.keys(manifest.operations).length).toBe(619);
+  test("manifest stays v0.60.0 at 623 ops and this read omits effect policy", () => {
+    expect(manifest.version).toBe("0.60.0");
+    expect(Object.keys(manifest.operations).length).toBe(623);
     const op = manifest.operations[OP] as Record<string, unknown>;
     expect(op.kind).toBe("action");
     expect(op.sideEffect).toBe("read");
