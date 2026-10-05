@@ -4,6 +4,7 @@ import searchCommitsFixture from "../fixtures/search_commits.json";
 import searchReposFixture from "../fixtures/search_repositories.json";
 import searchOrgsFixture from "../fixtures/search_orgs.json";
 import getRefFixture from "../fixtures/get_ref.json";
+import getRef404Fixture from "../fixtures/get_ref_404.json";
 import userGetFixture from "../fixtures/user_get.json";
 import {
   getGitRef,
@@ -35,7 +36,7 @@ describe("github S12 refs-search-user", () => {
     expect(() => validateUsersGetAuthenticatedInput("nope")).toThrow(/users.get_authenticated/);
   });
 
-  test("git.refs.get hits /git/refs/{ref} and strips refs/ prefix", async () => {
+  test("git.refs.get hits /git/ref/{ref} and strips refs/ prefix", async () => {
     const dry = getGitRef({ owner: "acme", repo: "app", ref: "heads/main" });
     expect(dry.action).toBe("git.refs.get");
     const requests: Request[] = [];
@@ -49,7 +50,7 @@ describe("github S12 refs-search-user", () => {
         return new Response(JSON.stringify(getRefFixture), { status: 200 });
       },
     });
-    expect(requests[0].url).toBe("https://api.github.com/repos/acme/app/git/refs/heads/main");
+    expect(requests[0].url).toBe("https://api.github.com/repos/acme/app/git/ref/heads/main");
     expect(requests[0].method).toBe("GET");
     const ref = result.ref as Record<string, unknown>;
     expect(ref.ref).toBe("refs/heads/main");
@@ -57,15 +58,21 @@ describe("github S12 refs-search-user", () => {
   });
 
   test("git.refs.get maps 404 to upstream error", async () => {
+    const requests: Request[] = [];
     await expect(
       getGitRef({
         accessToken: "ghp_test",
         owner: "acme",
         repo: "app",
         ref: "heads/missing",
-        fetch: async () => new Response("{}", { status: 404 }),
+        fetch: async (input, init) => {
+          requests.push(new Request(input, init));
+          return new Response(JSON.stringify(getRef404Fixture), { status: 404 });
+        },
       }),
     ).rejects.toMatchObject({ code: "CONNECTOR_UPSTREAM_ERROR", message: "Ref not found." });
+    expect(requests[0].url).toBe("https://api.github.com/repos/acme/app/git/ref/heads/missing");
+    expect(requests[0].method).toBe("GET");
   });
 
   test("search.code hits /search/code", async () => {

@@ -688,6 +688,7 @@ import {
   updateOrgHookConfig as ghUpdateOrgHookConfig,
   updateRepoHookConfig as ghUpdateRepoHookConfig,
   updateUserProjectItem as ghUpdateUserProjectItem,
+  listUsers as ghListUsers,
 } from "../../connectors/github/src/actions";
 import { healthcheck as githubHealthcheck } from "../../connectors/github/src/healthcheck";
 import { executeIssuesListSync as listGitHubIssues, executePullRequestsListSync as listGitHubPRs, executeCommitsListSync as listGitHubCommits, executeRepositoriesListSync as listGitHubRepos } from "../../connectors/github/src/sync";
@@ -2144,6 +2145,7 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
       "orgs.hooks.config.update": ghUpdateOrgHookConfig,
       "repos.hooks.config.update": ghUpdateRepoHookConfig,
       "users.projects_v2.items.update": ghUpdateUserProjectItem,
+      "users.list": ghListUsers,
     },
     salesforce: {
       "contacts.create": createContact,
