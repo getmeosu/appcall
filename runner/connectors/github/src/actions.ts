@@ -547,6 +547,16 @@ import {
   validateRemoveInstallationRepositoryInput,
 } from "./write_card7";
 
+import {
+  createWriteCard8Client,
+  validateDeleteAuthenticatedPackageVersionInput,
+  validateDeleteOrgPackageVersionInput,
+  validateDeleteUserPackageVersionInput,
+  validateRestoreOrgPackageInput,
+  validateRestoreUserPackageInput,
+  validateRestoreAuthenticatedPackageInput,
+} from "./write_card8";
+
 
 
 import {
@@ -7502,6 +7512,77 @@ export function removeInstallationRepository(input: unknown): Record<string, unk
     });
   }
   return { connector: "github", action: "user.installations.repositories.remove", source: "connector", validated: validateRemoveInstallationRepositoryInput(input) };
+}
+
+// ─── write card 8: package version deletes and package restores ───────────────
+
+function liveWriteCard8Client(input: Record<string, unknown>, operation: string) {
+  const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
+  return createWriteCard8Client({
+    accessToken: input.accessToken as string,
+    fetch: fetchFn,
+    githubClient: createGitHubClient({ accessToken: input.accessToken as string, fetch: fetchFn, operation }),
+  });
+}
+
+export function deleteAuthenticatedPackageVersion(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveWriteCard8Client(input, "user.packages.versions.delete").deleteAuthenticatedPackageVersion(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "user.packages.versions.delete", source: "connector", deleted: result.deleted, packageType: result.packageType, packageName: result.packageName, packageVersionId: result.packageVersionId };
+    });
+  }
+  return { connector: "github", action: "user.packages.versions.delete", source: "connector", validated: validateDeleteAuthenticatedPackageVersionInput(input) };
+}
+
+export function deleteOrgPackageVersion(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveWriteCard8Client(input, "orgs.packages.versions.delete").deleteOrgPackageVersion(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "orgs.packages.versions.delete", source: "connector", deleted: result.deleted, org: result.org, packageType: result.packageType, packageName: result.packageName, packageVersionId: result.packageVersionId };
+    });
+  }
+  return { connector: "github", action: "orgs.packages.versions.delete", source: "connector", validated: validateDeleteOrgPackageVersionInput(input) };
+}
+
+export function deleteUserPackageVersion(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveWriteCard8Client(input, "users.packages.versions.delete").deleteUserPackageVersion(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "users.packages.versions.delete", source: "connector", deleted: result.deleted, username: result.username, packageType: result.packageType, packageName: result.packageName, packageVersionId: result.packageVersionId };
+    });
+  }
+  return { connector: "github", action: "users.packages.versions.delete", source: "connector", validated: validateDeleteUserPackageVersionInput(input) };
+}
+
+export function restoreOrgPackage(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveWriteCard8Client(input, "orgs.packages.restore").restoreOrgPackage(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "orgs.packages.restore", source: "connector", restored: result.restored, org: result.org, packageType: result.packageType, packageName: result.packageName };
+    });
+  }
+  return { connector: "github", action: "orgs.packages.restore", source: "connector", validated: validateRestoreOrgPackageInput(input) };
+}
+
+export function restoreUserPackage(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveWriteCard8Client(input, "users.packages.restore").restoreUserPackage(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "users.packages.restore", source: "connector", restored: result.restored, username: result.username, packageType: result.packageType, packageName: result.packageName };
+    });
+  }
+  return { connector: "github", action: "users.packages.restore", source: "connector", validated: validateRestoreUserPackageInput(input) };
+}
+
+export function restoreAuthenticatedPackage(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveWriteCard8Client(input, "user.packages.restore").restoreAuthenticatedPackage(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "user.packages.restore", source: "connector", restored: result.restored, packageType: result.packageType, packageName: result.packageName };
+    });
+  }
+  return { connector: "github", action: "user.packages.restore", source: "connector", validated: validateRestoreAuthenticatedPackageInput(input) };
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
