@@ -740,6 +740,20 @@ import {
   validateUpdateOrgIssueTypeInput,
 } from "./gap_g3";
 import {
+  createGapG4Client,
+  validateAddOrgActionsSecretRepositoryInput,
+  validateCreateDeploymentProtectionRuleInput,
+  validateDeleteOrgActionsSecretInput,
+  validateDeleteRepoActionsSecretInput,
+  validateDeleteRepoCodespaceSecretInput,
+  validateGetRepoActionsSecretInput,
+  validateGetRepoActionsSecretsPublicKeyInput,
+  validateRenderMarkdownRawInput,
+  validateSetOrgActionsSecretRepositoriesInput,
+  validateUpsertOrgActionsSecretInput,
+  validateUpsertRepoActionsSecretInput,
+} from "./gap_g4";
+import {
   createReposReadsClient,
   validateGetAutolinkInput,
   validateGetReadmeInput,
@@ -9182,6 +9196,128 @@ export function getOrgOidcCustomizationSub(input: unknown): Record<string, unkno
     });
   }
   return { connector: "github", action: "orgs.actions.oidc.customization.sub.get", source: "connector", validated: validateGetOrgOidcCustomizationSubInput(input) };
+}
+
+
+// ─── gap G4: repo Actions secrets + org secret writes + leftovers ─────────────
+
+function liveGapG4Client(input: Record<string, unknown>, operation: string) {
+  const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
+  return createGapG4Client({
+    accessToken: input.accessToken as string,
+    fetch: fetchFn,
+    githubClient: createGitHubClient({ accessToken: input.accessToken as string, fetch: fetchFn, operation }),
+  });
+}
+
+export function getRepoActionsSecretsPublicKey(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG4Client(input, "actions.secrets.public_key.get").getRepoActionsSecretsPublicKey(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "actions.secrets.public_key.get", source: "connector", publicKey: result.publicKey };
+    });
+  }
+  return { connector: "github", action: "actions.secrets.public_key.get", source: "connector", validated: validateGetRepoActionsSecretsPublicKeyInput(input) };
+}
+
+export function getRepoActionsSecret(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG4Client(input, "actions.secrets.get").getRepoActionsSecret(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "actions.secrets.get", source: "connector", secret: result.secret };
+    });
+  }
+  return { connector: "github", action: "actions.secrets.get", source: "connector", validated: validateGetRepoActionsSecretInput(input) };
+}
+
+export function upsertRepoActionsSecret(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG4Client(input, "actions.secrets.create_or_update").upsertRepoActionsSecret(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "actions.secrets.create_or_update", source: "connector", upserted: result.upserted, created: result.created, status: result.status, owner: result.owner, repo: result.repo, secretName: result.secretName };
+    });
+  }
+  return { connector: "github", action: "actions.secrets.create_or_update", source: "connector", validated: validateUpsertRepoActionsSecretInput(input) };
+}
+
+export function deleteRepoActionsSecret(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG4Client(input, "actions.secrets.delete").deleteRepoActionsSecret(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "actions.secrets.delete", source: "connector", deleted: result.deleted, owner: result.owner, repo: result.repo, secretName: result.secretName };
+    });
+  }
+  return { connector: "github", action: "actions.secrets.delete", source: "connector", validated: validateDeleteRepoActionsSecretInput(input) };
+}
+
+export function upsertOrgActionsSecret(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG4Client(input, "actions.org_secrets.create_or_update").upsertOrgActionsSecret(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "actions.org_secrets.create_or_update", source: "connector", upserted: result.upserted, created: result.created, status: result.status, org: result.org, secretName: result.secretName, visibility: result.visibility };
+    });
+  }
+  return { connector: "github", action: "actions.org_secrets.create_or_update", source: "connector", validated: validateUpsertOrgActionsSecretInput(input) };
+}
+
+export function deleteOrgActionsSecret(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG4Client(input, "actions.org_secrets.delete").deleteOrgActionsSecret(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "actions.org_secrets.delete", source: "connector", deleted: result.deleted, org: result.org, secretName: result.secretName };
+    });
+  }
+  return { connector: "github", action: "actions.org_secrets.delete", source: "connector", validated: validateDeleteOrgActionsSecretInput(input) };
+}
+
+export function setOrgActionsSecretRepositories(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG4Client(input, "actions.org_secrets.repositories.set").setOrgActionsSecretRepositories(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "actions.org_secrets.repositories.set", source: "connector", set: result.set, org: result.org, secretName: result.secretName, selectedRepositoryIds: result.selectedRepositoryIds };
+    });
+  }
+  return { connector: "github", action: "actions.org_secrets.repositories.set", source: "connector", validated: validateSetOrgActionsSecretRepositoriesInput(input) };
+}
+
+export function addOrgActionsSecretRepository(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG4Client(input, "actions.org_secrets.repositories.add").addOrgActionsSecretRepository(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "actions.org_secrets.repositories.add", source: "connector", added: result.added, org: result.org, secretName: result.secretName, repositoryId: result.repositoryId };
+    });
+  }
+  return { connector: "github", action: "actions.org_secrets.repositories.add", source: "connector", validated: validateAddOrgActionsSecretRepositoryInput(input) };
+}
+
+export function createDeploymentProtectionRule(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG4Client(input, "repos.environments.deployment_protection_rules.create").createDeploymentProtectionRule(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "repos.environments.deployment_protection_rules.create", source: "connector", rule: result.rule };
+    });
+  }
+  return { connector: "github", action: "repos.environments.deployment_protection_rules.create", source: "connector", validated: validateCreateDeploymentProtectionRuleInput(input) };
+}
+
+export function renderMarkdownRaw(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG4Client(input, "markdown.render_raw").renderMarkdownRaw(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "markdown.render_raw", source: "connector", html: result.html };
+    });
+  }
+  return { connector: "github", action: "markdown.render_raw", source: "connector", validated: validateRenderMarkdownRawInput(input) };
+}
+
+export function deleteRepoCodespaceSecret(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG4Client(input, "repos.codespaces.secrets.delete").deleteRepoCodespaceSecret(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "repos.codespaces.secrets.delete", source: "connector", deleted: result.deleted, owner: result.owner, repo: result.repo, secretName: result.secretName };
+    });
+  }
+  return { connector: "github", action: "repos.codespaces.secrets.delete", source: "connector", validated: validateDeleteRepoCodespaceSecretInput(input) };
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────

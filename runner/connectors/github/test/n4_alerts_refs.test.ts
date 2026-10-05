@@ -48,9 +48,9 @@ function schemaKeys(schema: unknown, acc: string[] = []): string[] {
 }
 
 describe("github N4 alerts refs tags gist delete", () => {
-  test("manifest is 0.70.0 with exactly 685 ops and the N4 policies", () => {
-    expect(manifest.version).toBe("0.70.0");
-    expect(Object.keys(manifest.operations).length).toBe(715);
+  test("manifest is 0.71.0 with exactly 726 ops and the N4 policies", () => {
+    expect(manifest.version).toBe("0.71.0");
+    expect(Object.keys(manifest.operations).length).toBe(726);
     for (const key of N4_READS) {
       const op = manifest.operations[key] as Record<string, unknown>;
       expect(op.kind).toBe("action");
@@ -83,7 +83,10 @@ describe("github N4 alerts refs tags gist delete", () => {
     expect(keys).not.toContain("token");
     expect(manifest.operations["actions.secrets.create"]).toBeUndefined();
     expect(manifest.operations["actions.secrets.update"]).toBeUndefined();
-    expect(manifest.operations["actions.secrets.delete"]).toBeUndefined();
+    // G4 lands sealed-box create_or_update + delete (ciphertext only; still no plaintext create/update).
+    expect(manifest.operations["actions.secrets.create_or_update"]).toBeDefined();
+    expect(manifest.operations["actions.secrets.delete"]).toBeDefined();
+    expect(manifest.operations["actions.secrets.delete"].effectPolicy).toBeUndefined();
     expect(manifest.operations["repos.contents.delete"].effectPolicy).toBe("Idempotent");
   });
 
