@@ -636,6 +636,10 @@ import {
   deleteCommitCommentReaction as ghDeleteCommitCommentReaction,
   deleteIssueCommentReaction as ghDeleteIssueCommentReaction,
   deleteIssueReaction as ghDeleteIssueReaction,
+  deletePullReviewCommentReaction as ghDeletePullReviewCommentReaction,
+  deleteOrgActionsRunner as ghDeleteOrgActionsRunner,
+  deleteRepoActionsRunner as ghDeleteRepoActionsRunner,
+  followUser as ghFollowUser,
 } from "../../connectors/github/src/actions";
 import { healthcheck as githubHealthcheck } from "../../connectors/github/src/healthcheck";
 import { executeIssuesListSync as listGitHubIssues, executePullRequestsListSync as listGitHubPRs, executeCommitsListSync as listGitHubCommits, executeRepositoriesListSync as listGitHubRepos } from "../../connectors/github/src/sync";
@@ -2040,6 +2044,10 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
       "commits.comments.reactions.delete": ghDeleteCommitCommentReaction,
       "issues.comments.reactions.delete": ghDeleteIssueCommentReaction,
       "issues.reactions.delete": ghDeleteIssueReaction,
+      "pull_requests.review_comments.reactions.delete": ghDeletePullReviewCommentReaction,
+      "orgs.actions.runners.delete": ghDeleteOrgActionsRunner,
+      "repos.actions.runners.delete": ghDeleteRepoActionsRunner,
+      "user.following.follow": ghFollowUser,
     },
     salesforce: {
       "contacts.create": createContact,
