@@ -587,6 +587,11 @@ import {
   updateBranchProtection as ghUpdateBranchProtection,
   updateBranchProtectionRequiredPullRequestReviews as ghUpdateBranchProtectionRequiredPullRequestReviews,
   updateBranchProtectionRequiredStatusChecks as ghUpdateBranchProtectionRequiredStatusChecks,
+  deleteUserProjectItem as ghDeleteUserProjectItem,
+  createCheckSuite as ghCreateCheckSuite,
+  deleteThreadSubscription as ghDeleteThreadSubscription,
+  markThreadDone as ghMarkThreadDone,
+  setThreadSubscription as ghSetThreadSubscription,
 } from "../../connectors/github/src/actions";
 import { healthcheck as githubHealthcheck } from "../../connectors/github/src/healthcheck";
 import { executeIssuesListSync as listGitHubIssues, executePullRequestsListSync as listGitHubPRs, executeCommitsListSync as listGitHubCommits, executeRepositoriesListSync as listGitHubRepos } from "../../connectors/github/src/sync";
@@ -1942,6 +1947,11 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
       "branches.protection.update": ghUpdateBranchProtection,
       "branches.protection.required_pull_request_reviews.update": ghUpdateBranchProtectionRequiredPullRequestReviews,
       "branches.protection.required_status_checks.update": ghUpdateBranchProtectionRequiredStatusChecks,
+      "users.projects_v2.items.delete": ghDeleteUserProjectItem,
+      "checks.suites.create": ghCreateCheckSuite,
+      "notifications.threads.subscription.delete": ghDeleteThreadSubscription,
+      "notifications.threads.mark_done": ghMarkThreadDone,
+      "notifications.threads.subscription.set": ghSetThreadSubscription,
     },
     salesforce: {
       "contacts.create": createContact,
