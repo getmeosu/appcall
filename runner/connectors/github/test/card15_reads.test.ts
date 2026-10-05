@@ -17,9 +17,9 @@ function json(body: unknown, status = 200) {
 }
 
 describe("github card-15 reads", () => {
-  test("version stays 0.64.0 at 656 ops and the new reads omit effect policy", () => {
-    expect(manifest.version).toBe("0.64.0");
-    expect(Object.keys(manifest.operations).length).toBe(656);
+  test("version stays 0.65.0 at 658 ops and the new reads omit effect policy", () => {
+    expect(manifest.version).toBe("0.65.0");
+    expect(Object.keys(manifest.operations).length).toBe(658);
     for (const key of READS) {
       const op = manifest.operations[key] as Record<string, unknown>;
       expect(op.sideEffect).toBe("read");

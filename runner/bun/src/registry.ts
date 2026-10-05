@@ -673,6 +673,8 @@ import {
   createRepoRuleset as ghCreateRepoRuleset,
   deleteRepoRuleset as ghDeleteRepoRuleset,
   updateRepoRuleset as ghUpdateRepoRuleset,
+  deleteReleaseAsset as ghDeleteReleaseAsset,
+  updateReleaseAsset as ghUpdateReleaseAsset,
 } from "../../connectors/github/src/actions";
 import { healthcheck as githubHealthcheck } from "../../connectors/github/src/healthcheck";
 import { executeIssuesListSync as listGitHubIssues, executePullRequestsListSync as listGitHubPRs, executeCommitsListSync as listGitHubCommits, executeRepositoriesListSync as listGitHubRepos } from "../../connectors/github/src/sync";
@@ -2114,6 +2116,8 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
       "repos.rulesets.create": ghCreateRepoRuleset,
       "repos.rulesets.delete": ghDeleteRepoRuleset,
       "repos.rulesets.update": ghUpdateRepoRuleset,
+      "releases.assets.delete": ghDeleteReleaseAsset,
+      "releases.assets.update": ghUpdateReleaseAsset,
     },
     salesforce: {
       "contacts.create": createContact,

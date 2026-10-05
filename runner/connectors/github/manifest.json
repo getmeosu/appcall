@@ -1,7 +1,7 @@
 {
   "key": "github",
   "name": "GitHub",
-  "version": "0.64.0",
+  "version": "0.65.0",
   "runtime": "bun",
   "categories": [
     "dev-tools"
@@ -168,7 +168,7 @@
       "maxResponseBytes": 1048576,
       "sideEffect": "write",
       "title": "Update Issue",
-      "description": "Update an existing issue in a GitHub repository — change title, body, state, labels, or assignees.",
+      "description": "Update an existing issue in a GitHub repository \u2014 change title, body, state, labels, or assignees.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -484,7 +484,7 @@
       "maxInputBytes": 1048576,
       "maxResponseBytes": 1048576,
       "title": "Update Pull Request",
-      "description": "Update an existing pull request — change title, body, state (open/closed), or base branch.",
+      "description": "Update an existing pull request \u2014 change title, body, state (open/closed), or base branch.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -2816,7 +2816,7 @@
           },
           "event": {
             "type": "string",
-            "description": "Filter by event type (push, pull_request, …)."
+            "description": "Filter by event type (push, pull_request, \u2026)."
           },
           "status": {
             "type": "string",
@@ -5600,7 +5600,7 @@
       "effectPolicy": "Reconcile",
       "reconcile": "labels.get",
       "title": "Delete Repository Label",
-      "description": "Delete a repository label via DELETE /repos/{owner}/{repo}/labels/{name}. EffectPolicy Reconcile observes via labels.get (soft 404 → found=false). Primary action result is settled first; EffectPolicy returns the observe output.",
+      "description": "Delete a repository label via DELETE /repos/{owner}/{repo}/labels/{name}. EffectPolicy Reconcile observes via labels.get (soft 404 \u2192 found=false). Primary action result is settled first; EffectPolicy returns the observe output.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -7275,7 +7275,7 @@
       "sideEffect": "write",
       "effectPolicy": "Idempotent",
       "title": "Delete File Contents",
-      "description": "Delete a file via DELETE /repos/{owner}/{repo}/contents/{path}. EffectPolicy Idempotent (double-delete is safe to classify; no reconcile — observe would 404).",
+      "description": "Delete a file via DELETE /repos/{owner}/{repo}/contents/{path}. EffectPolicy Idempotent (double-delete is safe to classify; no reconcile \u2014 observe would 404).",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -7355,7 +7355,7 @@
       "sideEffect": "write",
       "effectPolicy": "Reconcile",
       "title": "Push Files (Git Data Compose)",
-      "description": "Create a multi-file commit by composing Git Data API calls (get ref → get commit → create blobs → create tree → create commit → update ref). EffectPolicy Reconcile observes the branch tip via commits.get (branch accepted as ref).",
+      "description": "Create a multi-file commit by composing Git Data API calls (get ref \u2192 get commit \u2192 create blobs \u2192 create tree \u2192 create commit \u2192 update ref). EffectPolicy Reconcile observes the branch tip via commits.get (branch accepted as ref).",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -7369,7 +7369,7 @@
           },
           "branch": {
             "type": "string",
-            "description": "Branch to update. Also accepted as `ref` for Reconcile→commits.get."
+            "description": "Branch to update. Also accepted as `ref` for Reconcile\u2192commits.get."
           },
           "ref": {
             "type": "string",
@@ -10259,7 +10259,7 @@
       "maxResponseBytes": 65536,
       "sideEffect": "write",
       "title": "Delete Pending Pull Request Review",
-      "description": "Delete a pending pull request review via DELETE /repos/{owner}/{repo}/pulls/{pull_number}/reviews/{review_id}. EffectPolicy Idempotent (same style as contents.delete; no reconcile — a deleted pending review cannot be observed).",
+      "description": "Delete a pending pull request review via DELETE /repos/{owner}/{repo}/pulls/{pull_number}/reviews/{review_id}. EffectPolicy Idempotent (same style as contents.delete; no reconcile \u2014 a deleted pending review cannot be observed).",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -13155,7 +13155,7 @@
           },
           "event": {
             "type": "string",
-            "description": "Filter by event type (push, pull_request, …)."
+            "description": "Filter by event type (push, pull_request, \u2026)."
           },
           "status": {
             "type": "string",
@@ -33053,6 +33053,109 @@
       },
       "effectPolicy": "Reconcile",
       "reconcile": "repos.rulesets.get"
+    },
+    "releases.assets.delete": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 65536,
+      "sideEffect": "write",
+      "title": "Delete a release asset",
+      "description": "DELETE /repos/{owner}/{repo}/releases/assets/{asset_id}. kind=action, sideEffect=write. Success is 204. No effectPolicy, no reconcile, and no effect. A 404 is CONNECTOR_UPSTREAM_ERROR, not success (unlike releases.delete Idempotent). Bearer auth only.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner. The name is not case sensitive."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name without the .git extension. The name is not case sensitive."
+          },
+          "assetId": {
+            "type": "number",
+            "description": "Release asset id."
+          }
+        },
+        "required": [
+          "owner",
+          "repo",
+          "assetId"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "deleted": {
+            "type": "boolean"
+          },
+          "owner": {
+            "type": "string"
+          },
+          "repo": {
+            "type": "string"
+          },
+          "assetId": {
+            "type": "number"
+          }
+        }
+      }
+    },
+    "releases.assets.update": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Update a release asset",
+      "description": "PATCH /repos/{owner}/{repo}/releases/assets/{asset_id}. kind=action, sideEffect=write. Success is 200. effectPolicy Reconcile, reconcile releases.assets.get. releases.assets.get is GET /repos/{owner}/{repo}/releases/assets/{asset_id} for the same owner, repo, and assetId. Optional body fields name, label, and state are strings. A 404 is CONNECTOR_UPSTREAM_ERROR. Bearer auth only.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner. The name is not case sensitive."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name without the .git extension. The name is not case sensitive."
+          },
+          "assetId": {
+            "type": "number",
+            "description": "Release asset id."
+          },
+          "name": {
+            "type": "string",
+            "description": "Asset file name."
+          },
+          "label": {
+            "type": "string",
+            "description": "Alternate short description of the asset."
+          },
+          "state": {
+            "type": "string",
+            "description": "Asset state returned by releases.assets.get."
+          }
+        },
+        "required": [
+          "owner",
+          "repo",
+          "assetId"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "asset": {
+            "type": "object"
+          }
+        }
+      },
+      "effectPolicy": "Reconcile",
+      "reconcile": "releases.assets.get"
     }
   },
   "models": [
