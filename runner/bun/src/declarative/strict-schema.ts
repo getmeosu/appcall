@@ -4,7 +4,12 @@ import type { JSONSchema } from "./validate";
 const MAX_DEPTH = 64;
 const MAX_NODES = 4096;
 const forbidden = new Set(["__proto__", "constructor", "prototype"]);
-const supported = new Set(["type", "enum", "properties", "required", "additionalProperties", "items", "minItems", "minLength", "minimum", "maximum", "title", "description"]);
+const supported = new Set(["type", "enum", "properties", "required", "additionalProperties", "items", "minItems", "minLength", "minimum", "maximum", "title", "description", "anyOf", "allOf", "oneOf"]);
+// Bounded combinators, shared with the control plane validator
+// (crates/appcall-connectors/src/schema.rs): each branch is a schema node that
+// counts toward MAX_NODES and MAX_DEPTH, and a combinator holds 1..64 branches.
+const COMBINATORS = ["anyOf", "allOf", "oneOf"] as const;
+const MAX_COMBINATOR_BRANCHES = 64;
 
 // Annotation-only keywords the control plane's schema checker accepts
 // (crates/appcall-connectors/src/schema.rs `check_schema`). They never
@@ -32,7 +37,20 @@ export function assertStrictSchema(schema: JSONSchema, depth = 0, state = { node
   if (schema.items !== undefined && !isRecord(schema.items)) throw new Error("items must be a schema");
   if (isRecord(schema.items)) assertStrictSchema(schema.items, depth + 1, state, allowAnnotations);
   if (isRecord(schema.additionalProperties)) assertStrictSchema(schema.additionalProperties, depth + 1, state, allowAnnotations);
+  for (const key of COMBINATORS) {
+    const branches = schema[key];
+    if (branches === undefined) continue;
+    if (!Array.isArray(branches) || branches.length === 0 || branches.length > MAX_COMBINATOR_BRANCHES) throw new Error(`${key} must be an array of 1-${MAX_COMBINATOR_BRANCHES} schemas`);
+    for (const branch of branches) {
+      if (!isRecord(branch)) throw new Error(`${key} branches must be schemas`);
+      assertStrictSchema(branch, depth + 1, state, allowAnnotations);
+    }
+  }
 }
+
+// A resource-limit failure inside a combinator branch must not be mistaken
+// for "this branch does not match"; it always propagates.
+class InputLimitError extends Error {}
 
 export function validateStrictInput(input: unknown, schema: JSONSchema, credentialKeys: ReadonlySet<string> = new Set<string>()): Record<string, unknown> {
   return compileStrictValidator(schema, { credentialKeys })(input);
@@ -100,7 +118,7 @@ export function compileStrictValidator(schema: JSONSchema, options: StrictValida
     const closed = s.additionalProperties === false;
     const items = isRecord(s.items) ? compileNode(s.items) : undefined;
     const check: NodeCheck = (value, parent, key, depth, ctx) => {
-      if (depth > MAX_DEPTH || ++ctx.nodes > maxNodes) throw new Error("Input nesting exceeds limit");
+      if (depth > MAX_DEPTH || ++ctx.nodes > maxNodes) throw new InputLimitError("Input nesting exceeds limit");
       if (typeof value === "number" && !Number.isFinite(value)) throw new Error(`${pathOf(parent, key) || "input"} must be finite`);
       if (matchers.length) {
         let matched = false;
@@ -137,7 +155,38 @@ export function compileStrictValidator(schema: JSONSchema, options: StrictValida
         }
       }
     };
-    return check;
+    const allOf = Array.isArray(s.allOf) ? (s.allOf as JSONSchema[]).map(compileNode) : undefined;
+    const anyOf = Array.isArray(s.anyOf) ? (s.anyOf as JSONSchema[]).map(compileNode) : undefined;
+    const oneOf = Array.isArray(s.oneOf) ? (s.oneOf as JSONSchema[]).map(compileNode) : undefined;
+    if (!allOf && !anyOf && !oneOf) return check;
+    // "requires one of: a | b+c" when every anyOf branch only lists required
+    // keys (the github identifier alternatives); a generic message otherwise.
+    const anyOfRequired = Array.isArray(s.anyOf) && (s.anyOf as JSONSchema[]).every((b) => Object.keys(b).length === 1 && Array.isArray(b.required) && b.required.length > 0)
+      ? (s.anyOf as JSONSchema[]).map((b) => (b.required as string[]).join("+")).join(" | ")
+      : undefined;
+    const matches = (branch: NodeCheck, value: unknown, parent: string, key: string | number | undefined, depth: number, ctx: Ctx): boolean => {
+      try {
+        branch(value, parent, key, depth + 1, ctx);
+        return true;
+      } catch (error) {
+        if (error instanceof InputLimitError) throw error;
+        return false;
+      }
+    };
+    return (value, parent, key, depth, ctx) => {
+      check(value, parent, key, depth, ctx);
+      if (allOf) for (const branch of allOf) branch(value, parent, key, depth + 1, ctx);
+      if (anyOf) {
+        let matched = false;
+        for (let i = 0; i < anyOf.length && !matched; i++) matched = matches(anyOf[i], value, parent, key, depth, ctx);
+        if (!matched) throw new Error(anyOfRequired ? `${pathOf(parent, key) || "input"} requires one of: ${anyOfRequired}` : `${pathOf(parent, key) || "input"} does not match any allowed alternative`);
+      }
+      if (oneOf) {
+        let matched = 0;
+        for (let i = 0; i < oneOf.length && matched < 2; i++) if (matches(oneOf[i], value, parent, key, depth, ctx)) matched += 1;
+        if (matched !== 1) throw new Error(`${pathOf(parent, key) || "input"} must match exactly one allowed alternative`);
+      }
+    };
   };
   empty = compileNode({});
   const root = compileNode(schema);

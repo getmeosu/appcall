@@ -13,13 +13,32 @@ fn validate_optional(schema: &Option<Value>, value: &Value, code: ErrorCode) -> 
     match schema {
         None => Ok(()),
         Some(schema) => {
-            check_schema(schema, 0)?;
-            validate(schema, value, code, 0)
+            // Combinator keywords are looked up during validation only when
+            // the schema uses them, so combinator-free schemas (all but nine
+            // shipped operations) pay nothing for this support.
+            let mut combinators = false;
+            check_schema(schema, 0, &mut 0, &mut combinators)?;
+            validate(schema, value, code, 0, combinators)
         }
     }
 }
-fn check_schema(schema: &Value, depth: usize) -> Result<()> {
-    if depth > 64 {
+// Bounds shared with the runner validator (runner/bun/src/declarative/
+// strict-schema.ts): nesting depth, total schema nodes, and branches per
+// combinator. Every combinator branch is a schema node, so validation work is
+// bounded by schema size times input size; a hostile schema is refused before
+// any input is examined.
+const MAX_SCHEMA_DEPTH: usize = 64;
+const MAX_SCHEMA_NODES: usize = 4096;
+const MAX_COMBINATOR_BRANCHES: usize = 64;
+const COMBINATORS: [&str; 3] = ["anyOf", "allOf", "oneOf"];
+fn check_schema(
+    schema: &Value,
+    depth: usize,
+    nodes: &mut usize,
+    combinators: &mut bool,
+) -> Result<()> {
+    *nodes += 1;
+    if depth > MAX_SCHEMA_DEPTH || *nodes > MAX_SCHEMA_NODES {
         return Err(Error::new(ErrorCode::UnsupportedSchema));
     }
     if schema.is_boolean() {
@@ -28,7 +47,12 @@ fn check_schema(schema: &Value, depth: usize) -> Result<()> {
     let map = schema
         .as_object()
         .ok_or_else(|| Error::new(ErrorCode::UnsupportedSchema))?;
+    let mut local_combinators = false;
     for key in map.keys() {
+        if COMBINATORS.contains(&key.as_str()) {
+            local_combinators = true;
+            continue;
+        }
         if !matches!(
             key.as_str(),
             "type"
@@ -79,12 +103,31 @@ fn check_schema(schema: &Value, depth: usize) -> Result<()> {
             .ok_or_else(|| Error::new(ErrorCode::UnsupportedSchema))?
             .values()
         {
-            check_schema(child, depth + 1)?;
+            check_schema(child, depth + 1, nodes, combinators)?;
         }
     }
     for key in ["items", "additionalProperties"] {
         if let Some(child) = map.get(key) {
-            check_schema(child, depth + 1)?;
+            check_schema(child, depth + 1, nodes, combinators)?;
+        }
+    }
+    if local_combinators {
+        *combinators = true;
+    }
+    for key in COMBINATORS.iter().filter(|_| local_combinators) {
+        if let Some(branches) = map.get(*key) {
+            let branches = branches
+                .as_array()
+                .filter(|b| !b.is_empty() && b.len() <= MAX_COMBINATOR_BRANCHES)
+                .ok_or_else(|| Error::new(ErrorCode::UnsupportedSchema))?;
+            for branch in branches {
+                // Branches are subschemas; a bare boolean branch is outside the
+                // subset the runner validator shares, so refuse it here too.
+                if !branch.is_object() {
+                    return Err(Error::new(ErrorCode::UnsupportedSchema));
+                }
+                check_schema(branch, depth + 1, nodes, combinators)?;
+            }
         }
     }
     if let Some(required) = map.get("required") {
@@ -116,7 +159,13 @@ fn check_schema(schema: &Value, depth: usize) -> Result<()> {
     }
     Ok(())
 }
-fn validate(schema: &Value, value: &Value, code: ErrorCode, depth: usize) -> Result<()> {
+fn validate(
+    schema: &Value,
+    value: &Value,
+    code: ErrorCode,
+    depth: usize,
+    combinators: bool,
+) -> Result<()> {
     if depth > 64 {
         return Err(Error::new(ErrorCode::UnsupportedSchema));
     }
@@ -191,9 +240,9 @@ fn validate(schema: &Value, value: &Value, code: ErrorCode, depth: usize) -> Res
             .transpose()?;
         for (name, child) in obj {
             if let Some(sub) = properties.and_then(|p| p.get(name)) {
-                validate(sub, child, code, depth + 1)?;
+                validate(sub, child, code, depth + 1, combinators)?;
             } else if let Some(additional) = map.get("additionalProperties") {
-                validate(additional, child, code, depth + 1)?;
+                validate(additional, child, code, depth + 1, combinators)?;
             }
         }
     }
@@ -210,9 +259,12 @@ fn validate(schema: &Value, value: &Value, code: ErrorCode, depth: usize) -> Res
         }
         if let Some(items) = map.get("items") {
             for item in array {
-                validate(items, item, code, depth + 1)?;
+                validate(items, item, code, depth + 1, combinators)?;
             }
         }
+    }
+    if combinators {
+        validate_combinators(map, value, code, depth)?;
     }
     if let Some(string) = value.as_str() {
         if let Some(min) = map.get("minLength") {
@@ -224,6 +276,42 @@ fn validate(schema: &Value, value: &Value, code: ErrorCode, depth: usize) -> Res
             {
                 return Err(Error::new(code));
             }
+        }
+    }
+    Ok(())
+}
+
+fn validate_combinators(
+    map: &serde_json::Map<String, Value>,
+    value: &Value,
+    code: ErrorCode,
+    depth: usize,
+) -> Result<()> {
+    if let Some(branches) = map.get("allOf").and_then(Value::as_array) {
+        for branch in branches {
+            validate(branch, value, code, depth + 1, true)?;
+        }
+    }
+    if let Some(branches) = map.get("anyOf").and_then(Value::as_array) {
+        if !branches
+            .iter()
+            .any(|branch| validate(branch, value, code, depth + 1, true).is_ok())
+        {
+            return Err(Error::new(code));
+        }
+    }
+    if let Some(branches) = map.get("oneOf").and_then(Value::as_array) {
+        let mut matched = 0;
+        for branch in branches {
+            if validate(branch, value, code, depth + 1, true).is_ok() {
+                matched += 1;
+                if matched > 1 {
+                    break;
+                }
+            }
+        }
+        if matched != 1 {
+            return Err(Error::new(code));
         }
     }
     Ok(())

@@ -5,10 +5,8 @@ import { describe, expect, test } from "bun:test";
 import { readdirSync, readFileSync, existsSync } from "node:fs";
 import { createConnectorRegistry, defaultConnectorRegistry } from "../src/registry";
 import { handleRPC } from "../src/server";
-import { INPUT_SCHEMA_COMBINATOR_ALLOWLIST, buildInputValidators } from "../src/input_schema";
+import { buildInputValidators } from "../src/input_schema";
 import { compileStrictValidator } from "../src/declarative/strict-schema";
-import leverManifest from "../../connectors/lever/manifest.json";
-import githubManifest from "../../connectors/github/manifest.json";
 
 const connectorsRoot = new URL("../../connectors", import.meta.url).pathname;
 
@@ -183,20 +181,21 @@ describe("registry input schema validation", () => {
     expect(compiled).toBeGreaterThan(3900);
   });
 
-  test("the combinator allowlist stays narrow: each entry exists, needs it, and other constraints still apply", () => {
-    const manifests: Record<string, { operations: Record<string, { inputSchema?: unknown }> }> = { github: githubManifest as never, lever: leverManifest as never };
-    for (const [connector, ops] of Object.entries(INPUT_SCHEMA_COMBINATOR_ALLOWLIST)) {
-      for (const op of ops) {
-        const schema = manifests[connector]?.operations[op]?.inputSchema;
-        expect(schema, `${connector}.${op}`).toBeDefined();
-        expect(JSON.stringify(schema), `${connector}.${op}`).toMatch(/"(anyOf|allOf|oneOf)"/);
-        expect(() => compileStrictValidator(schema as Record<string, unknown>, { registry: true }), `${connector}.${op} needs the allowlist`).toThrow();
-      }
-    }
+  test("github combinator ops are enforced in full at dispatch, with no allowlist", async () => {
     const net = countingFetch();
     expect(defaultConnectorRegistry.executeAction("github", "deployments.get", { accessToken: "t", fetch: net.fetch, owner: "o", repo: "r", deploymentId: "not-a-number" }))
       .toMatchObject({ ok: false, code: "INVALID_ACTION_INPUT", message: "github.deployments.get: deploymentId has an invalid type (expected number)" });
+    expect(defaultConnectorRegistry.executeAction("github", "discussions.get", { accessToken: "t", fetch: net.fetch, owner: "o", repo: "r", categoryId: "C" }))
+      .toEqual({ ok: false, code: "INVALID_ACTION_INPUT", message: "github.discussions.get: input requires one of: discussionNumber | discussionId | title" });
+    expect(defaultConnectorRegistry.executeAction("github", "discussions.update", { accessToken: "t", fetch: net.fetch, owner: "o", repo: "r", discussionNumber: 7 }))
+      .toEqual({ ok: false, code: "INVALID_ACTION_INPUT", message: "github.discussions.update: input requires one of: title | body | categoryId" });
+    expect(defaultConnectorRegistry.executeAction("github", "deployments.create", { accessToken: "t", fetch: net.fetch, owner: "o", repo: "r", ref: "main", payload: 5 }))
+      .toEqual({ ok: false, code: "INVALID_ACTION_INPUT", message: "github.deployments.create: payload must match exactly one allowed alternative" });
     expect(net.calls).toEqual([]);
+    const ok = defaultConnectorRegistry.executeAction("github", "discussions.get", { accessToken: "t", fetch: net.fetch, owner: "o", repo: "r", title: "Welcome" });
+    expect(ok.ok).toBe(true);
+    if (ok.ok) await Promise.resolve(ok.output).catch(() => undefined);
+    expect(net.calls.length).toBeGreaterThan(0);
   });
 
   test("validators are compiled once: dispatch never re-checks the schema", () => {
