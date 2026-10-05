@@ -762,6 +762,22 @@ import {
   validateUpdateUserCodespaceInput,
 } from "./gap_g5";
 import {
+  createGapG6Client,
+  validateAddOrgActionsPermissionsRepositoryInput,
+  validateAddOrgRunnerLabelsInput,
+  validateAddRepoRunnerLabelsInput,
+  validateCreateOrgRunnerJitConfigInput,
+  validateCreateRepoRunnerJitConfigInput,
+  validateGetActionsPermissionsAccessInput,
+  validateRemoveAllOrgRunnerLabelsInput,
+  validateRemoveOrgActionsPermissionsRepositoryInput,
+  validateReviewDeploymentProtectionRuleInput,
+  validateSetActionsPermissionsAccessInput,
+  validateSetOrgActionsPermissionsRepositoriesInput,
+  validateSetOrgRunnerLabelsInput,
+  validateSetRepoRunnerLabelsInput,
+} from "./gap_g6";
+import {
   createReposReadsClient,
   validateGetAutolinkInput,
   validateGetReadmeInput,
@@ -9388,6 +9404,148 @@ export function listOrgMemberships(input: unknown): Record<string, unknown> | Pr
     });
   }
   return { connector: "github", action: "user.memberships.orgs.list", source: "connector", validated: validateListOrgMembershipsInput(input) };
+}
+
+
+// ─── gap G6: runners labels/jitconfig, access, org Actions repos, gate review ─
+
+function liveGapG6Client(input: Record<string, unknown>, operation: string) {
+  const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
+  return createGapG6Client({
+    accessToken: input.accessToken as string,
+    fetch: fetchFn,
+    githubClient: createGitHubClient({ accessToken: input.accessToken as string, fetch: fetchFn, operation }),
+  });
+}
+
+export function addOrgRunnerLabels(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG6Client(input, "orgs.actions.runners.labels.add").addOrgRunnerLabels(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "orgs.actions.runners.labels.add", source: "connector", totalCount: result.totalCount, labels: result.labels };
+    });
+  }
+  return { connector: "github", action: "orgs.actions.runners.labels.add", source: "connector", validated: validateAddOrgRunnerLabelsInput(input) };
+}
+
+export function setOrgRunnerLabels(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG6Client(input, "orgs.actions.runners.labels.set").setOrgRunnerLabels(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "orgs.actions.runners.labels.set", source: "connector", totalCount: result.totalCount, labels: result.labels };
+    });
+  }
+  return { connector: "github", action: "orgs.actions.runners.labels.set", source: "connector", validated: validateSetOrgRunnerLabelsInput(input) };
+}
+
+export function removeAllOrgRunnerLabels(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG6Client(input, "orgs.actions.runners.labels.remove_all").removeAllOrgRunnerLabels(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "orgs.actions.runners.labels.remove_all", source: "connector", totalCount: result.totalCount, labels: result.labels };
+    });
+  }
+  return { connector: "github", action: "orgs.actions.runners.labels.remove_all", source: "connector", validated: validateRemoveAllOrgRunnerLabelsInput(input) };
+}
+
+export function addRepoRunnerLabels(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG6Client(input, "repos.actions.runners.labels.add").addRepoRunnerLabels(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "repos.actions.runners.labels.add", source: "connector", totalCount: result.totalCount, labels: result.labels };
+    });
+  }
+  return { connector: "github", action: "repos.actions.runners.labels.add", source: "connector", validated: validateAddRepoRunnerLabelsInput(input) };
+}
+
+export function setRepoRunnerLabels(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG6Client(input, "repos.actions.runners.labels.set").setRepoRunnerLabels(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "repos.actions.runners.labels.set", source: "connector", totalCount: result.totalCount, labels: result.labels };
+    });
+  }
+  return { connector: "github", action: "repos.actions.runners.labels.set", source: "connector", validated: validateSetRepoRunnerLabelsInput(input) };
+}
+
+export function createOrgRunnerJitConfig(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG6Client(input, "orgs.actions.runners.jitconfig.create").createOrgRunnerJitConfig(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "orgs.actions.runners.jitconfig.create", source: "connector", jitConfig: result.jitConfig };
+    });
+  }
+  return { connector: "github", action: "orgs.actions.runners.jitconfig.create", source: "connector", validated: validateCreateOrgRunnerJitConfigInput(input) };
+}
+
+export function createRepoRunnerJitConfig(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG6Client(input, "repos.actions.runners.jitconfig.create").createRepoRunnerJitConfig(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "repos.actions.runners.jitconfig.create", source: "connector", jitConfig: result.jitConfig };
+    });
+  }
+  return { connector: "github", action: "repos.actions.runners.jitconfig.create", source: "connector", validated: validateCreateRepoRunnerJitConfigInput(input) };
+}
+
+export function getActionsPermissionsAccess(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG6Client(input, "actions.permissions.access.get").getActionsPermissionsAccess(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "actions.permissions.access.get", source: "connector", access: result.access };
+    });
+  }
+  return { connector: "github", action: "actions.permissions.access.get", source: "connector", validated: validateGetActionsPermissionsAccessInput(input) };
+}
+
+export function setActionsPermissionsAccess(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG6Client(input, "actions.permissions.access.set").setActionsPermissionsAccess(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "actions.permissions.access.set", source: "connector", access: result.access };
+    });
+  }
+  return { connector: "github", action: "actions.permissions.access.set", source: "connector", validated: validateSetActionsPermissionsAccessInput(input) };
+}
+
+export function removeOrgActionsPermissionsRepository(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG6Client(input, "orgs.actions.permissions.repositories.remove").removeOrgActionsPermissionsRepository(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "orgs.actions.permissions.repositories.remove", source: "connector", removed: result.removed, org: result.org, repositoryId: result.repositoryId };
+    });
+  }
+  return { connector: "github", action: "orgs.actions.permissions.repositories.remove", source: "connector", validated: validateRemoveOrgActionsPermissionsRepositoryInput(input) };
+}
+
+export function setOrgActionsPermissionsRepositories(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG6Client(input, "orgs.actions.permissions.repositories.set").setOrgActionsPermissionsRepositories(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "orgs.actions.permissions.repositories.set", source: "connector", set: result.set, org: result.org, selectedRepositoryIds: result.selectedRepositoryIds };
+    });
+  }
+  return { connector: "github", action: "orgs.actions.permissions.repositories.set", source: "connector", validated: validateSetOrgActionsPermissionsRepositoriesInput(input) };
+}
+
+export function addOrgActionsPermissionsRepository(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG6Client(input, "orgs.actions.permissions.repositories.add").addOrgActionsPermissionsRepository(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "orgs.actions.permissions.repositories.add", source: "connector", added: result.added, org: result.org, repositoryId: result.repositoryId };
+    });
+  }
+  return { connector: "github", action: "orgs.actions.permissions.repositories.add", source: "connector", validated: validateAddOrgActionsPermissionsRepositoryInput(input) };
+}
+
+export function reviewDeploymentProtectionRule(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG6Client(input, "actions.runs.deployment_protection_rule.review").reviewDeploymentProtectionRule(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "actions.runs.deployment_protection_rule.review", source: "connector", reviewed: result.reviewed, owner: result.owner, repo: result.repo, runId: result.runId, environmentName: result.environmentName, state: result.state };
+    });
+  }
+  return { connector: "github", action: "actions.runs.deployment_protection_rule.review", source: "connector", validated: validateReviewDeploymentProtectionRuleInput(input) };
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
