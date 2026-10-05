@@ -91,7 +91,13 @@ export function createAuthClient(config: SmartRecruitersAuthClientConfig): JobBo
  */
 export type SmartRecruitersApiClient = {
   getJSON(path: string): Promise<unknown>;
-  request(method: "POST" | "PUT" | "PATCH" | "DELETE", path: string, body?: unknown): Promise<unknown>;
+  request(
+    method: "POST" | "PUT" | "PATCH" | "DELETE",
+    path: string,
+    body?: unknown,
+    /** Defaults to application/json; jobs.update sends application/json-patch+json. */
+    contentType?: string,
+  ): Promise<unknown>;
 };
 
 export function createApiClient(config: SmartRecruitersAuthClientConfig): SmartRecruitersApiClient {
@@ -107,12 +113,12 @@ export function createApiClient(config: SmartRecruitersAuthClientConfig): SmartR
   });
   const base = "https://api.smartrecruiters.com";
 
-  async function send(method: string, path: string, body?: unknown): Promise<unknown> {
+  async function send(method: string, path: string, body?: unknown, contentType = "application/json"): Promise<unknown> {
     const headers: Record<string, string> = {
       "X-SmartToken": config.apiKey,
       Accept: "application/json",
     };
-    if (body !== undefined) headers["Content-Type"] = "application/json";
+    if (body !== undefined) headers["Content-Type"] = contentType;
     const response = await http.fetchText(`${base}${path}`, {
       method,
       headers,
@@ -137,6 +143,6 @@ export function createApiClient(config: SmartRecruitersAuthClientConfig): SmartR
 
   return {
     getJSON: (path) => send("GET", path),
-    request: (method, path, body) => send(method, path, body),
+    request: (method, path, body, contentType) => send(method, path, body, contentType),
   };
 }

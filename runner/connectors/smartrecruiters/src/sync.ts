@@ -11,7 +11,7 @@
  */
 
 import { createClient, createAuthClient } from "./http";
-import { assertSafePathSegment } from "../../_shared/jobboard";
+import { candidateIdSegment, jobIdSegment } from "./ids";
 import {
   parseJobsResponse,
   parsePostingsResponse,
@@ -128,7 +128,7 @@ export interface ExecuteJobsGetSyncOutput {
 export async function executeJobsGetSync(
   input: ExecuteJobsGetSyncInput,
 ): Promise<ExecuteJobsGetSyncOutput> {
-  const id = assertSafePathSegment(input.id, "id");
+  const id = jobIdSegment(input.id, "id");
   const client = createAuthClient({
     apiKey: input.apiKey,
     fetch: input.fetch,
@@ -171,7 +171,7 @@ export async function executeCandidatesListSync(
       limit: input.limit != null ? String(input.limit) : undefined,
       pageId: input.pageId,
       q: input.q,
-      jobId: input.jobId,
+      jobId: input.jobId != null ? jobIdSegment(input.jobId, "jobId") : undefined,
       updatedAfter: input.updatedAfter,
       status: input.status,
     });
@@ -195,7 +195,7 @@ export interface ExecuteCandidatesGetSyncOutput {
 export async function executeCandidatesGetSync(
   input: ExecuteCandidatesGetSyncInput,
 ): Promise<ExecuteCandidatesGetSyncOutput> {
-  const id = assertSafePathSegment(input.id, "id");
+  const id = candidateIdSegment(input.id, "id");
   const client = createAuthClient({
     apiKey: input.apiKey,
     fetch: input.fetch,

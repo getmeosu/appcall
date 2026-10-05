@@ -401,3 +401,64 @@ describe("SmartRecruiters G1 through the registry (effect policy)", () => {
     expect(props.calls).toHaveLength(1);
   });
 });
+
+describe("SmartRecruiters G1 id consistency (raw vs prefixed)", () => {
+  test("applications.get accepts sr-candidate: and sr-job: equally", async () => {
+    const raw = stub([{ body: applicationGet }]);
+    await executeApplicationsGet({ ...auth, id: C, jobId: J, fetch: raw.impl });
+    const pref = stub([{ body: applicationGet }]);
+    await executeApplicationsGet({ ...auth, id: `sr-candidate:${C}`, jobId: `sr-job:${J}`, fetch: pref.impl });
+    expect(raw.calls[0]!.url.pathname).toBe(`/candidates/${C}/jobs/${J}`);
+    expect(pref.calls[0]!.url.pathname).toBe(`/candidates/${C}/jobs/${J}`);
+  });
+
+  test("candidates.update accepts sr-candidate: prefix", async () => {
+    const { calls, impl } = stub([{ body: candidateUpdated }]);
+    await executeCandidatesUpdate({ ...auth, id: `sr-candidate:${C}`, firstName: "Ada", fetch: impl });
+    expect(calls[0]!.url.pathname).toBe(`/candidates/${C}`);
+  });
+
+  test("applications.create accepts sr-job: and hits the same URL", async () => {
+    const raw = stub([{ body: applicationCreated, status: 201 }]);
+    await executeApplicationsCreate({ ...auth, jobId: J, firstName: "Ada", lastName: "Lovelace", email: "ada@example.com", fetch: raw.impl });
+    const pref = stub([{ body: applicationCreated, status: 201 }]);
+    await executeApplicationsCreate({ ...auth, jobId: `sr-job:${J}`, firstName: "Ada", lastName: "Lovelace", email: "ada@example.com", fetch: pref.impl });
+    expect(pref.calls[0]!.url.href).toBe(raw.calls[0]!.url.href);
+  });
+
+  test("unsafe candidate / job ids are still rejected before any request", async () => {
+    for (const [id, jobId] of [
+      ["../x", J],
+      ["sr-candidate:", J],
+      ["sr-candidate:a/b", J],
+      [C, "sr-job:"],
+      [C, "sr-job:../x"],
+      [`sr-job:${C}`, J],
+    ] as const) {
+      const s = stub([{ body: applicationGet }]);
+      await expect(executeApplicationsGet({ ...auth, id, jobId, fetch: s.impl })).rejects.toThrow(/required|letters, digits/);
+      expect(s.calls).toHaveLength(0);
+    }
+  });
+
+  test("dot-segment candidate / job ids (raw or prefixed) are rejected before any request", async () => {
+    for (const [id, jobId] of [
+      [".", J],
+      ["..", J],
+      ["sr-candidate:.", J],
+      ["sr-candidate:..", J],
+      [C, "."],
+      [C, ".."],
+      [C, "sr-job:.."],
+    ] as const) {
+      const s = stub([{ body: applicationGet }]);
+      await expect(executeApplicationsGet({ ...auth, id, jobId, fetch: s.impl })).rejects.toThrow("must not be a dot segment");
+      expect(s.calls).toHaveLength(0);
+    }
+    for (const id of ["..", "sr-candidate:.."]) {
+      const s = stub([{ body: candidateUpdated }]);
+      await expect(executeCandidatesUpdate({ ...auth, id, firstName: "Ada", fetch: s.impl })).rejects.toThrow("must not be a dot segment");
+      expect(s.calls).toHaveLength(0);
+    }
+  });
+});

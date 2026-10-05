@@ -31,6 +31,27 @@ const G1_EFFECTS: Record<string, [string, string | undefined, string | undefined
   "job_applications.get": ["read", undefined, undefined, "job_applications_read"],
 };
 
+// G2 lock: [sideEffect, effectPolicy, reconcile, OAuth scope].
+const G2_EFFECTS: Record<string, [string, string | undefined, string | undefined, string]> = {
+  "jobs.search": ["read", undefined, undefined, "jobs_read"],
+  "jobs.create": ["write", undefined, undefined, "jobs_manage"],
+  "jobs.update": ["write", undefined, undefined, "jobs_manage"],
+  "jobs.update_status": ["write", "Reconcile", "jobs.get", "jobs_manage"],
+  "jobs.status_history": ["read", undefined, undefined, "jobs_read"],
+  "jobs.hiring_team.get": ["read", undefined, undefined, "jobs_read"],
+  "jobs.hiring_team.add": ["write", undefined, undefined, "jobs_manage"],
+  "jobs.hiring_team.remove": ["destructive", undefined, undefined, "jobs_manage"],
+  "jobs.note.get": ["read", undefined, undefined, "jobs_read"],
+  "jobs.note.update": ["write", "Reconcile", "jobs.note.get", "jobs_manage"],
+  "jobs.publish": ["write", undefined, undefined, "jobs_publications_manage"],
+  "jobs.unpublish": ["destructive", undefined, undefined, "jobs_publications_manage"],
+  "jobs.publications.list": ["read", undefined, undefined, "jobs_read"],
+  "jobs.positions.list": ["read", undefined, undefined, "jobs_read"],
+  "postings.get": ["read", undefined, undefined, "internal_postings_read"],
+};
+
+const NEW_EFFECTS = { ...G1_EFFECTS, ...G2_EFFECTS };
+
 const STRICT_KEYS = new Set([
   "type",
   "enum",
@@ -74,8 +95,8 @@ describe("SmartRecruiters manifest", () => {
     expect(manifest.key).toBe("smartrecruiters");
   });
 
-  it("has version 0.4.0", () => {
-    expect(manifest.version).toBe("0.4.0");
+  it("has version 0.5.0", () => {
+    expect(manifest.version).toBe("0.5.0");
   });
 
   it("uses bun runtime", () => {
@@ -116,9 +137,9 @@ describe("SmartRecruiters manifest", () => {
     expect(manifest.operations.healthcheck.request.query).toEqual({ limit: 1 });
   });
 
-  it("declares the 8 SR-1 operations plus the 15 G1 operations (23)", () => {
-    expect(Object.keys(manifest.operations).sort()).toEqual([...SR1_OPS, ...Object.keys(G1_EFFECTS)].sort());
-    expect(Object.keys(manifest.operations)).toHaveLength(23);
+  it("declares the 8 SR-1 operations plus 15 G1 and 15 G2 operations (38)", () => {
+    expect(Object.keys(manifest.operations).sort()).toEqual([...SR1_OPS, ...Object.keys(NEW_EFFECTS)].sort());
+    expect(Object.keys(manifest.operations)).toHaveLength(38);
   });
 
   it("declares authenticated healthcheck request", () => {
@@ -130,8 +151,8 @@ describe("SmartRecruiters manifest", () => {
     expect(manifest.models).toEqual(["job", "candidate", "user", "interview"]);
   });
 
-  it("G1 ops carry the locked sideEffect / effect keys and no Idempotent anywhere", () => {
-    for (const [name, [sideEffect, policy, reconcile]] of Object.entries(G1_EFFECTS)) {
+  it("G1/G2 ops carry the locked sideEffect / effect keys and no Idempotent anywhere", () => {
+    for (const [name, [sideEffect, policy, reconcile]] of Object.entries(NEW_EFFECTS)) {
       const op = ops[name]!;
       expect(op.kind).toBe("action");
       expect(op.sideEffect).toBe(sideEffect);
@@ -143,7 +164,7 @@ describe("SmartRecruiters manifest", () => {
   });
 
   it("Reconcile observes take the write's own identifying inputs", () => {
-    for (const [name, [, policy, reconcile]] of Object.entries(G1_EFFECTS)) {
+    for (const [name, [, policy, reconcile]] of Object.entries(NEW_EFFECTS)) {
       if (policy !== "Reconcile") continue;
       const required = (ops[name]!.inputSchema as { required: string[] }).required;
       const target = ops[reconcile!]!;
@@ -152,15 +173,15 @@ describe("SmartRecruiters manifest", () => {
     }
   });
 
-  it("G1 input schemas use only the strict subset", () => {
-    for (const name of Object.keys(G1_EFFECTS)) {
+  it("G1/G2 input schemas use only the strict subset", () => {
+    for (const name of Object.keys(NEW_EFFECTS)) {
       expect({ name, violations: strictViolations(ops[name]!.inputSchema, name) }).toEqual({ name, violations: [] });
     }
   });
 
-  it("each G1 op declares its own OAuth scope and the default connect set stays empty", () => {
+  it("each G1/G2 op declares its own OAuth scope and the default connect set stays empty", () => {
     expect(manifest.auth.scopes).toEqual([]);
-    for (const [name, [, , , scope]] of Object.entries(G1_EFFECTS)) {
+    for (const [name, [, , , scope]] of Object.entries(NEW_EFFECTS)) {
       expect(String(ops[name]!.description)).toContain(`OAuth scope`);
       expect(String(ops[name]!.description)).toContain(scope);
     }
@@ -174,5 +195,32 @@ describe("SmartRecruiters manifest", () => {
   it("applications.update_status enumerates the documented CandidateStatusEnum", () => {
     const status = (ops["applications.update_status"]!.inputSchema as { properties: { status: { enum: string[] } } }).properties.status;
     expect(status.enum).toEqual(["LEAD", "NEW", "IN_REVIEW", "INTERVIEW", "OFFERED", "HIRED", "REJECTED", "WITHDRAWN", "TRANSFERRED"]);
+  });
+
+  it("jobs.update only accepts fields jobs.get returns verbatim", () => {
+    const props = Object.keys((ops["jobs.update"]!.inputSchema as { properties: object }).properties).sort();
+    expect(props).toEqual(["id", "refNumber", "title"]);
+  });
+
+  it("jobs.search does not expose the deprecated offset or single-value status parameters", () => {
+    const props = Object.keys((ops["jobs.search"]!.inputSchema as { properties: object }).properties);
+    expect(props).not.toContain("offset");
+    expect(props).not.toContain("status");
+    expect(props).toContain("pageId");
+    expect(props).toContain("statuses");
+  });
+
+  it("deletes are destructive and omit effect keys", () => {
+    for (const name of ["jobs.hiring_team.remove", "jobs.unpublish"]) {
+      expect(ops[name]!.sideEffect).toBe("destructive");
+      expect(ops[name]!.effectPolicy).toBeUndefined();
+      expect(ops[name]!.reconcile).toBeUndefined();
+    }
+  });
+
+  it("jobs.update omits effect keys (PATCH may trigger approval)", () => {
+    expect(ops["jobs.update"]!.sideEffect).toBe("write");
+    expect(ops["jobs.update"]!.effectPolicy).toBeUndefined();
+    expect(ops["jobs.update"]!.reconcile).toBeUndefined();
   });
 });
