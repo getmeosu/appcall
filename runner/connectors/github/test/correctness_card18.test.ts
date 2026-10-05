@@ -7,10 +7,10 @@ import { generateReleaseNotes, getGitRef, listUsers } from "../src/actions";
 import { validateListUsersInput } from "../src/correctness_card18";
 
 describe("github correctness card 18", () => {
-  test("version is 0.74.0 at 756 ops with the read/write breakdown", () => {
-    expect(manifest.version).toBe("0.74.0");
+  test("version is 0.75.0 at 770 ops with the read/write breakdown", () => {
+    expect(manifest.version).toBe("0.75.0");
     const ops = manifest.operations as Record<string, Record<string, unknown>>;
-    expect(Object.keys(ops)).toHaveLength(756);
+    expect(Object.keys(ops)).toHaveLength(770);
     const kinds = { action: 0, sync: 0, webhook: 0 };
     const side = { read: 0, write: 0, absent: 0 };
     for (const op of Object.values(ops)) {
@@ -21,8 +21,8 @@ describe("github correctness card 18", () => {
         else side.absent += 1;
       }
     }
-    expect(kinds).toEqual({ action: 706, sync: 4, webhook: 46 });
-    expect(side).toEqual({ read: 376, write: 315, absent: 15 });
+    expect(kinds).toEqual({ action: 720, sync: 4, webhook: 46 });
+    expect(side).toEqual({ read: 383, write: 322, absent: 15 });
 
     const notes = ops["releases.generate_notes"];
     expect(notes.sideEffect).toBe("read");

@@ -32,10 +32,10 @@ const pkg = {
 };
 
 describe("github card8 app and package reads", () => {
-  test("version stays 0.74.0 and the five reads omit effect fields", () => {
-    expect(manifest.version).toBe("0.74.0");
+  test("version stays 0.75.0 and the five reads omit effect fields", () => {
+    expect(manifest.version).toBe("0.75.0");
     expect(READS).toHaveLength(5);
-    expect(Object.keys(manifest.operations)).toHaveLength(756);
+    expect(Object.keys(manifest.operations)).toHaveLength(770);
     for (const key of READS) {
       const op = manifest.operations[key] as Record<string, unknown>;
       expect(op.kind).toBe("action");
