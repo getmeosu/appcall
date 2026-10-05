@@ -527,6 +527,15 @@ import {
   validateUpdateStatusCheckProtectionInput,
 } from "./write_card5";
 
+import {
+  createWriteCard6Client,
+  validateDeleteUserProjectItemInput,
+  validateCreateCheckSuiteInput,
+  validateDeleteThreadSubscriptionInput,
+  validateMarkThreadDoneInput,
+  validateSetThreadSubscriptionInput,
+} from "./write_card6";
+
 
 
 import {
@@ -7339,6 +7348,68 @@ export function updateBranchProtectionRequiredStatusChecks(input: unknown): Reco
     });
   }
   return { connector: "github", action: "branches.protection.required_status_checks.update", source: "connector", validated: validateUpdateStatusCheckProtectionInput(input) };
+}
+
+
+// ─── write card 6: project item, check suite, and notification writes ────────
+
+function liveWriteCard6Client(input: Record<string, unknown>, operation: string) {
+  const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
+  return createWriteCard6Client({
+    accessToken: input.accessToken as string,
+    fetch: fetchFn,
+    githubClient: createGitHubClient({ accessToken: input.accessToken as string, fetch: fetchFn, operation }),
+  });
+}
+
+export function deleteUserProjectItem(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveWriteCard6Client(input, "users.projects_v2.items.delete").deleteUserProjectItem(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "users.projects_v2.items.delete", source: "connector", deleted: result.deleted, username: result.username, projectNumber: result.projectNumber, itemId: result.itemId };
+    });
+  }
+  return { connector: "github", action: "users.projects_v2.items.delete", source: "connector", validated: validateDeleteUserProjectItemInput(input) };
+}
+
+export function createCheckSuite(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveWriteCard6Client(input, "checks.suites.create").createCheckSuite(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "checks.suites.create", source: "connector", suite: result.suite };
+    });
+  }
+  return { connector: "github", action: "checks.suites.create", source: "connector", validated: validateCreateCheckSuiteInput(input) };
+}
+
+export function deleteThreadSubscription(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveWriteCard6Client(input, "notifications.threads.subscription.delete").deleteThreadSubscription(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "notifications.threads.subscription.delete", source: "connector", deleted: result.deleted, threadId: result.threadId };
+    });
+  }
+  return { connector: "github", action: "notifications.threads.subscription.delete", source: "connector", validated: validateDeleteThreadSubscriptionInput(input) };
+}
+
+export function markThreadDone(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveWriteCard6Client(input, "notifications.threads.mark_done").markThreadDone(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "notifications.threads.mark_done", source: "connector", deleted: result.deleted, threadId: result.threadId };
+    });
+  }
+  return { connector: "github", action: "notifications.threads.mark_done", source: "connector", validated: validateMarkThreadDoneInput(input) };
+}
+
+export function setThreadSubscription(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveWriteCard6Client(input, "notifications.threads.subscription.set").setThreadSubscription(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "notifications.threads.subscription.set", source: "connector", subscription: result.subscription };
+    });
+  }
+  return { connector: "github", action: "notifications.threads.subscription.set", source: "connector", validated: validateSetThreadSubscriptionInput(input) };
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
