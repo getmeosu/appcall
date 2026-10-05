@@ -29,8 +29,8 @@ const READS = [
 
 describe("github N8 environment and org action variables", () => {
   test("manifest stays on the base version and wires Idempotent reconcile like milestones.create", () => {
-    expect(manifest.version).toBe("0.60.0");
-    expect(Object.keys(manifest.operations).length).toBe(623);
+    expect(manifest.version).toBe("0.61.0");
+    expect(Object.keys(manifest.operations).length).toBe(630);
     for (const key of READS) {
       const op = manifest.operations[key] as Record<string, unknown>;
       expect(op.kind).toBe("action");

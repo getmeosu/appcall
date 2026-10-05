@@ -640,6 +640,13 @@ import {
   deleteOrgActionsRunner as ghDeleteOrgActionsRunner,
   deleteRepoActionsRunner as ghDeleteRepoActionsRunner,
   followUser as ghFollowUser,
+  unfollowUser as ghUnfollowUser,
+  createGistComment as ghCreateGistComment,
+  deleteGistComment as ghDeleteGistComment,
+  updateGistComment as ghUpdateGistComment,
+  createGistFork as ghCreateGistFork,
+  starGist as ghStarGist,
+  unstarGist as ghUnstarGist,
 } from "../../connectors/github/src/actions";
 import { healthcheck as githubHealthcheck } from "../../connectors/github/src/healthcheck";
 import { executeIssuesListSync as listGitHubIssues, executePullRequestsListSync as listGitHubPRs, executeCommitsListSync as listGitHubCommits, executeRepositoriesListSync as listGitHubRepos } from "../../connectors/github/src/sync";
@@ -2048,6 +2055,13 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
       "orgs.actions.runners.delete": ghDeleteOrgActionsRunner,
       "repos.actions.runners.delete": ghDeleteRepoActionsRunner,
       "user.following.follow": ghFollowUser,
+      "user.following.unfollow": ghUnfollowUser,
+      "gists.comments.create": ghCreateGistComment,
+      "gists.comments.delete": ghDeleteGistComment,
+      "gists.comments.update": ghUpdateGistComment,
+      "gists.forks.create": ghCreateGistFork,
+      "gists.star": ghStarGist,
+      "gists.unstar": ghUnstarGist,
     },
     salesforce: {
       "contacts.create": createContact,
