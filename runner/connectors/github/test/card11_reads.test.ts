@@ -52,10 +52,10 @@ const runner = {
 };
 
 describe("github card11 runner and social reads", () => {
-  test("version stays 0.67.0 and the thirteen reads omit effect fields", () => {
-    expect(manifest.version).toBe("0.67.0");
+  test("version stays 0.68.0 and the thirteen reads omit effect fields", () => {
+    expect(manifest.version).toBe("0.68.0");
     expect(READS).toHaveLength(13);
-    expect(Object.keys(manifest.operations)).toHaveLength(672);
+    expect(Object.keys(manifest.operations)).toHaveLength(685);
     for (const key of READS) {
       const op = manifest.operations[key] as Record<string, unknown>;
       expect(op.kind).toBe("action");
@@ -68,7 +68,7 @@ describe("github card11 runner and social reads", () => {
     expect(manifest.operations["repos.actions.runners.get"]).toBeDefined();
     expect(manifest.operations["orgs.actions.runners.labels.list"]).toBeUndefined();
     expect(manifest.operations["repos.actions.runners.labels.list"]).toBeDefined();
-    expect(manifest.operations["user.following.check"]).toBeUndefined();
+    expect(manifest.operations["user.following.check"]).toBeDefined();
   });
 
   test("reads the documented paths with the bearer token", async () => {

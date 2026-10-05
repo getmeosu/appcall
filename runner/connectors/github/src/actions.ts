@@ -680,6 +680,22 @@ import {
   createCorrectnessCard18Client,
   validateListUsersInput,
 } from "./correctness_card18";
+import {
+  createGapG1Client,
+  validateCheckAuthenticatedFollowingInput,
+  validateGetAuthenticatedInteractionLimitsInput,
+  validateGetPremiumRequestUsageInput,
+  validateGetUsageSummaryInput,
+  validateGetUserByIdInput,
+  validateListAuthenticatedPackagesInput,
+  validateListAuthenticatedRepoInvitationsInput,
+  validateListCodesOfConductInput,
+  validateListGitignoreTemplatesInput,
+  validateListLicensesInput,
+  validateListPublicEmailsInput,
+  validateListUserAttestationsInput,
+  validateSetAuthenticatedInteractionLimitsInput,
+} from "./gap_g1";
 
 
 
@@ -8663,6 +8679,147 @@ export function listUsers(input: unknown): Record<string, unknown> | Promise<Rec
     });
   }
   return { connector: "github", action: "users.list", source: "connector", validated: validateListUsersInput(input) };
+}
+
+// ─── gap G1: users, account, and meta reads ──────────────────────────────────
+
+function liveGapG1Client(input: Record<string, unknown>, operation: string) {
+  const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
+  return createGapG1Client({
+    accessToken: input.accessToken as string,
+    fetch: fetchFn,
+    githubClient: createGitHubClient({ accessToken: input.accessToken as string, fetch: fetchFn, operation }),
+  });
+}
+
+export function getUserById(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG1Client(input, "users.get_by_id").getUserById(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "users.get_by_id", source: "connector", user: result.user };
+    });
+  }
+  return { connector: "github", action: "users.get_by_id", source: "connector", validated: validateGetUserByIdInput(input) };
+}
+
+export function checkAuthenticatedUserFollowing(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG1Client(input, "user.following.check").checkAuthenticatedFollowing(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "user.following.check", source: "connector", following: result.following };
+    });
+  }
+  return { connector: "github", action: "user.following.check", source: "connector", validated: validateCheckAuthenticatedFollowingInput(input) };
+}
+
+export function listAuthenticatedUserPublicEmails(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG1Client(input, "user.public_emails.list").listPublicEmails(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "user.public_emails.list", source: "connector", emails: result.emails };
+    });
+  }
+  return { connector: "github", action: "user.public_emails.list", source: "connector", validated: validateListPublicEmailsInput(input) };
+}
+
+export function listAuthenticatedUserRepoInvitations(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG1Client(input, "user.repository_invitations.list").listRepositoryInvitations(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "user.repository_invitations.list", source: "connector", invitations: result.invitations };
+    });
+  }
+  return { connector: "github", action: "user.repository_invitations.list", source: "connector", validated: validateListAuthenticatedRepoInvitationsInput(input) };
+}
+
+export function listAuthenticatedUserPackages(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG1Client(input, "user.packages.list").listPackages(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "user.packages.list", source: "connector", packages: result.packages };
+    });
+  }
+  return { connector: "github", action: "user.packages.list", source: "connector", validated: validateListAuthenticatedPackagesInput(input) };
+}
+
+export function getAuthenticatedUserInteractionLimits(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG1Client(input, "user.interaction_limits.get").getInteractionLimits(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "user.interaction_limits.get", source: "connector", limits: result.limits, present: result.present };
+    });
+  }
+  return { connector: "github", action: "user.interaction_limits.get", source: "connector", validated: validateGetAuthenticatedInteractionLimitsInput(input) };
+}
+
+export function setAuthenticatedUserInteractionLimits(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG1Client(input, "user.interaction_limits.set").setInteractionLimits(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "user.interaction_limits.set", source: "connector", limits: result.limits };
+    });
+  }
+  return { connector: "github", action: "user.interaction_limits.set", source: "connector", validated: validateSetAuthenticatedInteractionLimitsInput(input) };
+}
+
+export function listUserAttestations(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG1Client(input, "users.attestations.list").listAttestations(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "users.attestations.list", source: "connector", attestations: result.attestations };
+    });
+  }
+  return { connector: "github", action: "users.attestations.list", source: "connector", validated: validateListUserAttestationsInput(input) };
+}
+
+export function getUserPremiumRequestUsage(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG1Client(input, "users.billing.premium_request_usage.get").getPremiumRequestUsage(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "users.billing.premium_request_usage.get", source: "connector", timePeriod: result.timePeriod, user: result.user, usageItems: result.usageItems };
+    });
+  }
+  return { connector: "github", action: "users.billing.premium_request_usage.get", source: "connector", validated: validateGetPremiumRequestUsageInput(input) };
+}
+
+export function getUserBillingUsageSummary(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG1Client(input, "users.billing.usage.summary.get").getUsageSummary(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "users.billing.usage.summary.get", source: "connector", timePeriod: result.timePeriod, user: result.user, usageItems: result.usageItems };
+    });
+  }
+  return { connector: "github", action: "users.billing.usage.summary.get", source: "connector", validated: validateGetUsageSummaryInput(input) };
+}
+
+export function listCodesOfConduct(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG1Client(input, "codes_of_conduct.list").listCodesOfConduct(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "codes_of_conduct.list", source: "connector", codesOfConduct: result.codesOfConduct };
+    });
+  }
+  return { connector: "github", action: "codes_of_conduct.list", source: "connector", validated: validateListCodesOfConductInput(input) };
+}
+
+export function listLicenses(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG1Client(input, "licenses.list").listLicenses(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "licenses.list", source: "connector", licenses: result.licenses };
+    });
+  }
+  return { connector: "github", action: "licenses.list", source: "connector", validated: validateListLicensesInput(input) };
+}
+
+export function listGitignoreTemplates(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG1Client(input, "gitignore.templates.list").listGitignoreTemplates(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "gitignore.templates.list", source: "connector", templates: result.templates };
+    });
+  }
+  return { connector: "github", action: "gitignore.templates.list", source: "connector", validated: validateListGitignoreTemplatesInput(input) };
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
