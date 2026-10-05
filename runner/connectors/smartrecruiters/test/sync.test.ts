@@ -31,8 +31,9 @@ describe("SmartRecruiters jobs.list sync", () => {
   test("requests the documented endpoint on the allowed host", async () => {
     const { calls, impl } = stubFetch('{"content":[{"id":"j1","name":"Engineer"}],"totalFound":1}');
 
-    await executeJobsListSync({ company: "acme", fetch: impl });
+    const result = await executeJobsListSync({ company: "acme", fetch: impl });
 
+    expect(result.jobs[0].title).toBe("Engineer");
     expect(calls).toHaveLength(1);
     const url = new URL(calls[0].url);
     expect(url.hostname).toBe("api.smartrecruiters.com");
@@ -309,7 +310,9 @@ describe("SmartRecruiters postings.list sync", () => {
     expect(url.pathname).toBe("/v1/companies/acme/postings");
     expect(calls[0].method).toBe("GET");
     expect(result.postings).toHaveLength(2);
-    expect(result.postings[0].id).toBe("sr-job:post-001");
+    expect(result.postings[0].id).toBe("sr-job:744000153583411");
+    expect(result.postings[0].title).toBe("Backend Engineer");
+    expect(result.postings[0].createdAt).toBe("2025-08-01T09:00:00.000Z");
     expect(result.total).toBe(2);
   });
 
