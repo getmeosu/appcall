@@ -6,8 +6,8 @@ describe("SmartRecruiters manifest", () => {
     expect(manifest.key).toBe("smartrecruiters");
   });
 
-  it("has version 0.3.1", () => {
-    expect(manifest.version).toBe("0.3.1");
+  it("has version 0.3.2", () => {
+    expect(manifest.version).toBe("0.3.2");
   });
 
   it("uses bun runtime", () => {
@@ -41,6 +41,24 @@ describe("SmartRecruiters manifest", () => {
     expect(manifest.operations["candidates.get"]).toBeTruthy();
     expect(manifest.operations["users.list"]).toBeTruthy();
     expect(manifest.operations["interviews.list"]).toBeTruthy();
+  });
+
+  it("healthcheck uses the current Users API, not the deprecated root /users", () => {
+    expect(manifest.operations.healthcheck.request.path).toBe("/user-api/v201804/users");
+    expect(manifest.operations.healthcheck.request.query).toEqual({ limit: 1 });
+  });
+
+  it("keeps the same 8 operations", () => {
+    expect(Object.keys(manifest.operations).sort()).toEqual([
+      "candidates.get",
+      "candidates.list",
+      "healthcheck",
+      "interviews.list",
+      "jobs.get",
+      "jobs.list",
+      "postings.list",
+      "users.list",
+    ]);
   });
 
   it("declares authenticated healthcheck request", () => {
