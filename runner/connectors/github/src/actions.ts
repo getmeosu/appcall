@@ -643,6 +643,19 @@ import {
 } from "./write_card14";
 
 
+import {
+  createWriteCard15Client,
+  validateCreateSecurityAdvisoryReportInput,
+  validateCreateSecurityAdvisoryForkInput,
+  validateCreateRepoKeyInput,
+  validateDeleteRepoKeyInput,
+  validateCreateRepoRulesetInput,
+  validateDeleteRepoRulesetInput,
+  validateUpdateRepoRulesetInput,
+} from "./write_card15";
+
+
+
 
 import {
   createReposReadsClient,
@@ -8345,6 +8358,88 @@ export function requestPagesBuild(input: unknown): Record<string, unknown> | Pro
     });
   }
   return { connector: "github", action: "repos.pages.builds.request", source: "connector", validated: validateRequestPagesBuildInput(input) };
+}
+
+
+// ─── write card 15: security advisory reports/forks, deploy keys, rulesets ─
+
+function liveWriteCard15Client(input: Record<string, unknown>, operation: string) {
+  const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
+  return createWriteCard15Client({
+    accessToken: input.accessToken as string,
+    fetch: fetchFn,
+    githubClient: createGitHubClient({ accessToken: input.accessToken as string, fetch: fetchFn, operation }),
+  });
+}
+
+export function createSecurityAdvisoryReport(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveWriteCard15Client(input, "repos.security_advisories.reports.create").createSecurityAdvisoryReport(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "repos.security_advisories.reports.create", source: "connector", advisory: result.advisory };
+    });
+  }
+  return { connector: "github", action: "repos.security_advisories.reports.create", source: "connector", validated: validateCreateSecurityAdvisoryReportInput(input) };
+}
+
+export function createSecurityAdvisoryFork(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveWriteCard15Client(input, "repos.security_advisories.forks.create").createSecurityAdvisoryFork(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "repos.security_advisories.forks.create", source: "connector", fork: result.fork };
+    });
+  }
+  return { connector: "github", action: "repos.security_advisories.forks.create", source: "connector", validated: validateCreateSecurityAdvisoryForkInput(input) };
+}
+
+export function createRepoKey(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveWriteCard15Client(input, "repos.keys.create").createRepoKey(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "repos.keys.create", source: "connector", key: result.key };
+    });
+  }
+  return { connector: "github", action: "repos.keys.create", source: "connector", validated: validateCreateRepoKeyInput(input) };
+}
+
+export function deleteRepoKey(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveWriteCard15Client(input, "repos.keys.delete").deleteRepoKey(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "repos.keys.delete", source: "connector", deleted: result.deleted, owner: result.owner, repo: result.repo, keyId: result.keyId };
+    });
+  }
+  return { connector: "github", action: "repos.keys.delete", source: "connector", validated: validateDeleteRepoKeyInput(input) };
+}
+
+export function createRepoRuleset(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveWriteCard15Client(input, "repos.rulesets.create").createRepoRuleset(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "repos.rulesets.create", source: "connector", ruleset: result.ruleset };
+    });
+  }
+  return { connector: "github", action: "repos.rulesets.create", source: "connector", validated: validateCreateRepoRulesetInput(input) };
+}
+
+export function deleteRepoRuleset(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveWriteCard15Client(input, "repos.rulesets.delete").deleteRepoRuleset(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "repos.rulesets.delete", source: "connector", deleted: result.deleted, owner: result.owner, repo: result.repo, rulesetId: result.rulesetId };
+    });
+  }
+  return { connector: "github", action: "repos.rulesets.delete", source: "connector", validated: validateDeleteRepoRulesetInput(input) };
+}
+
+export function updateRepoRuleset(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveWriteCard15Client(input, "repos.rulesets.update").updateRepoRuleset(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "repos.rulesets.update", source: "connector", ruleset: result.ruleset };
+    });
+  }
+  return { connector: "github", action: "repos.rulesets.update", source: "connector", validated: validateUpdateRepoRulesetInput(input) };
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────

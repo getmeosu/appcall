@@ -666,6 +666,13 @@ import {
   createPagesSite as ghCreatePagesSite,
   deletePagesSite as ghDeletePagesSite,
   requestPagesBuild as ghRequestPagesBuild,
+  createSecurityAdvisoryReport as ghCreateSecurityAdvisoryReport,
+  createSecurityAdvisoryFork as ghCreateSecurityAdvisoryFork,
+  createRepoKey as ghCreateRepoKey,
+  deleteRepoKey as ghDeleteRepoKey,
+  createRepoRuleset as ghCreateRepoRuleset,
+  deleteRepoRuleset as ghDeleteRepoRuleset,
+  updateRepoRuleset as ghUpdateRepoRuleset,
 } from "../../connectors/github/src/actions";
 import { healthcheck as githubHealthcheck } from "../../connectors/github/src/healthcheck";
 import { executeIssuesListSync as listGitHubIssues, executePullRequestsListSync as listGitHubPRs, executeCommitsListSync as listGitHubCommits, executeRepositoriesListSync as listGitHubRepos } from "../../connectors/github/src/sync";
@@ -2100,6 +2107,13 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
       "repos.pages.create": ghCreatePagesSite,
       "repos.pages.delete": ghDeletePagesSite,
       "repos.pages.builds.request": ghRequestPagesBuild,
+      "repos.security_advisories.reports.create": ghCreateSecurityAdvisoryReport,
+      "repos.security_advisories.forks.create": ghCreateSecurityAdvisoryFork,
+      "repos.keys.create": ghCreateRepoKey,
+      "repos.keys.delete": ghDeleteRepoKey,
+      "repos.rulesets.create": ghCreateRepoRuleset,
+      "repos.rulesets.delete": ghDeleteRepoRuleset,
+      "repos.rulesets.update": ghUpdateRepoRuleset,
     },
     salesforce: {
       "contacts.create": createContact,
