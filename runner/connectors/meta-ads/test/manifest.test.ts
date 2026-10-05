@@ -4,7 +4,7 @@ import manifest from "../manifest.json";
 describe("meta-ads manifest", () => {
   it("has correct key and version", () => {
     expect(manifest.key).toBe("meta-ads");
-    expect(manifest.version).toBe("0.1.1");
+    expect(manifest.version).toBe("0.1.2");
     expect(manifest.runtime).toBe("bun");
   });
 
