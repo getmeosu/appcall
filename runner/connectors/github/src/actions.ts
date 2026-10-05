@@ -604,6 +604,17 @@ import {
   validateFollowUserInput,
 } from "./write_card11";
 
+import {
+  createWriteCard12Client,
+  validateUnfollowUserInput,
+  validateCreateGistCommentInput,
+  validateDeleteGistCommentInput,
+  validateUpdateGistCommentInput,
+  validateCreateGistForkInput,
+  validateStarGistInput,
+  validateUnstarGistInput,
+} from "./write_card12";
+
 
 
 import {
@@ -8013,6 +8024,87 @@ export function followUser(input: unknown): Record<string, unknown> | Promise<Re
     });
   }
   return { connector: "github", action: "user.following.follow", source: "connector", validated: validateFollowUserInput(input) };
+}
+
+// ─── write card 12: unfollow, gist comments/forks/star ────────────────────────
+
+function liveWriteCard12Client(input: Record<string, unknown>, operation: string) {
+  const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
+  return createWriteCard12Client({
+    accessToken: input.accessToken as string,
+    fetch: fetchFn,
+    githubClient: createGitHubClient({ accessToken: input.accessToken as string, fetch: fetchFn, operation }),
+  });
+}
+
+export function unfollowUser(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveWriteCard12Client(input, "user.following.unfollow").unfollowUser(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "user.following.unfollow", source: "connector", unfollowed: result.unfollowed, username: result.username };
+    });
+  }
+  return { connector: "github", action: "user.following.unfollow", source: "connector", validated: validateUnfollowUserInput(input) };
+}
+
+export function createGistComment(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveWriteCard12Client(input, "gists.comments.create").createGistComment(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "gists.comments.create", source: "connector", comment: result.comment };
+    });
+  }
+  return { connector: "github", action: "gists.comments.create", source: "connector", validated: validateCreateGistCommentInput(input) };
+}
+
+export function deleteGistComment(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveWriteCard12Client(input, "gists.comments.delete").deleteGistComment(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "gists.comments.delete", source: "connector", deleted: result.deleted, gistId: result.gistId, commentId: result.commentId };
+    });
+  }
+  return { connector: "github", action: "gists.comments.delete", source: "connector", validated: validateDeleteGistCommentInput(input) };
+}
+
+export function updateGistComment(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveWriteCard12Client(input, "gists.comments.update").updateGistComment(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "gists.comments.update", source: "connector", comment: result.comment };
+    });
+  }
+  return { connector: "github", action: "gists.comments.update", source: "connector", validated: validateUpdateGistCommentInput(input) };
+}
+
+export function createGistFork(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveWriteCard12Client(input, "gists.forks.create").createGistFork(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "gists.forks.create", source: "connector", gist: result.gist };
+    });
+  }
+  return { connector: "github", action: "gists.forks.create", source: "connector", validated: validateCreateGistForkInput(input) };
+}
+
+export function starGist(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveWriteCard12Client(input, "gists.star").starGist(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "gists.star", source: "connector", starred: result.starred, gistId: result.gistId };
+    });
+  }
+  return { connector: "github", action: "gists.star", source: "connector", validated: validateStarGistInput(input) };
+}
+
+export function unstarGist(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveWriteCard12Client(input, "gists.unstar").unstarGist(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "gists.unstar", source: "connector", unstarred: result.unstarred, gistId: result.gistId };
+    });
+  }
+  return { connector: "github", action: "gists.unstar", source: "connector", validated: validateUnstarGistInput(input) };
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────

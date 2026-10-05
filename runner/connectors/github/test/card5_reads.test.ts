@@ -44,11 +44,11 @@ const user = { id: 1, login: "octocat", html_url: "https://github.com/octocat", 
 const team = { id: 2, name: "owners", slug: "owners", html_url: "https://github.com/orgs/acme/teams/owners" };
 
 describe("github card5 secret, protection, and project field reads", () => {
-  test("version is 0.60.0 and the 13 reads omit effect fields", () => {
-    expect(manifest.version).toBe("0.60.0");
+  test("version is 0.61.0 and the 13 reads omit effect fields", () => {
+    expect(manifest.version).toBe("0.61.0");
     expect(manifest.version).not.toBe("0.32.0");
     expect(READS).toHaveLength(13);
-    expect(Object.keys(manifest.operations)).toHaveLength(623);
+    expect(Object.keys(manifest.operations)).toHaveLength(630);
     for (const key of READS) {
       const op = manifest.operations[key] as Record<string, unknown>;
       expect(op.kind).toBe("action");
