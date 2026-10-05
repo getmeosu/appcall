@@ -1,7 +1,7 @@
 {
   "key": "google-ads",
   "name": "Google Ads",
-  "version": "0.3.1",
+  "version": "0.4.0",
   "runtime": "bun",
   "categories": [
     "ads"
@@ -13,7 +13,15 @@
     ],
     "setup": {
       "mode": "oauth2",
-      "fields": []
+      "fields": [
+        {
+          "key": "developerToken",
+          "label": "Developer token (optional)",
+          "description": "Ignored by Google Ads API since 2026-09-09. Omit when unused; never send empty. Future API majors reject this header.",
+          "required": false,
+          "secret": true
+        }
+      ]
     }
   },
   "network": {
@@ -1302,6 +1310,874 @@
           }
         }
       }
+    },
+    "assets.get": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 5242880,
+      "title": "Get Asset",
+      "description": "Fetch an asset by ID via GAQL (POST .../googleAds:search FROM asset).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "customerId": {
+            "type": "string",
+            "description": "Google Ads customer ID (hyphens optional). For MCC, pass the child account ID."
+          },
+          "assetId": {
+            "type": "string",
+            "description": "Numeric asset ID."
+          },
+          "loginCustomerId": {
+            "type": "string",
+            "description": "Optional MCC/manager customer ID for the login-customer-id header."
+          }
+        },
+        "required": [
+          "customerId",
+          "assetId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "asset": {
+            "type": [
+              "object",
+              "null"
+            ]
+          }
+        }
+      },
+      "sideEffect": "read"
+    },
+    "assets.list": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 5242880,
+      "title": "List Assets",
+      "description": "List assets via GAQL search (action; pageToken for continuation). Never uses segments.click_type.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "customerId": {
+            "type": "string",
+            "description": "Google Ads customer ID (hyphens optional). For MCC, pass the child account ID."
+          },
+          "pageToken": {
+            "type": "string",
+            "description": "Optional GAQL search page token."
+          },
+          "loginCustomerId": {
+            "type": "string",
+            "description": "Optional MCC/manager customer ID for the login-customer-id header."
+          }
+        },
+        "required": [
+          "customerId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "assets": {
+            "type": "array"
+          },
+          "nextPageToken": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "sideEffect": "read"
+    },
+    "assets.mutate": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 5242880,
+      "title": "Mutate Assets",
+      "description": "Create, update, or remove assets (POST customers/{id}/assets:mutate). Batch upsert class \u2014 effect keys omitted.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "customerId": {
+            "type": "string",
+            "description": "Google Ads customer ID (hyphens optional). For MCC, pass the child account ID."
+          },
+          "operations": {
+            "type": "array",
+            "description": "Mutate operations array (create/update/remove).",
+            "items": {
+              "type": "object"
+            }
+          },
+          "validateOnly": {
+            "type": "boolean",
+            "description": "Validate without applying changes."
+          },
+          "partialFailure": {
+            "type": "boolean",
+            "description": "Allow partial success when some operations fail."
+          },
+          "responseContentType": {
+            "type": "string",
+            "description": "RESOURCE_NAME_ONLY or MUTABLE_RESOURCE."
+          },
+          "loginCustomerId": {
+            "type": "string",
+            "description": "Optional MCC/manager customer ID for the login-customer-id header."
+          }
+        },
+        "required": [
+          "customerId",
+          "operations"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "resourceNames": {
+            "type": "array"
+          }
+        }
+      }
+    },
+    "assets.callout.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 5242880,
+      "title": "Create Callout Asset",
+      "description": "Create a CALLOUT asset via assets:mutate. Param calloutText is a string; upstream enforces length (rejection surfaces as CONNECTOR_UPSTREAM_ERROR). Effect keys omitted (create).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "customerId": {
+            "type": "string",
+            "description": "Google Ads customer ID (hyphens optional). For MCC, pass the child account ID."
+          },
+          "calloutText": {
+            "type": "string",
+            "description": "Callout text string (upstream enforces length)."
+          },
+          "name": {
+            "type": "string",
+            "description": "Optional asset name."
+          },
+          "validateOnly": {
+            "type": "boolean",
+            "description": "Validate without applying changes."
+          },
+          "partialFailure": {
+            "type": "boolean",
+            "description": "Allow partial success when some operations fail."
+          },
+          "responseContentType": {
+            "type": "string",
+            "description": "RESOURCE_NAME_ONLY or MUTABLE_RESOURCE."
+          },
+          "loginCustomerId": {
+            "type": "string",
+            "description": "Optional MCC/manager customer ID for the login-customer-id header."
+          }
+        },
+        "required": [
+          "customerId",
+          "calloutText"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "asset": {
+            "type": [
+              "object",
+              "null"
+            ]
+          },
+          "resourceNames": {
+            "type": "array"
+          }
+        }
+      }
+    },
+    "campaign_assets.get": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 5242880,
+      "title": "Get Campaign Asset",
+      "description": "Fetch a campaign_asset link via GAQL. Never selects segments.click_type.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "customerId": {
+            "type": "string",
+            "description": "Google Ads customer ID (hyphens optional). For MCC, pass the child account ID."
+          },
+          "campaignId": {
+            "type": "string",
+            "description": "Numeric campaign ID."
+          },
+          "assetId": {
+            "type": "string",
+            "description": "Numeric asset ID."
+          },
+          "fieldType": {
+            "type": "string",
+            "description": "AssetFieldType enum (e.g. CALLOUT)."
+          },
+          "loginCustomerId": {
+            "type": "string",
+            "description": "Optional MCC/manager customer ID for the login-customer-id header."
+          }
+        },
+        "required": [
+          "customerId",
+          "campaignId",
+          "assetId",
+          "fieldType"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "campaignAsset": {
+            "type": [
+              "object",
+              "null"
+            ]
+          }
+        }
+      },
+      "sideEffect": "read"
+    },
+    "campaign_assets.mutate": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 5242880,
+      "title": "Mutate Campaign Assets",
+      "description": "Create, update, or remove campaign_asset links (POST .../campaignAssets:mutate). Batch upsert class \u2014 effect keys omitted.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "customerId": {
+            "type": "string",
+            "description": "Google Ads customer ID (hyphens optional). For MCC, pass the child account ID."
+          },
+          "operations": {
+            "type": "array",
+            "description": "Mutate operations array (create/update/remove).",
+            "items": {
+              "type": "object"
+            }
+          },
+          "validateOnly": {
+            "type": "boolean",
+            "description": "Validate without applying changes."
+          },
+          "partialFailure": {
+            "type": "boolean",
+            "description": "Allow partial success when some operations fail."
+          },
+          "responseContentType": {
+            "type": "string",
+            "description": "RESOURCE_NAME_ONLY or MUTABLE_RESOURCE."
+          },
+          "loginCustomerId": {
+            "type": "string",
+            "description": "Optional MCC/manager customer ID for the login-customer-id header."
+          }
+        },
+        "required": [
+          "customerId",
+          "operations"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "resourceNames": {
+            "type": "array"
+          }
+        }
+      }
+    },
+    "ad_group_assets.get": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 5242880,
+      "title": "Get Ad Group Asset",
+      "description": "Fetch an ad_group_asset link via GAQL. Never selects segments.click_type.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "customerId": {
+            "type": "string",
+            "description": "Google Ads customer ID (hyphens optional). For MCC, pass the child account ID."
+          },
+          "adGroupId": {
+            "type": "string",
+            "description": "Numeric ad group ID."
+          },
+          "assetId": {
+            "type": "string",
+            "description": "Numeric asset ID."
+          },
+          "fieldType": {
+            "type": "string",
+            "description": "AssetFieldType enum (e.g. CALLOUT)."
+          },
+          "loginCustomerId": {
+            "type": "string",
+            "description": "Optional MCC/manager customer ID for the login-customer-id header."
+          }
+        },
+        "required": [
+          "customerId",
+          "adGroupId",
+          "assetId",
+          "fieldType"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "adGroupAsset": {
+            "type": [
+              "object",
+              "null"
+            ]
+          }
+        }
+      },
+      "sideEffect": "read"
+    },
+    "ad_group_assets.mutate": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 5242880,
+      "title": "Mutate Ad Group Assets",
+      "description": "Create, update, or remove ad_group_asset links (POST .../adGroupAssets:mutate). Batch upsert class \u2014 effect keys omitted.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "customerId": {
+            "type": "string",
+            "description": "Google Ads customer ID (hyphens optional). For MCC, pass the child account ID."
+          },
+          "operations": {
+            "type": "array",
+            "description": "Mutate operations array (create/update/remove).",
+            "items": {
+              "type": "object"
+            }
+          },
+          "validateOnly": {
+            "type": "boolean",
+            "description": "Validate without applying changes."
+          },
+          "partialFailure": {
+            "type": "boolean",
+            "description": "Allow partial success when some operations fail."
+          },
+          "responseContentType": {
+            "type": "string",
+            "description": "RESOURCE_NAME_ONLY or MUTABLE_RESOURCE."
+          },
+          "loginCustomerId": {
+            "type": "string",
+            "description": "Optional MCC/manager customer ID for the login-customer-id header."
+          }
+        },
+        "required": [
+          "customerId",
+          "operations"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "resourceNames": {
+            "type": "array"
+          }
+        }
+      }
+    },
+    "customer_assets.get": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 5242880,
+      "title": "Get Customer Asset",
+      "description": "Fetch a customer_asset link via GAQL. Never selects segments.click_type.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "customerId": {
+            "type": "string",
+            "description": "Google Ads customer ID (hyphens optional). For MCC, pass the child account ID."
+          },
+          "assetId": {
+            "type": "string",
+            "description": "Numeric asset ID."
+          },
+          "fieldType": {
+            "type": "string",
+            "description": "AssetFieldType enum (e.g. CALLOUT)."
+          },
+          "loginCustomerId": {
+            "type": "string",
+            "description": "Optional MCC/manager customer ID for the login-customer-id header."
+          }
+        },
+        "required": [
+          "customerId",
+          "assetId",
+          "fieldType"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "customerAsset": {
+            "type": [
+              "object",
+              "null"
+            ]
+          }
+        }
+      },
+      "sideEffect": "read"
+    },
+    "customer_assets.mutate": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 5242880,
+      "title": "Mutate Customer Assets",
+      "description": "Create, update, or remove customer_asset links (POST .../customerAssets:mutate). Batch upsert class \u2014 effect keys omitted.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "customerId": {
+            "type": "string",
+            "description": "Google Ads customer ID (hyphens optional). For MCC, pass the child account ID."
+          },
+          "operations": {
+            "type": "array",
+            "description": "Mutate operations array (create/update/remove).",
+            "items": {
+              "type": "object"
+            }
+          },
+          "validateOnly": {
+            "type": "boolean",
+            "description": "Validate without applying changes."
+          },
+          "partialFailure": {
+            "type": "boolean",
+            "description": "Allow partial success when some operations fail."
+          },
+          "responseContentType": {
+            "type": "string",
+            "description": "RESOURCE_NAME_ONLY or MUTABLE_RESOURCE."
+          },
+          "loginCustomerId": {
+            "type": "string",
+            "description": "Optional MCC/manager customer ID for the login-customer-id header."
+          }
+        },
+        "required": [
+          "customerId",
+          "operations"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "resourceNames": {
+            "type": "array"
+          }
+        }
+      }
+    },
+    "labels.get": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 5242880,
+      "title": "Get Label",
+      "description": "Fetch a label by ID via GAQL (POST .../googleAds:search FROM label).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "customerId": {
+            "type": "string",
+            "description": "Google Ads customer ID (hyphens optional). For MCC, pass the child account ID."
+          },
+          "labelId": {
+            "type": "string",
+            "description": "Numeric label ID."
+          },
+          "loginCustomerId": {
+            "type": "string",
+            "description": "Optional MCC/manager customer ID for the login-customer-id header."
+          }
+        },
+        "required": [
+          "customerId",
+          "labelId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "label": {
+            "type": [
+              "object",
+              "null"
+            ]
+          }
+        }
+      },
+      "sideEffect": "read"
+    },
+    "bidding_strategies.get": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 5242880,
+      "title": "Get Bidding Strategy",
+      "description": "Fetch a bidding strategy by ID via GAQL.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "customerId": {
+            "type": "string",
+            "description": "Google Ads customer ID (hyphens optional). For MCC, pass the child account ID."
+          },
+          "biddingStrategyId": {
+            "type": "string",
+            "description": "Numeric bidding strategy ID."
+          },
+          "loginCustomerId": {
+            "type": "string",
+            "description": "Optional MCC/manager customer ID for the login-customer-id header."
+          }
+        },
+        "required": [
+          "customerId",
+          "biddingStrategyId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "biddingStrategy": {
+            "type": [
+              "object",
+              "null"
+            ]
+          }
+        }
+      },
+      "sideEffect": "read"
+    },
+    "bidding_strategies.mutate": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 5242880,
+      "title": "Mutate Bidding Strategies",
+      "description": "Create, update, or remove bidding strategies (POST .../biddingStrategies:mutate). Batch upsert class \u2014 effect keys omitted.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "customerId": {
+            "type": "string",
+            "description": "Google Ads customer ID (hyphens optional). For MCC, pass the child account ID."
+          },
+          "operations": {
+            "type": "array",
+            "description": "Mutate operations array (create/update/remove).",
+            "items": {
+              "type": "object"
+            }
+          },
+          "validateOnly": {
+            "type": "boolean",
+            "description": "Validate without applying changes."
+          },
+          "partialFailure": {
+            "type": "boolean",
+            "description": "Allow partial success when some operations fail."
+          },
+          "responseContentType": {
+            "type": "string",
+            "description": "RESOURCE_NAME_ONLY or MUTABLE_RESOURCE."
+          },
+          "loginCustomerId": {
+            "type": "string",
+            "description": "Optional MCC/manager customer ID for the login-customer-id header."
+          }
+        },
+        "required": [
+          "customerId",
+          "operations"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "resourceNames": {
+            "type": "array"
+          }
+        }
+      }
+    },
+    "portfolio_bidding_strategies.mutate": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 5242880,
+      "title": "Mutate Portfolio Bidding Strategies",
+      "description": "Create/update portfolio Target CPA/ROAS strategies via the same biddingStrategies:mutate collection. Batch upsert class \u2014 effect keys omitted.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "customerId": {
+            "type": "string",
+            "description": "Google Ads customer ID (hyphens optional). For MCC, pass the child account ID."
+          },
+          "operations": {
+            "type": "array",
+            "description": "Mutate operations array (create/update/remove).",
+            "items": {
+              "type": "object"
+            }
+          },
+          "validateOnly": {
+            "type": "boolean",
+            "description": "Validate without applying changes."
+          },
+          "partialFailure": {
+            "type": "boolean",
+            "description": "Allow partial success when some operations fail."
+          },
+          "responseContentType": {
+            "type": "string",
+            "description": "RESOURCE_NAME_ONLY or MUTABLE_RESOURCE."
+          },
+          "loginCustomerId": {
+            "type": "string",
+            "description": "Optional MCC/manager customer ID for the login-customer-id header."
+          }
+        },
+        "required": [
+          "customerId",
+          "operations"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "resourceNames": {
+            "type": "array"
+          }
+        }
+      }
+    },
+    "conversion_actions.tag_snippets.get": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 5242880,
+      "title": "Get Conversion Action Tag Snippets",
+      "description": "Fetch tag_snippets for a conversion action via GAQL.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "customerId": {
+            "type": "string",
+            "description": "Google Ads customer ID (hyphens optional). For MCC, pass the child account ID."
+          },
+          "conversionActionId": {
+            "type": "string",
+            "description": "Numeric conversion action ID."
+          },
+          "loginCustomerId": {
+            "type": "string",
+            "description": "Optional MCC/manager customer ID for the login-customer-id header."
+          }
+        },
+        "required": [
+          "customerId",
+          "conversionActionId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "conversionActionId": {
+            "type": "string"
+          },
+          "tagSnippets": {
+            "type": "array"
+          }
+        }
+      },
+      "sideEffect": "read"
     }
   },
   "models": [
@@ -1313,6 +2189,11 @@
     "customer",
     "user_list",
     "conversion_action",
-    "label"
+    "label",
+    "asset",
+    "campaign_asset",
+    "ad_group_asset",
+    "customer_asset",
+    "bidding_strategy"
   ]
 }
