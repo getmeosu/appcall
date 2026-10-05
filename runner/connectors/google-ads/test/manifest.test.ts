@@ -2,12 +2,16 @@ import { describe, expect, test } from "bun:test";
 import manifest from "../manifest.json";
 
 describe("google-ads connector manifest", () => {
-  test("manifest declares key, runtime, auth, and version 0.3.1", () => {
+  test("manifest declares key, runtime, auth, and version 0.4.0", () => {
     expect(manifest.key).toBe("google-ads");
     expect(manifest.runtime).toBe("bun");
-    expect(manifest.version).toBe("0.3.1");
+    expect(manifest.version).toBe("0.4.0");
     expect(manifest.auth.type).toBe("oauth2");
     expect(manifest.auth.scopes).toContain("https://www.googleapis.com/auth/adwords");
+    const fields = manifest.auth.setup.fields as Array<{ key: string; required: boolean }>;
+    const developerToken = fields.find((f) => f.key === "developerToken");
+    expect(developerToken).toBeDefined();
+    expect(developerToken!.required).toBe(false);
   });
 
   test("manifest declares network controls", () => {
@@ -49,6 +53,21 @@ describe("google-ads connector manifest", () => {
       "conversion_actions.mutate",
       "labels.mutate",
       "reports.get",
+      "assets.get",
+      "assets.list",
+      "assets.mutate",
+      "assets.callout.create",
+      "campaign_assets.get",
+      "campaign_assets.mutate",
+      "ad_group_assets.get",
+      "ad_group_assets.mutate",
+      "customer_assets.get",
+      "customer_assets.mutate",
+      "labels.get",
+      "bidding_strategies.get",
+      "bidding_strategies.mutate",
+      "portfolio_bidding_strategies.mutate",
+      "conversion_actions.tag_snippets.get",
     ];
     for (const op of actions) {
       expect(manifest.operations[op as keyof typeof manifest.operations].kind).toBe("action");
@@ -91,12 +110,49 @@ describe("google-ads connector manifest", () => {
     expect(labels.reconcile).toBeUndefined();
   });
 
+  test("G1 mutates and callout.create omit all three effect keys", () => {
+    const omit = [
+      "assets.mutate",
+      "campaign_assets.mutate",
+      "ad_group_assets.mutate",
+      "customer_assets.mutate",
+      "bidding_strategies.mutate",
+      "portfolio_bidding_strategies.mutate",
+      "assets.callout.create",
+    ];
+    for (const id of omit) {
+      const op = manifest.operations[id as keyof typeof manifest.operations] as Record<string, unknown>;
+      expect(op.sideEffect).toBe("write");
+      expect(op.effectPolicy).toBeUndefined();
+      expect(op.reconcile).toBeUndefined();
+      expect(op.observe).toBeUndefined();
+    }
+  });
+
+  test("assets.list is an action (GAQL + pageToken), not a sync", () => {
+    const op = manifest.operations["assets.list"] as Record<string, unknown>;
+    expect(op.kind).toBe("action");
+    expect(op.sideEffect).toBe("read");
+    const schema = op.inputSchema as { properties: Record<string, unknown>; required: string[] };
+    expect(schema.properties.pageToken).toBeDefined();
+    expect(schema.required).toContain("customerId");
+  });
+
+  test("tip campaigns.mutate still Reconciles to campaigns.get", () => {
+    const op = manifest.operations["campaigns.mutate"] as {
+      effectPolicy: string;
+      reconcile: string;
+    };
+    expect(op.effectPolicy).toBe("Reconcile");
+    expect(op.reconcile).toBe("campaigns.get");
+  });
+
   test("manifest expands beyond the thin 4-op stub", () => {
     expect(Object.keys(manifest.operations).length).toBeGreaterThanOrEqual(20);
   });
 
-  test("manifest stays at 29 ops on v0.3.1", () => {
-    expect(Object.keys(manifest.operations).length).toBe(29);
+  test("manifest stays at 44 ops on v0.4.0", () => {
+    expect(Object.keys(manifest.operations).length).toBe(44);
   });
 
   test("manifest declares models", () => {
@@ -108,6 +164,12 @@ describe("google-ads connector manifest", () => {
     expect(manifest.models).toContain("customer");
     expect(manifest.models).toContain("user_list");
     expect(manifest.models).toContain("conversion_action");
+    expect(manifest.models).toContain("label");
+    expect(manifest.models).toContain("asset");
+    expect(manifest.models).toContain("campaign_asset");
+    expect(manifest.models).toContain("ad_group_asset");
+    expect(manifest.models).toContain("customer_asset");
+    expect(manifest.models).toContain("bidding_strategy");
   });
 
   test("manifest has timeout and size limits on all operations", () => {

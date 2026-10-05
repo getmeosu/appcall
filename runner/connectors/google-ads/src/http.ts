@@ -254,7 +254,8 @@ export type GoogleAdsAccessibleCustomersResponse = {
 
 export type GoogleAdsClientOptions = {
   accessToken: string;
-  developerToken: string;
+  /** Optional; ignored by Google since 2026-09-09. Omit rather than send empty — future majors reject the header. */
+  developerToken?: string;
   loginCustomerId?: string;
   fetch?: typeof fetch;
   httpClient?: ConnectorHttpClient;
@@ -302,9 +303,12 @@ export function createGoogleAdsClient(options: GoogleAdsClientOptions) {
 export function buildGoogleAdsHeaders(options: GoogleAdsClientOptions): Record<string, string> {
   const headers: Record<string, string> = {
     Authorization: `Bearer ${options.accessToken}`,
-    "developer-token": options.developerToken,
     "Content-Type": "application/json",
   };
+  // Only send when non-empty. Empty/placeholder headers become rejectable on a future major.
+  if (typeof options.developerToken === "string" && options.developerToken.length > 0) {
+    headers["developer-token"] = options.developerToken;
+  }
   if (options.loginCustomerId) {
     headers["login-customer-id"] = sanitizeCustomerId(options.loginCustomerId);
   }

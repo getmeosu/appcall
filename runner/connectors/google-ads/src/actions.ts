@@ -35,27 +35,31 @@ import {
 type ActionResult = Record<string, unknown> | Promise<Record<string, unknown>>;
 
 // ---------------------------------------------------------------------------
-// Live-auth detection: accessToken + developerToken (+ customerId for scoped)
+// Live-auth detection: accessToken (+ customerId for scoped).
+// developerToken is optional (ignored upstream since 2026-09-09).
 // ---------------------------------------------------------------------------
 
 function hasLiveAuth(input: unknown, requireCustomerId = true): input is Record<string, unknown> & {
   accessToken: string;
-  developerToken: string;
   customerId?: string;
 } {
   if (!isRecord(input)) return false;
   if (typeof input.accessToken !== "string" || input.accessToken.length === 0) return false;
-  if (typeof input.developerToken !== "string" || input.developerToken.length === 0) return false;
   if (requireCustomerId) {
     if (typeof input.customerId !== "string" || input.customerId.length === 0) return false;
   }
   return true;
 }
 
+function optionalDeveloperToken(input: Record<string, unknown>): string | undefined {
+  const value = input.developerToken;
+  return typeof value === "string" && value.length > 0 ? value : undefined;
+}
+
 function clientOpts(input: Record<string, unknown>, operation: string): GoogleAdsClientOptions {
   return {
     accessToken: String(input.accessToken),
-    developerToken: String(input.developerToken),
+    developerToken: optionalDeveloperToken(input),
     loginCustomerId: typeof input.loginCustomerId === "string" ? input.loginCustomerId : undefined,
     fetch: typeof input.fetch === "function" ? (input.fetch as typeof fetch) : undefined,
     operation,
