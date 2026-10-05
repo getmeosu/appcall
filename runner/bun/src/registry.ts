@@ -920,6 +920,23 @@ import {
   executeOpeningsUpdate as updateAshbyOpening,
   executeCloseReasonsList as listAshbyCloseReasons,
 } from "../../connectors/ashby/src/g2";
+import {
+  executeOpeningsSetArchived as setAshbyOpeningArchived,
+  executeOpeningsSetState as setAshbyOpeningState,
+  executeOpeningsAddJob as addAshbyOpeningJob,
+  executeOpeningsRemoveJob as removeAshbyOpeningJob,
+  executeOpeningsAddLocation as addAshbyOpeningLocation,
+  executeOpeningsRemoveLocation as removeAshbyOpeningLocation,
+  executeLocationsList as listAshbyLocations,
+  executeLocationsGet as getAshbyLocation,
+  executeDepartmentsGet as getAshbyDepartment,
+  executeUsersSearch as searchAshbyUsers,
+  executeOffersCreate as createAshbyOffer,
+  executeOffersStart as startAshbyOffer,
+  executeOfferProcessesStart as startAshbyOfferProcess,
+  executeCommunicationTemplatesList as listAshbyCommunicationTemplates,
+  executeApplicationHiringTeamRolesList as listAshbyApplicationHiringTeamRoles,
+} from "../../connectors/ashby/src/g3";
 import { parseWebhook as ashbyParseWebhook } from "../../connectors/ashby/src/webhook";
 import intercomManifest from "../../connectors/intercom/manifest.json";
 import {
@@ -2540,6 +2557,21 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
       "openings.create": createAshbyOpening,
       "openings.update": updateAshbyOpening,
       "close_reasons.list": listAshbyCloseReasons,
+      "openings.set_archived": setAshbyOpeningArchived,
+      "openings.set_state": setAshbyOpeningState,
+      "openings.add_job": addAshbyOpeningJob,
+      "openings.remove_job": removeAshbyOpeningJob,
+      "openings.add_location": addAshbyOpeningLocation,
+      "openings.remove_location": removeAshbyOpeningLocation,
+      "locations.list": listAshbyLocations,
+      "locations.get": getAshbyLocation,
+      "departments.get": getAshbyDepartment,
+      "users.search": searchAshbyUsers,
+      "offers.create": createAshbyOffer,
+      "offers.start": startAshbyOffer,
+      "offer_processes.start": startAshbyOfferProcess,
+      "communication_templates.list": listAshbyCommunicationTemplates,
+      "application_hiring_team_roles.list": listAshbyApplicationHiringTeamRoles,
     },
     intercom: {
       "conversations.reply": replyIntercomConversation,

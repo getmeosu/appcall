@@ -441,7 +441,7 @@ describe("Ashby interviews.list sync", () => {
   });
 });
 
-describe("Ashby candidates.create (POST only; runner owns Idempotent)", () => {
+describe("Ashby candidates.create (POST only; no effect keys)", () => {
   test("POSTs /candidate.create and returns unwrapped results with id", async () => {
     const { calls, impl } = stubFetch(JSON.stringify(candidateCreatedFixture));
 
@@ -517,7 +517,7 @@ describe("Ashby candidates.create (POST only; runner owns Idempotent)", () => {
   });
 });
 
-describe("Ashby applications.create (POST only; runner owns Idempotent)", () => {
+describe("Ashby applications.create (POST only; no effect keys)", () => {
   test("POSTs /application.create and returns unwrapped results with id", async () => {
     const { calls, impl } = stubFetch(JSON.stringify(applicationCreatedFixture));
 
