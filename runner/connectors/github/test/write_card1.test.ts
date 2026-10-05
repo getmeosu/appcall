@@ -40,10 +40,10 @@ function empty(status: number) {
 }
 
 describe("github write card 1 org writes", () => {
-  test("version is 0.71.0 at 726 ops with the write breakdown", () => {
-    expect(manifest.version).toBe("0.71.0");
+  test("version is 0.72.0 at 731 ops with the write breakdown", () => {
+    expect(manifest.version).toBe("0.72.0");
     const ops = manifest.operations as Record<string, Record<string, unknown>>;
-    expect(Object.keys(ops)).toHaveLength(726);
+    expect(Object.keys(ops)).toHaveLength(731);
     const kinds = { action: 0, sync: 0, webhook: 0 };
     const side = { read: 0, write: 0, absent: 0 };
     for (const op of Object.values(ops)) {
@@ -54,8 +54,8 @@ describe("github write card 1 org writes", () => {
         else side.absent += 1;
       }
     }
-    expect(kinds).toEqual({ action: 676, sync: 4, webhook: 46 });
-    expect(side).toEqual({ read: 370, write: 291, absent: 15 });
+    expect(kinds).toEqual({ action: 681, sync: 4, webhook: 46 });
+    expect(side).toEqual({ read: 372, write: 294, absent: 15 });
     expect(String(ops["orgs.get"].description)).toContain("GET /orgs/{org}");
     expect(ops["orgs.get"].sideEffect).toBe("read");
     for (const key of NO_POLICY) {

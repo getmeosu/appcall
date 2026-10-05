@@ -1,7 +1,7 @@
 {
   "key": "github",
   "name": "GitHub",
-  "version": "0.71.0",
+  "version": "0.72.0",
   "runtime": "bun",
   "categories": [
     "dev-tools"
@@ -36620,6 +36620,232 @@
           "secretName": {
             "type": "string",
             "description": "Secret name."
+          }
+        }
+      }
+    },
+    "user.codespaces.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Get a codespace for the authenticated user",
+      "description": "GET /user/codespaces/{codespace_name}. Returns one codespace. A 200 is the codespace. A 404 is CONNECTOR_UPSTREAM_ERROR. Read only. No effectPolicy and no reconcile.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "codespaceName"
+        ],
+        "properties": {
+          "codespaceName": {
+            "type": "string",
+            "description": "Codespace name. A single path segment."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "codespace": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "user.codespaces.update": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Update a codespace for the authenticated user",
+      "description": "PATCH /user/codespaces/{codespace_name}. kind=action, sideEffect=write. Success is 200 with the codespace. At least one of machine, displayName, recentFolders is required. user.codespaces.get is co-carded but is not an exact observe (PATCH machine is a string; GET returns a machine object). No effectPolicy, no reconcile, and no effect. A 404 is CONNECTOR_UPSTREAM_ERROR. Bearer auth only.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "codespaceName"
+        ],
+        "properties": {
+          "codespaceName": {
+            "type": "string",
+            "description": "Codespace name. A single path segment."
+          },
+          "machine": {
+            "type": "string",
+            "description": "Machine name to transition to (for example standardLinux)."
+          },
+          "displayName": {
+            "type": "string",
+            "description": "Display name for the codespace. Sent as display_name."
+          },
+          "recentFolders": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Recently opened folders. Sent as recent_folders."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "codespace": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "user.emails.delete": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 65536,
+      "sideEffect": "write",
+      "title": "Delete email addresses for the authenticated user",
+      "description": "DELETE /user/emails. kind=action, sideEffect=write. Success is 204. Body is {emails}. No effectPolicy, no reconcile, and no effect. A 404 is CONNECTOR_UPSTREAM_ERROR, not success. Bearer auth only.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "emails"
+        ],
+        "properties": {
+          "emails": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Email addresses to delete. At least one."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "deleted": {
+            "type": "boolean",
+            "description": "True when the emails were deleted."
+          },
+          "emails": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Emails that were requested for deletion."
+          }
+        }
+      }
+    },
+    "user.email.visibility.set": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Set primary email visibility for the authenticated user",
+      "description": "PATCH /user/email/visibility. kind=action, sideEffect=write. Success is 200 with the email list. One-shot; no exact observe GET on tip. No effectPolicy, no reconcile, and no effect. A 404 is CONNECTOR_UPSTREAM_ERROR. Bearer auth only.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "visibility"
+        ],
+        "properties": {
+          "visibility": {
+            "type": "string",
+            "enum": [
+              "public",
+              "private"
+            ],
+            "description": "Primary email visibility."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "emails": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "email": {
+                  "type": "string"
+                },
+                "primary": {
+                  "type": "boolean"
+                },
+                "verified": {
+                  "type": "boolean"
+                },
+                "visibility": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "user.memberships.orgs.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "List organization memberships for the authenticated user",
+      "description": "GET /user/memberships/orgs. Lists organization memberships for the authenticated user. Optional state filter active|pending. A 200 is the memberships array. A 404 is CONNECTOR_UPSTREAM_ERROR. Read only. No effectPolicy and no reconcile.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "state": {
+            "type": "string",
+            "enum": [
+              "active",
+              "pending"
+            ],
+            "description": "Filter by membership state."
+          },
+          "perPage": {
+            "type": "number",
+            "description": "Results per page (max 100)."
+          },
+          "page": {
+            "type": "number",
+            "description": "Page number."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "memberships": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "url": {
+                  "type": "string"
+                },
+                "state": {
+                  "type": "string"
+                },
+                "role": {
+                  "type": "string"
+                },
+                "organizationLogin": {
+                  "type": "string"
+                },
+                "organizationId": {
+                  "type": "integer"
+                }
+              }
+            }
           }
         }
       }

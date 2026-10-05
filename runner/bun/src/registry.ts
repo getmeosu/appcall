@@ -743,6 +743,11 @@ import {
   createDeploymentProtectionRule as ghCreateDeploymentProtectionRule,
   renderMarkdownRaw as ghRenderMarkdownRaw,
   deleteRepoCodespaceSecret as ghDeleteRepoCodespaceSecret,
+  getUserCodespace as ghGetUserCodespace,
+  updateUserCodespace as ghUpdateUserCodespace,
+  deleteUserEmails as ghDeleteUserEmails,
+  setPrimaryEmailVisibility as ghSetPrimaryEmailVisibility,
+  listOrgMemberships as ghListOrgMemberships,
 } from "../../connectors/github/src/actions";
 import { healthcheck as githubHealthcheck } from "../../connectors/github/src/healthcheck";
 import { executeIssuesListSync as listGitHubIssues, executePullRequestsListSync as listGitHubPRs, executeCommitsListSync as listGitHubCommits, executeRepositoriesListSync as listGitHubRepos } from "../../connectors/github/src/sync";
@@ -2254,6 +2259,11 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
       "repos.environments.deployment_protection_rules.create": ghCreateDeploymentProtectionRule,
       "markdown.render_raw": ghRenderMarkdownRaw,
       "repos.codespaces.secrets.delete": ghDeleteRepoCodespaceSecret,
+      "user.codespaces.get": ghGetUserCodespace,
+      "user.codespaces.update": ghUpdateUserCodespace,
+      "user.emails.delete": ghDeleteUserEmails,
+      "user.email.visibility.set": ghSetPrimaryEmailVisibility,
+      "user.memberships.orgs.list": ghListOrgMemberships,
     },
     salesforce: {
       "contacts.create": createContact,
