@@ -41,10 +41,10 @@ const gitignoreBody = {
 };
 
 describe("github card14 zen license and gitignore reads", () => {
-  test("version stays 0.72.0 and the three reads omit effect fields", () => {
-    expect(manifest.version).toBe("0.72.0");
+  test("version stays 0.73.0 and the three reads omit effect fields", () => {
+    expect(manifest.version).toBe("0.73.0");
     expect(READS).toHaveLength(3);
-    expect(Object.keys(manifest.operations)).toHaveLength(731);
+    expect(Object.keys(manifest.operations)).toHaveLength(744);
     for (const key of READS) {
       const op = manifest.operations[key] as Record<string, unknown>;
       expect(op.kind).toBe("action");
