@@ -8,9 +8,13 @@
  * See https://developers.smartrecruiters.com/reference/v1listpostings
  * jobs.get uses authenticated JobDetails (GET /jobs/{id}) — location is a full
  * city/region/country object; type comes from typeOfEmployment.
- * Authenticated Customer API list ops return { content, totalFound, ... }
- * (GET /candidates, GET /users). candidates.get returns a bare CandidateDetails
- * object (GET /candidates/{id}).
+ * GET /candidates returns { content, totalFound, nextPageId, ... }.
+ * users.list uses the current Users API (GET /user-api/v201804/users), which
+ * returns { limit, nextPageId, content } with no totalFound/offset, and carries
+ * the role as systemRole { id, name } (https://developers.smartrecruiters.com/reference/usersall-2).
+ * The deprecated root GET /users returned a flat `role` string; it is still read
+ * as a fallback. candidates.get returns a bare CandidateDetails object
+ * (GET /candidates/{id}).
  * interviews.list returns { content: Interview[] } from Interviews API
  * (GET /interviews-api/v201904/interviews).
  */
@@ -306,6 +310,9 @@ interface SRUser {
   firstName?: string | null;
   lastName?: string | null;
   email?: string | null;
+  /** Current Users API (v201804): system role object. */
+  systemRole?: { id?: string | null; name?: string | null } | null;
+  /** Deprecated root GET /users: flat role string. */
   role?: string | null;
   active?: boolean | null;
   updatedOn?: string | null;
@@ -326,7 +333,7 @@ export function normalizeUser(user: SRUser): NormalizedUser {
     lastName,
     name: nameParts.join(" "),
     email: user.email ?? null,
-    role: user.role ?? null,
+    role: user.systemRole?.id ?? user.role ?? null,
     active: user.active !== false,
     language: user.language?.code ?? null,
     updatedAt: asIso(user.updatedOn),
@@ -335,20 +342,24 @@ export function normalizeUser(user: SRUser): NormalizedUser {
 
 interface SRUsersResponse {
   content?: SRUser[];
+  /** Deprecated root GET /users only; the v201804 Users API omits it. */
   totalFound?: number;
   limit?: number;
-  offset?: number;
+  nextPageId?: string;
 }
 
 export function parseUsersResponse(raw: unknown): {
   users: NormalizedUser[];
   total: number | null;
+  nextPageId: string | null;
 } {
   const data = (raw ?? {}) as SRUsersResponse;
   const items = Array.isArray(data.content) ? data.content : [];
   return {
     users: items.map(normalizeUser),
     total: typeof data.totalFound === "number" ? data.totalFound : null,
+    nextPageId:
+      typeof data.nextPageId === "string" && data.nextPageId.length > 0 ? data.nextPageId : null,
   };
 }
 

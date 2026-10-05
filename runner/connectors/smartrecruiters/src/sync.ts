@@ -6,7 +6,7 @@
  * jobs.get           → authenticated GET /jobs/{id}
  * candidates.list    → authenticated GET /candidates
  * candidates.get     → authenticated GET /candidates/{id}
- * users.list         → authenticated GET /users
+ * users.list         → authenticated GET /user-api/v201804/users (pageId paging)
  * interviews.list    → authenticated GET /interviews-api/v201904/interviews
  */
 
@@ -28,6 +28,10 @@ import {
 
 export interface ExecuteJobsListSyncInput {
   company: string;
+  /** Optional page size (Posting API `limit`). Omitted → provider default page. */
+  limit?: number;
+  /** Optional page offset (Posting API `offset`); page with `total` from the response. */
+  offset?: number;
   /** Injected by tests; production leaves it unset. */
   fetch?: typeof fetch;
 }
@@ -41,7 +45,13 @@ export async function executeJobsListSync(
   input: ExecuteJobsListSyncInput,
 ): Promise<ExecuteJobsListSyncOutput> {
   const client = createClient({ company: input.company, fetch: input.fetch });
-  const raw = await client.getJSON("/postings");
+  const raw = await client.getJSON(
+    "/postings" +
+      buildQuery({
+        limit: input.limit != null ? String(input.limit) : undefined,
+        offset: input.offset != null ? String(input.offset) : undefined,
+      }),
+  );
   const parsed = parseJobsResponse(raw);
   return { jobs: parsed.jobs, total: parsed.total };
 }
@@ -196,11 +206,22 @@ export async function executeCandidatesGetSync(
 }
 
 // ---------------------------------------------------------------------------
-// users.list — GET /users
+// users.list — GET /user-api/v201804/users
+// https://developers.smartrecruiters.com/reference/usersall-2
+// (the root GET /users is deprecated: reference/usersall-3)
 // ---------------------------------------------------------------------------
 
+export const USERS_LIST_PATH = "/user-api/v201804/users";
+
 export interface ExecuteUsersListSyncInput extends SmartRecruitersAuthInput {
+  /** Page size, 1–100 (provider default 100). */
   limit?: number;
+  /** Cursor from a previous response's `nextPageId`. */
+  pageId?: string;
+  /**
+   * @deprecated Accepted for backward compatibility and ignored. The current
+   * Users API pages by `pageId`; it has no `offset` parameter.
+   */
   offset?: number;
   q?: string;
   updatedAfter?: string;
@@ -208,7 +229,10 @@ export interface ExecuteUsersListSyncInput extends SmartRecruitersAuthInput {
 
 export interface ExecuteUsersListSyncOutput {
   users: NormalizedUser[];
+  /** Always null on the current Users API (no totalFound); kept for compatibility. */
   total: number | null;
+  /** Cursor for the next page, or null on the last page. */
+  nextPageId: string | null;
 }
 
 export async function executeUsersListSync(
@@ -219,11 +243,12 @@ export async function executeUsersListSync(
     fetch: input.fetch,
     operation: "users.list",
   });
+  // `offset` is intentionally not forwarded (deprecated input, see above).
   const path =
-    "/users" +
+    USERS_LIST_PATH +
     buildQuery({
       limit: input.limit != null ? String(input.limit) : undefined,
-      offset: input.offset != null ? String(input.offset) : undefined,
+      pageId: input.pageId,
       q: input.q,
       updatedAfter: input.updatedAfter,
     });

@@ -38,7 +38,20 @@ describe("SmartRecruiters jobs.list sync", () => {
     const url = new URL(calls[0].url);
     expect(url.hostname).toBe("api.smartrecruiters.com");
     expect(url.pathname).toBe("/v1/companies/acme/postings");
+    expect(url.search).toBe("");
     expect(calls[0].method).toBe("GET");
+  });
+
+  test("forwards optional limit/offset so callers can page past the first page", async () => {
+    const { calls, impl } = stubFetch('{"offset":100,"limit":100,"totalFound":250,"content":[]}');
+
+    const result = await executeJobsListSync({ company: "acme", limit: 100, offset: 100, fetch: impl });
+
+    const url = new URL(calls[0].url);
+    expect(url.pathname).toBe("/v1/companies/acme/postings");
+    expect(url.searchParams.get("limit")).toBe("100");
+    expect(url.searchParams.get("offset")).toBe("100");
+    expect(result.total).toBe(250);
   });
 
   test("classifies an upstream failure instead of throwing a bare Error", async () => {
@@ -174,7 +187,9 @@ describe("SmartRecruiters candidates.get sync", () => {
 });
 
 describe("SmartRecruiters users.list sync", () => {
-  test("GETs /users with X-SmartToken on api host", async () => {
+  // SR-1: the root GET /users is deprecated (reference/usersall-3); the current
+  // Users API is GET /user-api/v201804/users (reference/usersall-2).
+  test("GETs /user-api/v201804/users with X-SmartToken on api host", async () => {
     const { calls, impl } = stubFetch(JSON.stringify(usersFixture));
 
     const result = await executeUsersListSync({ ...auth, fetch: impl });
@@ -182,22 +197,26 @@ describe("SmartRecruiters users.list sync", () => {
     expect(calls).toHaveLength(1);
     const url = new URL(calls[0].url);
     expect(url.hostname).toBe("api.smartrecruiters.com");
-    expect(url.pathname).toBe("/users");
+    expect(url.pathname).toBe("/user-api/v201804/users");
     expect(calls[0].method).toBe("GET");
     expect(calls[0].headers.get("x-smarttoken")).toBe("fixture-smart-token");
     expect(result.users).toHaveLength(2);
-    expect(result.users[0].id).toBe("sr-user:user-001");
+    expect(result.users[0].id).toBe("sr-user:5f0c7e2ab1cd2e0001d63a9a");
     expect(result.users[0].email).toBe("recruiter.one@example.com");
     expect(result.users[0].active).toBe(true);
-    expect(result.total).toBe(2);
+    expect(result.users[0].role).toBe("ADMINISTRATOR");
+    expect(result.nextPageId).toBe("MTAwOjVmMGM3ZTJhYjFjZDJlMDAwMWQ2M2E5Yg==");
+    // v201804 has no totalFound.
+    expect(result.total).toBeNull();
   });
 
-  test("forwards limit/offset/q/updatedAfter filters", async () => {
+  test("forwards limit/pageId/q/updatedAfter and ignores deprecated offset", async () => {
     const { calls, impl } = stubFetch(JSON.stringify(usersFixture));
 
     await executeUsersListSync({
       ...auth,
       limit: 50,
+      pageId: "cursor-abc",
       offset: 10,
       q: "recruiter",
       updatedAfter: "2024-01-01T00:00:00.000Z",
@@ -205,10 +224,19 @@ describe("SmartRecruiters users.list sync", () => {
     });
 
     const url = new URL(calls[0].url);
+    expect(url.pathname).toBe("/user-api/v201804/users");
     expect(url.searchParams.get("limit")).toBe("50");
-    expect(url.searchParams.get("offset")).toBe("10");
+    expect(url.searchParams.get("pageId")).toBe("cursor-abc");
+    expect(url.searchParams.has("offset")).toBe(false);
     expect(url.searchParams.get("q")).toBe("recruiter");
     expect(url.searchParams.get("updatedAfter")).toBe("2024-01-01T00:00:00.000Z");
+  });
+
+  test("still accepts a legacy offset-only call (backward compatible)", async () => {
+    const { calls, impl } = stubFetch(JSON.stringify({ limit: 100, content: [] }));
+    const result = await executeUsersListSync({ ...auth, offset: 100, fetch: impl });
+    expect(new URL(calls[0].url).search).toBe("");
+    expect(result).toEqual({ users: [], total: null, nextPageId: null });
   });
 
   test("classifies upstream errors", async () => {

@@ -227,21 +227,36 @@ describe("SmartRecruiters parseCandidateDetailsResponse", () => {
 });
 
 describe("SmartRecruiters normalizeUser", () => {
-  it("normalizes a full user from fixture", () => {
+  it("normalizes a v201804 user (systemRole) from fixture", () => {
     const user = normalizeUser(usersFixture.content[0] as never);
-    expect(user.id).toBe("sr-user:user-001");
+    expect(user.id).toBe("sr-user:5f0c7e2ab1cd2e0001d63a9a");
     expect(user.provider).toBe("smartrecruiters");
     expect(user.name).toBe("Recruiter One");
     expect(user.email).toBe("recruiter.one@example.com");
     expect(user.role).toBe("ADMINISTRATOR");
     expect(user.active).toBe(true);
     expect(user.language).toBe("en");
+    expect(user.updatedAt).toBe("2024-05-01T10:00:00.000Z");
   });
 
-  it("marks inactive users", () => {
+  it("marks inactive users and maps systemRole.id", () => {
     const user = normalizeUser(usersFixture.content[1] as never);
     expect(user.active).toBe(false);
     expect(user.role).toBe("STANDARD");
+    expect(user.language).toBe("de");
+  });
+
+  it("returns non-null role for every live-shape user", () => {
+    for (const raw of usersFixture.content) {
+      expect(normalizeUser(raw as never).role).not.toBeNull();
+    }
+  });
+
+  it("still reads the deprecated flat role string", () => {
+    expect(normalizeUser({ id: "u1", role: "EXTENDED" }).role).toBe("EXTENDED");
+    expect(normalizeUser({ id: "u1", role: "EXTENDED", systemRole: { id: "ADMINISTRATOR" } }).role).toBe(
+      "ADMINISTRATOR",
+    );
   });
 
   it("handles sparse user", () => {
@@ -249,15 +264,22 @@ describe("SmartRecruiters normalizeUser", () => {
     expect(user.id).toBe("sr-user:u1");
     expect(user.name).toBe("");
     expect(user.active).toBe(true);
+    expect(user.role).toBeNull();
   });
 });
 
 describe("SmartRecruiters parseUsersResponse", () => {
-  it("parses fixture response", () => {
+  it("parses v201804 fixture response (nextPageId, no totalFound)", () => {
     const result = parseUsersResponse(usersFixture);
     expect(result.users).toHaveLength(2);
-    expect(result.total).toBe(2);
-    expect(result.users[1].id).toBe("sr-user:user-002");
+    expect(result.total).toBeNull();
+    expect(result.nextPageId).toBe("MTAwOjVmMGM3ZTJhYjFjZDJlMDAwMWQ2M2E5Yg==");
+    expect(result.users[1].id).toBe("sr-user:5f0c7e2ab1cd2e0001d63a9b");
+  });
+
+  it("returns null nextPageId on the last page and keeps legacy totalFound", () => {
+    expect(parseUsersResponse({ content: [] }).nextPageId).toBeNull();
+    expect(parseUsersResponse({ totalFound: 3, content: [] }).total).toBe(3);
   });
 
   it("handles missing content", () => {
