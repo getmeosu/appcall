@@ -1,7 +1,7 @@
 {
   "key": "greenhouse",
   "name": "Greenhouse",
-  "version": "0.9.0",
+  "version": "0.9.1",
   "runtime": "bun",
   "categories": [
     "ats-recruitment"
@@ -183,13 +183,11 @@
     "applications.create": {
       "kind": "action",
       "sideEffect": "write",
-      "effectPolicy": "Idempotent",
-      "reconcile": "applications.get",
       "timeoutMs": 20000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 1048576,
       "title": "Create application",
-      "description": "Create an application for an existing candidate via authenticated Harvest POST /v3/applications. Requires candidateId and jobId. EffectPolicy Idempotent observes the created application via applications.get.",
+      "description": "Create an application for an existing candidate via authenticated Harvest POST /v3/applications. Requires candidateId and jobId. Effect keys omitted (creates always omit).",
       "inputSchema": {
         "type": "object",
         "additionalProperties": false,
@@ -324,13 +322,11 @@
     "candidates.create": {
       "kind": "action",
       "sideEffect": "write",
-      "effectPolicy": "Idempotent",
-      "reconcile": "candidates.get",
       "timeoutMs": 20000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 1048576,
       "title": "Create candidate",
-      "description": "Create a candidate via authenticated Harvest POST /v3/candidates. Requires firstName and lastName. Optional email maps to email_addresses; optional jobId attaches an application. EffectPolicy Idempotent observes via candidates.get.",
+      "description": "Create a candidate via authenticated Harvest POST /v3/candidates. Requires firstName and lastName. Optional email maps to email_addresses; optional jobId attaches an application. Effect keys omitted (creates always omit).",
       "inputSchema": {
         "type": "object",
         "additionalProperties": false,
@@ -637,7 +633,7 @@
       "maxInputBytes": 65536,
       "maxResponseBytes": 1048576,
       "title": "Update application",
-      "description": "Patch application attribution/metadata via PATCH /v3/applications/{id}. EffectPolicy Reconcile observes via applications.get.",
+      "description": "Patch application attribution/metadata via PATCH /v3/applications/{id}. customFields is the Harvest v3 array of { name_key | custom_field_id, value }. EffectPolicy Reconcile observes via applications.get.",
       "inputSchema": {
         "type": "object",
         "additionalProperties": false,
@@ -689,8 +685,12 @@
             "description": "Optional prospect stage id."
           },
           "customFields": {
-            "type": "object",
-            "description": "Optional custom fields map."
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": true
+            },
+            "description": "Optional Harvest v3 custom field values: array of { name_key | custom_field_id, value } (exactly one of name_key/custom_field_id per entry; value null clears)."
           }
         },
         "required": [
@@ -1065,7 +1065,7 @@
       "maxInputBytes": 65536,
       "maxResponseBytes": 1048576,
       "title": "Apply candidate tag",
-      "description": "Apply a tag to a candidate via POST /v3/applied_candidate_tags. Input id is the candidate id (Reconcile \u2192 candidates.get).",
+      "description": "Apply a tag to a candidate via POST /v3/applied_candidate_tags. Input id is the candidate id. Effect keys omitted (POST creates a join row; candidates.get returns tag names, not candidate_tag_id, so no exact observe).",
       "inputSchema": {
         "type": "object",
         "additionalProperties": false,
@@ -1094,9 +1094,7 @@
         "type": "object",
         "additionalProperties": true,
         "properties": {}
-      },
-      "effectPolicy": "Reconcile",
-      "reconcile": "candidates.get"
+      }
     },
     "candidates.remove_tag": {
       "kind": "action",
@@ -1281,7 +1279,7 @@
       "maxInputBytes": 65536,
       "maxResponseBytes": 1048576,
       "title": "Create offer",
-      "description": "Create an offer via POST /v3/offers. EffectPolicy Idempotent observes via offers.get (response top-level id).",
+      "description": "Create an offer via POST /v3/offers. Returns the created offer (top-level id). customFields is the Harvest v3 array of { name_key | custom_field_id, value }. Effect keys omitted (creates always omit).",
       "inputSchema": {
         "type": "object",
         "additionalProperties": false,
@@ -1298,8 +1296,12 @@
             "description": "Optional starts_on date."
           },
           "customFields": {
-            "type": "object",
-            "description": "Optional custom fields."
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": true
+            },
+            "description": "Optional Harvest v3 custom field values: array of { name_key | custom_field_id, value } (exactly one of name_key/custom_field_id per entry; value null clears)."
           }
         },
         "required": [
@@ -1310,9 +1312,7 @@
         "type": "object",
         "additionalProperties": true,
         "properties": {}
-      },
-      "effectPolicy": "Idempotent",
-      "reconcile": "offers.get"
+      }
     },
     "jobs.list_internal": {
       "kind": "action",

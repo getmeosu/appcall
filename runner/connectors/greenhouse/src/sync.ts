@@ -10,7 +10,7 @@
  * applications.move            → POST /v3/applications/{id}/move
  *                                (runner EffectPolicy Reconcile → applications.get)
  * applications.create          → POST /v3/applications
- *                                (runner EffectPolicy Idempotent → applications.get)
+ *                                (creates omit effect keys)
  * users.list                   → authenticated GET /v3/users
  * interviews.list              → authenticated GET /v3/interviews
  * job_interview_stages.list    → authenticated GET /v3/job_interview_stages
@@ -311,7 +311,7 @@ export async function executeApplicationsMoveSync(
 
 // ---------------------------------------------------------------------------
 // applications.create — POST /v3/applications
-// Runtime owns EffectPolicy Idempotent → applications.get (create returns 201).
+// Create returns 201; creates omit effect keys (no runner observe).
 // ---------------------------------------------------------------------------
 
 export interface ExecuteApplicationsCreateSyncInput extends GreenhouseAuthInput {
@@ -332,7 +332,7 @@ export interface ExecuteApplicationsCreateSyncInput extends GreenhouseAuthInput 
 }
 
 export interface ExecuteApplicationsCreateSyncOutput {
-  /** Raw Harvest create payload; runner Idempotent replaces with applications.get. */
+  /** Raw Harvest create payload (passed through; creates omit effect keys). */
   id?: number | string;
   [key: string]: unknown;
 }
@@ -358,7 +358,7 @@ export async function executeApplicationsCreateSync(
   if (referrerId != null) body.referrer_id = referrerId;
 
   const client = createAuthClient(authClientOpts(input, "applications.create"));
-  // POST only — runner EffectPolicy Idempotent observes via applications.get.
+  // POST only — creates omit effect keys.
   return (await client.postJSON("/applications", body)) as ExecuteApplicationsCreateSyncOutput;
 }
 
