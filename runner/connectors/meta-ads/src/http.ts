@@ -1,6 +1,11 @@
 import { createConnectorHttpClient } from "../../../bun/src/http";
 import manifest from "../manifest.json";
 
+// Graph API version pin. Bump when Meta sunsets the pinned version
+// (v19.0 was sunset 2026-05-21). Matches facebook/instagram siblings (v26.0).
+export const META_GRAPH_API_VERSION = "v26.0";
+export const META_GRAPH_BASE_URL = `https://graph.facebook.com/${META_GRAPH_API_VERSION}`;
+
 // ---------------------------------------------------------------------------
 // Meta Marketing API raw object types
 // ---------------------------------------------------------------------------
@@ -99,7 +104,7 @@ export function createMetaClient(options: MetaClientOptions) {
       init: RequestInit = {},
     ): Promise<{ status: number; headers: Record<string, string>; body: unknown }> {
       const response = await httpClient.fetchText(
-        `https://graph.facebook.com/v19.0${path}`,
+        `${META_GRAPH_BASE_URL}${path}`,
         {
           ...init,
           headers: {
