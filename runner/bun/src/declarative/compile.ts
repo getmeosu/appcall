@@ -16,7 +16,7 @@ import { createConnectorHttpClient, ConnectorHttpError } from "../http";
 import { maxOperationResponseBytes } from "../budget";
 import { assertSafePathSegment, assertSafePathSegments, isRecord, renderPath, renderTemplate, resolvePath } from "./template";
 import { assertOutputSchema, validateAgainstSchema } from "./validate";
-import { assertStrictSchema, validateStrictInput } from "./strict-schema";
+import { assertStrictSchema, compileStrictValidator } from "./strict-schema";
 import type {
   CompiledConnector,
   CompiledHandler,
@@ -153,13 +153,17 @@ function compileOperation(
   if(operation.enforceOutputSchema && operation.outputSchema?.type !== "object") throw new Error("Output enforcement requires object schema");
   const setup=manifest.auth?.setup;
   const credentialKeys=new Set([credentialField,"fetch",...(setup?.fields??[]).map(f=>f.key),...(setup?.routes??[]).flatMap(r=>(r.fields??[]).map(f=>f.key)),...((setup as any)?.derive??[]).map((d:any)=>d.field)]);
+  // Strict-generated schemas are checked once here, not on every call.
+  const strictValidator = operation.validationMode === "strict-generated"
+    ? compileStrictValidator(schema, { credentialKeys })
+    : undefined;
   const validateInput=(value:unknown)=> {
     if(schema.additionalProperties===false && isRecord(value)) {
       const props=isRecord(schema.properties)?schema.properties:{};
       for(const key of Object.keys(value)) if(!Object.hasOwn(props,key) && !credentialKeys.has(key)) throw new Error("Unsupported input field");
     }
-    return operation.validationMode === "strict-generated"
-      ? validateStrictInput(value, schema, credentialKeys)
+    return strictValidator
+      ? strictValidator(value)
       : validateAgainstSchema(value,schema);
   };
 

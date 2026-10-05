@@ -6,11 +6,16 @@ const MAX_NODES = 4096;
 const forbidden = new Set(["__proto__", "constructor", "prototype"]);
 const supported = new Set(["type", "enum", "properties", "required", "additionalProperties", "items", "minItems", "minLength", "minimum", "maximum", "title", "description"]);
 
-export function assertStrictSchema(schema: JSONSchema, depth = 0, state = { nodes: 0 }): void {
+// Annotation-only keywords the control plane's schema checker accepts
+// (crates/appcall-connectors/src/schema.rs `check_schema`). They never
+// constrain a value, so registry dispatch validation may skip over them.
+const annotations = new Set(["default", "examples", "$schema", "$id", "$comment", "readOnly", "writeOnly", "deprecated"]);
+
+export function assertStrictSchema(schema: JSONSchema, depth = 0, state = { nodes: 0 }, allowAnnotations = false): void {
   if (!isRecord(schema)) throw new Error("Invalid strict-generated schema");
   if (depth > MAX_DEPTH || ++state.nodes > MAX_NODES) throw new Error("Schema nesting exceeds limit");
   for (const key of Object.keys(schema)) {
-    if (!supported.has(key)) throw new Error(`Unsupported strict-generated schema constraint: ${key}`);
+    if (!supported.has(key) && !(allowAnnotations && (annotations.has(key) || key.startsWith("x-")))) throw new Error(`Unsupported strict-generated schema constraint: ${key}`);
   }
   const types = schema.type;
   if (types !== undefined && !(typeof types === "string" || (Array.isArray(types) && types.length > 0 && types.every((t) => typeof t === "string")))) throw new Error("Invalid schema type");
@@ -22,38 +27,136 @@ export function assertStrictSchema(schema: JSONSchema, depth = 0, state = { node
   if (schema.enum !== undefined && (!Array.isArray(schema.enum) || schema.enum.length === 0)) throw new Error("enum must be a non-empty array");
   if (schema.required !== undefined && (!Array.isArray(schema.required) || !schema.required.every((x) => typeof x === "string" && !forbidden.has(x)))) throw new Error("required must be an array of safe property names");
   if (schema.additionalProperties !== undefined && typeof schema.additionalProperties !== "boolean" && !isRecord(schema.additionalProperties)) throw new Error("additionalProperties must be boolean or schema");
-  if (isRecord(schema.properties)) for (const [key, child] of Object.entries(schema.properties)) { if (forbidden.has(key)) throw new Error("Forbidden property name"); assertStrictSchema(child as JSONSchema, depth + 1, state); }
+  if (isRecord(schema.properties)) for (const [key, child] of Object.entries(schema.properties)) { if (forbidden.has(key)) throw new Error("Forbidden property name"); assertStrictSchema(child as JSONSchema, depth + 1, state, allowAnnotations); }
   else if (schema.properties !== undefined) throw new Error("properties must be an object");
   if (schema.items !== undefined && !isRecord(schema.items)) throw new Error("items must be a schema");
-  if (isRecord(schema.items)) assertStrictSchema(schema.items, depth + 1, state);
-  if (isRecord(schema.additionalProperties)) assertStrictSchema(schema.additionalProperties, depth + 1, state);
+  if (isRecord(schema.items)) assertStrictSchema(schema.items, depth + 1, state, allowAnnotations);
+  if (isRecord(schema.additionalProperties)) assertStrictSchema(schema.additionalProperties, depth + 1, state, allowAnnotations);
 }
 
-export function validateStrictInput(input: unknown, schema: JSONSchema, credentialKeys = new Set<string>()): Record<string, unknown> {
-  let nodes = 0;
-  assertStrictSchema(schema);
-  const walk = (value: unknown, s: JSONSchema, path: string, depth: number): unknown => {
-    if (depth > MAX_DEPTH || ++nodes > MAX_NODES) throw new Error("Input nesting exceeds limit");
-    if (typeof value === "number" && !Number.isFinite(value)) throw new Error(`${path || "input"} must be finite`);
-    const types = typeof s.type === "string" ? [s.type] : Array.isArray(s.type) ? s.type as string[] : [];
-    if (types.length && !types.some((t) => (t === "null" ? value === null : t === "object" ? isRecord(value) : t === "array" ? Array.isArray(value) : t === "integer" ? typeof value === "number" && Number.isSafeInteger(value) : t === "number" ? typeof value === "number" && Number.isFinite(value) : typeof value === t))) throw new Error(`${path || "input"} has an invalid type`);
-    if (s.enum && !(s.enum as unknown[]).some((x) => deepEqual(x, value))) throw new Error(`${path || "input"} is not an allowed value`);
-    if (typeof value === "string") { const n = [...value].length; if (s.minLength !== undefined && n < (s.minLength as number)) throw new Error(`${path} is too short`); }
-    if (typeof value === "number") { if (s.minimum !== undefined && value < (s.minimum as number)) throw new Error(`${path} is below minimum`); if (s.maximum !== undefined && value > (s.maximum as number)) throw new Error(`${path} is above maximum`); }
-    if (Array.isArray(value)) { if (s.minItems !== undefined && value.length < (s.minItems as number)) throw new Error(`${path} has too few items`); value.forEach((v, i) => walk(v, isRecord(s.items) ? s.items : {}, `${path}[${i}]`, depth + 1)); }
-    if (isRecord(value)) { const props = isRecord(s.properties) ? s.properties : {}; for (const k of (s.required as string[] ?? [])) if (!Object.hasOwn(value, k)) throw new Error(`${path ? `${path}.` : ""}${k} is required`); for (const [k, v] of Object.entries(value)) { if (forbidden.has(k)) throw new Error("Forbidden input field"); if (Object.hasOwn(props, k)) walk(v, props[k] as JSONSchema, `${path ? `${path}.` : ""}${k}`, depth + 1); else if (isRecord(s.additionalProperties)) walk(v, s.additionalProperties, `${path ? `${path}.` : ""}${k}`, depth + 1); else if (s.additionalProperties === false && !(path === "" && credentialKeys.has(k))) throw new Error("Unsupported input field"); else walk(v, {}, `${path ? `${path}.` : ""}${k}`, depth + 1); } }
-    return value;
+export function validateStrictInput(input: unknown, schema: JSONSchema, credentialKeys: ReadonlySet<string> = new Set<string>()): Record<string, unknown> {
+  return compileStrictValidator(schema, { credentialKeys })(input);
+}
+
+export type StrictValidatorOptions = {
+  // Top-level keys injected by the runtime rather than the caller (credential
+  // fields, the test-only fetch override): exempt from additionalProperties:false.
+  credentialKeys?: ReadonlySet<string>;
+  // Registry dispatch mode mirrors the control plane validator
+  // (crates/appcall-connectors/src/schema.rs): annotation keywords are
+  // tolerated, an undeclared credential key is not checked against an
+  // additionalProperties schema (the control plane strips it first), input
+  // size is bounded by maxInputBytes rather than a node count, and an
+  // unsupported field is named in the error.
+  registry?: boolean;
+};
+
+// compileStrictValidator checks the schema once and compiles it into a tree of
+// node checkers with every keyword lookup resolved up front, so the returned
+// validator only walks the input. Callers on a hot path keep the returned
+// function; the schema is never re-checked or re-read per call. Error messages
+// are byte-identical to the original interpretive walker.
+type Ctx = { nodes: number };
+// A node receives its parent path and its own key rather than a prebuilt path,
+// so leaf values never pay for path strings; the path is only materialized for
+// an error message or when descending into a container.
+type NodeCheck = (value: unknown, parent: string, key: string | number | undefined, depth: number, ctx: Ctx) => void;
+
+const childPath = (path: string, key: string) => (path ? `${path}.${key}` : key);
+const pathOf = (parent: string, key: string | number | undefined) =>
+  key === undefined ? parent : typeof key === "number" ? `${parent}[${key}]` : childPath(parent, key);
+
+export function compileStrictValidator(schema: JSONSchema, options: StrictValidatorOptions = {}): (input: unknown) => Record<string, unknown> {
+  const credentialKeys = options.credentialKeys ?? new Set<string>();
+  const registry = options.registry === true;
+  const maxNodes = registry ? Number.POSITIVE_INFINITY : MAX_NODES;
+  assertStrictSchema(schema, 0, { nodes: 0 }, registry);
+
+  const typeMatchers: Record<string, (value: unknown) => boolean> = {
+    null: (value) => value === null,
+    object: (value) => isRecord(value),
+    array: (value) => Array.isArray(value),
+    integer: (value) => typeof value === "number" && Number.isSafeInteger(value),
+    number: (value) => typeof value === "number" && Number.isFinite(value),
+    string: (value) => typeof value === "string",
+    boolean: (value) => typeof value === "boolean",
   };
-  walk(input, schema, "", 0);
-  const out: Record<string, unknown> = {};
-  if (isRecord(input)) {
-    const props = isRecord(schema.properties) ? schema.properties : {};
-    for (const [k, v] of Object.entries(input)) {
-      const declared = Object.hasOwn(props, k);
-      if (declared || (schema.additionalProperties !== false && !credentialKeys.has(k))) out[k] = v;
+
+  let empty: NodeCheck = () => undefined;
+  const compileNode = (s: JSONSchema): NodeCheck => {
+    const types = typeof s.type === "string" ? [s.type] : Array.isArray(s.type) ? s.type as string[] : [];
+    const matchers = types.map((t) => typeMatchers[t] ?? ((value: unknown) => typeof value === t));
+    const expected = registry ? ` (expected ${types.join(" or ")})` : "";
+    const enumValues = s.enum ? s.enum as unknown[] : undefined;
+    const minLength = s.minLength as number | undefined;
+    const minimum = s.minimum as number | undefined;
+    const maximum = s.maximum as number | undefined;
+    const minItems = s.minItems as number | undefined;
+    const props = isRecord(s.properties) ? s.properties : {};
+    const propChecks = new Map<string, NodeCheck>();
+    for (const [k, child] of Object.entries(props)) propChecks.set(k, compileNode(child as JSONSchema));
+    const required = (s.required as string[] | undefined) ?? [];
+    const additional = isRecord(s.additionalProperties) ? compileNode(s.additionalProperties) : undefined;
+    const closed = s.additionalProperties === false;
+    const items = isRecord(s.items) ? compileNode(s.items) : undefined;
+    const check: NodeCheck = (value, parent, key, depth, ctx) => {
+      if (depth > MAX_DEPTH || ++ctx.nodes > maxNodes) throw new Error("Input nesting exceeds limit");
+      if (typeof value === "number" && !Number.isFinite(value)) throw new Error(`${pathOf(parent, key) || "input"} must be finite`);
+      if (matchers.length) {
+        let matched = false;
+        for (let i = 0; i < matchers.length && !matched; i++) matched = matchers[i](value);
+        if (!matched) throw new Error(`${pathOf(parent, key) || "input"} has an invalid type${expected}`);
+      }
+      if (enumValues) {
+        let allowed = false;
+        for (let i = 0; i < enumValues.length && !allowed; i++) allowed = deepEqual(enumValues[i], value);
+        if (!allowed) throw new Error(`${pathOf(parent, key) || "input"} is not an allowed value`);
+      }
+      if (typeof value === "string") { if (minLength !== undefined && [...value].length < minLength) throw new Error(`${pathOf(parent, key)} is too short`); return; }
+      if (typeof value === "number") { if (minimum !== undefined && value < minimum) throw new Error(`${pathOf(parent, key)} is below minimum`); if (maximum !== undefined && value > maximum) throw new Error(`${pathOf(parent, key)} is above maximum`); return; }
+      if (Array.isArray(value)) {
+        const path = pathOf(parent, key);
+        if (minItems !== undefined && value.length < minItems) throw new Error(`${path} has too few items`);
+        const item = items ?? empty;
+        for (let i = 0; i < value.length; i++) item(value[i], path, i, depth + 1, ctx);
+        return;
+      }
+      if (isRecord(value)) {
+        const path = pathOf(parent, key);
+        for (const k of required) if (!Object.hasOwn(value, k)) throw new Error(`${childPath(path, k)} is required`);
+        const atTop = path === "";
+        for (const k in value) {
+          if (!Object.hasOwn(value, k)) continue;
+          if (forbidden.has(k)) throw new Error("Forbidden input field");
+          const declared = propChecks.get(k);
+          if (declared !== undefined && Object.hasOwn(props, k)) declared(value[k], path, k, depth + 1, ctx);
+          else if (registry && atTop && credentialKeys.has(k)) continue;
+          else if (additional) additional(value[k], path, k, depth + 1, ctx);
+          else if (closed && !(atTop && credentialKeys.has(k))) throw new Error(registry ? `Unsupported input field: ${childPath(path, k)}` : "Unsupported input field");
+          else empty(value[k], path, k, depth + 1, ctx);
+        }
+      }
+    };
+    return check;
+  };
+  empty = compileNode({});
+  const root = compileNode(schema);
+  const rootProps = isRecord(schema.properties) ? schema.properties : {};
+
+  return (input: unknown): Record<string, unknown> => {
+    root(input, "", undefined, 0, { nodes: 0 });
+    // Registry dispatch only needs the verdict; the handler receives the
+    // original input untouched.
+    if (registry) return input as Record<string, unknown>;
+    const out: Record<string, unknown> = {};
+    if (isRecord(input)) {
+      for (const [k, v] of Object.entries(input)) {
+        const declared = Object.hasOwn(rootProps, k);
+        if (declared || (schema.additionalProperties !== false && !credentialKeys.has(k))) out[k] = v;
+      }
     }
-  }
-  return out;
+    return out;
+  };
 }
 
 function deepEqual(a: unknown, b: unknown): boolean { if (Object.is(a, b)) return true; if (Array.isArray(a) && Array.isArray(b)) return a.length === b.length && a.every((v, i) => deepEqual(v, b[i])); if (isRecord(a) && isRecord(b)) { const ak = Object.keys(a); const bk = Object.keys(b); return ak.length === bk.length && ak.every((k) => Object.hasOwn(b, k) && deepEqual(a[k], b[k])); } return false; }
