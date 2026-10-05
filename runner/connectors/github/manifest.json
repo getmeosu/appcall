@@ -1,7 +1,7 @@
 {
   "key": "github",
   "name": "GitHub",
-  "version": "0.67.0",
+  "version": "0.68.0",
   "runtime": "bun",
   "categories": [
     "dev-tools"
@@ -33976,6 +33976,694 @@
         "properties": {
           "item": {
             "type": "object"
+          }
+        }
+      }
+    },
+    "users.get_by_id": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Get a user using their ID",
+      "description": "Read GET /user/{account_id}. Read only. Uses the connector bearer token. accountId is the stable numeric GitHub account id, not the login. A 404 is CONNECTOR_UPSTREAM_ERROR. This is not users.get (GET /user). No effectPolicy and no reconcile.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "accountId": {
+            "type": "integer",
+            "description": "GitHub account id, the account_id path segment. Positive integer."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "accountId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "user": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "login": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "url": {
+                "type": "string"
+              },
+              "type": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "user.following.check": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Check if a person is followed by the authenticated user",
+      "description": "Read GET /user/following/{username}. Read only. Uses the connector bearer token. HTTP 204 means the authenticated user follows username and HTTP 404 means they do not. Both are a successful read. Empty bodies are expected. Other statuses stay errors. GET /users/{username}/following/{target_user} is users.following.check, not this operation. No effectPolicy and no reconcile.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "username": {
+            "type": "string",
+            "description": "GitHub user login. A single path segment."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "username"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "following": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    "user.public_emails.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "List public email addresses for the authenticated user",
+      "description": "List public email addresses for the authenticated user via GET /user/public_emails. Read only. Requires the account token (user:email). per_page max is 100. A missing resource is CONNECTOR_UPSTREAM_ERROR. This is not user.emails.list (GET /user/emails). No effectPolicy and no reconcile.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "perPage": {
+            "type": "number",
+            "description": "Results per page (max 100)."
+          },
+          "page": {
+            "type": "number",
+            "description": "Page number."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "emails": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "email": {
+                  "type": "string"
+                },
+                "primary": {
+                  "type": "boolean"
+                },
+                "verified": {
+                  "type": "boolean"
+                },
+                "visibility": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "user.repository_invitations.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "List repository invitations for the authenticated user",
+      "description": "Read GET /user/repository_invitations. Read only. Lists open repository invitations for the authenticated user. per_page max is 100. A 404 is CONNECTOR_UPSTREAM_ERROR. This is not repos.invitations.list (GET /repos/{owner}/{repo}/invitations). No effectPolicy and no reconcile.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "perPage": {
+            "type": "number",
+            "description": "Results per page (max 100)."
+          },
+          "page": {
+            "type": "number",
+            "description": "Page number."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "invitations": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      }
+    },
+    "user.packages.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "List packages for the authenticated user",
+      "description": "GET /user/packages. package_type is a required query parameter. visibility is optional. A 200 is the package list. A 404 is CONNECTOR_UPSTREAM_ERROR. This is not users.packages.list (GET /users/{username}/packages). Read only. No effectPolicy and no reconcile.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "packageType": {
+            "type": "string",
+            "description": "Required package_type query. One of npm, maven, rubygems, docker, nuget, container.",
+            "enum": [
+              "npm",
+              "maven",
+              "rubygems",
+              "docker",
+              "nuget",
+              "container"
+            ]
+          },
+          "visibility": {
+            "type": "string",
+            "description": "Optional visibility query. One of public, private, internal.",
+            "enum": [
+              "public",
+              "private",
+              "internal"
+            ]
+          },
+          "perPage": {
+            "type": "number",
+            "description": "Results per page (max 100)."
+          },
+          "page": {
+            "type": "number",
+            "description": "Page number."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "packageType"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "packages": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "integer"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "packageType": {
+                  "type": "string"
+                },
+                "visibility": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "user.interaction_limits.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Get interaction restrictions for your public repositories",
+      "description": "Read GET /user/interaction-limits. Read only. A 204 or an empty body means no restriction is set and present is false. A 404 is CONNECTOR_UPSTREAM_ERROR. Does not change repos.interaction_limits.get or orgs.interaction_limits.get. No effectPolicy and no reconcile.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false,
+        "required": []
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "limits": {
+            "type": "object",
+            "properties": {
+              "limit": {
+                "type": "string"
+              },
+              "origin": {
+                "type": "string"
+              },
+              "expiresAt": {
+                "type": "string"
+              }
+            }
+          },
+          "present": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    "user.interaction_limits.set": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 65536,
+      "sideEffect": "write",
+      "title": "Set interaction restrictions for your public repositories",
+      "description": "PUT /user/interaction-limits. kind=action, sideEffect=write. Success is 200. The PUT replaces any existing restriction across all public repositories owned by the authenticated user. Not Reconcile. No effectPolicy, no reconcile, and no effect. A 404 is CONNECTOR_UPSTREAM_ERROR.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "string",
+            "description": "Who can comment, open issues, or create pull requests while the limit is in effect.",
+            "enum": [
+              "existing_users",
+              "contributors_only",
+              "collaborators_only"
+            ]
+          },
+          "expiry": {
+            "type": "string",
+            "description": "How long the interaction restriction lasts.",
+            "enum": [
+              "one_day",
+              "three_days",
+              "one_week",
+              "one_month",
+              "six_months"
+            ]
+          }
+        },
+        "required": [
+          "limit"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "limits": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "users.attestations.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "List attestations for a user",
+      "description": "Read GET /users/{username}/attestations/{subject_digest}. Read only. subjectDigest is the artifact digest, for example sha256:<hex>. Cursor pagination uses before and after with per_page max 100. A 404 is CONNECTOR_UPSTREAM_ERROR. No effectPolicy and no reconcile.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "username": {
+            "type": "string",
+            "description": "GitHub user login. A single path segment."
+          },
+          "subjectDigest": {
+            "type": "string",
+            "description": "Subject digest, the subject_digest path segment (for example sha256:<hex>). A single path segment."
+          },
+          "perPage": {
+            "type": "number",
+            "description": "Results per page (max 100)."
+          },
+          "before": {
+            "type": "string",
+            "description": "Cursor. Official query parameter before."
+          },
+          "after": {
+            "type": "string",
+            "description": "Cursor. Official query parameter after."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "username",
+          "subjectDigest"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "attestations": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "repositoryId": {
+                  "type": "integer"
+                },
+                "bundleUrl": {
+                  "type": "string"
+                },
+                "bundle": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "users.billing.premium_request_usage.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Get billing premium request usage report for a user",
+      "description": "GET /users/{username}/settings/billing/premium_request/usage. Optional integer year, month, and day narrow the report period. A 200 is the premium request usage report. A 404 is CONNECTOR_UPSTREAM_ERROR. This is not users.billing.usage.get. Read only. No effectPolicy and no reconcile.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "username": {
+            "type": "string",
+            "description": "GitHub user login. A single path segment."
+          },
+          "year": {
+            "type": "integer",
+            "description": "Official query parameter year. Four-digit year. Defaults to the current year upstream."
+          },
+          "month": {
+            "type": "integer",
+            "description": "Official query parameter month. Integer from 1 to 12."
+          },
+          "day": {
+            "type": "integer",
+            "description": "Official query parameter day. Integer from 1 to 31."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "username"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "timePeriod": {
+            "type": "object",
+            "properties": {
+              "year": {
+                "type": "integer"
+              },
+              "month": {
+                "type": "integer"
+              },
+              "day": {
+                "type": "integer"
+              }
+            }
+          },
+          "user": {
+            "type": "string"
+          },
+          "usageItems": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "product": {
+                  "type": "string"
+                },
+                "sku": {
+                  "type": "string"
+                },
+                "unitType": {
+                  "type": "string"
+                },
+                "pricePerUnit": {
+                  "type": "number"
+                },
+                "grossQuantity": {
+                  "type": "number"
+                },
+                "grossAmount": {
+                  "type": "number"
+                },
+                "discountQuantity": {
+                  "type": "number"
+                },
+                "discountAmount": {
+                  "type": "number"
+                },
+                "netQuantity": {
+                  "type": "number"
+                },
+                "netAmount": {
+                  "type": "number"
+                },
+                "model": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "users.billing.usage.summary.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Get billing usage summary for a user",
+      "description": "GET /users/{username}/settings/billing/usage/summary. Optional integer year, month, and day narrow the summary period. A 200 is the usage summary. A 404 is CONNECTOR_UPSTREAM_ERROR. This is not users.billing.usage.get (GET .../settings/billing/usage). Read only. No effectPolicy and no reconcile.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "username": {
+            "type": "string",
+            "description": "GitHub user login. A single path segment."
+          },
+          "year": {
+            "type": "integer",
+            "description": "Official query parameter year. Four-digit year. Defaults to the current year upstream."
+          },
+          "month": {
+            "type": "integer",
+            "description": "Official query parameter month. Integer from 1 to 12."
+          },
+          "day": {
+            "type": "integer",
+            "description": "Official query parameter day. Integer from 1 to 31."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "username"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "timePeriod": {
+            "type": "object",
+            "properties": {
+              "year": {
+                "type": "integer"
+              },
+              "month": {
+                "type": "integer"
+              },
+              "day": {
+                "type": "integer"
+              }
+            }
+          },
+          "user": {
+            "type": "string"
+          },
+          "usageItems": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "product": {
+                  "type": "string"
+                },
+                "sku": {
+                  "type": "string"
+                },
+                "unitType": {
+                  "type": "string"
+                },
+                "pricePerUnit": {
+                  "type": "number"
+                },
+                "grossQuantity": {
+                  "type": "number"
+                },
+                "grossAmount": {
+                  "type": "number"
+                },
+                "discountQuantity": {
+                  "type": "number"
+                },
+                "discountAmount": {
+                  "type": "number"
+                },
+                "netQuantity": {
+                  "type": "number"
+                },
+                "netAmount": {
+                  "type": "number"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "codes_of_conduct.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "List codes of conduct",
+      "description": "GET /codes_of_conduct. A 200 is the list of all codes of conduct. A 404 is CONNECTOR_UPSTREAM_ERROR. This is not codes_of_conduct.get (GET /codes_of_conduct/{key}). Read only. No effectPolicy and no reconcile.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false,
+        "required": []
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "codesOfConduct": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "key": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "url": {
+                  "type": "string"
+                },
+                "htmlUrl": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "licenses.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "List commonly used licenses",
+      "description": "Read GET /licenses. Read only. Uses the connector bearer token. featured is an optional boolean query. per_page max is 100. A 404 is CONNECTOR_UPSTREAM_ERROR. This is not licenses.get (GET /licenses/{license}). No effectPolicy and no reconcile.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "featured": {
+            "type": "boolean",
+            "description": "Optional featured query. When true, only featured licenses are returned."
+          },
+          "perPage": {
+            "type": "number",
+            "description": "Results per page (max 100)."
+          },
+          "page": {
+            "type": "number",
+            "description": "Page number."
+          }
+        },
+        "additionalProperties": false,
+        "required": []
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "licenses": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "key": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "spdxId": {
+                  "type": "string"
+                },
+                "url": {
+                  "type": "string"
+                },
+                "nodeId": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "gitignore.templates.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "List all gitignore templates",
+      "description": "Read GET /gitignore/templates. Read only. Uses the connector bearer token. Returns template names only. A 404 is CONNECTOR_UPSTREAM_ERROR. This is not gitignore.templates.get (GET /gitignore/templates/{name}). No effectPolicy and no reconcile.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false,
+        "required": []
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "templates": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           }
         }
       }
