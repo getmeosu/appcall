@@ -1127,3 +1127,415 @@ export async function executeReferralsList(input: ExecuteReferralsListInput): Pr
   );
   return { data: asEnvelopeObject(raw) };
 }
+
+// ---------------------------------------------------------------------------
+// G2 — panels / interviews writes / requisitions / resumes / files metadata
+// Handlers win over declarative request blocks so region=eu reaches
+// api.eu.lever.co. Creates omit EffectPolicy and surface data.id as id.
+// panels.update Reconcile → panels.get; interviews.update → tip interviews.get;
+// requisitions.update → requisitions.get. Deletes omit (404 → upstream error).
+// ---------------------------------------------------------------------------
+
+function requireObjectArray(value: unknown, field: string): Array<Record<string, unknown>> {
+  if (!Array.isArray(value) || value.length === 0) {
+    throw new Error(`${field} must be a non-empty array`);
+  }
+  for (const item of value) {
+    if (item == null || typeof item !== "object" || Array.isArray(item)) {
+      throw new Error(`${field} must contain objects`);
+    }
+  }
+  return value as Array<Record<string, unknown>>;
+}
+
+function surfaceCreatedId(raw: unknown, label: string): { id: string; data: Record<string, unknown> } {
+  const envelope = asEnvelopeObject(raw);
+  const data = envelope.data;
+  if (data == null || typeof data !== "object" || Array.isArray(data)) {
+    throw {
+      ok: false,
+      code: "CONNECTOR_RESPONSE_INVALID",
+      message: `Lever ${label} response is missing data.`,
+    };
+  }
+  const id = (data as { id?: unknown }).id;
+  if (typeof id !== "string" || id.length === 0) {
+    throw {
+      ok: false,
+      code: "CONNECTOR_RESPONSE_INVALID",
+      message: `Lever ${label} response is missing data.id.`,
+    };
+  }
+  return { id, data: data as Record<string, unknown> };
+}
+
+function uploadedAtQuery(
+  uploadedAtStart: number | undefined,
+  uploadedAtEnd: number | undefined,
+): string {
+  return buildQuery({
+    uploaded_at_start: uploadedAtStart != null ? String(uploadedAtStart) : undefined,
+    uploaded_at_end: uploadedAtEnd != null ? String(uploadedAtEnd) : undefined,
+  });
+}
+
+// --- panels -----------------------------------------------------------------
+
+export interface ExecutePanelsListInput extends ExecutePagedReadInput {
+  opportunityId: string;
+}
+
+export async function executePanelsList(input: ExecutePanelsListInput): Promise<LeverEnvelopeOutput> {
+  const opportunityId = safeSegment(input.opportunityId, "opportunityId");
+  const client = authClientFor(input, "panels.list");
+  const raw = await client.getJSON(
+    `/opportunities/${opportunityId}/panels` + pagingQuery(input.limit, input.offset),
+  );
+  return { data: asEnvelopeObject(raw) };
+}
+
+export interface ExecutePanelRefInput extends LeverAuthInput {
+  opportunityId: string;
+  panelId: string;
+}
+
+export async function executePanelsGet(input: ExecutePanelRefInput): Promise<LeverEnvelopeOutput> {
+  const opportunityId = safeSegment(input.opportunityId, "opportunityId");
+  const panelId = safeSegment(input.panelId, "panelId");
+  const client = authClientFor(input, "panels.get");
+  const raw = await client.getJSON(`/opportunities/${opportunityId}/panels/${panelId}`);
+  return { data: asEnvelopeObject(raw) };
+}
+
+export interface ExecutePanelsCreateInput extends LeverAuthInput {
+  opportunityId: string;
+  performAs: string;
+  timezone: string;
+  interviews: Array<Record<string, unknown>>;
+  applications?: string[];
+  feedbackReminder?: string;
+  note?: string;
+  externalUrl?: string;
+}
+
+export async function executePanelsCreate(
+  input: ExecutePanelsCreateInput,
+): Promise<{ id: string; data: Record<string, unknown> }> {
+  const opportunityId = safeSegment(input.opportunityId, "opportunityId");
+  const performAs = requireNonEmptyString(input.performAs, "performAs");
+  const timezone = requireNonEmptyString(input.timezone, "timezone");
+  const interviews = requireObjectArray(input.interviews, "interviews");
+  const client = authClientFor(input, "panels.create");
+  const raw = await client.postJSON(
+    `/opportunities/${opportunityId}/panels` + buildQuery({ perform_as: performAs }),
+    compactBody({
+      timezone,
+      interviews,
+      applications: input.applications,
+      feedbackReminder: input.feedbackReminder,
+      note: input.note,
+      externalUrl: input.externalUrl,
+    }),
+  );
+  return surfaceCreatedId(raw, "create panel");
+}
+
+export interface ExecutePanelsUpdateInput extends ExecutePanelsCreateInput {
+  panelId: string;
+}
+
+export async function executePanelsUpdate(input: ExecutePanelsUpdateInput): Promise<LeverEnvelopeOutput> {
+  const opportunityId = safeSegment(input.opportunityId, "opportunityId");
+  const panelId = safeSegment(input.panelId, "panelId");
+  const performAs = requireNonEmptyString(input.performAs, "performAs");
+  const timezone = requireNonEmptyString(input.timezone, "timezone");
+  const interviews = requireObjectArray(input.interviews, "interviews");
+  const client = authClientFor(input, "panels.update");
+  const raw = await client.putJSON(
+    `/opportunities/${opportunityId}/panels/${panelId}` + buildQuery({ perform_as: performAs }),
+    compactBody({
+      timezone,
+      interviews,
+      applications: input.applications,
+      feedbackReminder: input.feedbackReminder,
+      note: input.note,
+      externalUrl: input.externalUrl,
+    }),
+  );
+  return { data: raw == null ? {} : asEnvelopeObject(raw) };
+}
+
+export interface ExecutePanelsDeleteInput extends LeverAuthInput {
+  opportunityId: string;
+  panelId: string;
+  performAs: string;
+}
+
+export async function executePanelsDelete(
+  input: ExecutePanelsDeleteInput,
+): Promise<{ deleted: true; opportunityId: string; panelId: string }> {
+  const opportunityId = safeSegment(input.opportunityId, "opportunityId");
+  const panelId = safeSegment(input.panelId, "panelId");
+  const performAs = requireNonEmptyString(input.performAs, "performAs");
+  const client = authClientFor(input, "panels.delete");
+  await client.deleteJSON(
+    `/opportunities/${opportunityId}/panels/${panelId}` + buildQuery({ perform_as: performAs }),
+  );
+  return { deleted: true, opportunityId, panelId };
+}
+
+// --- interviews writes ------------------------------------------------------
+
+export interface ExecuteInterviewsCreateInput extends LeverAuthInput {
+  opportunityId: string;
+  performAs: string;
+  panel: string;
+  interviewers: Array<Record<string, unknown>>;
+  date: number;
+  duration: number;
+  subject?: string;
+  note?: string;
+  location?: string;
+  feedbackTemplate?: string;
+  feedbackReminder?: string;
+}
+
+export async function executeInterviewsCreate(
+  input: ExecuteInterviewsCreateInput,
+): Promise<{ id: string; data: Record<string, unknown> }> {
+  const opportunityId = safeSegment(input.opportunityId, "opportunityId");
+  const performAs = requireNonEmptyString(input.performAs, "performAs");
+  const panel = requireNonEmptyString(input.panel, "panel");
+  const interviewers = requireObjectArray(input.interviewers, "interviewers");
+  if (typeof input.date !== "number" || !Number.isFinite(input.date)) {
+    throw new Error("date is required");
+  }
+  if (typeof input.duration !== "number" || !Number.isFinite(input.duration) || input.duration < 1) {
+    throw new Error("duration must be a positive number");
+  }
+  const client = authClientFor(input, "interviews.create");
+  const raw = await client.postJSON(
+    `/opportunities/${opportunityId}/interviews` + buildQuery({ perform_as: performAs }),
+    compactBody({
+      panel,
+      interviewers,
+      date: input.date,
+      duration: input.duration,
+      subject: input.subject,
+      note: input.note,
+      location: input.location,
+      feedbackTemplate: input.feedbackTemplate,
+      feedbackReminder: input.feedbackReminder,
+    }),
+  );
+  return surfaceCreatedId(raw, "create interview");
+}
+
+export interface ExecuteInterviewsUpdateInput extends ExecuteInterviewsCreateInput {
+  interviewId: string;
+}
+
+export async function executeInterviewsUpdate(
+  input: ExecuteInterviewsUpdateInput,
+): Promise<LeverEnvelopeOutput> {
+  const opportunityId = safeSegment(input.opportunityId, "opportunityId");
+  const interviewId = safeSegment(input.interviewId, "interviewId");
+  const performAs = requireNonEmptyString(input.performAs, "performAs");
+  const panel = requireNonEmptyString(input.panel, "panel");
+  const interviewers = requireObjectArray(input.interviewers, "interviewers");
+  if (typeof input.date !== "number" || !Number.isFinite(input.date)) {
+    throw new Error("date is required");
+  }
+  if (typeof input.duration !== "number" || !Number.isFinite(input.duration) || input.duration < 1) {
+    throw new Error("duration must be a positive number");
+  }
+  const client = authClientFor(input, "interviews.update");
+  const raw = await client.putJSON(
+    `/opportunities/${opportunityId}/interviews/${interviewId}` + buildQuery({ perform_as: performAs }),
+    compactBody({
+      panel,
+      interviewers,
+      date: input.date,
+      duration: input.duration,
+      subject: input.subject,
+      note: input.note,
+      location: input.location,
+      feedbackTemplate: input.feedbackTemplate,
+      feedbackReminder: input.feedbackReminder,
+    }),
+  );
+  return { data: raw == null ? {} : asEnvelopeObject(raw) };
+}
+
+export interface ExecuteInterviewsDeleteInput extends LeverAuthInput {
+  opportunityId: string;
+  interviewId: string;
+  performAs: string;
+}
+
+export async function executeInterviewsDelete(
+  input: ExecuteInterviewsDeleteInput,
+): Promise<{ deleted: true; opportunityId: string; interviewId: string }> {
+  const opportunityId = safeSegment(input.opportunityId, "opportunityId");
+  const interviewId = safeSegment(input.interviewId, "interviewId");
+  const performAs = requireNonEmptyString(input.performAs, "performAs");
+  const client = authClientFor(input, "interviews.delete");
+  await client.deleteJSON(
+    `/opportunities/${opportunityId}/interviews/${interviewId}` + buildQuery({ perform_as: performAs }),
+  );
+  return { deleted: true, opportunityId, interviewId };
+}
+
+// --- requisitions -----------------------------------------------------------
+
+export interface ExecuteRequisitionsGetInput extends LeverAuthInput {
+  requisitionId: string;
+}
+
+export async function executeRequisitionsGet(
+  input: ExecuteRequisitionsGetInput,
+): Promise<LeverEnvelopeOutput> {
+  const requisitionId = safeSegment(input.requisitionId, "requisitionId");
+  const client = authClientFor(input, "requisitions.get");
+  const raw = await client.getJSON(`/requisitions/${requisitionId}`);
+  return { data: asEnvelopeObject(raw) };
+}
+
+export interface ExecuteRequisitionsCreateInput extends LeverAuthInput {
+  requisitionCode: string;
+  name: string;
+  headcountTotal: number;
+  backfill?: boolean;
+  compensationBand?: Record<string, unknown>;
+  employmentStatus?: string;
+  hiringManager?: string;
+  owner?: string;
+  location?: string;
+  team?: string;
+  department?: string;
+  postingIds?: string[];
+  customFields?: Record<string, unknown>;
+}
+
+export async function executeRequisitionsCreate(
+  input: ExecuteRequisitionsCreateInput,
+): Promise<{ id: string; data: Record<string, unknown> }> {
+  const requisitionCode = requireNonEmptyString(input.requisitionCode, "requisitionCode");
+  const name = requireNonEmptyString(input.name, "name");
+  if (typeof input.headcountTotal !== "number" || !Number.isFinite(input.headcountTotal) || input.headcountTotal < 1) {
+    throw new Error("headcountTotal must be a positive number");
+  }
+  const client = authClientFor(input, "requisitions.create");
+  const raw = await client.postJSON(
+    "/requisitions",
+    compactBody({
+      requisitionCode,
+      name,
+      headcountTotal: input.headcountTotal,
+      backfill: input.backfill,
+      compensationBand: input.compensationBand,
+      employmentStatus: input.employmentStatus,
+      hiringManager: input.hiringManager,
+      owner: input.owner,
+      location: input.location,
+      team: input.team,
+      department: input.department,
+      postingIds: input.postingIds,
+      customFields: input.customFields,
+    }),
+  );
+  return surfaceCreatedId(raw, "create requisition");
+}
+
+export interface ExecuteRequisitionsUpdateInput extends ExecuteRequisitionsCreateInput {
+  requisitionId: string;
+  status?: string;
+}
+
+export async function executeRequisitionsUpdate(
+  input: ExecuteRequisitionsUpdateInput,
+): Promise<LeverEnvelopeOutput> {
+  const requisitionId = safeSegment(input.requisitionId, "requisitionId");
+  const requisitionCode = requireNonEmptyString(input.requisitionCode, "requisitionCode");
+  const name = requireNonEmptyString(input.name, "name");
+  if (typeof input.headcountTotal !== "number" || !Number.isFinite(input.headcountTotal) || input.headcountTotal < 1) {
+    throw new Error("headcountTotal must be a positive number");
+  }
+  const client = authClientFor(input, "requisitions.update");
+  const raw = await client.putJSON(
+    `/requisitions/${requisitionId}`,
+    compactBody({
+      requisitionCode,
+      name,
+      headcountTotal: input.headcountTotal,
+      backfill: input.backfill,
+      compensationBand: input.compensationBand,
+      employmentStatus: input.employmentStatus,
+      hiringManager: input.hiringManager,
+      owner: input.owner,
+      location: input.location,
+      team: input.team,
+      department: input.department,
+      postingIds: input.postingIds,
+      customFields: input.customFields,
+      status: input.status,
+    }),
+  );
+  return { data: raw == null ? {} : asEnvelopeObject(raw) };
+}
+
+export interface ExecuteRequisitionsDeleteInput extends LeverAuthInput {
+  requisitionId: string;
+}
+
+export async function executeRequisitionsDelete(
+  input: ExecuteRequisitionsDeleteInput,
+): Promise<{ deleted: true; requisitionId: string }> {
+  const requisitionId = safeSegment(input.requisitionId, "requisitionId");
+  const client = authClientFor(input, "requisitions.delete");
+  await client.deleteJSON(`/requisitions/${requisitionId}`);
+  return { deleted: true, requisitionId };
+}
+
+// --- resumes / files metadata ----------------------------------------------
+
+export interface ExecuteOpportunityFilesListInput extends LeverAuthInput {
+  opportunityId: string;
+  uploadedAtStart?: number;
+  uploadedAtEnd?: number;
+}
+
+export async function executeResumesList(
+  input: ExecuteOpportunityFilesListInput,
+): Promise<LeverEnvelopeOutput> {
+  const opportunityId = safeSegment(input.opportunityId, "opportunityId");
+  const client = authClientFor(input, "resumes.list");
+  const raw = await client.getJSON(
+    `/opportunities/${opportunityId}/resumes` + uploadedAtQuery(input.uploadedAtStart, input.uploadedAtEnd),
+  );
+  return { data: asEnvelopeObject(raw) };
+}
+
+export async function executeFilesList(
+  input: ExecuteOpportunityFilesListInput,
+): Promise<LeverEnvelopeOutput> {
+  const opportunityId = safeSegment(input.opportunityId, "opportunityId");
+  const client = authClientFor(input, "files.list");
+  const raw = await client.getJSON(
+    `/opportunities/${opportunityId}/files` + uploadedAtQuery(input.uploadedAtStart, input.uploadedAtEnd),
+  );
+  return { data: asEnvelopeObject(raw) };
+}
+
+export interface ExecuteFilesGetInput extends LeverAuthInput {
+  opportunityId: string;
+  fileId: string;
+}
+
+export async function executeFilesGet(input: ExecuteFilesGetInput): Promise<LeverEnvelopeOutput> {
+  const opportunityId = safeSegment(input.opportunityId, "opportunityId");
+  const fileId = safeSegment(input.fileId, "fileId");
+  const client = authClientFor(input, "files.get");
+  const raw = await client.getJSON(`/opportunities/${opportunityId}/files/${fileId}`);
+  return { data: asEnvelopeObject(raw) };
+}
