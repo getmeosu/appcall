@@ -9,13 +9,15 @@ import { PINNED_COMMIT, PINNED_REPO, PINNED_TREE_OID } from "./provenance";
 import { dossierFromProvider } from "./dossier";
 import { reconcileNativeIdentities, loadNativeIdentityCatalog } from "./native-identities";
 const execFileAsync = promisify(execFile);
+// Connector manifests outgrow Node's 1 MiB execFile default (github is >1 MiB); read git blobs with a generous cap.
+const GIT_READ = { maxBuffer: 256 * 1024 * 1024 } as const;
 const PROJECT_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../../../");
 
 export async function loadNativeIdentityInventory(nativeBase = "HEAD") {
   const baseCommit = (await execFileAsync("git", ["-C", PROJECT_ROOT, "rev-parse", "--verify", `${nativeBase}^{commit}`])).stdout.trim();
-  const baseRows = (await execFileAsync("git", ["-C", PROJECT_ROOT, "ls-tree", "-r", "--name-only", baseCommit, "--", "runner/connectors"])).stdout.split("\n").filter((p) => /\/manifest\.json$/.test(p));
+  const baseRows = (await execFileAsync("git", ["-C", PROJECT_ROOT, "ls-tree", "-r", "--name-only", baseCommit, "--", "runner/connectors"], GIT_READ)).stdout.split("\n").filter((p) => /\/manifest\.json$/.test(p));
   const baseline: string[] = [];
-  for (const path of baseRows) { const content = (await execFileAsync("git", ["-C", PROJECT_ROOT, "show", `${baseCommit}:${path}`])).stdout; let manifest: any; try { manifest = JSON.parse(content); } catch { throw new Error(`INVALID_BASE_MANIFEST: ${path}`); } if (typeof manifest.key !== "string" || !manifest.key) throw new Error(`INVALID_BASE_MANIFEST: ${path}`); baseline.push(manifest.key); }
+  for (const path of baseRows) { const content = (await execFileAsync("git", ["-C", PROJECT_ROOT, "show", `${baseCommit}:${path}`], GIT_READ)).stdout; let manifest: any; try { manifest = JSON.parse(content); } catch { throw new Error(`INVALID_BASE_MANIFEST: ${path}`); } if (typeof manifest.key !== "string" || !manifest.key) throw new Error(`INVALID_BASE_MANIFEST: ${path}`); baseline.push(manifest.key); }
   const currentRows = await readdir(join(PROJECT_ROOT, "runner", "connectors"), { withFileTypes: true });
   const current: string[] = [];
   for (const entry of currentRows) { if (!entry.isDirectory()) continue; const path = join(PROJECT_ROOT, "runner", "connectors", entry.name, "manifest.json"); let raw: string; try { raw = await readFile(path, "utf8"); } catch (error: any) { if (error?.code === "ENOENT") continue; throw error; } let manifest: any; try { manifest = JSON.parse(raw); } catch { throw new Error(`INVALID_CURRENT_MANIFEST: ${entry.name}`); } if (typeof manifest.key !== "string" || !manifest.key) throw new Error(`INVALID_CURRENT_MANIFEST: ${entry.name}`); current.push(manifest.key); }
