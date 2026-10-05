@@ -599,6 +599,12 @@ import {
   createRepoRunnerRemoveToken as ghCreateRepoRunnerRemoveToken,
   addInstallationRepository as ghAddInstallationRepository,
   removeInstallationRepository as ghRemoveInstallationRepository,
+  deleteAuthenticatedPackageVersion as ghDeleteAuthenticatedPackageVersion,
+  deleteOrgPackageVersion as ghDeleteOrgPackageVersion,
+  deleteUserPackageVersion as ghDeleteUserPackageVersion,
+  restoreOrgPackage as ghRestoreOrgPackage,
+  restoreUserPackage as ghRestoreUserPackage,
+  restoreAuthenticatedPackage as ghRestoreAuthenticatedPackage,
 } from "../../connectors/github/src/actions";
 import { healthcheck as githubHealthcheck } from "../../connectors/github/src/healthcheck";
 import { executeIssuesListSync as listGitHubIssues, executePullRequestsListSync as listGitHubPRs, executeCommitsListSync as listGitHubCommits, executeRepositoriesListSync as listGitHubRepos } from "../../connectors/github/src/sync";
@@ -1966,6 +1972,12 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
       "repos.actions.runners.remove_token.create": ghCreateRepoRunnerRemoveToken,
       "user.installations.repositories.add": ghAddInstallationRepository,
       "user.installations.repositories.remove": ghRemoveInstallationRepository,
+      "user.packages.versions.delete": ghDeleteAuthenticatedPackageVersion,
+      "orgs.packages.versions.delete": ghDeleteOrgPackageVersion,
+      "users.packages.versions.delete": ghDeleteUserPackageVersion,
+      "orgs.packages.restore": ghRestoreOrgPackage,
+      "users.packages.restore": ghRestoreUserPackage,
+      "user.packages.restore": ghRestoreAuthenticatedPackage,
     },
     salesforce: {
       "contacts.create": createContact,
