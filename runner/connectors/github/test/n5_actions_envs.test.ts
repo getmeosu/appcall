@@ -54,7 +54,7 @@ const N5_KEYS = [
 describe("github N5 actions environments", () => {
   test("manifest wires exactly the N5 effect policies", () => {
     expect(N5_KEYS).toHaveLength(13);
-    expect(Object.keys(manifest.operations).length).toBe(715);
+    expect(Object.keys(manifest.operations).length).toBe(726);
     for (const key of N5_READS) {
       const op = manifest.operations[key];
       expect(op.sideEffect).toBe("read");
