@@ -754,6 +754,14 @@ import {
   validateUpsertRepoActionsSecretInput,
 } from "./gap_g4";
 import {
+  createGapG5Client,
+  validateDeleteUserEmailsInput,
+  validateGetUserCodespaceInput,
+  validateListOrgMembershipsInput,
+  validateSetPrimaryEmailVisibilityInput,
+  validateUpdateUserCodespaceInput,
+} from "./gap_g5";
+import {
   createReposReadsClient,
   validateGetAutolinkInput,
   validateGetReadmeInput,
@@ -9318,6 +9326,68 @@ export function deleteRepoCodespaceSecret(input: unknown): Record<string, unknow
     });
   }
   return { connector: "github", action: "repos.codespaces.secrets.delete", source: "connector", validated: validateDeleteRepoCodespaceSecretInput(input) };
+}
+
+
+// ─── gap G5: user codespaces + emails + org memberships ──────────────────────
+
+function liveGapG5Client(input: Record<string, unknown>, operation: string) {
+  const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
+  return createGapG5Client({
+    accessToken: input.accessToken as string,
+    fetch: fetchFn,
+    githubClient: createGitHubClient({ accessToken: input.accessToken as string, fetch: fetchFn, operation }),
+  });
+}
+
+export function getUserCodespace(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG5Client(input, "user.codespaces.get").getUserCodespace(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "user.codespaces.get", source: "connector", codespace: result.codespace };
+    });
+  }
+  return { connector: "github", action: "user.codespaces.get", source: "connector", validated: validateGetUserCodespaceInput(input) };
+}
+
+export function updateUserCodespace(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG5Client(input, "user.codespaces.update").updateUserCodespace(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "user.codespaces.update", source: "connector", codespace: result.codespace };
+    });
+  }
+  return { connector: "github", action: "user.codespaces.update", source: "connector", validated: validateUpdateUserCodespaceInput(input) };
+}
+
+export function deleteUserEmails(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG5Client(input, "user.emails.delete").deleteUserEmails(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "user.emails.delete", source: "connector", deleted: result.deleted, emails: result.emails };
+    });
+  }
+  return { connector: "github", action: "user.emails.delete", source: "connector", validated: validateDeleteUserEmailsInput(input) };
+}
+
+export function setPrimaryEmailVisibility(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG5Client(input, "user.email.visibility.set").setPrimaryEmailVisibility(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "user.email.visibility.set", source: "connector", emails: result.emails };
+    });
+  }
+  return { connector: "github", action: "user.email.visibility.set", source: "connector", validated: validateSetPrimaryEmailVisibilityInput(input) };
+}
+
+export function listOrgMemberships(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG5Client(input, "user.memberships.orgs.list").listOrgMemberships(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "user.memberships.orgs.list", source: "connector", memberships: result.memberships };
+    });
+  }
+  return { connector: "github", action: "user.memberships.orgs.list", source: "connector", validated: validateListOrgMembershipsInput(input) };
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
