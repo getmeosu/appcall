@@ -885,6 +885,14 @@ import {
   executeJobNotesCreate as createGreenhouseJobNote,
   executeJobNotesUpdate as updateGreenhouseJobNote,
 } from "../../connectors/greenhouse/src/g3";
+import {
+  executeJobNotesDelete as deleteGreenhouseJobNote,
+  executeJobInterviewsList as listGreenhouseJobInterviews,
+  executeDefaultInterviewersList as listGreenhouseDefaultInterviewers,
+  executeInterviewerTagsList as listGreenhouseInterviewerTags,
+  executeReferrersList as listGreenhouseReferrers,
+  executeEmailTemplatesList as listGreenhouseEmailTemplates,
+} from "../../connectors/greenhouse/src/g4";
 import leverManifest from "../../connectors/lever/manifest.json";
 import {
   executeJobsListSync as listLeverJobs,
@@ -2560,6 +2568,12 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
       "job_notes.list": listGreenhouseJobNotes,
       "job_notes.create": createGreenhouseJobNote,
       "job_notes.update": updateGreenhouseJobNote,
+      "job_notes.delete": deleteGreenhouseJobNote,
+      "job_interviews.list": listGreenhouseJobInterviews,
+      "default_interviewers.list": listGreenhouseDefaultInterviewers,
+      "interviewer_tags.list": listGreenhouseInterviewerTags,
+      "referrers.list": listGreenhouseReferrers,
+      "email_templates.list": listGreenhouseEmailTemplates,
     },
     lever: {
       "opportunities.update_stage": updateLeverOpportunityStage,
