@@ -810,6 +810,21 @@ import {
   validateUpsertOrgCodespacesSecretInput,
 } from "./gap_g8";
 import {
+  createGapG9Client,
+  validateCheckUserStarredInput,
+  validateDeleteUserInteractionLimitsInput,
+  validateDeleteUserPackageInput,
+  validateDisablePrivateVulnerabilityReportingInput,
+  validateEnablePrivateVulnerabilityReportingInput,
+  validateListOrgIssuesInput,
+  validateListOrgPackageVersionsInput,
+  validateListRepoAttestationsInput,
+  validateListUserPackageVersionsInput,
+  validateRemoveOrgPublicMemberInput,
+  validateUpdatePagesSiteInput,
+  validateUploadCodeScanningSarifInput,
+} from "./gap_g9";
+import {
   createReposReadsClient,
   validateGetAutolinkInput,
   validateGetReadmeInput,
@@ -9856,6 +9871,135 @@ export function listOrgCodespacesSecretRepositories(input: unknown): Record<stri
     });
   }
   return { connector: "github", action: "orgs.codespaces.secrets.repositories.list", source: "connector", validated: validateListOrgCodespacesSecretRepositoriesInput(input) };
+}
+
+
+function liveGapG9Client(input: Record<string, unknown>, operation: string) {
+  void operation;
+  return createGapG9Client({
+    accessToken: input.accessToken as string,
+    fetch: typeof input.fetch === "function" ? (input.fetch as typeof fetch) : undefined,
+  });
+}
+
+export function updatePagesSite(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG9Client(input, "repos.pages.update").updatePagesSite(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "repos.pages.update", source: "connector", updated: result.updated, owner: result.owner, repo: result.repo, cname: result.cname, httpsEnforced: result.httpsEnforced, buildType: result.buildType, source: result.source };
+    });
+  }
+  return { connector: "github", action: "repos.pages.update", source: "connector", validated: validateUpdatePagesSiteInput(input) };
+}
+
+export function enablePrivateVulnerabilityReporting(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG9Client(input, "repos.private_vulnerability_reporting.enable").enablePrivateVulnerabilityReporting(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "repos.private_vulnerability_reporting.enable", source: "connector", enabled: result.enabled, owner: result.owner, repo: result.repo };
+    });
+  }
+  return { connector: "github", action: "repos.private_vulnerability_reporting.enable", source: "connector", validated: validateEnablePrivateVulnerabilityReportingInput(input) };
+}
+
+export function disablePrivateVulnerabilityReporting(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG9Client(input, "repos.private_vulnerability_reporting.disable").disablePrivateVulnerabilityReporting(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "repos.private_vulnerability_reporting.disable", source: "connector", enabled: result.enabled, owner: result.owner, repo: result.repo };
+    });
+  }
+  return { connector: "github", action: "repos.private_vulnerability_reporting.disable", source: "connector", validated: validateDisablePrivateVulnerabilityReportingInput(input) };
+}
+
+export function uploadCodeScanningSarif(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG9Client(input, "code_scanning.sarifs.upload").uploadCodeScanningSarif(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "code_scanning.sarifs.upload", source: "connector", upload: result.upload };
+    });
+  }
+  return { connector: "github", action: "code_scanning.sarifs.upload", source: "connector", validated: validateUploadCodeScanningSarifInput(input) };
+}
+
+export function listRepoAttestations(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG9Client(input, "repos.attestations.list").listRepoAttestations(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "repos.attestations.list", source: "connector", attestations: result.attestations };
+    });
+  }
+  return { connector: "github", action: "repos.attestations.list", source: "connector", validated: validateListRepoAttestationsInput(input) };
+}
+
+export function listOrgIssues(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG9Client(input, "orgs.issues.list").listOrgIssues(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "orgs.issues.list", source: "connector", issues: result.issues };
+    });
+  }
+  return { connector: "github", action: "orgs.issues.list", source: "connector", validated: validateListOrgIssuesInput(input) };
+}
+
+export function listOrgPackageVersions(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG9Client(input, "orgs.packages.versions.list").listOrgPackageVersions(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "orgs.packages.versions.list", source: "connector", versions: result.versions };
+    });
+  }
+  return { connector: "github", action: "orgs.packages.versions.list", source: "connector", validated: validateListOrgPackageVersionsInput(input) };
+}
+
+export function removeOrgPublicMember(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG9Client(input, "orgs.public_members.remove").removeOrgPublicMember(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "orgs.public_members.remove", source: "connector", removed: result.removed, org: result.org, username: result.username };
+    });
+  }
+  return { connector: "github", action: "orgs.public_members.remove", source: "connector", validated: validateRemoveOrgPublicMemberInput(input) };
+}
+
+export function deleteUserInteractionLimits(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG9Client(input, "user.interaction_limits.delete").deleteUserInteractionLimits(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "user.interaction_limits.delete", source: "connector", deleted: result.deleted };
+    });
+  }
+  return { connector: "github", action: "user.interaction_limits.delete", source: "connector", validated: validateDeleteUserInteractionLimitsInput(input) };
+}
+
+export function checkUserStarred(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG9Client(input, "user.starred.check").checkUserStarred(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "user.starred.check", source: "connector", starred: result.starred, owner: result.owner, repo: result.repo };
+    });
+  }
+  return { connector: "github", action: "user.starred.check", source: "connector", validated: validateCheckUserStarredInput(input) };
+}
+
+export function deleteAuthenticatedUserPackage(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG9Client(input, "user.packages.delete").deleteUserPackage(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "user.packages.delete", source: "connector", deleted: result.deleted, packageType: result.packageType, packageName: result.packageName };
+    });
+  }
+  return { connector: "github", action: "user.packages.delete", source: "connector", validated: validateDeleteUserPackageInput(input) };
+}
+
+export function listAuthenticatedUserPackageVersions(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG9Client(input, "user.packages.versions.list").listUserPackageVersions(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "user.packages.versions.list", source: "connector", versions: result.versions };
+    });
+  }
+  return { connector: "github", action: "user.packages.versions.list", source: "connector", validated: validateListUserPackageVersionsInput(input) };
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
