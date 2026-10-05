@@ -6,8 +6,8 @@ describe("Ashby manifest", () => {
     expect(manifest.key).toBe("ashby");
   });
 
-  it("has version 0.10.0", () => {
-    expect(manifest.version).toBe("0.10.0");
+  it("has version 0.11.0", () => {
+    expect(manifest.version).toBe("0.11.0");
   });
 
   it("uses bun runtime", () => {
@@ -33,7 +33,7 @@ describe("Ashby manifest", () => {
     expect(manifest.operations.healthcheck.kind).toBe("action");
   });
 
-  it("declares tip+G1+G2+G3+G4 operations", () => {
+  it("declares tip+G1+G2+G3+G4+G5 operations", () => {
     expect(Object.keys(manifest.operations).sort()).toEqual([
       "application_feedback.list",
       "application_feedback.submit",
@@ -52,12 +52,14 @@ describe("Ashby manifest", () => {
       "archive_reasons.list",
       "candidate_tags.create",
       "candidate_tags.list",
+      "candidates.add_project",
       "candidates.add_tag",
       "candidates.create",
       "candidates.create_note",
       "candidates.get",
       "candidates.list",
       "candidates.list_notes",
+      "candidates.list_projects",
       "candidates.search",
       "candidates.update",
       "close_reasons.list",
@@ -115,6 +117,8 @@ describe("Ashby manifest", () => {
       "openings.set_archived",
       "openings.set_state",
       "openings.update",
+      "projects.list",
+      "projects.search",
       "referral_forms.get",
       "referrals.create",
       "sources.list",
@@ -199,8 +203,8 @@ describe("Ashby manifest", () => {
     expect(update.reconcile).toBe("candidates.get");
   });
 
-  it("declares 75 operations (G3 +15) and no interview_schedules.get (Ashby-0 cite-drop)", () => {
-    expect(Object.keys(manifest.operations)).toHaveLength(90);
+  it("declares 94 operations (G5 +4) and no interview_schedules.get (Ashby-0 cite-drop)", () => {
+    expect(Object.keys(manifest.operations)).toHaveLength(94);
     expect(manifest.operations["interview_schedules.get"]).toBeUndefined();
   });
 
@@ -417,7 +421,7 @@ describe("Ashby G4 effect keys", () => {
     for (const [id, op] of Object.entries(manifest.operations as Record<string, any>)) {
       expect(op.effectPolicy === "Idempotent").toBe(false);
     }
-    expect(Object.keys(manifest.operations)).toHaveLength(90);
+    expect(Object.keys(manifest.operations)).toHaveLength(94);
   });
 
   it("jobs.list description cites documented board path without /jobs", () => {
@@ -426,5 +430,53 @@ describe("Ashby G4 effect keys", () => {
     );
     expect(manifest.operations["jobs.list"].description).not.toContain("/jobs.");
     expect(manifest.operations["jobs.list"].description).not.toMatch(/boardName\}\/jobs/);
+  });
+});
+
+describe("Ashby G5 project ops", () => {
+  const ops = manifest.operations as Record<string, any>;
+
+  it("declares the 4 G5 ops as agent-tool actions with no effect keys", () => {
+    for (const id of [
+      "candidates.add_project",
+      "candidates.list_projects",
+      "projects.list",
+      "projects.search",
+    ]) {
+      const op = ops[id];
+      expect(op).toBeTruthy();
+      expect(op.kind).toBe("action");
+      expect(op.effectPolicy).toBeUndefined();
+      expect(op.reconcile).toBeUndefined();
+      expect(op.observe).toBeUndefined();
+    }
+  });
+
+  it("marks candidates.add_project write and the project lookups read", () => {
+    expect(ops["candidates.add_project"].sideEffect).toBe("write");
+    expect(ops["candidates.add_project"].inputSchema.required).toEqual(["candidateId", "projectId"]);
+    expect(ops["candidates.add_project"].description).toContain("no exact observe");
+    expect(ops["candidates.list_projects"].sideEffect).toBe("read");
+    expect(ops["projects.list"].sideEffect).toBe("read");
+    expect(ops["projects.search"].sideEffect).toBe("read");
+  });
+
+  it("matches the official request schemas", () => {
+    // candidate.listProjects: candidateId*, cursor, limit (no syncToken).
+    expect(Object.keys(ops["candidates.list_projects"].inputSchema.properties).sort()).toEqual([
+      "candidateId",
+      "cursor",
+      "limit",
+    ]);
+    // project.list: createdAfter is integer epoch ms.
+    expect(ops["projects.list"].inputSchema.properties.createdAfter.type).toBe("integer");
+    expect(ops["projects.list"].inputSchema.required).toBeUndefined();
+    expect(ops["projects.search"].inputSchema.required).toEqual(["title"]);
+  });
+
+  it("still has no Idempotent op after G5", () => {
+    for (const op of Object.values(ops)) {
+      expect(op.effectPolicy === "Idempotent").toBe(false);
+    }
   });
 });

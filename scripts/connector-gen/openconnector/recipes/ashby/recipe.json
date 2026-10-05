@@ -163,7 +163,11 @@
       "referrals.create",
       "referral_forms.get",
       "files.get",
-      "applications.list_criteria_evaluations"
+      "applications.list_criteria_evaluations",
+      "candidates.add_project",
+      "candidates.list_projects",
+      "projects.list",
+      "projects.search"
     ],
     "upstreamSha": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
     "marketFocus": "international",
@@ -948,12 +952,56 @@
         "status": "supplied"
       },
       "adaptations": []
+    },
+    "candidates.add_project": {
+      "upstreamActionId": "candidates.add_project",
+      "sourceRefs": [],
+      "documentationUrls": [
+        "https://developers.ashbyhq.com/reference/candidateaddproject-1"
+      ],
+      "responseContract": {
+        "status": "supplied"
+      },
+      "adaptations": []
+    },
+    "candidates.list_projects": {
+      "upstreamActionId": "candidates.list_projects",
+      "sourceRefs": [],
+      "documentationUrls": [
+        "https://developers.ashbyhq.com/reference/candidatelistprojects"
+      ],
+      "responseContract": {
+        "status": "supplied"
+      },
+      "adaptations": []
+    },
+    "projects.list": {
+      "upstreamActionId": "projects.list",
+      "sourceRefs": [],
+      "documentationUrls": [
+        "https://developers.ashbyhq.com/reference/projectlist-1"
+      ],
+      "responseContract": {
+        "status": "supplied"
+      },
+      "adaptations": []
+    },
+    "projects.search": {
+      "upstreamActionId": "projects.search",
+      "sourceRefs": [],
+      "documentationUrls": [
+        "https://developers.ashbyhq.com/reference/projectsearch"
+      ],
+      "responseContract": {
+        "status": "supplied"
+      },
+      "adaptations": []
     }
   },
   "manifest": {
     "key": "ashby",
     "name": "Ashby",
-    "version": "0.10.0",
+    "version": "0.11.0",
     "runtime": "bun",
     "visibility": "public",
     "categories": [
@@ -3730,6 +3778,117 @@
           "required": [
             "applicationId"
           ]
+        }
+      },
+      "candidates.add_project": {
+        "kind": "action",
+        "timeoutMs": 20000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
+        "sideEffect": "write",
+        "title": "Add candidate to project",
+        "description": "Add a candidate to a sourcing project via authenticated POST /candidate.addProject. Requires candidateId and projectId (candidatesWrite). Returns the Candidate object. No effect keys: candidate.info has no projects field and candidate.listProjects is a paginated list, so there is no exact observe.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "candidateId",
+            "projectId"
+          ],
+          "properties": {
+            "candidateId": {
+              "type": "string",
+              "description": "Ashby candidate UUID."
+            },
+            "projectId": {
+              "type": "string",
+              "description": "Ashby project UUID (from projects.list / projects.search)."
+            }
+          }
+        }
+      },
+      "candidates.list_projects": {
+        "kind": "action",
+        "timeoutMs": 20000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
+        "sideEffect": "read",
+        "title": "List candidate projects",
+        "description": "List the projects a candidate has been added to via authenticated POST /candidate.listProjects. Requires candidateId. Optional limit (max 100) and cursor. Agent tool.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "candidateId"
+          ],
+          "properties": {
+            "candidateId": {
+              "type": "string",
+              "description": "Ashby candidate UUID."
+            },
+            "limit": {
+              "type": "integer",
+              "description": "Page size (max 100)."
+            },
+            "cursor": {
+              "type": "string",
+              "description": "Opaque pagination cursor."
+            }
+          }
+        }
+      },
+      "projects.list": {
+        "kind": "action",
+        "timeoutMs": 20000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
+        "sideEffect": "read",
+        "title": "List projects",
+        "description": "List sourcing projects via authenticated POST /project.list. Optional createdAfter (epoch milliseconds), limit (max 100), cursor, syncToken. Agent tool.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "createdAfter": {
+              "type": "integer",
+              "description": "Only projects created after this time (Unix epoch milliseconds)."
+            },
+            "limit": {
+              "type": "integer",
+              "description": "Page size (max 100)."
+            },
+            "cursor": {
+              "type": "string",
+              "description": "Opaque pagination cursor."
+            },
+            "syncToken": {
+              "type": "string",
+              "description": "Incremental sync token."
+            }
+          }
+        }
+      },
+      "projects.search": {
+        "kind": "action",
+        "timeoutMs": 20000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
+        "sideEffect": "read",
+        "title": "Search projects",
+        "description": "Search sourcing projects by title via authenticated POST /project.search. Requires title. Returns at most 100 results (use projects.list to paginate). Agent tool.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "title"
+          ],
+          "properties": {
+            "title": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Project title to search."
+            }
+          }
         }
       }
     },

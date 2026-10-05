@@ -954,6 +954,12 @@ import {
   executeFilesGet as getAshbyFile,
   executeApplicationsListCriteriaEvaluations as listAshbyApplicationCriteriaEvaluations,
 } from "../../connectors/ashby/src/g4";
+import {
+  executeCandidatesAddProject as addAshbyCandidateProject,
+  executeCandidatesListProjects as listAshbyCandidateProjects,
+  executeProjectsList as listAshbyProjects,
+  executeProjectsSearch as searchAshbyProjects,
+} from "../../connectors/ashby/src/g5";
 import { parseWebhook as ashbyParseWebhook } from "../../connectors/ashby/src/webhook";
 import intercomManifest from "../../connectors/intercom/manifest.json";
 import {
@@ -2604,6 +2610,10 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
       "referral_forms.get": getAshbyReferralForm,
       "files.get": getAshbyFile,
       "applications.list_criteria_evaluations": listAshbyApplicationCriteriaEvaluations,
+      "candidates.add_project": addAshbyCandidateProject,
+      "candidates.list_projects": listAshbyCandidateProjects,
+      "projects.list": listAshbyProjects,
+      "projects.search": searchAshbyProjects,
     },
     intercom: {
       "conversations.reply": replyIntercomConversation,
