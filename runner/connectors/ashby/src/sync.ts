@@ -695,13 +695,13 @@ export async function executeCandidatesUpdateSync(
   await client.postJSON(
     "/candidate.update",
     compactBody({
-      id,
+      candidateId: id,
       name: input.name,
       email: input.email,
       phoneNumber: input.phoneNumber,
       linkedInUrl: input.linkedInUrl,
       githubUrl: input.githubUrl,
-      website: input.websiteUrl,
+      websiteUrl: input.websiteUrl,
       sourceId: input.sourceId,
       creditedToUserId: input.creditedToUserId,
     }),
@@ -887,31 +887,8 @@ export async function executeInterviewSchedulesListSync(
   return parseInterviewSchedulesResponse(raw);
 }
 
-export interface ExecuteInterviewSchedulesGetSyncInput extends AshbyAuthInput {
-  interviewScheduleId: string;
-}
-
-export interface ExecuteInterviewSchedulesGetSyncOutput {
-  interviewSchedule: NormalizedInterviewSchedule | null;
-}
-
-export async function executeInterviewSchedulesGetSync(
-  input: ExecuteInterviewSchedulesGetSyncInput,
-): Promise<ExecuteInterviewSchedulesGetSyncOutput> {
-  const interviewScheduleId = requireNonEmptyString(input.interviewScheduleId, "interviewScheduleId");
-  const client = createAuthClient({
-    apiKey: input.apiKey,
-    fetch: input.fetch,
-    operation: "interview_schedules.get",
-  });
-  const raw = await client.postJSON("/interviewSchedule.info", { id: interviewScheduleId });
-  return parseInterviewScheduleInfoResponse(raw);
-}
-
 export interface ExecuteInterviewStagesListSyncInput extends AshbyAuthInput {
-  limit?: number;
-  cursor?: string;
-  syncToken?: string;
+  interviewPlanId: string;
 }
 
 export interface ExecuteInterviewStagesListSyncOutput {
@@ -924,12 +901,13 @@ export interface ExecuteInterviewStagesListSyncOutput {
 export async function executeInterviewStagesListSync(
   input: ExecuteInterviewStagesListSyncInput,
 ): Promise<ExecuteInterviewStagesListSyncOutput> {
+  const interviewPlanId = requireNonEmptyString(input.interviewPlanId, "interviewPlanId");
   const client = createAuthClient({
     apiKey: input.apiKey,
     fetch: input.fetch,
     operation: "interview_stages.list",
   });
-  const raw = await client.postJSON("/interviewStage.list", listBody(input));
+  const raw = await client.postJSON("/interviewStage.list", { interviewPlanId });
   return parseInterviewStagesResponse(raw);
 }
 
