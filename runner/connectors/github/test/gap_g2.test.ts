@@ -62,10 +62,10 @@ function json(body: unknown, status = 200) {
 }
 
 describe("github gap G2 organization and repository reads", () => {
-  test("version is 0.69.0 at 700 ops with the read/write breakdown", () => {
-    expect(manifest.version).toBe("0.69.0");
+  test("version is 0.70.0 at 715 ops with the read/write breakdown", () => {
+    expect(manifest.version).toBe("0.70.0");
     const ops = manifest.operations as Record<string, Record<string, unknown>>;
-    expect(Object.keys(ops)).toHaveLength(700);
+    expect(Object.keys(ops)).toHaveLength(715);
     const kinds = { action: 0, sync: 0, webhook: 0 };
     const side = { read: 0, write: 0, absent: 0 };
     for (const op of Object.values(ops)) {
@@ -76,8 +76,8 @@ describe("github gap G2 organization and repository reads", () => {
         else side.absent += 1;
       }
     }
-    expect(kinds).toEqual({ action: 650, sync: 4, webhook: 46 });
-    expect(side).toEqual({ read: 358, write: 277, absent: 15 });
+    expect(kinds).toEqual({ action: 665, sync: 4, webhook: 46 });
+    expect(side).toEqual({ read: 367, write: 283, absent: 15 });
   });
 
   test("the fifteen G2 ops are present, omit all three effect keys, and document their paths", () => {
