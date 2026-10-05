@@ -7,11 +7,13 @@ import {
   normalizeAd,
   parseAdsResponse,
   normalizeAdAccount,
+  AD_ACCOUNT_STATUS_MAP,
   parseAdAccountsResponse,
 } from "../src/objects";
 import campaignsList from "../fixtures/campaigns_list.json";
 import adSetsList from "../fixtures/ad_sets_list.json";
 import adsList from "../fixtures/ads_list.json";
+import adsListLegacyType from "../fixtures/ads_list_legacy_type.json";
 import adAccountsList from "../fixtures/ad_accounts_list.json";
 
 // ---------------------------------------------------------------------------
@@ -165,7 +167,7 @@ describe("normalizeAd", () => {
     expect(a.name).toBe("Summer Sale - Image Ad");
     expect(a.status).toBe("ACTIVE");
     expect(a.creative.name).toBe("Summer Creative - Beach");
-    expect(a.creative.type).toBe("IMAGE");
+    expect(a.creative.type).toBe("PHOTO");
     expect(a.effectiveStatus).toBe("ACTIVE");
     expect(a.createdAt).toBe("2024-05-28T12:00:00+0000");
     expect(a.updatedAt).toBe("2024-07-15T09:30:00+0000");
@@ -191,6 +193,31 @@ describe("normalizeAd", () => {
   it("stores raw object", () => {
     const a = normalizeAd(raw);
     expect(a.raw).toBe(raw);
+  });
+
+  it("maps Graph v26.0 creative.object_type into creative.type", () => {
+    const [photo, video] = adsList.data as any[];
+    expect(photo.creative.object_type).toBe("PHOTO");
+    expect(photo.creative.type).toBeUndefined();
+    expect(normalizeAd(photo).creative.type).toBe("PHOTO");
+    expect(normalizeAd(video).creative.type).toBe("VIDEO");
+  });
+
+  it("prefers object_type over a legacy type when both are present", () => {
+    const a = normalizeAd({ id: "1", creative: { name: "c", object_type: "SHARE", type: "IMAGE" } } as any);
+    expect(a.creative.type).toBe("SHARE");
+  });
+
+  it("falls back to a legacy type-only creative", () => {
+    const [image, video] = adsListLegacyType.data as any[];
+    expect(image.creative.object_type).toBeUndefined();
+    expect(normalizeAd(image).creative.type).toBe("IMAGE");
+    expect(normalizeAd(image).creative.name).toBe("Summer Creative - Beach");
+    expect(normalizeAd(video).creative.type).toBe("VIDEO");
+  });
+
+  it("keeps the normalized creative keys unchanged (name, type)", () => {
+    expect(Object.keys(normalizeAd(raw).creative).sort()).toEqual(["name", "type"]);
   });
 });
 
@@ -236,6 +263,35 @@ describe("normalizeAdAccount", () => {
     const rawUnknown = { id: "act_000", account_status: 999 };
     const a = normalizeAdAccount(rawUnknown);
     expect(a.accountStatus).toBe("UNKNOWN");
+  });
+
+  // Graph v26.0 Ad Account reference account_status table.
+  const V26_ACCOUNT_STATUS: [number, string][] = [
+    [1, "ACTIVE"],
+    [2, "DISABLED"],
+    [3, "UNSETTLED"],
+    [7, "PENDING_RISK_REVIEW"],
+    [8, "PENDING_SETTLEMENT"],
+    [9, "IN_GRACE_PERIOD"],
+    [100, "PENDING_CLOSURE"],
+    [101, "CLOSED"],
+    [201, "ANY_ACTIVE"],
+    [202, "ANY_CLOSED"],
+  ];
+
+  for (const [code, label] of V26_ACCOUNT_STATUS) {
+    it(`maps account_status ${code} to ${label}`, () => {
+      expect(normalizeAdAccount({ id: `act_${code}`, account_status: code }).accountStatus).toBe(label);
+    });
+  }
+
+  it("status map is exactly the v26 reference table", () => {
+    expect(AD_ACCOUNT_STATUS_MAP).toEqual(Object.fromEntries(V26_ACCOUNT_STATUS));
+  });
+
+  it("maps removed non-reference codes 402 and 403 to UNKNOWN", () => {
+    expect(normalizeAdAccount({ id: "act_402", account_status: 402 }).accountStatus).toBe("UNKNOWN");
+    expect(normalizeAdAccount({ id: "act_403", account_status: 403 }).accountStatus).toBe("UNKNOWN");
   });
 
   it("handles missing optional fields", () => {
