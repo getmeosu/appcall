@@ -654,6 +654,13 @@ import {
   validateUpdateRepoRulesetInput,
 } from "./write_card15";
 
+import {
+  createWriteCard16Client,
+  validateDeleteReleaseAssetInput,
+  validateUpdateReleaseAssetInput,
+} from "./write_card16";
+
+
 
 
 
@@ -8440,6 +8447,38 @@ export function updateRepoRuleset(input: unknown): Record<string, unknown> | Pro
     });
   }
   return { connector: "github", action: "repos.rulesets.update", source: "connector", validated: validateUpdateRepoRulesetInput(input) };
+}
+
+
+// ─── write card 16: release asset delete and update ─────────────────────────
+
+function liveWriteCard16Client(input: Record<string, unknown>, operation: string) {
+  const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
+  return createWriteCard16Client({
+    accessToken: input.accessToken as string,
+    fetch: fetchFn,
+    githubClient: createGitHubClient({ accessToken: input.accessToken as string, fetch: fetchFn, operation }),
+  });
+}
+
+export function deleteReleaseAsset(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveWriteCard16Client(input, "releases.assets.delete").deleteReleaseAsset(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "releases.assets.delete", source: "connector", deleted: result.deleted, owner: result.owner, repo: result.repo, assetId: result.assetId };
+    });
+  }
+  return { connector: "github", action: "releases.assets.delete", source: "connector", validated: validateDeleteReleaseAssetInput(input) };
+}
+
+export function updateReleaseAsset(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveWriteCard16Client(input, "releases.assets.update").updateReleaseAsset(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "releases.assets.update", source: "connector", asset: result.asset };
+    });
+  }
+  return { connector: "github", action: "releases.assets.update", source: "connector", validated: validateUpdateReleaseAssetInput(input) };
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
