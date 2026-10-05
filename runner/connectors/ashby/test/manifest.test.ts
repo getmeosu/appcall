@@ -6,8 +6,8 @@ describe("Ashby manifest", () => {
     expect(manifest.key).toBe("ashby");
   });
 
-  it("has version 0.6.0", () => {
-    expect(manifest.version).toBe("0.6.0");
+  it("has version 0.6.1", () => {
+    expect(manifest.version).toBe("0.6.1");
   });
 
   it("uses bun runtime", () => {
@@ -49,7 +49,6 @@ describe("Ashby manifest", () => {
       "candidates.update",
       "departments.list",
       "healthcheck",
-      "interview_schedules.get",
       "interview_schedules.list",
       "interview_stages.list",
       "interviews.cancel",
@@ -153,6 +152,18 @@ describe("Ashby manifest", () => {
     expect(update.sideEffect).toBe("write");
     expect(update.effectPolicy).toBe("Reconcile");
     expect(update.reconcile).toBe("candidates.get");
+  });
+
+  it("declares 30 operations and no interview_schedules.get (Ashby-0 cite-drop)", () => {
+    expect(Object.keys(manifest.operations)).toHaveLength(30);
+    expect(Object.prototype.hasOwnProperty.call(manifest.operations, "interview_schedules.get")).toBe(false);
+    expect(JSON.stringify(manifest)).not.toContain("interviewSchedule.info");
+  });
+
+  it("documents candidates.update id -> candidateId and required interviewPlanId", () => {
+    expect(manifest.operations["candidates.update"].description).toContain("candidateId");
+    expect(manifest.operations["candidates.update"].inputSchema.required).toEqual(["id"]);
+    expect(manifest.operations["interview_stages.list"].description).toContain("Requires interviewPlanId");
   });
 
   it("declares EventOnly Ashby webhooks", () => {
