@@ -697,6 +697,25 @@ import {
   validateSetAuthenticatedInteractionLimitsInput,
 } from "./gap_g1";
 
+import {
+  createGapG2Client,
+  validateGetOrgDependabotSecretsPublicKeyInput,
+  validateListBranchProtectionRestrictionAppsInput,
+  validateListEnvironmentDeploymentProtectionRulesInput,
+  validateListIssueDependenciesBlockedByInput,
+  validateListIssueDependenciesBlockingInput,
+  validateListOrgActionsRunnerLabelsInput,
+  validateListOrgCodespacesSecretsInput,
+  validateListOrgProjectViewItemsInput,
+  validateListOrgPropertySchemasInput,
+  validateListOrgPropertyValuesInput,
+  validateListOrganizationRolesInput,
+  validateListRequiredStatusCheckContextsInput,
+  validateListRepoAutolinksInput,
+  validateListRepoNotificationsInput,
+  validateListRepoPropertyValuesInput,
+} from "./gap_g2";
+
 
 
 
@@ -8820,6 +8839,168 @@ export function listGitignoreTemplates(input: unknown): Record<string, unknown> 
     });
   }
   return { connector: "github", action: "gitignore.templates.list", source: "connector", validated: validateListGitignoreTemplatesInput(input) };
+}
+
+
+// ─── gap G2: organization and repository reads ───────────────────────────────
+
+function liveGapG2Client(input: Record<string, unknown>, operation: string) {
+  const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
+  return createGapG2Client({
+    accessToken: input.accessToken as string,
+    fetch: fetchFn,
+    githubClient: createGitHubClient({ accessToken: input.accessToken as string, fetch: fetchFn, operation }),
+  });
+}
+
+export function listOrgPropertySchemas(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG2Client(input, "orgs.properties.schema.list").listOrgPropertySchemas(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "orgs.properties.schema.list", source: "connector", properties: result.properties };
+    });
+  }
+  return { connector: "github", action: "orgs.properties.schema.list", source: "connector", validated: validateListOrgPropertySchemasInput(input) };
+}
+
+export function listOrgPropertyValues(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG2Client(input, "orgs.properties.values.list").listOrgPropertyValues(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "orgs.properties.values.list", source: "connector", values: result.values };
+    });
+  }
+  return { connector: "github", action: "orgs.properties.values.list", source: "connector", validated: validateListOrgPropertyValuesInput(input) };
+}
+
+export function listOrganizationRoles(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG2Client(input, "orgs.organization_roles.list").listOrganizationRoles(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "orgs.organization_roles.list", source: "connector", totalCount: result.totalCount, roles: result.roles };
+    });
+  }
+  return { connector: "github", action: "orgs.organization_roles.list", source: "connector", validated: validateListOrganizationRolesInput(input) };
+}
+
+export function listOrgActionsRunnerLabels(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG2Client(input, "orgs.actions.runners.labels.list").listOrgActionsRunnerLabels(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "orgs.actions.runners.labels.list", source: "connector", totalCount: result.totalCount, labels: result.labels };
+    });
+  }
+  return { connector: "github", action: "orgs.actions.runners.labels.list", source: "connector", validated: validateListOrgActionsRunnerLabelsInput(input) };
+}
+
+export function listOrgCodespacesSecrets(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG2Client(input, "orgs.codespaces.secrets.list").listOrgCodespacesSecrets(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "orgs.codespaces.secrets.list", source: "connector", totalCount: result.totalCount, secrets: result.secrets };
+    });
+  }
+  return { connector: "github", action: "orgs.codespaces.secrets.list", source: "connector", validated: validateListOrgCodespacesSecretsInput(input) };
+}
+
+export function getOrgDependabotSecretsPublicKey(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG2Client(input, "orgs.dependabot.secrets.public_key.get").getOrgDependabotSecretsPublicKey(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "orgs.dependabot.secrets.public_key.get", source: "connector", publicKey: result.publicKey };
+    });
+  }
+  return { connector: "github", action: "orgs.dependabot.secrets.public_key.get", source: "connector", validated: validateGetOrgDependabotSecretsPublicKeyInput(input) };
+}
+
+export function listRepoAutolinks(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG2Client(input, "repos.autolinks.list").listRepoAutolinks(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "repos.autolinks.list", source: "connector", autolinks: result.autolinks };
+    });
+  }
+  return { connector: "github", action: "repos.autolinks.list", source: "connector", validated: validateListRepoAutolinksInput(input) };
+}
+
+export function listBranchProtectionRestrictionApps(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG2Client(input, "branches.protection.restrictions.apps.list").listBranchProtectionRestrictionApps(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "branches.protection.restrictions.apps.list", source: "connector", apps: result.apps };
+    });
+  }
+  return { connector: "github", action: "branches.protection.restrictions.apps.list", source: "connector", validated: validateListBranchProtectionRestrictionAppsInput(input) };
+}
+
+export function listRequiredStatusCheckContexts(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG2Client(input, "branches.protection.required_status_checks.contexts.list").listRequiredStatusCheckContexts(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "branches.protection.required_status_checks.contexts.list", source: "connector", contexts: result.contexts };
+    });
+  }
+  return { connector: "github", action: "branches.protection.required_status_checks.contexts.list", source: "connector", validated: validateListRequiredStatusCheckContextsInput(input) };
+}
+
+export function listRepoPropertyValues(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG2Client(input, "repos.properties.values.list").listRepoPropertyValues(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "repos.properties.values.list", source: "connector", properties: result.properties };
+    });
+  }
+  return { connector: "github", action: "repos.properties.values.list", source: "connector", validated: validateListRepoPropertyValuesInput(input) };
+}
+
+export function listIssueDependenciesBlockedBy(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG2Client(input, "issues.dependencies.blocked_by.list").listIssueDependenciesBlockedBy(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "issues.dependencies.blocked_by.list", source: "connector", issues: result.issues };
+    });
+  }
+  return { connector: "github", action: "issues.dependencies.blocked_by.list", source: "connector", validated: validateListIssueDependenciesBlockedByInput(input) };
+}
+
+export function listIssueDependenciesBlocking(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG2Client(input, "issues.dependencies.blocking.list").listIssueDependenciesBlocking(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "issues.dependencies.blocking.list", source: "connector", issues: result.issues };
+    });
+  }
+  return { connector: "github", action: "issues.dependencies.blocking.list", source: "connector", validated: validateListIssueDependenciesBlockingInput(input) };
+}
+
+export function listRepoNotifications(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG2Client(input, "repos.notifications.list").listRepoNotifications(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "repos.notifications.list", source: "connector", notifications: result.notifications };
+    });
+  }
+  return { connector: "github", action: "repos.notifications.list", source: "connector", validated: validateListRepoNotificationsInput(input) };
+}
+
+export function listOrgProjectViewItems(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG2Client(input, "orgs.projects_v2.views.items.list").listOrgProjectViewItems(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "orgs.projects_v2.views.items.list", source: "connector", items: result.items };
+    });
+  }
+  return { connector: "github", action: "orgs.projects_v2.views.items.list", source: "connector", validated: validateListOrgProjectViewItemsInput(input) };
+}
+
+export function listEnvironmentDeploymentProtectionRules(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG2Client(input, "repos.environments.deployment_protection_rules.list").listEnvironmentDeploymentProtectionRules(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "repos.environments.deployment_protection_rules.list", source: "connector", totalCount: result.totalCount, rules: result.rules };
+    });
+  }
+  return { connector: "github", action: "repos.environments.deployment_protection_rules.list", source: "connector", validated: validateListEnvironmentDeploymentProtectionRulesInput(input) };
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────

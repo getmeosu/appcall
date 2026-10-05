@@ -52,10 +52,10 @@ const runner = {
 };
 
 describe("github card11 runner and social reads", () => {
-  test("version stays 0.68.0 and the thirteen reads omit effect fields", () => {
-    expect(manifest.version).toBe("0.68.0");
+  test("version stays 0.69.0 and the thirteen reads omit effect fields", () => {
+    expect(manifest.version).toBe("0.69.0");
     expect(READS).toHaveLength(13);
-    expect(Object.keys(manifest.operations)).toHaveLength(685);
+    expect(Object.keys(manifest.operations)).toHaveLength(700);
     for (const key of READS) {
       const op = manifest.operations[key] as Record<string, unknown>;
       expect(op.kind).toBe("action");
@@ -66,7 +66,7 @@ describe("github card11 runner and social reads", () => {
     }
     expect(manifest.operations["orgs.actions.runners.get"]).toBeDefined();
     expect(manifest.operations["repos.actions.runners.get"]).toBeDefined();
-    expect(manifest.operations["orgs.actions.runners.labels.list"]).toBeUndefined();
+    expect(manifest.operations["orgs.actions.runners.labels.list"]).toBeDefined();
     expect(manifest.operations["repos.actions.runners.labels.list"]).toBeDefined();
     expect(manifest.operations["user.following.check"]).toBeDefined();
   });
