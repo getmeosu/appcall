@@ -1,8 +1,8 @@
 import { createConnectorHttpClient, type ConnectorHttpClient } from "../../../bun/src/http";
 import manifest from "../manifest.json";
 
-/** Google Ads REST API version. Task targets v19+; bump when Google sunsets. */
-export const GOOGLE_ADS_API_VERSION = "v19";
+/** Google Ads REST API version. Tip bumped v19→v25 (GAQL campaign dates use start_date_time/end_date_time since v23). */
+export const GOOGLE_ADS_API_VERSION = "v25";
 export const GOOGLE_ADS_BASE_URL = `https://googleads.googleapis.com/${GOOGLE_ADS_API_VERSION}`;
 
 // ---------------------------------------------------------------------------
@@ -40,16 +40,32 @@ export function parseGoogleAdsRateLimitMetadata(status: number, headers: Record<
   return { limited: false };
 }
 
+function looksLikeMissingEuPoliticalAdvertising(body: unknown, message: string): boolean {
+  const hay = `${message}\n${JSON.stringify(body ?? "")}`.toLowerCase();
+  return (
+    hay.includes("contains_eu_political_advertising") ||
+    hay.includes("eu_political_advertising") ||
+    hay.includes("missing_eu_political_advertising")
+  );
+}
+
 export function parseGoogleAdsError(body: unknown): ConnectorError | null {
   if (!isRecord(body)) return null;
   const error = body.error;
   if (!isRecord(error)) return null;
   const status = typeof error.status === "number" ? error.status : 0;
-  const message = typeof error.message === "string" ? error.message : "Google Ads API error";
+  let message = typeof error.message === "string" ? error.message : "Google Ads API error";
   const code = typeof error.code === "number" ? error.code : status;
 
   if (status === 429 || code === 429) {
     return { code: "CONNECTOR_RATE_LIMITED", message, retryAfterSeconds: 0 };
+  }
+  if (looksLikeMissingEuPoliticalAdvertising(body, message)) {
+    message =
+      "Google Ads requires containsEuPoliticalAdvertising on campaign create " +
+      "(CONTAINS_EU_POLITICAL_ADVERTISING or DOES_NOT_CONTAIN_EU_POLITICAL_ADVERTISING). " +
+      "The connector never defaults this advertiser declaration. Upstream: " +
+      message;
   }
   return { code: "CONNECTOR_UPSTREAM_ERROR", message, providerError: `${code}` };
 }
@@ -79,8 +95,8 @@ export type GoogleAdsCampaignRow = {
       amount_micros?: string;
     };
     bidding_strategy?: string;
-    start_date?: string;
-    end_date?: string;
+    start_date_time?: string;
+    end_date_time?: string;
     [key: string]: unknown;
   };
   metrics?: {

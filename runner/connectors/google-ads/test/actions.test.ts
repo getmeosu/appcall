@@ -10,6 +10,7 @@ import {
   getBudget,
   getConversionAction,
   mutateCampaigns,
+  rewriteCampaignCreateOperations,
   mutateAdGroups,
   mutateAds,
   mutateKeywords,
@@ -42,6 +43,7 @@ import offlineJobCreate from "../fixtures/offline_user_data_job_create.json";
 import mutateConversionActionsFixture from "../fixtures/mutate_conversion_actions.json";
 import mutateLabelsFixture from "../fixtures/mutate_labels.json";
 import reportsCampaign from "../fixtures/reports_campaign.json";
+import { GOOGLE_ADS_API_VERSION, GOOGLE_ADS_BASE_URL } from "../src/http";
 
 function createMockFetch(status: number, body: unknown) {
   return () => Promise.resolve(new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } }));
@@ -364,5 +366,187 @@ describe("reports.get", () => {
     expect(result.report).toBe("CAMPAIGN");
     expect(result.rowCount).toBe(1);
     expect(result.truncated).toBe(false);
+  });
+});
+
+
+describe("campaign date fields + EU political (v25)", () => {
+  it("campaigns.get GAQL selects start_date_time/end_date_time", async () => {
+    let body = "";
+    await getCampaign({
+      ...liveAuth,
+      campaignId: "1111111111",
+      fetch: async (_input, init) => {
+        body = String(init?.body ?? "");
+        return new Response(JSON.stringify(campaignGet), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        });
+      },
+    });
+    expect(body).toContain("campaign.start_date_time");
+    expect(body).toContain("campaign.end_date_time");
+    expect(body).not.toContain("campaign.start_date,");
+    expect(body).not.toContain("campaign.end_date ");
+  });
+
+  it("campaigns.getByName GAQL selects start_date_time/end_date_time", async () => {
+    let body = "";
+    await getCampaignByName({
+      ...liveAuth,
+      name: "Summer Sale 2024",
+      fetch: async (_input, init) => {
+        body = String(init?.body ?? "");
+        return new Response(JSON.stringify(campaignGet), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        });
+      },
+    });
+    expect(body).toContain("campaign.start_date_time");
+    expect(body).toContain("campaign.end_date_time");
+    expect(body).not.toContain("campaign.start_date,");
+  });
+
+  it("campaigns.mutate create maps startDate/endDate to start_date_time/end_date_time", async () => {
+    let body = "";
+    await mutateCampaigns({
+      ...liveAuth,
+      operations: [
+        {
+          create: {
+            name: "X",
+            status: "PAUSED",
+            startDate: "2026-01-01",
+            endDate: "2026-12-31",
+          },
+        },
+      ],
+      fetch: async (_input, init) => {
+        body = String(init?.body ?? "");
+        return new Response(JSON.stringify(mutateCampaignsFixture), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        });
+      },
+    });
+    const parsed = JSON.parse(body);
+    const create = parsed.operations[0].create;
+    expect(create.start_date_time).toBe("2026-01-01");
+    expect(create.end_date_time).toBe("2026-12-31");
+    expect(create.startDate).toBeUndefined();
+    expect(create.endDate).toBeUndefined();
+    expect(create.start_date).toBeUndefined();
+    expect(create.end_date).toBeUndefined();
+  });
+
+  it("campaigns.mutate create renames legacy start_date/end_date fields", () => {
+    const ops = rewriteCampaignCreateOperations([
+      { create: { name: "Y", start_date: "2026-02-01", end_date: "2026-03-01" } },
+    ]);
+    const create = (ops[0] as any).create;
+    expect(create.start_date_time).toBe("2026-02-01");
+    expect(create.end_date_time).toBe("2026-03-01");
+    expect(create.start_date).toBeUndefined();
+    expect(create.end_date).toBeUndefined();
+  });
+
+  it("campaigns.mutate passes containsEuPoliticalAdvertising through and never defaults it", async () => {
+    const dry = mutateCampaigns({
+      customerId: "123",
+      operations: [{ create: { name: "New", status: "PAUSED" } }],
+    }) as any;
+    expect(dry.validated.operations[0].create.contains_eu_political_advertising).toBeUndefined();
+
+    let bodyWithout = "";
+    await mutateCampaigns({
+      ...liveAuth,
+      operations: [{ create: { name: "X", status: "PAUSED" } }],
+      fetch: async (_input, init) => {
+        bodyWithout = String(init?.body ?? "");
+        return new Response(JSON.stringify(mutateCampaignsFixture), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        });
+      },
+    });
+    expect(bodyWithout).not.toContain("contains_eu_political_advertising");
+
+    let bodyWith = "";
+    await mutateCampaigns({
+      ...liveAuth,
+      containsEuPoliticalAdvertising: "DOES_NOT_CONTAIN_EU_POLITICAL_ADVERTISING",
+      operations: [{ create: { name: "X", status: "PAUSED" } }],
+      fetch: async (_input, init) => {
+        bodyWith = String(init?.body ?? "");
+        return new Response(JSON.stringify(mutateCampaignsFixture), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        });
+      },
+    });
+    const parsed = JSON.parse(bodyWith);
+    expect(parsed.operations[0].create.contains_eu_political_advertising).toBe(
+      "DOES_NOT_CONTAIN_EU_POLITICAL_ADVERTISING",
+    );
+  });
+
+  it("surfaces a clear connector error when upstream requires EU political declaration", async () => {
+    const upstream = {
+      error: {
+        code: 400,
+        status: 400,
+        message: "The required field was not present.",
+        details: [
+          {
+            errors: [
+              {
+                errorCode: { fieldError: "REQUIRED" },
+                message: "contains_eu_political_advertising is required",
+              },
+            ],
+          },
+        ],
+      },
+    };
+    try {
+      await mutateCampaigns({
+        ...liveAuth,
+        operations: [{ create: { name: "X", status: "PAUSED" } }],
+        fetch: async () =>
+          new Response(JSON.stringify(upstream), {
+            status: 400,
+            headers: { "content-type": "application/json" },
+          }),
+      });
+      throw new Error("expected mutateCampaigns to throw");
+    } catch (err: any) {
+      expect(err.ok).toBe(false);
+      expect(err.code).toBe("CONNECTOR_UPSTREAM_ERROR");
+      expect(err.message).toContain("containsEuPoliticalAdvertising");
+      expect(err.message).toContain("never defaults");
+    }
+  });
+});
+
+describe("API version pin", () => {
+  it("pins GOOGLE_ADS_API_VERSION to v25 and uses it in request URLs", async () => {
+    expect(GOOGLE_ADS_API_VERSION).toBe("v25");
+    expect(GOOGLE_ADS_BASE_URL).toBe("https://googleads.googleapis.com/v25");
+    let seen = "";
+    const result = await listAccessibleCustomers({
+      accessToken: "t",
+      developerToken: "d",
+      fetch: async (input) => {
+        seen = String(input);
+        return new Response(JSON.stringify(accessibleCustomers), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        });
+      },
+    }) as any;
+    expect(seen).toContain("https://googleads.googleapis.com/v25/");
+    expect(seen).not.toContain("/v19/");
+    expect(result.customers).toHaveLength(2);
   });
 });

@@ -177,8 +177,9 @@ export function normalizeCampaign(row: GoogleAdsCampaignRow): NormalizedCampaign
     status: prop(campaignObj, "status"),
     budget: budgetObj ? microsToDollars(propNum(budgetObj, "amount_micros")) : 0,
     biddingStrategy: prop(campaignObj, "bidding_strategy"),
-    startDate: prop(campaignObj, "start_date"),
-    endDate: prop(campaignObj, "end_date"),
+    // Public camelCase startDate/endDate stay stable; v23+ upstream uses *_date_time.
+    startDate: firstString(prop(campaignObj, "start_date_time"), prop(campaignObj, "start_date")),
+    endDate: firstString(prop(campaignObj, "end_date_time"), prop(campaignObj, "end_date")),
     metrics,
     raw: row,
   };

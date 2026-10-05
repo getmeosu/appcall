@@ -2,10 +2,10 @@ import { describe, expect, test } from "bun:test";
 import manifest from "../manifest.json";
 
 describe("google-ads connector manifest", () => {
-  test("manifest declares key, runtime, auth, and version 0.3.0", () => {
+  test("manifest declares key, runtime, auth, and version 0.3.1", () => {
     expect(manifest.key).toBe("google-ads");
     expect(manifest.runtime).toBe("bun");
-    expect(manifest.version).toBe("0.3.0");
+    expect(manifest.version).toBe("0.3.1");
     expect(manifest.auth.type).toBe("oauth2");
     expect(manifest.auth.scopes).toContain("https://www.googleapis.com/auth/adwords");
   });
@@ -93,6 +93,10 @@ describe("google-ads connector manifest", () => {
 
   test("manifest expands beyond the thin 4-op stub", () => {
     expect(Object.keys(manifest.operations).length).toBeGreaterThanOrEqual(20);
+  });
+
+  test("manifest stays at 29 ops on v0.3.1", () => {
+    expect(Object.keys(manifest.operations).length).toBe(29);
   });
 
   test("manifest declares models", () => {
