@@ -390,7 +390,7 @@ function statusForRegistryFailure(code: string): number {
   if (code === "INPUT_TOO_LARGE") {
     return 413;
   }
-  if (code === "UNSUPPORTED_OPERATION_BUDGET") {
+  if (code === "UNSUPPORTED_OPERATION_BUDGET" || code === "INVALID_ACTION_INPUT") {
     return 400;
   }
   return 404;

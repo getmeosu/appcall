@@ -37,14 +37,23 @@ fn check_schema(schema: &Value, depth: usize) -> Result<()> {
                 | "items"
                 | "additionalProperties"
                 | "enum"
+                | "const"
                 | "minLength"
+                | "maxLength"
                 | "minItems"
+                | "maxItems"
+                | "minProperties"
+                | "maxProperties"
                 | "minimum"
                 | "maximum"
+                | "exclusiveMinimum"
+                | "exclusiveMaximum"
+                | "uniqueItems"
                 | "description"
                 | "title"
                 | "default"
                 | "examples"
+                | "format"
                 | "$schema"
                 | "$id"
                 | "$comment"
@@ -100,18 +109,30 @@ fn check_schema(schema: &Value, depth: usize) -> Result<()> {
             return Err(Error::new(ErrorCode::UnsupportedSchema));
         }
     }
-    for key in ["minItems", "minLength"] {
-        if let Some(min) = map.get(key) {
-            if min.as_u64().is_none() {
+    for key in [
+        "minItems",
+        "maxItems",
+        "minLength",
+        "maxLength",
+        "minProperties",
+        "maxProperties",
+    ] {
+        if let Some(bound) = map.get(key) {
+            if bound.as_u64().is_none() {
                 return Err(Error::new(ErrorCode::UnsupportedSchema));
             }
         }
     }
-    for key in ["minimum", "maximum"] {
+    for key in ["minimum", "maximum", "exclusiveMinimum", "exclusiveMaximum"] {
         if let Some(bound) = map.get(key) {
             if !bound.is_number() {
                 return Err(Error::new(ErrorCode::UnsupportedSchema));
             }
+        }
+    }
+    if let Some(unique) = map.get("uniqueItems") {
+        if !unique.is_boolean() {
+            return Err(Error::new(ErrorCode::UnsupportedSchema));
         }
     }
     Ok(())
@@ -156,6 +177,11 @@ fn validate(schema: &Value, value: &Value, code: ErrorCode, depth: usize) -> Res
             return Err(Error::new(code));
         }
     }
+    if let Some(constant) = map.get("const") {
+        if !equal_json(constant, value) {
+            return Err(Error::new(code));
+        }
+    }
     if value.is_number() {
         if let Some(minimum) = map.get("minimum") {
             if compare_numbers(value, minimum)? == Ordering::Less {
@@ -167,8 +193,38 @@ fn validate(schema: &Value, value: &Value, code: ErrorCode, depth: usize) -> Res
                 return Err(Error::new(code));
             }
         }
+        if let Some(minimum) = map.get("exclusiveMinimum") {
+            if compare_numbers(value, minimum)? != Ordering::Greater {
+                return Err(Error::new(code));
+            }
+        }
+        if let Some(maximum) = map.get("exclusiveMaximum") {
+            if compare_numbers(value, maximum)? != Ordering::Less {
+                return Err(Error::new(code));
+            }
+        }
     }
     if let Some(obj) = value.as_object() {
+        if let Some(min) = map.get("minProperties") {
+            if obj.len()
+                < (min
+                    .as_u64()
+                    .ok_or_else(|| Error::new(ErrorCode::UnsupportedSchema))?
+                    as usize)
+            {
+                return Err(Error::new(code));
+            }
+        }
+        if let Some(max) = map.get("maxProperties") {
+            if obj.len()
+                > (max
+                    .as_u64()
+                    .ok_or_else(|| Error::new(ErrorCode::UnsupportedSchema))?
+                    as usize)
+            {
+                return Err(Error::new(code));
+            }
+        }
         if let Some(required) = map.get("required") {
             for name in required
                 .as_array()
@@ -208,6 +264,25 @@ fn validate(schema: &Value, value: &Value, code: ErrorCode, depth: usize) -> Res
                 return Err(Error::new(code));
             }
         }
+        if let Some(max) = map.get("maxItems") {
+            if array.len()
+                > (max
+                    .as_u64()
+                    .ok_or_else(|| Error::new(ErrorCode::UnsupportedSchema))?
+                    as usize)
+            {
+                return Err(Error::new(code));
+            }
+        }
+        if map.get("uniqueItems") == Some(&Value::Bool(true)) {
+            for i in 0..array.len() {
+                for j in (i + 1)..array.len() {
+                    if equal_json(&array[i], &array[j]) {
+                        return Err(Error::new(code));
+                    }
+                }
+            }
+        }
         if let Some(items) = map.get("items") {
             for item in array {
                 validate(items, item, code, depth + 1)?;
@@ -215,9 +290,20 @@ fn validate(schema: &Value, value: &Value, code: ErrorCode, depth: usize) -> Res
         }
     }
     if let Some(string) = value.as_str() {
+        let len = string.chars().count();
         if let Some(min) = map.get("minLength") {
-            if string.chars().count()
+            if len
                 < (min
+                    .as_u64()
+                    .ok_or_else(|| Error::new(ErrorCode::UnsupportedSchema))?
+                    as usize)
+            {
+                return Err(Error::new(code));
+            }
+        }
+        if let Some(max) = map.get("maxLength") {
+            if len
+                > (max
                     .as_u64()
                     .ok_or_else(|| Error::new(ErrorCode::UnsupportedSchema))?
                     as usize)
