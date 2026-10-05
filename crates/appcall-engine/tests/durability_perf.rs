@@ -59,14 +59,30 @@ const NOOP_BUDGET_P99_US: u128 = 5_000;
 const RSS_REGRESSION_MULT: u64 = 3;
 const LATENCY_REGRESSION_MULT: u128 = 5;
 
-/// Load the newest matching baseline JSON.
+/// Load the newest matching baseline JSON from the committed benchmarks dir.
 ///
 /// A match requires `host` equal to this process's `host_tag()` and
 /// `runs`/`redrives` equal to `runs`. A baseline that lacks a `host`
-/// field is treated as no match.
+/// field is treated as no match. Among matching files, the newest by
+/// filename sort wins — not the newest overall (so a newer other-host
+/// baseline cannot hide an older same-host one).
 fn load_baseline(name_suffix: &str, runs: usize) -> Option<serde_json::Value> {
     let dir = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("benchmarks");
-    let mut matches: Vec<_> = std::fs::read_dir(&dir)
+    select_baseline(&dir, name_suffix, &host_tag(), runs)
+}
+
+/// Pick the newest baseline under `dir` whose host + run count match.
+///
+/// Filenames are sorted ascending; candidates are scanned newest-first.
+/// First host+runs match wins. No match → `None` (caller takes the
+/// absolute-budget / no-baseline path).
+fn select_baseline(
+    dir: &std::path::Path,
+    name_suffix: &str,
+    host: &str,
+    runs: usize,
+) -> Option<serde_json::Value> {
+    let mut candidates: Vec<_> = std::fs::read_dir(dir)
         .ok()?
         .filter_map(|e| e.ok())
         .map(|e| e.path())
@@ -76,22 +92,33 @@ fn load_baseline(name_suffix: &str, runs: usize) -> Option<serde_json::Value> {
                 .is_some_and(|n| n.ends_with(name_suffix))
         })
         .collect();
-    matches.sort();
-    let path = matches.last()?;
-    let bytes = std::fs::read(path).ok()?;
-    let prior: serde_json::Value = serde_json::from_slice(&bytes).ok()?;
-    let prior_host = prior.get("host").and_then(|v| v.as_str())?;
-    if prior_host != host_tag() {
-        return None;
+    candidates.sort();
+    for path in candidates.into_iter().rev() {
+        let Ok(bytes) = std::fs::read(&path) else {
+            continue;
+        };
+        let Ok(prior) = serde_json::from_slice::<serde_json::Value>(&bytes) else {
+            continue;
+        };
+        let Some(prior_host) = prior.get("host").and_then(|v| v.as_str()) else {
+            continue;
+        };
+        if prior_host != host {
+            continue;
+        }
+        let Some(prior_runs) = prior
+            .get("runs")
+            .or_else(|| prior.get("redrives"))
+            .and_then(|v| v.as_u64())
+        else {
+            continue;
+        };
+        if prior_runs as usize != runs {
+            continue;
+        }
+        return Some(prior);
     }
-    let prior_runs = prior
-        .get("runs")
-        .or_else(|| prior.get("redrives"))
-        .and_then(|v| v.as_u64())? as usize;
-    if prior_runs != runs {
-        return None;
-    }
-    Some(prior)
+    None
 }
 
 struct LatencyDiag<'a> {
@@ -100,6 +127,13 @@ struct LatencyDiag<'a> {
     p95: u128,
     p99: u128,
     max: u128,
+}
+
+fn log_no_baseline(suite: &str, diag: &LatencyDiag<'_>) {
+    eprintln!(
+        "durability_perf: no matching baseline for {suite}; host={} p50={} p95={} p99={} (absolute budgets only)",
+        diag.host, diag.p50, diag.p95, diag.p99
+    );
 }
 
 fn assert_under_budget_and_baseline(
@@ -277,6 +311,9 @@ fn durability_path_rss_and_latency_under_budget() {
         p99,
         max,
     };
+    if prior.is_none() {
+        log_no_baseline("durability_path", &diag);
+    }
     assert_rss_gate(
         "incremental RSS",
         incremental,
@@ -400,6 +437,9 @@ fn noop_waiting_redrive_rss_and_latency_under_budget() {
         p99,
         max,
     };
+    if prior.is_none() {
+        log_no_baseline("noop_waiting", &diag);
+    }
     assert_rss_gate(
         "noop Waiting incremental RSS",
         incremental,
@@ -416,5 +456,83 @@ fn noop_waiting_redrive_rss_and_latency_under_budget() {
         LATENCY_REGRESSION_MULT,
         &out,
         &diag,
+    );
+}
+
+#[test]
+fn select_baseline_newest_matching_host_wins() {
+    let dir = tempfile::tempdir().unwrap();
+    // Older same-host match.
+    std::fs::write(
+        dir.path().join("unix-day-100-durability-path.json"),
+        serde_json::json!({
+            "host": "linux-x86_64",
+            "runs": 256,
+            "incremental_rss_kib": 100,
+            "marker": "older-match"
+        })
+        .to_string(),
+    )
+    .unwrap();
+    // Newer other-host — must NOT win over the older matching baseline.
+    std::fs::write(
+        dir.path().join("unix-day-200-durability-path.json"),
+        serde_json::json!({
+            "host": "macos-aarch64",
+            "runs": 256,
+            "incremental_rss_kib": 999,
+            "marker": "newer-other-host"
+        })
+        .to_string(),
+    )
+    .unwrap();
+
+    let picked = select_baseline(dir.path(), "-durability-path.json", "linux-x86_64", 256)
+        .expect("expected a matching baseline");
+    assert_eq!(
+        picked.get("marker").and_then(|v| v.as_str()),
+        Some("older-match"),
+        "newest matching host must beat a newer non-matching baseline"
+    );
+}
+
+#[test]
+fn select_baseline_no_match_returns_none() {
+    let dir = tempfile::tempdir().unwrap();
+    std::fs::write(
+        dir.path().join("unix-day-200-durability-path.json"),
+        serde_json::json!({
+            "host": "macos-aarch64",
+            "runs": 256,
+            "marker": "other-host"
+        })
+        .to_string(),
+    )
+    .unwrap();
+    // Missing host field → no match.
+    std::fs::write(
+        dir.path().join("unix-day-100-durability-path.json"),
+        serde_json::json!({
+            "runs": 256,
+            "marker": "no-host"
+        })
+        .to_string(),
+    )
+    .unwrap();
+    // Wrong run count → no match.
+    std::fs::write(
+        dir.path().join("unix-day-300-durability-path.json"),
+        serde_json::json!({
+            "host": "linux-x86_64",
+            "runs": 64,
+            "marker": "wrong-runs"
+        })
+        .to_string(),
+    )
+    .unwrap();
+
+    assert!(
+        select_baseline(dir.path(), "-durability-path.json", "linux-x86_64", 256).is_none(),
+        "no host+runs match should fall back to no-baseline"
     );
 }
