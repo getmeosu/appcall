@@ -6,8 +6,9 @@
  * Effect keys (self-lock /workspace/parity-briefs/ashby-g1-selflock.md):
  * - applications.transfer → Reconcile → applications.get (job/stage exposed)
  * - all other creates/deletes/one-shots omit effectPolicy/reconcile/observe
- * - candidates.add_tag / applications.change_source / applications.update omit
- *   because tip observes do not expose tags / source / creditedToUser
+ * - candidates.add_tag Reconcile → candidates.get (G2 fold-in: tags on observe)
+ * - applications.change_source / applications.update Reconcile → applications.get
+ *   (G2 fold-in: source / sourceId / creditedToUserId on observe)
  */
 import { createAuthClient } from "./http";
 
@@ -124,7 +125,8 @@ export async function executeCandidatesListNotes(input: ExecuteCandidatesListNot
 }
 
 // ---------------------------------------------------------------------------
-// 3. candidates.add_tag — POST /candidate.addTag (omit effects; tip get has no tags)
+// 3. candidates.add_tag — POST /candidate.addTag
+//    EffectPolicy Reconcile → candidates.get (G2 fold-in: tags on observe)
 // ---------------------------------------------------------------------------
 
 export interface ExecuteCandidatesAddTagInput extends AshbyAuthInput {
@@ -136,8 +138,9 @@ export async function executeCandidatesAddTag(input: ExecuteCandidatesAddTagInpu
   const candidateId = requireNonEmptyString(input.candidateId, "candidateId");
   const tagId = requireNonEmptyString(input.tagId, "tagId");
   const client = authClient(input, "candidates.add_tag");
-  const raw = await client.postJSON("/candidate.addTag", { candidateId, tagId });
-  return { candidate: asResults(raw) };
+  await client.postJSON("/candidate.addTag", { candidateId, tagId });
+  // Runner owns EffectPolicy Reconcile → candidates.get.
+  return { candidate: null };
 }
 
 // ---------------------------------------------------------------------------
@@ -183,7 +186,8 @@ export async function executeCandidateTagsCreate(input: ExecuteCandidateTagsCrea
 }
 
 // ---------------------------------------------------------------------------
-// 6. applications.change_source — POST /application.changeSource (omit; no source on tip get)
+// 6. applications.change_source — POST /application.changeSource
+//    EffectPolicy Reconcile → applications.get (G2 fold-in: sourceId on observe)
 // ---------------------------------------------------------------------------
 
 export interface ExecuteApplicationsChangeSourceInput extends AshbyAuthInput {
@@ -195,8 +199,9 @@ export async function executeApplicationsChangeSource(input: ExecuteApplications
   const applicationId = requireNonEmptyString(input.applicationId, "applicationId");
   const sourceId = requireNonEmptyString(input.sourceId, "sourceId");
   const client = authClient(input, "applications.change_source");
-  const raw = await client.postJSON("/application.changeSource", { applicationId, sourceId });
-  return { application: asResults(raw) };
+  await client.postJSON("/application.changeSource", { applicationId, sourceId });
+  // Runner owns EffectPolicy Reconcile → applications.get.
+  return { application: null };
 }
 
 // ---------------------------------------------------------------------------
@@ -233,7 +238,8 @@ export async function executeApplicationsTransfer(input: ExecuteApplicationsTran
 }
 
 // ---------------------------------------------------------------------------
-// 8. applications.update — POST /application.update (omit; tip get lacks source/creditedTo)
+// 8. applications.update — POST /application.update
+//    EffectPolicy Reconcile → applications.get (G2 fold-in: sourceId/creditedToUserId)
 // ---------------------------------------------------------------------------
 
 export interface ExecuteApplicationsUpdateInput extends AshbyAuthInput {
@@ -247,7 +253,7 @@ export interface ExecuteApplicationsUpdateInput extends AshbyAuthInput {
 export async function executeApplicationsUpdate(input: ExecuteApplicationsUpdateInput) {
   const applicationId = requireNonEmptyString(input.applicationId, "applicationId");
   const client = authClient(input, "applications.update");
-  const raw = await client.postJSON(
+  await client.postJSON(
     "/application.update",
     compactBody({
       applicationId,
@@ -257,7 +263,8 @@ export async function executeApplicationsUpdate(input: ExecuteApplicationsUpdate
       sendNotifications: input.sendNotifications,
     }),
   );
-  return { application: asResults(raw) };
+  // Runner owns EffectPolicy Reconcile → applications.get.
+  return { application: null };
 }
 
 // ---------------------------------------------------------------------------

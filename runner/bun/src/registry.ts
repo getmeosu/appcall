@@ -903,6 +903,23 @@ import {
   executeHiringTeamRolesList as listAshbyHiringTeamRoles,
   executeUsersGet as getAshbyUser,
 } from "../../connectors/ashby/src/g1";
+import {
+  executeJobsListInternal as listAshbyJobsInternal,
+  executeJobsSearch as searchAshbyJobs,
+  executeJobsCreate as createAshbyJob,
+  executeJobsUpdate as updateAshbyJob,
+  executeJobsSetStatus as setAshbyJobStatus,
+  executeJobTemplatesList as listAshbyJobTemplates,
+  executeJobInterviewPlansGet as getAshbyJobInterviewPlan,
+  executeJobPostingsList as listAshbyJobPostings,
+  executeJobPostingsGet as getAshbyJobPosting,
+  executeJobPostingsUpdate as updateAshbyJobPosting,
+  executeOpeningsGet as getAshbyOpening,
+  executeOpeningsSearch as searchAshbyOpenings,
+  executeOpeningsCreate as createAshbyOpening,
+  executeOpeningsUpdate as updateAshbyOpening,
+  executeCloseReasonsList as listAshbyCloseReasons,
+} from "../../connectors/ashby/src/g2";
 import { parseWebhook as ashbyParseWebhook } from "../../connectors/ashby/src/webhook";
 import intercomManifest from "../../connectors/intercom/manifest.json";
 import {
@@ -2508,6 +2525,21 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
       "hiring_team.remove_member": removeAshbyHiringTeamMember,
       "hiring_team_roles.list": listAshbyHiringTeamRoles,
       "users.get": getAshbyUser,
+      "jobs.list_internal": listAshbyJobsInternal,
+      "jobs.search": searchAshbyJobs,
+      "jobs.create": createAshbyJob,
+      "jobs.update": updateAshbyJob,
+      "jobs.set_status": setAshbyJobStatus,
+      "job_templates.list": listAshbyJobTemplates,
+      "job_interview_plans.get": getAshbyJobInterviewPlan,
+      "job_postings.list": listAshbyJobPostings,
+      "job_postings.get": getAshbyJobPosting,
+      "job_postings.update": updateAshbyJobPosting,
+      "openings.get": getAshbyOpening,
+      "openings.search": searchAshbyOpenings,
+      "openings.create": createAshbyOpening,
+      "openings.update": updateAshbyOpening,
+      "close_reasons.list": listAshbyCloseReasons,
     },
     intercom: {
       "conversations.reply": replyIntercomConversation,
