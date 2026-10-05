@@ -103,12 +103,12 @@ describe("Lever opportunities.list sync", () => {
     expect(result.hasNext).toBe(true);
   });
 
-  test("uses api.lever.eu when region is eu", async () => {
+  test("uses api.eu.lever.co when region is eu", async () => {
     const { calls, impl } = stubFetch(JSON.stringify(opportunitiesFixture));
 
     await executeOpportunitiesListSync({ ...auth, region: "eu", fetch: impl });
 
-    expect(new URL(calls[0].url).hostname).toBe("api.lever.eu");
+    expect(new URL(calls[0].url).hostname).toBe("api.eu.lever.co");
   });
 
   test("forwards limit/offset/email/tag/stageId/postingId/archived", async () => {

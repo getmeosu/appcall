@@ -4,9 +4,11 @@
  * Two surfaces:
  * - Public postings (`createClient`) — jobs.list against /v0/postings/{site}
  * - Authenticated Data API (`createAuthClient`) — opportunities/stages/users/
- *   archive_reasons against https://api.lever.{region}/v1 with HTTP Basic
- *   (apiKey as username, empty password). Matches the manifest http.auth.basic
- *   scheme. Exposes getJSON + putJSON for read and write depth.
+ *   archive_reasons against the region host with HTTP Basic (apiKey as
+ *   username, empty password). Matches the manifest http.auth.basic scheme.
+ *   Region map: co → https://api.lever.co/v1, eu → https://api.eu.lever.co/v1
+ *   (official EU root; tip previously used the nonexistent api.lever.eu).
+ *   Exposes getJSON + putJSON + postJSON + deleteJSON for read and write depth.
  *
  * Both route through the shared outbound stack for allowlist, redirect
  * blocking, response-size bounds, deadlines, and inject-fetch for tests.
@@ -38,10 +40,14 @@ export interface LeverAuthClientConfig {
 }
 
 export type LeverAuthClient = {
-  /** GET `path` relative to https://api.lever.{region}/v1 and parse JSON. */
+  /** GET `path` relative to the region Data API root and parse JSON. */
   getJSON(path: string): Promise<unknown>;
-  /** PUT `path` with a JSON body relative to https://api.lever.{region}/v1. */
+  /** PUT `path` with a JSON body relative to the region Data API root. */
   putJSON(path: string, body?: Record<string, unknown>): Promise<unknown>;
+  /** POST `path` with a JSON body relative to the region Data API root. */
+  postJSON(path: string, body?: Record<string, unknown>): Promise<unknown>;
+  /** DELETE `path` relative to the region Data API root (204 → undefined). */
+  deleteJSON(path: string): Promise<unknown>;
 };
 
 type OperationBounds = { maxResponseBytes: number; timeoutMs: number };
@@ -87,6 +93,13 @@ export function createClient(config: LeverClientConfig): JobBoardClient {
   });
 }
 
+/** Official Lever Data API root for a region code. */
+export function leverDataApiBaseUrl(region: string): string {
+  if (region === "eu") return "https://api.eu.lever.co/v1";
+  if (region === "co") return "https://api.lever.co/v1";
+  throw new Error('region must be "co" or "eu"');
+}
+
 export function createAuthClient(config: LeverAuthClientConfig): LeverAuthClient {
   const region = assertSafePathSegment(config.region, "region");
   if (region !== "co" && region !== "eu") {
@@ -102,7 +115,7 @@ export function createAuthClient(config: LeverAuthClientConfig): LeverAuthClient
     timeoutMs: bounds.timeoutMs,
     fetch: config.fetch,
   });
-  const baseUrl = `https://api.lever.${region}/v1`;
+  const baseUrl = leverDataApiBaseUrl(region);
   const headers = {
     Authorization: basicAuthHeader(config.apiKey),
     Accept: "application/json",
@@ -126,6 +139,35 @@ export function createAuthClient(config: LeverAuthClientConfig): LeverAuthClient
         method: "PUT",
         headers,
         body: JSON.stringify(body),
+      });
+      if (response.status < 200 || response.status >= 300) {
+        throw upstreamErrorFor("Lever", response.status, response.headers, response.body);
+      }
+      if (response.status === 204 || response.body.length === 0) {
+        return undefined;
+      }
+      return parseJSONBody("Lever", response.body);
+    },
+
+    async postJSON(path: string, body: Record<string, unknown> = {}): Promise<unknown> {
+      const response = await http.fetchText(`${baseUrl}${path}`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(body),
+      });
+      if (response.status < 200 || response.status >= 300) {
+        throw upstreamErrorFor("Lever", response.status, response.headers, response.body);
+      }
+      if (response.status === 204 || response.body.length === 0) {
+        return undefined;
+      }
+      return parseJSONBody("Lever", response.body);
+    },
+
+    async deleteJSON(path: string): Promise<unknown> {
+      const response = await http.fetchText(`${baseUrl}${path}`, {
+        method: "DELETE",
+        headers: { Authorization: headers.Authorization, Accept: headers.Accept },
       });
       if (response.status < 200 || response.status >= 300) {
         throw upstreamErrorFor("Lever", response.status, response.headers, response.body);
