@@ -793,6 +793,23 @@ import {
   validateUpdateRepoPropertyValuesInput,
 } from "./gap_g7";
 import {
+  createGapG8Client,
+  validateDeleteDependabotSecretInput,
+  validateDeleteOrgCodespacesSecretInput,
+  validateDeleteOrgMemberCodespaceInput,
+  validateDeleteUserCodespaceInput,
+  validateGetOrgCodespacesSecretInput,
+  validateGetOrgCodespacesSecretsPublicKeyInput,
+  validateGetRepoCodespacesPermissionsCheckInput,
+  validateGetRepoCodespacesSecretInput,
+  validateListOrgCodespacesSecretRepositoriesInput,
+  validateListRepoCodespacesInput,
+  validateListRepoDevcontainersInput,
+  validateRemoveOrgCodespacesSecretRepositoryInput,
+  validateSetOrgCodespacesSecretRepositoriesInput,
+  validateUpsertOrgCodespacesSecretInput,
+} from "./gap_g8";
+import {
   createReposReadsClient,
   validateGetAutolinkInput,
   validateGetReadmeInput,
@@ -9690,6 +9707,155 @@ export function listEnvironmentDeploymentProtectionRuleApps(input: unknown): Rec
     });
   }
   return { connector: "github", action: "repos.environments.deployment_protection_rules.apps.list", source: "connector", validated: validateListEnvironmentDeploymentProtectionRuleAppsInput(input) };
+}
+
+
+function liveGapG8Client(input: Record<string, unknown>, operation: string) {
+  void operation;
+  return createGapG8Client({
+    accessToken: input.accessToken as string,
+    fetch: typeof input.fetch === "function" ? (input.fetch as typeof fetch) : undefined,
+  });
+}
+
+export function deleteUserCodespace(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG8Client(input, "user.codespaces.delete").deleteUserCodespace(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "user.codespaces.delete", source: "connector", deleted: result.deleted, codespaceName: result.codespaceName };
+    });
+  }
+  return { connector: "github", action: "user.codespaces.delete", source: "connector", validated: validateDeleteUserCodespaceInput(input) };
+}
+
+export function deleteOrgMemberCodespace(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG8Client(input, "orgs.members.codespaces.delete").deleteOrgMemberCodespace(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "orgs.members.codespaces.delete", source: "connector", deleted: result.deleted, org: result.org, username: result.username, codespaceName: result.codespaceName };
+    });
+  }
+  return { connector: "github", action: "orgs.members.codespaces.delete", source: "connector", validated: validateDeleteOrgMemberCodespaceInput(input) };
+}
+
+export function listRepoCodespaces(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG8Client(input, "repos.codespaces.list").listRepoCodespaces(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "repos.codespaces.list", source: "connector", totalCount: result.totalCount, codespaces: result.codespaces };
+    });
+  }
+  return { connector: "github", action: "repos.codespaces.list", source: "connector", validated: validateListRepoCodespacesInput(input) };
+}
+
+export function listRepoDevcontainers(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG8Client(input, "repos.codespaces.devcontainers.list").listRepoDevcontainers(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "repos.codespaces.devcontainers.list", source: "connector", totalCount: result.totalCount, devcontainers: result.devcontainers };
+    });
+  }
+  return { connector: "github", action: "repos.codespaces.devcontainers.list", source: "connector", validated: validateListRepoDevcontainersInput(input) };
+}
+
+export function getRepoCodespacesPermissionsCheck(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG8Client(input, "repos.codespaces.permissions_check.get").getRepoCodespacesPermissionsCheck(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "repos.codespaces.permissions_check.get", source: "connector", check: result.check };
+    });
+  }
+  return { connector: "github", action: "repos.codespaces.permissions_check.get", source: "connector", validated: validateGetRepoCodespacesPermissionsCheckInput(input) };
+}
+
+export function getOrgCodespacesSecret(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG8Client(input, "orgs.codespaces.secrets.get").getOrgCodespacesSecret(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "orgs.codespaces.secrets.get", source: "connector", secret: result.secret };
+    });
+  }
+  return { connector: "github", action: "orgs.codespaces.secrets.get", source: "connector", validated: validateGetOrgCodespacesSecretInput(input) };
+}
+
+export function upsertOrgCodespacesSecret(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG8Client(input, "orgs.codespaces.secrets.create_or_update").upsertOrgCodespacesSecret(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "orgs.codespaces.secrets.create_or_update", source: "connector", upserted: result.upserted, created: result.created, status: result.status, org: result.org, secretName: result.secretName, visibility: result.visibility };
+    });
+  }
+  return { connector: "github", action: "orgs.codespaces.secrets.create_or_update", source: "connector", validated: validateUpsertOrgCodespacesSecretInput(input) };
+}
+
+export function deleteOrgCodespacesSecret(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG8Client(input, "orgs.codespaces.secrets.delete").deleteOrgCodespacesSecret(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "orgs.codespaces.secrets.delete", source: "connector", deleted: result.deleted, org: result.org, secretName: result.secretName };
+    });
+  }
+  return { connector: "github", action: "orgs.codespaces.secrets.delete", source: "connector", validated: validateDeleteOrgCodespacesSecretInput(input) };
+}
+
+export function setOrgCodespacesSecretRepositories(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG8Client(input, "orgs.codespaces.secrets.repositories.set").setOrgCodespacesSecretRepositories(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "orgs.codespaces.secrets.repositories.set", source: "connector", set: result.set, org: result.org, secretName: result.secretName, selectedRepositoryIds: result.selectedRepositoryIds };
+    });
+  }
+  return { connector: "github", action: "orgs.codespaces.secrets.repositories.set", source: "connector", validated: validateSetOrgCodespacesSecretRepositoriesInput(input) };
+}
+
+export function removeOrgCodespacesSecretRepository(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG8Client(input, "orgs.codespaces.secrets.repositories.remove").removeOrgCodespacesSecretRepository(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "orgs.codespaces.secrets.repositories.remove", source: "connector", removed: result.removed, org: result.org, secretName: result.secretName, repositoryId: result.repositoryId };
+    });
+  }
+  return { connector: "github", action: "orgs.codespaces.secrets.repositories.remove", source: "connector", validated: validateRemoveOrgCodespacesSecretRepositoryInput(input) };
+}
+
+export function getRepoCodespacesSecret(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG8Client(input, "repos.codespaces.secrets.get").getRepoCodespacesSecret(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "repos.codespaces.secrets.get", source: "connector", secret: result.secret };
+    });
+  }
+  return { connector: "github", action: "repos.codespaces.secrets.get", source: "connector", validated: validateGetRepoCodespacesSecretInput(input) };
+}
+
+export function deleteDependabotSecret(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG8Client(input, "dependabot.secrets.delete").deleteDependabotSecret(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "dependabot.secrets.delete", source: "connector", deleted: result.deleted, owner: result.owner, repo: result.repo, secretName: result.secretName };
+    });
+  }
+  return { connector: "github", action: "dependabot.secrets.delete", source: "connector", validated: validateDeleteDependabotSecretInput(input) };
+}
+
+export function getOrgCodespacesSecretsPublicKey(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG8Client(input, "orgs.codespaces.secrets.public_key.get").getOrgCodespacesSecretsPublicKey(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "orgs.codespaces.secrets.public_key.get", source: "connector", publicKey: result.publicKey };
+    });
+  }
+  return { connector: "github", action: "orgs.codespaces.secrets.public_key.get", source: "connector", validated: validateGetOrgCodespacesSecretsPublicKeyInput(input) };
+}
+
+export function listOrgCodespacesSecretRepositories(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG8Client(input, "orgs.codespaces.secrets.repositories.list").listOrgCodespacesSecretRepositories(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "orgs.codespaces.secrets.repositories.list", source: "connector", totalCount: result.totalCount, repositories: result.repositories };
+    });
+  }
+  return { connector: "github", action: "orgs.codespaces.secrets.repositories.list", source: "connector", validated: validateListOrgCodespacesSecretRepositoriesInput(input) };
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────

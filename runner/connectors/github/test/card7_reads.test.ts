@@ -17,10 +17,10 @@ import {
 const READS = ["repos.forks.list", "search.topics.list", "search.labels.list"] as const;
 
 describe("github card-7 reads", () => {
-  test("manifest stays v0.74.0 at 756 ops and these reads omit effect policy", () => {
-    expect(manifest.version).toBe("0.74.0");
+  test("manifest stays v0.75.0 at 770 ops and these reads omit effect policy", () => {
+    expect(manifest.version).toBe("0.75.0");
     expect(manifest.version).not.toBe("0.35.0");
-    expect(Object.keys(manifest.operations).length).toBe(756);
+    expect(Object.keys(manifest.operations).length).toBe(770);
     for (const key of READS) {
       const op = manifest.operations[key] as Record<string, unknown>;
       expect(op.kind).toBe("action");
