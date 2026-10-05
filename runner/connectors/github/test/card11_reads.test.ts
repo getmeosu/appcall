@@ -52,10 +52,10 @@ const runner = {
 };
 
 describe("github card11 runner and social reads", () => {
-  test("version stays 0.58.0 and the thirteen reads omit effect fields", () => {
-    expect(manifest.version).toBe("0.58.0");
+  test("version stays 0.59.0 and the thirteen reads omit effect fields", () => {
+    expect(manifest.version).toBe("0.59.0");
     expect(READS).toHaveLength(13);
-    expect(Object.keys(manifest.operations)).toHaveLength(601);
+    expect(Object.keys(manifest.operations)).toHaveLength(619);
     for (const key of READS) {
       const op = manifest.operations[key] as Record<string, unknown>;
       expect(op.kind).toBe("action");

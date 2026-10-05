@@ -574,6 +574,28 @@ import {
   validateStopUserCodespaceInput,
 } from "./write_card9";
 
+import {
+  createWriteCard10Client,
+  validateCreateOrgHookInput,
+  validateDeleteRepoHookInput,
+  validateDeleteOrgHookInput,
+  validatePingOrgHookInput,
+  validatePingRepoHookInput,
+  validateRedeliverOrgHookDeliveryInput,
+  validateRedeliverRepoHookDeliveryInput,
+  validateUpdateOrgHookInput,
+  validateUpdateRepoHookInput,
+  validateCreateIssueReactionInput,
+  validateCreateIssueCommentReactionInput,
+  validateCreateCommitCommentReactionInput,
+  validateCreatePullReviewCommentReactionInput,
+  validateCreateReleaseReactionInput,
+  validateDeleteReleaseReactionInput,
+  validateDeleteCommitCommentReactionInput,
+  validateDeleteIssueCommentReactionInput,
+  validateDeleteIssueReactionInput,
+} from "./write_card10";
+
 
 
 import {
@@ -7741,6 +7763,197 @@ export function stopUserCodespace(input: unknown): Record<string, unknown> | Pro
     });
   }
   return { connector: "github", action: "user.codespaces.stop", source: "connector", validated: validateStopUserCodespaceInput(input) };
+}
+
+// ─── write card 10: hooks and reactions writes ────────────────────────────────
+
+function liveWriteCard10Client(input: Record<string, unknown>, operation: string) {
+  const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
+  return createWriteCard10Client({
+    accessToken: input.accessToken as string,
+    fetch: fetchFn,
+    githubClient: createGitHubClient({ accessToken: input.accessToken as string, fetch: fetchFn, operation }),
+  });
+}
+
+export function createOrgHook(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveWriteCard10Client(input, "orgs.hooks.create").createOrgHook(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "orgs.hooks.create", source: "connector", hook: result.hook };
+    });
+  }
+  return { connector: "github", action: "orgs.hooks.create", source: "connector", validated: validateCreateOrgHookInput(input) };
+}
+
+export function deleteRepoHook(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveWriteCard10Client(input, "repos.hooks.delete").deleteRepoHook(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "repos.hooks.delete", source: "connector", deleted: result.deleted, owner: result.owner, repo: result.repo, hookId: result.hookId };
+    });
+  }
+  return { connector: "github", action: "repos.hooks.delete", source: "connector", validated: validateDeleteRepoHookInput(input) };
+}
+
+export function deleteOrgHook(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveWriteCard10Client(input, "orgs.hooks.delete").deleteOrgHook(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "orgs.hooks.delete", source: "connector", deleted: result.deleted, org: result.org, hookId: result.hookId };
+    });
+  }
+  return { connector: "github", action: "orgs.hooks.delete", source: "connector", validated: validateDeleteOrgHookInput(input) };
+}
+
+export function pingOrgHook(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveWriteCard10Client(input, "orgs.hooks.ping").pingOrgHook(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "orgs.hooks.ping", source: "connector", pinged: result.pinged, org: result.org, hookId: result.hookId };
+    });
+  }
+  return { connector: "github", action: "orgs.hooks.ping", source: "connector", validated: validatePingOrgHookInput(input) };
+}
+
+export function pingRepoHook(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveWriteCard10Client(input, "repos.hooks.ping").pingRepoHook(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "repos.hooks.ping", source: "connector", pinged: result.pinged, owner: result.owner, repo: result.repo, hookId: result.hookId };
+    });
+  }
+  return { connector: "github", action: "repos.hooks.ping", source: "connector", validated: validatePingRepoHookInput(input) };
+}
+
+export function redeliverOrgHookDelivery(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveWriteCard10Client(input, "orgs.hooks.deliveries.redeliver").redeliverOrgHookDelivery(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "orgs.hooks.deliveries.redeliver", source: "connector", redelivered: result.redelivered, org: result.org, hookId: result.hookId, deliveryId: result.deliveryId };
+    });
+  }
+  return { connector: "github", action: "orgs.hooks.deliveries.redeliver", source: "connector", validated: validateRedeliverOrgHookDeliveryInput(input) };
+}
+
+export function redeliverRepoHookDelivery(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveWriteCard10Client(input, "repos.hooks.deliveries.redeliver").redeliverRepoHookDelivery(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "repos.hooks.deliveries.redeliver", source: "connector", redelivered: result.redelivered, owner: result.owner, repo: result.repo, hookId: result.hookId, deliveryId: result.deliveryId };
+    });
+  }
+  return { connector: "github", action: "repos.hooks.deliveries.redeliver", source: "connector", validated: validateRedeliverRepoHookDeliveryInput(input) };
+}
+
+export function updateOrgHook(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveWriteCard10Client(input, "orgs.hooks.update").updateOrgHook(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "orgs.hooks.update", source: "connector", hook: result.hook };
+    });
+  }
+  return { connector: "github", action: "orgs.hooks.update", source: "connector", validated: validateUpdateOrgHookInput(input) };
+}
+
+export function updateRepoHook(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveWriteCard10Client(input, "repos.hooks.update").updateRepoHook(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "repos.hooks.update", source: "connector", hook: result.hook };
+    });
+  }
+  return { connector: "github", action: "repos.hooks.update", source: "connector", validated: validateUpdateRepoHookInput(input) };
+}
+
+export function createIssueReaction(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveWriteCard10Client(input, "issues.reactions.create").createIssueReaction(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "issues.reactions.create", source: "connector", reaction: result.reaction };
+    });
+  }
+  return { connector: "github", action: "issues.reactions.create", source: "connector", validated: validateCreateIssueReactionInput(input) };
+}
+
+export function createIssueCommentReaction(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveWriteCard10Client(input, "issues.comments.reactions.create").createIssueCommentReaction(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "issues.comments.reactions.create", source: "connector", reaction: result.reaction };
+    });
+  }
+  return { connector: "github", action: "issues.comments.reactions.create", source: "connector", validated: validateCreateIssueCommentReactionInput(input) };
+}
+
+export function createCommitCommentReaction(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveWriteCard10Client(input, "commits.comments.reactions.create").createCommitCommentReaction(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "commits.comments.reactions.create", source: "connector", reaction: result.reaction };
+    });
+  }
+  return { connector: "github", action: "commits.comments.reactions.create", source: "connector", validated: validateCreateCommitCommentReactionInput(input) };
+}
+
+export function createPullReviewCommentReaction(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveWriteCard10Client(input, "pull_requests.review_comments.reactions.create").createPullReviewCommentReaction(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "pull_requests.review_comments.reactions.create", source: "connector", reaction: result.reaction };
+    });
+  }
+  return { connector: "github", action: "pull_requests.review_comments.reactions.create", source: "connector", validated: validateCreatePullReviewCommentReactionInput(input) };
+}
+
+export function createReleaseReaction(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveWriteCard10Client(input, "releases.reactions.create").createReleaseReaction(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "releases.reactions.create", source: "connector", reaction: result.reaction };
+    });
+  }
+  return { connector: "github", action: "releases.reactions.create", source: "connector", validated: validateCreateReleaseReactionInput(input) };
+}
+
+export function deleteReleaseReaction(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveWriteCard10Client(input, "releases.reactions.delete").deleteReleaseReaction(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "releases.reactions.delete", source: "connector", deleted: result.deleted, owner: result.owner, repo: result.repo, releaseId: result.releaseId, reactionId: result.reactionId };
+    });
+  }
+  return { connector: "github", action: "releases.reactions.delete", source: "connector", validated: validateDeleteReleaseReactionInput(input) };
+}
+
+export function deleteCommitCommentReaction(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveWriteCard10Client(input, "commits.comments.reactions.delete").deleteCommitCommentReaction(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "commits.comments.reactions.delete", source: "connector", deleted: result.deleted, owner: result.owner, repo: result.repo, commentId: result.commentId, reactionId: result.reactionId };
+    });
+  }
+  return { connector: "github", action: "commits.comments.reactions.delete", source: "connector", validated: validateDeleteCommitCommentReactionInput(input) };
+}
+
+export function deleteIssueCommentReaction(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveWriteCard10Client(input, "issues.comments.reactions.delete").deleteIssueCommentReaction(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "issues.comments.reactions.delete", source: "connector", deleted: result.deleted, owner: result.owner, repo: result.repo, commentId: result.commentId, reactionId: result.reactionId };
+    });
+  }
+  return { connector: "github", action: "issues.comments.reactions.delete", source: "connector", validated: validateDeleteIssueCommentReactionInput(input) };
+}
+
+export function deleteIssueReaction(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveWriteCard10Client(input, "issues.reactions.delete").deleteIssueReaction(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "issues.reactions.delete", source: "connector", deleted: result.deleted, owner: result.owner, repo: result.repo, issueNumber: result.issueNumber, reactionId: result.reactionId };
+    });
+  }
+  return { connector: "github", action: "issues.reactions.delete", source: "connector", validated: validateDeleteIssueReactionInput(input) };
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
