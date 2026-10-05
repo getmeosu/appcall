@@ -1049,6 +1049,23 @@ import {
 import metaAdsManifest from "../../connectors/meta-ads/manifest.json";
 import { healthcheck as metaAdsHealthcheck } from "../../connectors/meta-ads/src/healthcheck";
 import { executeCampaignsListSync as listMetaCampaigns, executeAdSetsListSync as listMetaAdSets, executeAdsListSync as listMetaAds, executeAdAccountsListSync as listMetaAdAccounts } from "../../connectors/meta-ads/src/sync";
+import {
+  getCampaign as metaAdsGetCampaign,
+  createCampaign as metaAdsCreateCampaign,
+  updateCampaign as metaAdsUpdateCampaign,
+  getAdSet as metaAdsGetAdSet,
+  createAdSet as metaAdsCreateAdSet,
+  updateAdSet as metaAdsUpdateAdSet,
+  getAd as metaAdsGetAd,
+  createAd as metaAdsCreateAd,
+  updateAd as metaAdsUpdateAd,
+  listAdCreatives as metaAdsListAdCreatives,
+  getAdCreative as metaAdsGetAdCreative,
+  createAdCreative as metaAdsCreateAdCreative,
+  getInsights as metaAdsGetInsights,
+  getAdAccount as metaAdsGetAdAccount,
+  searchTargeting as metaAdsSearchTargeting,
+} from "../../connectors/meta-ads/src/g1";
 import linkedinAdsManifest from "../../connectors/linkedin-ads/manifest.json";
 import { healthcheck as linkedinAdsHealthcheck } from "../../connectors/linkedin-ads/src/healthcheck";
 import {
@@ -2452,6 +2469,23 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
       "bidding_strategies.mutate": gadsMutateBiddingStrategies,
       "portfolio_bidding_strategies.mutate": gadsMutatePortfolioBiddingStrategies,
       "conversion_actions.tag_snippets.get": gadsGetConversionActionTagSnippets,
+    },
+    "meta-ads": {
+      "campaigns.get": metaAdsGetCampaign,
+      "campaigns.create": metaAdsCreateCampaign,
+      "campaigns.update": metaAdsUpdateCampaign,
+      "ad_sets.get": metaAdsGetAdSet,
+      "ad_sets.create": metaAdsCreateAdSet,
+      "ad_sets.update": metaAdsUpdateAdSet,
+      "ads.get": metaAdsGetAd,
+      "ads.create": metaAdsCreateAd,
+      "ads.update": metaAdsUpdateAd,
+      "ad_creatives.list": metaAdsListAdCreatives,
+      "ad_creatives.get": metaAdsGetAdCreative,
+      "ad_creatives.create": metaAdsCreateAdCreative,
+      "insights.get": metaAdsGetInsights,
+      "ad_accounts.get": metaAdsGetAdAccount,
+      "targeting.search": metaAdsSearchTargeting,
     },
     "linkedin-ads": {
       "campaigns.get": linkedinAdsGetCampaign,
