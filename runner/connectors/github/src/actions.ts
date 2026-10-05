@@ -426,6 +426,24 @@ import {
   validateListRepoPullCommentsInput,
 } from "./card18_reads";
 
+import {
+  createCard19ReadsClient,
+  validateGetMetaRootInput,
+  validateGetRepoDependencyGraphSbomInput,
+  validateGetCodeqlDatabaseInput,
+  validateGetCodeScanningDefaultSetupInput,
+  validateGetOrgPropertySchemaInput,
+  validateGetOrgProjectItemInput,
+  validateGetRepoPagesHealthInput,
+  validateGetRepoPagesInput,
+  validateGetUserProjectItemInput,
+  validateListRepoIssueTypesInput,
+  validateListOrgProjectsInput,
+  validateListUserProjectItemsInput,
+  validateListUserProjectViewItemsInput,
+  validateListUserProjectsInput,
+} from "./card19_reads";
+
 
 
 import {
@@ -6361,6 +6379,158 @@ export function listRepoPullComments(input: unknown): Record<string, unknown> | 
     });
   }
   return { connector: "github", action: "repos.pulls.comments.list", source: "connector", validated: validateListRepoPullCommentsInput(input) };
+}
+
+
+// ─── card 19: root, sbom, pages, and project reads ───────────────────────────
+
+function liveCard19Client(input: Record<string, unknown>, operation: string) {
+  const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
+  return createCard19ReadsClient({
+    accessToken: input.accessToken as string,
+    fetch: fetchFn,
+    githubClient: createGitHubClient({ accessToken: input.accessToken as string, fetch: fetchFn, operation }),
+  });
+}
+
+export function getMetaRoot(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCard19Client(input, "meta.root.get").getMetaRoot(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "meta.root.get", source: "connector", root: result.root };
+    });
+  }
+  return { connector: "github", action: "meta.root.get", source: "connector", validated: validateGetMetaRootInput(input) };
+}
+
+export function getRepoDependencyGraphSbom(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCard19Client(input, "repos.dependency_graph.sbom.get").getRepoDependencyGraphSbom(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "repos.dependency_graph.sbom.get", source: "connector", sbom: result.sbom };
+    });
+  }
+  return { connector: "github", action: "repos.dependency_graph.sbom.get", source: "connector", validated: validateGetRepoDependencyGraphSbomInput(input) };
+}
+
+export function getCodeqlDatabase(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCard19Client(input, "code_scanning.codeql.databases.get").getCodeqlDatabase(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "code_scanning.codeql.databases.get", source: "connector", downloadUrl: result.downloadUrl };
+    });
+  }
+  return { connector: "github", action: "code_scanning.codeql.databases.get", source: "connector", validated: validateGetCodeqlDatabaseInput(input) };
+}
+
+export function getCodeScanningDefaultSetup(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCard19Client(input, "code_scanning.default_setup.get").getCodeScanningDefaultSetup(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "code_scanning.default_setup.get", source: "connector", setup: result.setup };
+    });
+  }
+  return { connector: "github", action: "code_scanning.default_setup.get", source: "connector", validated: validateGetCodeScanningDefaultSetupInput(input) };
+}
+
+export function getOrgPropertySchema(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCard19Client(input, "orgs.properties.schema.get").getOrgPropertySchema(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "orgs.properties.schema.get", source: "connector", property: result.property };
+    });
+  }
+  return { connector: "github", action: "orgs.properties.schema.get", source: "connector", validated: validateGetOrgPropertySchemaInput(input) };
+}
+
+export function getOrgProjectItem(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCard19Client(input, "orgs.projects_v2.items.get").getOrgProjectItem(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "orgs.projects_v2.items.get", source: "connector", item: result.item };
+    });
+  }
+  return { connector: "github", action: "orgs.projects_v2.items.get", source: "connector", validated: validateGetOrgProjectItemInput(input) };
+}
+
+export function getRepoPagesHealth(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCard19Client(input, "repos.pages.health.get").getRepoPagesHealth(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "repos.pages.health.get", source: "connector", health: result.health };
+    });
+  }
+  return { connector: "github", action: "repos.pages.health.get", source: "connector", validated: validateGetRepoPagesHealthInput(input) };
+}
+
+export function getRepoPages(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCard19Client(input, "repos.pages.get").getRepoPages(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "repos.pages.get", source: "connector", pages: result.pages };
+    });
+  }
+  return { connector: "github", action: "repos.pages.get", source: "connector", validated: validateGetRepoPagesInput(input) };
+}
+
+export function getUserProjectItem(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCard19Client(input, "users.projects_v2.items.get").getUserProjectItem(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "users.projects_v2.items.get", source: "connector", item: result.item };
+    });
+  }
+  return { connector: "github", action: "users.projects_v2.items.get", source: "connector", validated: validateGetUserProjectItemInput(input) };
+}
+
+export function listRepoIssueTypes(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCard19Client(input, "repos.issue_types.list").listRepoIssueTypes(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "repos.issue_types.list", source: "connector", issueTypes: result.issueTypes };
+    });
+  }
+  return { connector: "github", action: "repos.issue_types.list", source: "connector", validated: validateListRepoIssueTypesInput(input) };
+}
+
+export function listOrgProjects(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCard19Client(input, "orgs.projects_v2.list").listOrgProjects(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "orgs.projects_v2.list", source: "connector", projects: result.projects };
+    });
+  }
+  return { connector: "github", action: "orgs.projects_v2.list", source: "connector", validated: validateListOrgProjectsInput(input) };
+}
+
+export function listUserProjectItems(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCard19Client(input, "users.projects_v2.items.list").listUserProjectItems(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "users.projects_v2.items.list", source: "connector", items: result.items };
+    });
+  }
+  return { connector: "github", action: "users.projects_v2.items.list", source: "connector", validated: validateListUserProjectItemsInput(input) };
+}
+
+export function listUserProjectViewItems(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCard19Client(input, "users.projects_v2.views.items.list").listUserProjectViewItems(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "users.projects_v2.views.items.list", source: "connector", items: result.items };
+    });
+  }
+  return { connector: "github", action: "users.projects_v2.views.items.list", source: "connector", validated: validateListUserProjectViewItemsInput(input) };
+}
+
+export function listUserProjects(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCard19Client(input, "users.projects_v2.list").listUserProjects(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "users.projects_v2.list", source: "connector", projects: result.projects };
+    });
+  }
+  return { connector: "github", action: "users.projects_v2.list", source: "connector", validated: validateListUserProjectsInput(input) };
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
