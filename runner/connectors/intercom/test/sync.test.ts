@@ -263,7 +263,7 @@ describe("Intercom conversations.reply sync", () => {
       admin_id: "991",
       body: "Thanks — updated your plan.",
     });
-    // Idempotent: raw primary with top-level id (no normalize / no in-handler GET)
+    // Raw primary with top-level id (no normalize / no in-handler GET; reply is a create)
     expect(result.id).toBe("147");
     expect((result as { conversation?: unknown }).conversation).toBeUndefined();
   });

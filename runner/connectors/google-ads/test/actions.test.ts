@@ -131,7 +131,7 @@ describe("campaigns.get / getByName", () => {
   });
 });
 
-describe("companion gets (EffectPolicy Reconcile targets)", () => {
+describe("companion gets (read-back for mutate ops)", () => {
   it("validates and fetches ad_groups.get", async () => {
     const dry = getAdGroup({ customerId: "1", adGroupId: "7777777777" }) as any;
     expect(dry.action).toBe("ad_groups.get");
