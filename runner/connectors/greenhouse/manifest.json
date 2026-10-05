@@ -1,7 +1,7 @@
 {
   "key": "greenhouse",
   "name": "Greenhouse",
-  "version": "0.8.0",
+  "version": "0.9.0",
   "runtime": "bun",
   "categories": [
     "ats-recruitment"
@@ -1382,6 +1382,637 @@
         "additionalProperties": true,
         "properties": {}
       }
+    },
+    "candidates.merge": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Merge candidates",
+      "description": "Merge secondaryCandidateId into the primary candidate id via POST /v3/candidates/{id}/merge. The secondary candidate is permanently deleted. Returns the surviving primary candidate. Effect keys omitted (merge is not observable via candidates.get).",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Primary (surviving) candidate id."
+          },
+          "secondaryCandidateId": {
+            "type": [
+              "string",
+              "integer"
+            ],
+            "description": "Candidate id to merge into the primary; permanently deleted."
+          }
+        },
+        "required": [
+          "id",
+          "secondaryCandidateId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {}
+      }
+    },
+    "candidates.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Delete candidate",
+      "description": "Permanently delete candidate via DELETE /v3/candidates/{id}. Returns { ok: true }; 404 surfaces as CONNECTOR_UPSTREAM_ERROR. Effect keys omitted. Also deletes all of the candidate's applications, attachments, scorecards and notes.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Harvest candidate id."
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {}
+      }
+    },
+    "applications.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Delete application",
+      "description": "Permanently delete application via DELETE /v3/applications/{id}. Returns { ok: true }; 404 surfaces as CONNECTOR_UPSTREAM_ERROR. Effect keys omitted. Also deletes its interview stages, scorecards and rejection details; the candidate is kept.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Harvest application id."
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {}
+      }
+    },
+    "attachments.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List attachments",
+      "description": "List application attachments via GET /v3/attachments (agent tool). url is a time-limited signed link.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "applicationIds": {
+            "type": [
+              "string",
+              "array"
+            ],
+            "description": "Optional Harvest ids filter (comma string or array)."
+          },
+          "candidateIds": {
+            "type": [
+              "string",
+              "array"
+            ],
+            "description": "Optional Harvest ids filter (comma string or array)."
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "resume",
+              "cover_letter",
+              "take_home_test",
+              "offer_packet",
+              "offer_letter",
+              "signed_offer_letter",
+              "other",
+              "form_attachment",
+              "midfunnel_agreement",
+              "automated_agreement"
+            ],
+            "description": "Optional attachment type filter."
+          },
+          "ids": {
+            "type": [
+              "string",
+              "array"
+            ],
+            "description": "Optional Harvest ids filter (comma string or array)."
+          },
+          "perPage": {
+            "type": "integer",
+            "description": "Page size."
+          },
+          "cursor": {
+            "type": "string",
+            "description": "Harvest v3 cursor from Link rel=next."
+          }
+        },
+        "required": []
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {}
+      }
+    },
+    "attachments.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Create attachment",
+      "description": "Attach a file to an application via POST /v3/attachments (JSON, not multipart). Provide exactly one of content (base64) or url. Returns the created attachment (top-level id). Effect keys omitted.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "applicationId": {
+            "type": [
+              "string",
+              "integer"
+            ],
+            "description": "Application id."
+          },
+          "filename": {
+            "type": "string",
+            "description": "Filename including extension."
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "resume",
+              "cover_letter",
+              "take_home_test",
+              "offer_packet",
+              "offer_letter",
+              "signed_offer_letter",
+              "other",
+              "form_attachment",
+              "midfunnel_agreement",
+              "automated_agreement"
+            ],
+            "description": "Attachment classification."
+          },
+          "content": {
+            "type": "string",
+            "description": "Base64-encoded file contents (exactly one of content or url)."
+          },
+          "url": {
+            "type": "string",
+            "description": "Publicly fetchable URL Greenhouse downloads (exactly one of content or url)."
+          },
+          "visibility": {
+            "type": "string",
+            "enum": [
+              "admin_only",
+              "private",
+              "public"
+            ],
+            "description": "Optional visibility; inferred from type when omitted."
+          }
+        },
+        "required": [
+          "applicationId",
+          "filename",
+          "type"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {}
+      }
+    },
+    "attachments.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Delete attachment",
+      "description": "Permanently delete attachment via DELETE /v3/attachments/{id}. Returns { ok: true }; 404 surfaces as CONNECTOR_UPSTREAM_ERROR. Effect keys omitted.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Harvest attachment id."
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {}
+      }
+    },
+    "candidate_educations.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List candidate educations",
+      "description": "List candidate education entries via GET /v3/candidate_educations (agent tool).",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "candidateIds": {
+            "type": [
+              "string",
+              "array"
+            ],
+            "description": "Optional Harvest ids filter (comma string or array)."
+          },
+          "latest": {
+            "type": "boolean",
+            "description": "When true, only each candidate's latest education."
+          },
+          "ids": {
+            "type": [
+              "string",
+              "array"
+            ],
+            "description": "Optional Harvest ids filter (comma string or array)."
+          },
+          "perPage": {
+            "type": "integer",
+            "description": "Page size."
+          },
+          "cursor": {
+            "type": "string",
+            "description": "Harvest v3 cursor from Link rel=next."
+          }
+        },
+        "required": []
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {}
+      }
+    },
+    "candidate_educations.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Create candidate education",
+      "description": "Add an education entry via POST /v3/candidate_educations. Use startDate/endDate (YYYY-MM-DD) or the month/year pairs per side, not both. Returns the created entry (top-level id). Effect keys omitted.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "candidateId": {
+            "type": [
+              "string",
+              "integer"
+            ],
+            "description": "Candidate id."
+          },
+          "schoolNameCustomFieldOptionId": {
+            "type": [
+              "string",
+              "integer"
+            ],
+            "description": "Optional school custom-field option id."
+          },
+          "degreeCustomFieldOptionId": {
+            "type": [
+              "string",
+              "integer"
+            ],
+            "description": "Optional degree custom-field option id."
+          },
+          "disciplineCustomFieldOptionId": {
+            "type": [
+              "string",
+              "integer"
+            ],
+            "description": "Optional discipline custom-field option id."
+          },
+          "startDate": {
+            "type": "string",
+            "description": "Optional start date (YYYY-MM-DD); not with startDateMonth/startDateYear."
+          },
+          "endDate": {
+            "type": "string",
+            "description": "Optional end date (YYYY-MM-DD); not with endDateMonth/endDateYear."
+          },
+          "startDateMonth": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 12,
+            "description": "Optional start month (1-12)."
+          },
+          "startDateYear": {
+            "type": "integer",
+            "minimum": 1900,
+            "maximum": 2100,
+            "description": "Optional start year."
+          },
+          "endDateMonth": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 12,
+            "description": "Optional end month (1-12)."
+          },
+          "endDateYear": {
+            "type": "integer",
+            "minimum": 1900,
+            "maximum": 2100,
+            "description": "Optional end year."
+          }
+        },
+        "required": [
+          "candidateId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {}
+      }
+    },
+    "candidate_educations.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Delete candidate education",
+      "description": "Permanently delete candidate education entry via DELETE /v3/candidate_educations/{id}. Returns { ok: true }; 404 surfaces as CONNECTOR_UPSTREAM_ERROR. Effect keys omitted.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Harvest candidate education entry id."
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {}
+      }
+    },
+    "candidate_employments.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List candidate employments",
+      "description": "List candidate employment entries via GET /v3/candidate_employments (agent tool).",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "candidateIds": {
+            "type": [
+              "string",
+              "array"
+            ],
+            "description": "Optional Harvest ids filter (comma string or array)."
+          },
+          "latest": {
+            "type": "boolean",
+            "description": "When true, only each candidate's latest employment."
+          },
+          "ids": {
+            "type": [
+              "string",
+              "array"
+            ],
+            "description": "Optional Harvest ids filter (comma string or array)."
+          },
+          "perPage": {
+            "type": "integer",
+            "description": "Page size."
+          },
+          "cursor": {
+            "type": "string",
+            "description": "Harvest v3 cursor from Link rel=next."
+          }
+        },
+        "required": []
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {}
+      }
+    },
+    "candidate_employments.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Create candidate employment",
+      "description": "Add a work-history entry via POST /v3/candidate_employments. Omit endDate for current employment. Returns the created entry (top-level id). Effect keys omitted.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "candidateId": {
+            "type": [
+              "string",
+              "integer"
+            ],
+            "description": "Candidate id."
+          },
+          "companyName": {
+            "type": "string",
+            "maxLength": 255,
+            "description": "Employer name."
+          },
+          "title": {
+            "type": "string",
+            "maxLength": 255,
+            "description": "Job title."
+          },
+          "startDate": {
+            "type": "string",
+            "description": "Start date (YYYY-MM-DD)."
+          },
+          "endDate": {
+            "type": "string",
+            "description": "Optional end date (YYYY-MM-DD)."
+          }
+        },
+        "required": [
+          "candidateId",
+          "companyName",
+          "title",
+          "startDate"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {}
+      }
+    },
+    "candidate_employments.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Delete candidate employment",
+      "description": "Permanently delete candidate employment entry via DELETE /v3/candidate_employments/{id}. Returns { ok: true }; 404 surfaces as CONNECTOR_UPSTREAM_ERROR. Effect keys omitted.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Harvest candidate employment entry id."
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {}
+      }
+    },
+    "candidate_tags.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Create candidate tag",
+      "description": "Add a tag to the organization's candidate-tag dictionary via POST /v3/candidate_tags. Names are unique (case sensitive); duplicates return 422. Returns the created tag (top-level id). Effect keys omitted.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255,
+            "description": "Tag name."
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {}
+      }
+    },
+    "candidate_tags.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Delete candidate tag",
+      "description": "Permanently delete candidate tag via DELETE /v3/candidate_tags/{id}. Returns { ok: true }; 404 surfaces as CONNECTOR_UPSTREAM_ERROR. Effect keys omitted. Also removes the tag from every candidate it was applied to.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Harvest candidate tag id."
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {}
+      }
+    },
+    "rejection_details.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Update rejection detail",
+      "description": "Patch the rejection reason or rejection-question custom fields via PATCH /v3/rejection_details/{id} (id is the rejection-detail row id, not the application id). rejected_at is unchanged. Effect keys omitted (no single-GET observe).",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Rejection detail row id."
+          },
+          "rejectionReasonId": {
+            "type": [
+              "string",
+              "integer"
+            ],
+            "description": "Optional rejection reason id."
+          },
+          "customFields": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": true
+            },
+            "description": "Optional rejection-question values: array of { name_key | custom_field_id, value }."
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {}
+      }
     }
   },
   "models": [
@@ -1402,6 +2033,9 @@
     "rejection_detail",
     "note",
     "candidate_tag",
-    "applied_candidate_tag"
+    "applied_candidate_tag",
+    "attachment",
+    "candidate_education",
+    "candidate_employment"
   ]
 }
