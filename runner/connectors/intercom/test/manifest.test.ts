@@ -6,8 +6,8 @@ describe("Intercom manifest", () => {
     expect(manifest.key).toBe("intercom");
   });
 
-  it("has version 0.4.1", () => {
-    expect(manifest.version).toBe("0.4.1");
+  it("has version 0.5.0", () => {
+    expect(manifest.version).toBe("0.5.0");
   });
 
   it("uses bun runtime", () => {
@@ -45,27 +45,42 @@ describe("Intercom manifest", () => {
       "admins.get",
       "admins.list",
       "companies.create",
+      "companies.delete",
       "companies.get",
       "companies.list",
+      "companies.update",
+      "contacts.archive",
+      "contacts.attach_company",
       "contacts.create",
       "contacts.delete",
+      "contacts.detach_company",
       "contacts.get",
       "contacts.list",
+      "contacts.search",
       "contacts.tag",
+      "contacts.unarchive",
+      "contacts.untag",
       "contacts.update",
       "conversations.assign",
       "conversations.close",
+      "conversations.create",
       "conversations.get",
       "conversations.list",
+      "conversations.reopen",
       "conversations.reply",
       "conversations.search",
       "conversations.tag",
+      "conversations.untag",
       "healthcheck",
       "tags.create",
       "tags.list",
+      "teams.list",
       "tickets.create",
+      "tickets.delete",
+      "tickets.get",
       "tickets.list",
       "tickets.reply",
+      "tickets.update",
     ]);
     expect(manifest.operations["conversations.list"].sideEffect).toBe("read");
     expect(manifest.operations["conversations.get"].sideEffect).toBe("read");
@@ -116,12 +131,10 @@ describe("Intercom manifest", () => {
     expect(manifest.operations["conversations.search"].request.path).toBe("/conversations/search");
   });
 
-  it("does not declare deferred open/snooze/untag/create", () => {
+  it("does not declare deferred open/snooze (reopen covers open)", () => {
     for (const key of [
       "conversations.open",
       "conversations.snooze",
-      "conversations.untag",
-      "conversations.create",
     ]) {
       expect(manifest.operations[key as keyof typeof manifest.operations]).toBeUndefined();
     }
@@ -165,6 +178,97 @@ describe("Intercom manifest", () => {
       expect((ops[key].inputSchema as { type?: string }).type).toBe("object");
       expect(ops[key].outputSchema).toBeDefined();
     }
+  });
+
+  it("declares G1 ops with exact request shapes", () => {
+    const ops = manifest.operations as Record<string, Record<string, unknown>>;
+    expect(Object.keys(ops)).toHaveLength(39);
+    expect(ops["conversations.reopen"].request).toEqual({
+      method: "POST",
+      path: "/conversations/{{id}}/parts",
+      body: { message_type: "open", admin_id: "{{adminId}}" },
+      success: [200],
+    });
+    expect(ops["conversations.untag"].request).toEqual({
+      method: "DELETE",
+      path: "/conversations/{{id}}/tags/{{tagId}}",
+      body: { admin_id: "{{adminId}}" },
+      success: [200],
+    });
+    expect(ops["contacts.untag"].request).toEqual({
+      method: "DELETE",
+      path: "/contacts/{{id}}/tags/{{tagId}}",
+      success: [200],
+    });
+    expect(ops["conversations.create"].request).toMatchObject({ method: "POST", path: "/conversations" });
+    expect(ops["contacts.search"].request).toMatchObject({ method: "POST", path: "/contacts/search" });
+    expect(ops["contacts.archive"].request).toMatchObject({ method: "POST", path: "/contacts/{{id}}/archive" });
+    expect(ops["contacts.unarchive"].request).toMatchObject({ method: "POST", path: "/contacts/{{id}}/unarchive" });
+    expect(ops["contacts.attach_company"].request).toMatchObject({
+      method: "POST",
+      path: "/contacts/{{id}}/companies",
+      body: { id: "{{companyId}}" },
+    });
+    expect(ops["contacts.detach_company"].request).toMatchObject({
+      method: "DELETE",
+      path: "/contacts/{{id}}/companies/{{companyId}}",
+    });
+    expect(ops["companies.update"].request).toMatchObject({ method: "PUT", path: "/companies/{{id}}" });
+    expect(ops["companies.delete"].request).toMatchObject({ method: "DELETE", path: "/companies/{{id}}" });
+    expect(ops["tickets.get"].request).toMatchObject({ method: "GET", path: "/tickets/{{id}}" });
+    expect(ops["tickets.update"].request).toMatchObject({ method: "PUT", path: "/tickets/{{id}}" });
+    expect(ops["tickets.delete"].request).toMatchObject({ method: "DELETE", path: "/tickets/{{id}}" });
+    expect(ops["teams.list"].request).toMatchObject({ method: "GET", path: "/teams" });
+  });
+
+  it("wires G1 effects: 5 Reconcile against exact observes, 10 omit effect keys", () => {
+    const ops = manifest.operations as Record<string, Record<string, unknown>>;
+    const reconcile: Record<string, string> = {
+      "conversations.reopen": "conversations.get",
+      "conversations.untag": "conversations.get",
+      "contacts.untag": "contacts.get",
+      "companies.update": "companies.get",
+      "tickets.update": "tickets.get",
+    };
+    for (const [key, observe] of Object.entries(reconcile)) {
+      expect(ops[key].sideEffect).toBe("write");
+      expect(ops[key].effectPolicy).toBe("Reconcile");
+      expect(ops[key].reconcile).toBe(observe);
+      expect(ops[observe].sideEffect).toBe("read");
+    }
+    const omitted: Record<string, string> = {
+      "conversations.create": "write",
+      "contacts.search": "read",
+      "contacts.archive": "write",
+      "contacts.unarchive": "write",
+      "contacts.attach_company": "write",
+      "contacts.detach_company": "write",
+      "companies.delete": "destructive",
+      "tickets.get": "read",
+      "tickets.delete": "destructive",
+      "teams.list": "read",
+    };
+    for (const [key, sideEffect] of Object.entries(omitted)) {
+      expect(ops[key].sideEffect).toBe(sideEffect);
+      expect(ops[key].effectPolicy).toBeUndefined();
+      expect(ops[key].reconcile).toBeUndefined();
+    }
+    for (const key of [...Object.keys(reconcile), ...Object.keys(omitted)]) {
+      expect(String(ops[key].title ?? "").length).toBeGreaterThan(0);
+      expect(String(ops[key].description ?? "").length).toBeGreaterThan(0);
+      expect(ops[key].enforceOutputSchema).toBe(true);
+      expect(ops[key].validationMode).toBe("strict-generated");
+      expect((ops[key].inputSchema as { additionalProperties?: boolean }).additionalProperties).toBe(false);
+    }
+  });
+
+  it("names the primary resource id and camelCases the other ids", () => {
+    const ops = manifest.operations as Record<string, { inputSchema: { properties: Record<string, unknown> } }>;
+    expect(Object.keys(ops["conversations.untag"].inputSchema.properties)).toEqual(["id", "tagId", "adminId"]);
+    expect(Object.keys(ops["contacts.untag"].inputSchema.properties)).toEqual(["id", "tagId"]);
+    expect(Object.keys(ops["contacts.attach_company"].inputSchema.properties)).toEqual(["id", "companyId"]);
+    expect(Object.keys(ops["contacts.detach_company"].inputSchema.properties)).toEqual(["id", "companyId"]);
+    expect(Object.keys(ops["conversations.reopen"].inputSchema.properties)).toEqual(["id", "adminId"]);
   });
 
 });
