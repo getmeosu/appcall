@@ -2905,6 +2905,7 @@ export function createConnectorRegistry(input: {
 }): ConnectorRegistry {
   const descriptions = buildConnectorDescriptions(input.manifests);
   const operationSpecs = buildConnectorOperationSpecs(input.manifests);
+  assertReconcilePairingsLoadable(operationSpecs);
   const connectorNetworks = buildConnectorNetworks(input.manifests);
 
   return {
@@ -2996,6 +2997,19 @@ export function createConnectorRegistry(input: {
         : input.actions[connectorKey]?.[action];
       if (!handler) {
         return { ok: false, code: "UNKNOWN_ACTION", message: "Action is not registered." };
+      }
+      // Everything that could make the post-write observe fail for a reason
+      // known up front is checked here, before the write is sent.
+      const reconcileFailure = precheckEffectPolicyReconcile(
+        connectorKey,
+        inputValue,
+        operationSpec,
+        operationSpecs,
+        input.actions,
+        input.syncs,
+      );
+      if (reconcileFailure) {
+        return reconcileFailure;
       }
       if (action === "healthcheck") {
         try {
@@ -3256,7 +3270,26 @@ type OperationSpec = OperationBudgetLike & {
   kind?: string;
   effectPolicy?: string;
   reconcile?: string;
+  /** Property names declared by the operation's inputSchema (empty when none). */
+  inputProperties?: ReadonlySet<string>;
+  /** inputSchema.required (empty when none). */
+  inputRequired?: readonly string[];
+  /** inputSchema.additionalProperties === false (closed input surface). */
+  inputClosed?: boolean;
 };
+
+function inputSchemaFacts(spec: Record<string, unknown>): Pick<OperationSpec, "inputProperties" | "inputRequired" | "inputClosed"> {
+  const schema = isRecord(spec.inputSchema) ? spec.inputSchema : undefined;
+  const properties = schema && isRecord(schema.properties) ? Object.keys(schema.properties) : [];
+  const required = schema && Array.isArray(schema.required)
+    ? schema.required.filter((key): key is string => typeof key === "string")
+    : [];
+  return {
+    inputProperties: new Set(properties),
+    inputRequired: required,
+    inputClosed: schema?.additionalProperties === false,
+  };
+}
 
 function buildConnectorOperationSpecs(manifests: Array<{ key: string; operations: unknown }>): Record<string, Record<string, OperationSpec>> {
   return Object.fromEntries(
@@ -3274,6 +3307,7 @@ function buildConnectorOperationSpecs(manifests: Array<{ key: string; operations
             maxResponseBytes: typeof spec.maxResponseBytes === "number" ? spec.maxResponseBytes : undefined,
             effectPolicy: typeof spec.effectPolicy === "string" ? spec.effectPolicy : undefined,
             reconcile: typeof spec.reconcile === "string" ? spec.reconcile : undefined,
+            ...inputSchemaFacts(spec),
           }]];
         }),
       );
@@ -3328,11 +3362,120 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+// Observe input projection.
+//
+// Credentials and runtime values (fetch, connection fields) travel inside the
+// action input itself (server.ts passes envelope.params.input straight to
+// executeAction), so they cannot be told apart by name. They are told apart by
+// schema instead: a key declared by neither the action nor the observe schema
+// is a runtime/context key and always travels. A key the action declares but a
+// closed observe (additionalProperties: false) does not declare is dropped, so
+// e.g. conversations.close {id, adminId, body} observes conversations.get {id}.
+// Open observes (no closed schema, typically hand-written handlers) keep the
+// full action input, unchanged from before.
+function projectObserveInput(
+  inputValue: unknown,
+  actionSpec: OperationSpec,
+  observeSpec: OperationSpec | undefined,
+): unknown {
+  if (!isRecord(inputValue) || !observeSpec?.inputClosed) {
+    return inputValue;
+  }
+  const observeProps = observeSpec.inputProperties ?? new Set<string>();
+  const actionProps = actionSpec.inputProperties ?? new Set<string>();
+  const projected: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(inputValue)) {
+    if (observeProps.has(key) || !actionProps.has(key)) {
+      projected[key] = value;
+    }
+  }
+  return projected;
+}
+
+function observeKeysSuppliedByPolicy(policy: string | undefined): ReadonlySet<string> {
+  // Idempotent projects `id` from the primary response after the write.
+  return policy === "Idempotent" ? new Set(["id"]) : new Set();
+}
+
+// Registry-build guard: a pairing whose closed observe requires a key the
+// action cannot even accept would fail after every write, so it cannot load.
+function assertReconcilePairingsLoadable(
+  operationSpecs: Record<string, Record<string, OperationSpec>>,
+): void {
+  for (const [connectorKey, specs] of Object.entries(operationSpecs)) {
+    for (const [operation, spec] of Object.entries(specs)) {
+      if (spec.effectPolicy !== "Reconcile" && spec.effectPolicy !== "Idempotent") continue;
+      if (typeof spec.reconcile !== "string" || spec.reconcile.length === 0) {
+        if (spec.effectPolicy === "Reconcile") {
+          throw new Error(`${connectorKey}.${operation}: Reconcile effectPolicy requires a reconcile operation.`);
+        }
+        continue;
+      }
+      const observe = specs[spec.reconcile];
+      if (!observe) {
+        throw new Error(`${connectorKey}.${operation}: reconcile operation ${spec.reconcile} is not declared.`);
+      }
+      if (!observe.inputClosed) continue;
+      const supplied = observeKeysSuppliedByPolicy(spec.effectPolicy);
+      const actionProps = spec.inputProperties ?? new Set<string>();
+      for (const key of observe.inputRequired ?? []) {
+        if (!supplied.has(key) && !actionProps.has(key)) {
+          throw new Error(
+            `${connectorKey}.${operation}: reconcile ${spec.reconcile} requires ${key}, which the action input does not declare.`,
+          );
+        }
+      }
+    }
+  }
+}
+
+// Pre-write guard: everything that would make the observe fail for a reason
+// known before the write (missing handler, a required observe key absent from
+// this call's projected input) fails here with nothing sent upstream.
+function precheckEffectPolicyReconcile(
+  connectorKey: string,
+  inputValue: unknown,
+  operationSpec: OperationSpec,
+  operationSpecs: Record<string, Record<string, OperationSpec>>,
+  actions: Record<string, Record<string, ActionHandler>>,
+  syncs: Record<string, Record<string, ActionHandler>> | undefined,
+): RegistryFailure | null {
+  const policy = operationSpec.effectPolicy;
+  if (policy !== "Reconcile" && policy !== "Idempotent") return null;
+  const reconcileName = operationSpec.reconcile;
+  if (typeof reconcileName !== "string" || reconcileName.length === 0) {
+    // Idempotent may omit reconcile (crates/appcall-connectors validation.rs);
+    // Reconcile without a target cannot load (assertReconcilePairingsLoadable).
+    return null;
+  }
+  if (!(actions[connectorKey]?.[reconcileName] ?? syncs?.[connectorKey]?.[reconcileName])) {
+    return { ok: false, code: "RECONCILE_HANDLER_MISSING", message: "Reconcile operation has no registered handler." };
+  }
+  const observeSpec = operationSpecs[connectorKey]?.[reconcileName];
+  if (!observeSpec?.inputClosed) return null;
+  const projected = projectObserveInput(inputValue, operationSpec, observeSpec);
+  const supplied = observeKeysSuppliedByPolicy(policy);
+  for (const key of observeSpec.inputRequired ?? []) {
+    if (supplied.has(key)) continue;
+    if (!isRecord(projected) || projected[key] === undefined) {
+      return {
+        ok: false,
+        code: "INVALID_ACTION_INPUT",
+        message: `${key} is required to reconcile via ${reconcileName}.`,
+      };
+    }
+  }
+  return null;
+}
+
 // Manifest effectPolicy Reconcile | Idempotent: after a successful mutating
 // action, observe post-write state via the declared reconcile handler.
-// Reconcile reuses the action input (id already known). Idempotent projects
-// id from the primary JSON (id | application.id) fail-closed, merges into
-// action input, then observes. Return observe output either way.
+// Reconcile reuses the action input projected onto the observe schema (id
+// already known). Idempotent projects id from the primary JSON
+// (id | application.id) fail-closed, merges into the projected input, then
+// observes. Return observe output either way. Idempotent without a reconcile
+// target is retry-safe with no observe (crates/appcall-connectors
+// validation.rs: "Idempotent may omit reconcile") and returns the primary.
 function applyEffectPolicyReconcile(
   connectorKey: string,
   inputValue: unknown,
@@ -3347,6 +3490,9 @@ function applyEffectPolicyReconcile(
     return primary;
   }
   const reconcileName = operationSpec.reconcile;
+  if (policy === "Idempotent" && (typeof reconcileName !== "string" || reconcileName.length === 0)) {
+    return primary;
+  }
   if (typeof reconcileName !== "string" || reconcileName.length === 0) {
     throw {
       ok: false,
@@ -3366,10 +3512,10 @@ function applyEffectPolicyReconcile(
   }
   const reconcileSpec = operationSpecs[connectorKey]?.[reconcileName];
   const runObserve = (resolvedPrimary: unknown) => {
-    let observeInput = inputValue;
+    let observeInput = projectObserveInput(inputValue, operationSpec, reconcileSpec);
     if (policy === "Idempotent") {
       const id = projectIdempotentId(resolvedPrimary);
-      observeInput = isRecord(inputValue) ? { ...inputValue, id } : { id };
+      observeInput = isRecord(observeInput) ? { ...observeInput, id } : { id };
     }
     return boundedOutput(
       reconcileHandler(observeInput),
