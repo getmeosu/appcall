@@ -194,6 +194,37 @@ describe("Greenhouse G1 notes", () => {
     expect(listUrl.searchParams.get("visibility")).toBe("publicly_visible");
   });
 
+  test("notes.create wires authorUserId → user_id and ignores credential userId", async () => {
+    clearGreenhouseTokenCache();
+    const { calls, impl } = stubSequence([{ body: JSON.stringify(noteCreated), status: 201 }]);
+    await executeNotesCreate({
+      ...auth,
+      userId: "9999",
+      candidateId: 57683957,
+      body: "Good call",
+      visibility: "private",
+      noteType: "NOTE",
+      authorUserId: "92120",
+      fetch: impl,
+    });
+    const body = JSON.parse(String(harvestCalls(calls)[0]!.init?.body));
+    expect(body.user_id).toBe(92120);
+
+    clearGreenhouseTokenCache();
+    const noAuthor = stubSequence([{ body: JSON.stringify(noteCreated), status: 201 }]);
+    await executeNotesCreate({
+      ...auth,
+      userId: "9999",
+      candidateId: 57683957,
+      body: "Good call",
+      visibility: "private",
+      noteType: "NOTE",
+      fetch: noAuthor.impl,
+    });
+    const body2 = JSON.parse(String(harvestCalls(noAuthor.calls)[0]!.init?.body));
+    expect(body2.user_id).toBeUndefined();
+  });
+
   test("rejects create visibility on list and email fields on NOTE", async () => {
     await expect(
       executeNotesList({ ...auth, visibility: "public", fetch: async () => new Response("[]") }),

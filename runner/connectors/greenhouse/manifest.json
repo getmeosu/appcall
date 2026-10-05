@@ -1,7 +1,7 @@
 {
   "key": "greenhouse",
   "name": "Greenhouse",
-  "version": "0.9.1",
+  "version": "0.10.0",
   "runtime": "bun",
   "categories": [
     "ats-recruitment"
@@ -910,12 +910,12 @@
             "type": "string",
             "description": "Subject (required for EMAIL)."
           },
-          "userId": {
+          "authorUserId": {
             "type": [
               "string",
               "integer"
             ],
-            "description": "Optional author user id."
+            "description": "Optional note author (Harvest user id); wired as user_id."
           },
           "emailFrom": {
             "type": [
@@ -2013,6 +2013,806 @@
         "additionalProperties": true,
         "properties": {}
       }
+    },
+    "jobs.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Create job",
+      "description": "Create a job from a template via POST /v3/jobs. templateJobId and numberOfOpenings are required; the template supplies the interview plan, scorecards, hiring team and approvals. Returns the created job (top-level id). Effect keys omitted.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "templateJobId": {
+            "type": [
+              "string",
+              "integer"
+            ],
+            "description": "Template job id to copy."
+          },
+          "numberOfOpenings": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Openings to create (one per slot)."
+          },
+          "jobName": {
+            "type": "string",
+            "description": "Optional internal job name."
+          },
+          "jobPostName": {
+            "type": "string",
+            "description": "Optional job post title."
+          },
+          "departmentId": {
+            "type": [
+              "string",
+              "integer"
+            ],
+            "description": "Optional department id."
+          },
+          "officeIds": {
+            "type": "array",
+            "items": {
+              "type": [
+                "string",
+                "integer"
+              ]
+            },
+            "description": "Optional office ids."
+          },
+          "requisitionId": {
+            "type": "string",
+            "description": "Optional requisition id."
+          },
+          "notes": {
+            "type": "string",
+            "description": "Optional internal notes."
+          },
+          "openingIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Optional partner opening ids (at most numberOfOpenings)."
+          },
+          "customFields": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": true
+            },
+            "description": "Optional Harvest v3 custom field values: array of { name_key | custom_field_id, value } (exactly one of name_key/custom_field_id per entry; value null clears). Replaces the collection wholesale."
+          }
+        },
+        "required": [
+          "templateJobId",
+          "numberOfOpenings"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {}
+      }
+    },
+    "jobs.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Update job",
+      "description": "Patch a job via PATCH /v3/jobs/{id}. Only supplied keys change; officeIds and customFields replace wholesale; null clears requisitionId/departmentId/anywhere. Open/close via openings. Effect keys omitted (jobs.get is not an exact observe).",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Harvest job id."
+          },
+          "name": {
+            "type": "string",
+            "description": "Job name."
+          },
+          "notes": {
+            "type": "string",
+            "description": "Internal notes."
+          },
+          "requisitionId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Requisition id (null clears)."
+          },
+          "officeIds": {
+            "type": "array",
+            "items": {
+              "type": [
+                "string",
+                "integer"
+              ]
+            },
+            "description": "Office ids (replaces the full list)."
+          },
+          "departmentId": {
+            "type": [
+              "string",
+              "integer",
+              "null"
+            ],
+            "description": "Department id (null clears)."
+          },
+          "anywhere": {
+            "type": [
+              "boolean",
+              "null"
+            ],
+            "description": "Whether the job can be performed anywhere (null clears)."
+          },
+          "customFields": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": true
+            },
+            "description": "Optional Harvest v3 custom field values: array of { name_key | custom_field_id, value } (exactly one of name_key/custom_field_id per entry; value null clears). Replaces the collection wholesale."
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {}
+      }
+    },
+    "job_posts.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List job posts",
+      "description": "List candidate-facing job posts via GET /v3/job_posts (agent tool).",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "jobIds": {
+            "type": [
+              "string",
+              "array"
+            ],
+            "description": "Optional Harvest ids filter (comma string or array)."
+          },
+          "jobBoardIds": {
+            "type": [
+              "string",
+              "array"
+            ],
+            "description": "Optional Harvest ids filter (comma string or array)."
+          },
+          "active": {
+            "type": "boolean",
+            "description": "Filter by active."
+          },
+          "live": {
+            "type": "boolean",
+            "description": "Filter by live."
+          },
+          "internal": {
+            "type": "boolean",
+            "description": "Filter by internal board."
+          },
+          "featured": {
+            "type": "boolean",
+            "description": "Filter by featured."
+          },
+          "ids": {
+            "type": [
+              "string",
+              "array"
+            ],
+            "description": "Optional Harvest ids filter (comma string or array)."
+          },
+          "perPage": {
+            "type": "integer",
+            "description": "Page size."
+          },
+          "cursor": {
+            "type": "string",
+            "description": "Harvest v3 cursor from Link rel=next."
+          }
+        },
+        "required": []
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {}
+      }
+    },
+    "openings.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List openings",
+      "description": "List job openings (headcount slots) via GET /v3/openings (agent tool).",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "jobIds": {
+            "type": [
+              "string",
+              "array"
+            ],
+            "description": "Optional Harvest ids filter (comma string or array)."
+          },
+          "applicationIds": {
+            "type": [
+              "string",
+              "array"
+            ],
+            "description": "Optional Harvest ids filter (comma string or array)."
+          },
+          "closeReasonIds": {
+            "type": [
+              "string",
+              "array"
+            ],
+            "description": "Optional Harvest ids filter (comma string or array)."
+          },
+          "open": {
+            "type": "boolean",
+            "description": "Filter by open status."
+          },
+          "openingId": {
+            "type": "string",
+            "description": "Partner opening id filter."
+          },
+          "ids": {
+            "type": [
+              "string",
+              "array"
+            ],
+            "description": "Optional Harvest ids filter (comma string or array)."
+          },
+          "perPage": {
+            "type": "integer",
+            "description": "Page size."
+          },
+          "cursor": {
+            "type": "string",
+            "description": "Harvest v3 cursor from Link rel=next."
+          }
+        },
+        "required": []
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {}
+      }
+    },
+    "openings.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Create opening",
+      "description": "Add an opening to a job via POST /v3/openings. Returns the created opening (top-level id). Effect keys omitted.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "jobId": {
+            "type": [
+              "string",
+              "integer"
+            ],
+            "description": "Job id."
+          },
+          "openingId": {
+            "type": "string",
+            "maxLength": 255,
+            "description": "Optional partner opening id."
+          },
+          "customFields": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": true
+            },
+            "description": "Optional Harvest v3 custom field values: array of { name_key | custom_field_id, value } (exactly one of name_key/custom_field_id per entry; value null clears). Replaces the collection wholesale."
+          }
+        },
+        "required": [
+          "jobId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {}
+      }
+    },
+    "openings.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Update opening",
+      "description": "Patch an opening via PATCH /v3/openings/{id}; status closed closes it (closing the last open opening closes the job). customFields replaces wholesale. Effect keys omitted (no opening.get).",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Harvest opening row id."
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "open",
+              "closed"
+            ],
+            "description": "Open or close the opening."
+          },
+          "closeReasonId": {
+            "type": [
+              "string",
+              "integer"
+            ],
+            "description": "Close reason id (when closing)."
+          },
+          "targetStartOn": {
+            "type": "string",
+            "description": "Target start date (YYYY-MM-DD)."
+          },
+          "openingId": {
+            "type": "string",
+            "maxLength": 255,
+            "description": "Partner opening id."
+          },
+          "customFields": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": true
+            },
+            "description": "Optional Harvest v3 custom field values: array of { name_key | custom_field_id, value } (exactly one of name_key/custom_field_id per entry; value null clears). Replaces the collection wholesale."
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {}
+      }
+    },
+    "job_owners.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List job owners",
+      "description": "List hiring-team recruiters/coordinators/sourcers via GET /v3/job_owners (agent tool).",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "jobIds": {
+            "type": [
+              "string",
+              "array"
+            ],
+            "description": "Optional Harvest ids filter (comma string or array)."
+          },
+          "userIds": {
+            "type": [
+              "string",
+              "array"
+            ],
+            "description": "Optional Harvest ids filter (comma string or array)."
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "recruiter",
+              "coordinator",
+              "sourcer"
+            ],
+            "description": "Optional owner role filter."
+          },
+          "ids": {
+            "type": [
+              "string",
+              "array"
+            ],
+            "description": "Optional Harvest ids filter (comma string or array)."
+          },
+          "perPage": {
+            "type": "integer",
+            "description": "Page size."
+          },
+          "cursor": {
+            "type": "string",
+            "description": "Harvest v3 cursor from Link rel=next."
+          }
+        },
+        "required": []
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {}
+      }
+    },
+    "job_owners.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Create job owner",
+      "description": "Add a user to a job's hiring team as recruiter, coordinator or sourcer via POST /v3/job_owners. Returns the join row (top-level id). Effect keys omitted.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "jobId": {
+            "type": [
+              "string",
+              "integer"
+            ],
+            "description": "Job id."
+          },
+          "ownerUserId": {
+            "type": [
+              "string",
+              "integer"
+            ],
+            "description": "Harvest user id to assign; wired as user_id."
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "recruiter",
+              "coordinator",
+              "sourcer"
+            ],
+            "description": "Hiring-team role."
+          },
+          "candidateResponsibility": {
+            "type": "string",
+            "enum": [
+              "active",
+              "inactive",
+              "future",
+              "all"
+            ],
+            "description": "Optional responsible-owner scope (recruiter/coordinator)."
+          }
+        },
+        "required": [
+          "jobId",
+          "ownerUserId",
+          "type"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {}
+      }
+    },
+    "job_owners.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Delete job owner",
+      "description": "Remove a user from one hiring-team role via DELETE /v3/job_owners/{id} (id is the job_owners row id). Returns { ok: true }; 404 surfaces as CONNECTOR_UPSTREAM_ERROR. Effect keys omitted.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Job owner row id."
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {}
+      }
+    },
+    "job_hiring_managers.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List job hiring managers",
+      "description": "List job hiring managers via GET /v3/job_hiring_managers (agent tool).",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "jobIds": {
+            "type": [
+              "string",
+              "array"
+            ],
+            "description": "Optional Harvest ids filter (comma string or array)."
+          },
+          "userIds": {
+            "type": [
+              "string",
+              "array"
+            ],
+            "description": "Optional Harvest ids filter (comma string or array)."
+          },
+          "ids": {
+            "type": [
+              "string",
+              "array"
+            ],
+            "description": "Optional Harvest ids filter (comma string or array)."
+          },
+          "perPage": {
+            "type": "integer",
+            "description": "Page size."
+          },
+          "cursor": {
+            "type": "string",
+            "description": "Harvest v3 cursor from Link rel=next."
+          }
+        },
+        "required": []
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {}
+      }
+    },
+    "job_hiring_managers.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Create job hiring manager",
+      "description": "Assign a hiring manager to a job via POST /v3/job_hiring_managers. Returns the join row (top-level id). Effect keys omitted.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "jobId": {
+            "type": [
+              "string",
+              "integer"
+            ],
+            "description": "Job id."
+          },
+          "hiringManagerUserId": {
+            "type": [
+              "string",
+              "integer"
+            ],
+            "description": "Harvest user id to assign; wired as user_id."
+          }
+        },
+        "required": [
+          "jobId",
+          "hiringManagerUserId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {}
+      }
+    },
+    "job_hiring_managers.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Delete job hiring manager",
+      "description": "Unassign a hiring manager via DELETE /v3/job_hiring_managers/{id} (id is the job_hiring_managers row id). Returns { ok: true }; 404 surfaces as CONNECTOR_UPSTREAM_ERROR. Effect keys omitted.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Job hiring manager row id."
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {}
+      }
+    },
+    "job_notes.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List job notes",
+      "description": "List job notes via GET /v3/job_notes (agent tool).",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "jobIds": {
+            "type": [
+              "string",
+              "array"
+            ],
+            "description": "Optional Harvest ids filter (comma string or array)."
+          },
+          "userIds": {
+            "type": [
+              "string",
+              "array"
+            ],
+            "description": "Optional Harvest ids filter (comma string or array)."
+          },
+          "visibility": {
+            "type": "string",
+            "enum": [
+              "admin_only_visible",
+              "privately_visible"
+            ],
+            "description": "Optional visibility filter."
+          },
+          "ids": {
+            "type": [
+              "string",
+              "array"
+            ],
+            "description": "Optional Harvest ids filter (comma string or array)."
+          },
+          "perPage": {
+            "type": "integer",
+            "description": "Page size."
+          },
+          "cursor": {
+            "type": "string",
+            "description": "Harvest v3 cursor from Link rel=next."
+          }
+        },
+        "required": []
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {}
+      }
+    },
+    "job_notes.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Create job note",
+      "description": "Create a note on a job via POST /v3/job_notes. Returns the created note (top-level id). Effect keys omitted.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "jobId": {
+            "type": [
+              "string",
+              "integer"
+            ],
+            "description": "Job id."
+          },
+          "authorUserId": {
+            "type": [
+              "string",
+              "integer"
+            ],
+            "description": "Note author (Harvest user id); wired as user_id."
+          },
+          "body": {
+            "type": "string",
+            "description": "Note body."
+          },
+          "visibility": {
+            "type": "string",
+            "enum": [
+              "admin_only_visible",
+              "privately_visible"
+            ],
+            "description": "Note visibility."
+          }
+        },
+        "required": [
+          "jobId",
+          "authorUserId",
+          "body",
+          "visibility"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {}
+      }
+    },
+    "job_notes.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Update job note",
+      "description": "Patch a job note via PATCH /v3/job_notes/{id} (body and/or visibility). Effect keys omitted (no job_note.get).",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Job note id."
+          },
+          "body": {
+            "type": "string",
+            "description": "Note body."
+          },
+          "visibility": {
+            "type": "string",
+            "enum": [
+              "admin_only_visible",
+              "privately_visible"
+            ],
+            "description": "Note visibility."
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {}
+      }
     }
   },
   "models": [
@@ -2036,6 +2836,11 @@
     "applied_candidate_tag",
     "attachment",
     "candidate_education",
-    "candidate_employment"
+    "candidate_employment",
+    "job_post",
+    "opening",
+    "job_owner",
+    "job_hiring_manager",
+    "job_note"
   ]
 }

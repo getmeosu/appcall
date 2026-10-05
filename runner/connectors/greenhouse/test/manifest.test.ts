@@ -6,8 +6,8 @@ describe("Greenhouse manifest", () => {
     expect(manifest.key).toBe("greenhouse");
   });
 
-  it("has version 0.9.1", () => {
-    expect(manifest.version).toBe("0.9.1");
+  it("has version 0.10.0", () => {
+    expect(manifest.version).toBe("0.10.0");
   });
 
   it("uses bun runtime", () => {
@@ -141,13 +141,18 @@ describe("Greenhouse manifest", () => {
       "attachment",
       "candidate_education",
       "candidate_employment",
+      "job_post",
+      "opening",
+      "job_owner",
+      "job_hiring_manager",
+      "job_note",
     ]) {
       expect(manifest.models).toContain(model);
     }
   });
 
-  it("stays at 54 ops on v0.9.1", () => {
-    expect(Object.keys(manifest.operations)).toHaveLength(54);
+  it("stays at 69 ops on v0.10.0", () => {
+    expect(Object.keys(manifest.operations)).toHaveLength(69);
   });
 });
 
