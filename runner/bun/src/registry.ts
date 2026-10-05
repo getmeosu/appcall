@@ -986,6 +986,23 @@ import {
   executeUsersListSync as listSmartRecruitersUsers,
   executeInterviewsListSync as listSmartRecruitersInterviews,
 } from "../../connectors/smartrecruiters/src/sync";
+import {
+  executeCandidatesCreate as createSmartRecruitersCandidate,
+  executeApplicationsCreate as createSmartRecruitersApplication,
+  executeCandidatesUpdate as updateSmartRecruitersCandidate,
+  executeApplicationsGet as getSmartRecruitersApplication,
+  executeApplicationsUpdateStatus as updateSmartRecruitersApplicationStatus,
+  executeApplicationsStatusHistory as getSmartRecruitersApplicationStatusHistory,
+  executeCandidatesTagsGet as getSmartRecruitersCandidateTags,
+  executeCandidatesTagsAdd as addSmartRecruitersCandidateTags,
+  executeCandidatesTagsReplace as replaceSmartRecruitersCandidateTags,
+  executeCandidatesAttachmentsList as listSmartRecruitersCandidateAttachments,
+  executeApplicationsAttachmentsList as listSmartRecruitersApplicationAttachments,
+  executeApplicationsPropertiesGet as getSmartRecruitersApplicationProperties,
+  executeApplicationsPropertiesUpdate as updateSmartRecruitersApplicationProperties,
+  executeApplicationsScreeningAnswersGet as getSmartRecruitersScreeningAnswers,
+  executeJobApplicationsGet as getSmartRecruitersJobApplication,
+} from "../../connectors/smartrecruiters/src/g1";
 import recruiteeManifest from "../../connectors/recruitee/manifest.json";
 import { healthcheck as recruiteeHealthcheck } from "../../connectors/recruitee/src/healthcheck";
 import {
@@ -2631,6 +2648,23 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
       "applications.hire": hireAshbyApplication,
       "interviews.schedule": scheduleAshbyInterview,
       "interviews.cancel": cancelAshbyInterview,
+    },
+    smartrecruiters: {
+      "candidates.create": createSmartRecruitersCandidate,
+      "applications.create": createSmartRecruitersApplication,
+      "candidates.update": updateSmartRecruitersCandidate,
+      "applications.get": getSmartRecruitersApplication,
+      "applications.update_status": updateSmartRecruitersApplicationStatus,
+      "applications.status_history": getSmartRecruitersApplicationStatusHistory,
+      "candidates.tags.get": getSmartRecruitersCandidateTags,
+      "candidates.tags.add": addSmartRecruitersCandidateTags,
+      "candidates.tags.replace": replaceSmartRecruitersCandidateTags,
+      "candidates.attachments.list": listSmartRecruitersCandidateAttachments,
+      "applications.attachments.list": listSmartRecruitersApplicationAttachments,
+      "applications.properties.get": getSmartRecruitersApplicationProperties,
+      "applications.properties.update": updateSmartRecruitersApplicationProperties,
+      "applications.screening_answers.get": getSmartRecruitersScreeningAnswers,
+      "job_applications.get": getSmartRecruitersJobApplication,
     },
     intercom: {
       "conversations.reply": replyIntercomConversation,
