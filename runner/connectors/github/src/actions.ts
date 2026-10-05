@@ -720,6 +720,25 @@ import {
 
 
 
+
+import {
+  createGapG3Client,
+  validateConvertOutsideCollaboratorInput,
+  validateCreateOrgIssueTypeInput,
+  validateDeleteOrgPackageInput,
+  validateGetOrgActionsSecretInput,
+  validateGetOrgActionsSecretsPublicKeyInput,
+  validateGetOrgOidcCustomizationSubInput,
+  validateGetOrgSelectedActionsInput,
+  validateGetPrivateVulnerabilityReportingInput,
+  validateListOrgActionsCacheUsageByRepositoryInput,
+  validateListOrgActionsPermissionsRepositoriesInput,
+  validateListOrgActionsSecretRepositoriesInput,
+  validateListOrgActionsSecretsInput,
+  validateRemoveOrgCodespacesAccessSelectedUsersInput,
+  validateSetOrgSelectedActionsInput,
+  validateUpdateOrgIssueTypeInput,
+} from "./gap_g3";
 import {
   createReposReadsClient,
   validateGetAutolinkInput,
@@ -9001,6 +9020,168 @@ export function listEnvironmentDeploymentProtectionRules(input: unknown): Record
     });
   }
   return { connector: "github", action: "repos.environments.deployment_protection_rules.list", source: "connector", validated: validateListEnvironmentDeploymentProtectionRulesInput(input) };
+}
+
+
+// ─── gap G3: org actions reads/writes ────────────────────────────────────────
+
+function liveGapG3Client(input: Record<string, unknown>, operation: string) {
+  const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
+  return createGapG3Client({
+    accessToken: input.accessToken as string,
+    fetch: fetchFn,
+    githubClient: createGitHubClient({ accessToken: input.accessToken as string, fetch: fetchFn, operation }),
+  });
+}
+
+export function listOrgActionsCacheUsageByRepository(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG3Client(input, "orgs.actions.cache.usage_by_repository.list").listOrgActionsCacheUsageByRepository(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "orgs.actions.cache.usage_by_repository.list", source: "connector", totalCount: result.totalCount, repositoryCacheUsages: result.repositoryCacheUsages };
+    });
+  }
+  return { connector: "github", action: "orgs.actions.cache.usage_by_repository.list", source: "connector", validated: validateListOrgActionsCacheUsageByRepositoryInput(input) };
+}
+
+export function getOrgSelectedActions(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG3Client(input, "orgs.actions.permissions.selected_actions.get").getOrgSelectedActions(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "orgs.actions.permissions.selected_actions.get", source: "connector", selectedActions: result.selectedActions };
+    });
+  }
+  return { connector: "github", action: "orgs.actions.permissions.selected_actions.get", source: "connector", validated: validateGetOrgSelectedActionsInput(input) };
+}
+
+export function setOrgSelectedActions(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG3Client(input, "orgs.actions.permissions.selected_actions.set").setOrgSelectedActions(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "orgs.actions.permissions.selected_actions.set", source: "connector", selectedActions: result.selectedActions };
+    });
+  }
+  return { connector: "github", action: "orgs.actions.permissions.selected_actions.set", source: "connector", validated: validateSetOrgSelectedActionsInput(input) };
+}
+
+export function convertOutsideCollaborator(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG3Client(input, "orgs.outside_collaborators.convert").convertOutsideCollaborator(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "orgs.outside_collaborators.convert", source: "connector", converted: result.converted, pending: result.pending, org: result.org, username: result.username };
+    });
+  }
+  return { connector: "github", action: "orgs.outside_collaborators.convert", source: "connector", validated: validateConvertOutsideCollaboratorInput(input) };
+}
+
+export function createOrgIssueType(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG3Client(input, "orgs.issue_types.create").createOrgIssueType(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "orgs.issue_types.create", source: "connector", issueType: result.issueType };
+    });
+  }
+  return { connector: "github", action: "orgs.issue_types.create", source: "connector", validated: validateCreateOrgIssueTypeInput(input) };
+}
+
+export function updateOrgIssueType(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG3Client(input, "orgs.issue_types.update").updateOrgIssueType(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "orgs.issue_types.update", source: "connector", issueType: result.issueType };
+    });
+  }
+  return { connector: "github", action: "orgs.issue_types.update", source: "connector", validated: validateUpdateOrgIssueTypeInput(input) };
+}
+
+export function deleteOrgPackage(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG3Client(input, "orgs.packages.delete").deleteOrgPackage(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "orgs.packages.delete", source: "connector", deleted: result.deleted, org: result.org, packageType: result.packageType, packageName: result.packageName };
+    });
+  }
+  return { connector: "github", action: "orgs.packages.delete", source: "connector", validated: validateDeleteOrgPackageInput(input) };
+}
+
+export function removeOrgCodespacesAccessSelectedUsers(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG3Client(input, "orgs.codespaces.access.selected_users.remove").removeOrgCodespacesAccessSelectedUsers(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "orgs.codespaces.access.selected_users.remove", source: "connector", removed: result.removed, org: result.org, selectedUsernames: result.selectedUsernames };
+    });
+  }
+  return { connector: "github", action: "orgs.codespaces.access.selected_users.remove", source: "connector", validated: validateRemoveOrgCodespacesAccessSelectedUsersInput(input) };
+}
+
+export function getPrivateVulnerabilityReporting(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG3Client(input, "repos.private_vulnerability_reporting.get").getPrivateVulnerabilityReporting(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "repos.private_vulnerability_reporting.get", source: "connector", enabled: result.enabled };
+    });
+  }
+  return { connector: "github", action: "repos.private_vulnerability_reporting.get", source: "connector", validated: validateGetPrivateVulnerabilityReportingInput(input) };
+}
+
+export function listOrgActionsSecrets(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG3Client(input, "actions.org_secrets.list").listOrgActionsSecrets(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "actions.org_secrets.list", source: "connector", totalCount: result.totalCount, secrets: result.secrets };
+    });
+  }
+  return { connector: "github", action: "actions.org_secrets.list", source: "connector", validated: validateListOrgActionsSecretsInput(input) };
+}
+
+export function getOrgActionsSecretsPublicKey(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG3Client(input, "actions.org_secrets.public_key.get").getOrgActionsSecretsPublicKey(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "actions.org_secrets.public_key.get", source: "connector", publicKey: result.publicKey };
+    });
+  }
+  return { connector: "github", action: "actions.org_secrets.public_key.get", source: "connector", validated: validateGetOrgActionsSecretsPublicKeyInput(input) };
+}
+
+export function getOrgActionsSecret(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG3Client(input, "actions.org_secrets.get").getOrgActionsSecret(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "actions.org_secrets.get", source: "connector", secret: result.secret };
+    });
+  }
+  return { connector: "github", action: "actions.org_secrets.get", source: "connector", validated: validateGetOrgActionsSecretInput(input) };
+}
+
+export function listOrgActionsSecretRepositories(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG3Client(input, "actions.org_secrets.repositories.list").listOrgActionsSecretRepositories(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "actions.org_secrets.repositories.list", source: "connector", totalCount: result.totalCount, repositories: result.repositories };
+    });
+  }
+  return { connector: "github", action: "actions.org_secrets.repositories.list", source: "connector", validated: validateListOrgActionsSecretRepositoriesInput(input) };
+}
+
+export function listOrgActionsPermissionsRepositories(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG3Client(input, "orgs.actions.permissions.repositories.list").listOrgActionsPermissionsRepositories(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "orgs.actions.permissions.repositories.list", source: "connector", totalCount: result.totalCount, repositories: result.repositories };
+    });
+  }
+  return { connector: "github", action: "orgs.actions.permissions.repositories.list", source: "connector", validated: validateListOrgActionsPermissionsRepositoriesInput(input) };
+}
+
+export function getOrgOidcCustomizationSub(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG3Client(input, "orgs.actions.oidc.customization.sub.get").getOrgOidcCustomizationSub(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "orgs.actions.oidc.customization.sub.get", source: "connector", subject: result.subject };
+    });
+  }
+  return { connector: "github", action: "orgs.actions.oidc.customization.sub.get", source: "connector", validated: validateGetOrgOidcCustomizationSubInput(input) };
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
