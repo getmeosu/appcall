@@ -38,8 +38,8 @@ const org = { id: 2, login: "acme", html_url: "https://github.com/acme", descrip
 const event = { id: "9", type: "PushEvent", actor: { login: "octocat" }, repo: { name: "acme/app" }, public: true, created_at: "2026-05-01T00:00:00Z" };
 
 describe("github organization reads", () => {
-  test("version string is 0.78.0 and the new reads omit effect policy", () => {
-    expect(manifest.version).toBe("0.78.0");
+  test("version string is 0.78.1 and the new reads omit effect policy", () => {
+    expect(manifest.version).toBe("0.78.1");
     expect(manifest.version).not.toBe("0.29.0");
     expect(READS).toHaveLength(11);
     expect(Object.keys(manifest.operations)).toHaveLength(812);

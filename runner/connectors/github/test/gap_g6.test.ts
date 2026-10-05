@@ -58,8 +58,8 @@ function empty(status: number) {
 }
 
 describe("github gap G6 runners access org Actions repos", () => {
-  test("version is 0.78.0 at 812 ops with the read/write breakdown", () => {
-    expect(manifest.version).toBe("0.78.0");
+  test("version is 0.78.1 at 812 ops with the read/write breakdown", () => {
+    expect(manifest.version).toBe("0.78.1");
     const ops = manifest.operations as Record<string, Record<string, unknown>>;
     expect(Object.keys(ops)).toHaveLength(812);
     const kinds = { action: 0, sync: 0, webhook: 0 };

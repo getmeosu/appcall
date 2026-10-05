@@ -37,7 +37,7 @@ const READS = [
 
 const PATHS: Record<(typeof READS)[number], string> = {
   "meta.root.get": "GET /",
-  "repos.dependency_graph.sbom.get": "GET /repos/{owner}/{repo}/dependency-graph/sbom",
+  "repos.dependency_graph.sbom.get": "GET /repos/{owner}/{repo}/dependency-graph/sbom/generate-report",
   "code_scanning.codeql.databases.get": "GET /repos/{owner}/{repo}/code-scanning/codeql/databases/{language}",
   "code_scanning.default_setup.get": "GET /repos/{owner}/{repo}/code-scanning/default-setup",
   "orgs.properties.schema.get": "GET /orgs/{org}/properties/schema/{custom_property_name}",
@@ -57,8 +57,8 @@ function json(body: unknown, status = 200) {
 }
 
 describe("github card-19 reads", () => {
-  test("version stays 0.78.0 at 812 ops and these reads omit effect policy", () => {
-    expect(manifest.version).toBe("0.78.0");
+  test("version stays 0.78.1 at 812 ops and these reads omit effect policy", () => {
+    expect(manifest.version).toBe("0.78.1");
     const ops = manifest.operations as Record<string, Record<string, unknown>>;
     expect(Object.keys(ops).length).toBe(812);
     const kinds = { action: 0, sync: 0, webhook: 0 };
@@ -110,13 +110,7 @@ describe("github card-19 reads", () => {
     expect(root.root).toEqual(rootBody);
     await expect(getMetaRoot({ accessToken: token, fetch: missing })).rejects.toMatchObject({ code: "CONNECTOR_UPSTREAM_ERROR" });
 
-    const sbomBody = { sbom: { SPDXID: "SPDXRef-DOCUMENT" } };
-    const sbom = await getRepoDependencyGraphSbom({
-      accessToken: token, owner: "octo cat", repo: "Hello World", fetch: fetchOf(json(sbomBody)),
-    });
-    expect(calls.at(-1)).toBe("https://api.github.com/repos/octo%20cat/Hello%20World/dependency-graph/sbom");
-    expect(sbom.sbom).toEqual(sbomBody);
-    await expect(getRepoDependencyGraphSbom({ accessToken: token, owner: "octocat", repo: "Hello-World", fetch: missing })).rejects.toMatchObject({ code: "CONNECTOR_UPSTREAM_ERROR" });
+    await expect(getRepoDependencyGraphSbom({ accessToken: token, owner: "octocat", repo: "Hello-World", fetch: missing, sleep: async () => {} })).rejects.toMatchObject({ code: "CONNECTOR_UPSTREAM_ERROR" });
 
     const setupBody = { state: "configured" };
     const setup = await getCodeScanningDefaultSetup({
@@ -205,6 +199,69 @@ describe("github card-19 reads", () => {
     expect(calls.at(-1)).toBe("https://api.github.com/users/octocat/projectsV2");
     expect(userProjects.projects).toEqual(userProjectsBody);
     await expect(listUserProjects({ accessToken: token, username: "octocat", fetch: missing })).rejects.toMatchObject({ code: "CONNECTOR_UPSTREAM_ERROR" });
+  });
+
+
+  test("sbom async happy path: generate 201 → 202 → 302 → download SPDX; never hits legacy …/sbom", async () => {
+    const calls: { url: string; method: string; redirect?: string }[] = [];
+    const uuid = "11111111-2222-3333-4444-555555555555";
+    const downloadUrl = `https://objects.githubusercontent.com/github-production-sbom/${uuid}/sbom.json`;
+    const spdxBody = { sbom: { SPDXID: "SPDXRef-DOCUMENT", name: "repo" } };
+    let fetchHits = 0;
+    const fetchSeq = async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      calls.push({ url, method: init?.method ?? "GET", redirect: init?.redirect as string | undefined });
+      if (url.endsWith("/dependency-graph/sbom/generate-report")) {
+        return json({
+          sbom_url: `https://api.github.com/repos/octo%20cat/Hello%20World/dependency-graph/sbom/fetch-report/${uuid}`,
+        }, 201);
+      }
+      if (url.includes(`/dependency-graph/sbom/fetch-report/${uuid}`)) {
+        fetchHits += 1;
+        if (fetchHits === 1) return json({ message: "pending" }, 202);
+        return new Response(null, { status: 302, headers: { Location: downloadUrl } });
+      }
+      if (url === downloadUrl) {
+        return json(spdxBody, 200);
+      }
+      throw new Error(`unexpected url ${url}`);
+    };
+    const result = await getRepoDependencyGraphSbom({
+      accessToken: "tok",
+      owner: "octo cat",
+      repo: "Hello World",
+      fetch: fetchSeq,
+      sleep: async () => {},
+    });
+    expect(result.sbom).toEqual(spdxBody);
+    expect(calls.map((c) => c.url)).toEqual([
+      "https://api.github.com/repos/octo%20cat/Hello%20World/dependency-graph/sbom/generate-report",
+      `https://api.github.com/repos/octo%20cat/Hello%20World/dependency-graph/sbom/fetch-report/${uuid}`,
+      `https://api.github.com/repos/octo%20cat/Hello%20World/dependency-graph/sbom/fetch-report/${uuid}`,
+      downloadUrl,
+    ]);
+    expect(calls[1].redirect).toBe("manual");
+    expect(calls[2].redirect).toBe("manual");
+    expect(calls.every((c) => !c.url.endsWith("/dependency-graph/sbom"))).toBe(true);
+    expect(String(manifest.operations["repos.dependency_graph.sbom.get"].description)).toContain("2026-11-13");
+    expect(String(manifest.operations["repos.dependency_graph.sbom.get"].description)).toContain("generate-report");
+    expect(manifest.operations["repos.dependency_graph.sbom.get"].timeoutMs).toBe(60000);
+    expect(manifest.network.allowedHosts).toContain("objects.githubusercontent.com");
+  });
+
+  test("sbom async poll exhaustion stays CONNECTOR_UPSTREAM_ERROR", async () => {
+    const uuid = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee";
+    const fetchAlways202 = async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.endsWith("/generate-report")) {
+        return json({ sbom_url: `https://api.github.com/repos/o/r/dependency-graph/sbom/fetch-report/${uuid}` }, 201);
+      }
+      if (url.includes("/fetch-report/")) return json({ message: "pending" }, 202);
+      throw new Error(`unexpected ${url}`);
+    };
+    await expect(getRepoDependencyGraphSbom({
+      accessToken: "tok", owner: "o", repo: "r", fetch: fetchAlways202, sleep: async () => {},
+    })).rejects.toMatchObject({ code: "CONNECTOR_UPSTREAM_ERROR", message: expect.stringMatching(/not ready within timeout/i) });
   });
 
   test("codeql database get returns the 302 Location and does not follow or return bytes", async () => {
