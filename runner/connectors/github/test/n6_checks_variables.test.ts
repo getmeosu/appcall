@@ -37,8 +37,8 @@ const N6_READS = [
 
 describe("github N6 checks and actions variables", () => {
   test("manifest stays on the N5 tip version and wires the 14 N6 policies", () => {
-    expect(manifest.version).toBe("0.50.0");
-    expect(Object.keys(manifest.operations).length).toBe(516);
+    expect(manifest.version).toBe("0.51.0");
+    expect(Object.keys(manifest.operations).length).toBe(532);
     for (const key of N6_READS) {
       const op = manifest.operations[key] as Record<string, unknown>;
       expect(op.kind).toBe("action");
@@ -70,7 +70,7 @@ describe("github N6 checks and actions variables", () => {
     expect(manifest.operations["contents.put"]).toBeUndefined();
     expect(manifest.operations["contents.delete"]).toBeUndefined();
     expect(manifest.operations["contents.push_files"]).toBeUndefined();
-    expect(manifest.operations["repos.delete"]).toBeUndefined();
+    expect(manifest.operations["repos.delete"]).toBeDefined();
     expect(manifest.operations["actions.secrets.create"]).toBeUndefined();
     expect(manifest.operations["checks.runs.get"].effectPolicy).toBeUndefined();
   });

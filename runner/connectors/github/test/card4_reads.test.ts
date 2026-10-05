@@ -63,9 +63,9 @@ const FORBIDDEN = [
 ] as const;
 
 describe("github card-4 reads", () => {
-  test("manifest stays v0.50.0 at 516 ops and these reads omit effect policy", () => {
-    expect(manifest.version).toBe("0.50.0");
-    expect(Object.keys(manifest.operations).length).toBe(516);
+  test("manifest stays v0.51.0 at 532 ops and these reads omit effect policy", () => {
+    expect(manifest.version).toBe("0.51.0");
+    expect(Object.keys(manifest.operations).length).toBe(532);
     for (const key of READS) {
       const op = manifest.operations[key] as Record<string, unknown>;
       expect(op.kind).toBe("action");

@@ -34,9 +34,9 @@ const READS = [
 ] as const;
 
 describe("github users-3 public user reads", () => {
-  test("manifest stays v0.50.0 at 516 ops and these reads omit effect policy", () => {
-    expect(manifest.version).toBe("0.50.0");
-    expect(Object.keys(manifest.operations).length).toBe(516);
+  test("manifest stays v0.51.0 at 532 ops and these reads omit effect policy", () => {
+    expect(manifest.version).toBe("0.51.0");
+    expect(Object.keys(manifest.operations).length).toBe(532);
     for (const key of READS) {
       const op = manifest.operations[key] as Record<string, unknown>;
       expect(op.kind).toBe("action");
@@ -45,7 +45,7 @@ describe("github users-3 public user reads", () => {
       expect(op.reconcile).toBeUndefined();
       expect(op.observe).toBeUndefined();
     }
-    expect(manifest.operations["repos.delete"]).toBeUndefined();
+    expect(manifest.operations["repos.delete"]).toBeDefined();
   });
 
   test("validates username, pagination, and starred sort", () => {

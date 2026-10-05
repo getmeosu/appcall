@@ -33,9 +33,9 @@ const N7_READS = [
 ] as const;
 
 describe("github N7 actions rules", () => {
-  test("manifest is v0.50.0 with 516 ops and the N7 policies", () => {
-    expect(manifest.version).toBe("0.50.0");
-    expect(Object.keys(manifest.operations).length).toBe(516);
+  test("manifest is v0.51.0 with 532 ops and the N7 policies", () => {
+    expect(manifest.version).toBe("0.51.0");
+    expect(Object.keys(manifest.operations).length).toBe(532);
     for (const key of N7_READS) {
       const op = manifest.operations[key] as Record<string, unknown>;
       expect(op.sideEffect).toBe("read");
@@ -64,7 +64,7 @@ describe("github N7 actions rules", () => {
     expect(manifest.operations["contents.put"]).toBeUndefined();
     expect(manifest.operations["contents.delete"]).toBeUndefined();
     expect(manifest.operations["contents.push_files"]).toBeUndefined();
-    expect(manifest.operations["repos.delete"]).toBeUndefined();
+    expect(manifest.operations["repos.delete"]).toBeDefined();
     expect(manifest.operations["repos.rulesets.create"]).toBeUndefined();
   });
 
