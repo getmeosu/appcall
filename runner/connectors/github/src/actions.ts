@@ -536,6 +536,17 @@ import {
   validateSetThreadSubscriptionInput,
 } from "./write_card6";
 
+import {
+  createWriteCard7Client,
+  validateDeleteMilestoneInput,
+  validateCreateOrgRunnerRegistrationTokenInput,
+  validateCreateRepoRunnerRegistrationTokenInput,
+  validateCreateOrgRunnerRemoveTokenInput,
+  validateCreateRepoRunnerRemoveTokenInput,
+  validateAddInstallationRepositoryInput,
+  validateRemoveInstallationRepositoryInput,
+} from "./write_card7";
+
 
 
 import {
@@ -7410,6 +7421,87 @@ export function setThreadSubscription(input: unknown): Record<string, unknown> |
     });
   }
   return { connector: "github", action: "notifications.threads.subscription.set", source: "connector", validated: validateSetThreadSubscriptionInput(input) };
+}
+
+// ─── write card 7: milestone delete, runner tokens, and installation repos ───
+
+function liveWriteCard7Client(input: Record<string, unknown>, operation: string) {
+  const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
+  return createWriteCard7Client({
+    accessToken: input.accessToken as string,
+    fetch: fetchFn,
+    githubClient: createGitHubClient({ accessToken: input.accessToken as string, fetch: fetchFn, operation }),
+  });
+}
+
+export function deleteMilestone(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveWriteCard7Client(input, "milestones.delete").deleteMilestone(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "milestones.delete", source: "connector", deleted: result.deleted, owner: result.owner, repo: result.repo, milestoneNumber: result.milestoneNumber };
+    });
+  }
+  return { connector: "github", action: "milestones.delete", source: "connector", validated: validateDeleteMilestoneInput(input) };
+}
+
+export function createOrgRunnerRegistrationToken(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveWriteCard7Client(input, "orgs.actions.runners.registration_token.create").createOrgRunnerRegistrationToken(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { ...result.body, connector: "github", action: "orgs.actions.runners.registration_token.create", source: "connector" };
+    });
+  }
+  return { connector: "github", action: "orgs.actions.runners.registration_token.create", source: "connector", validated: validateCreateOrgRunnerRegistrationTokenInput(input) };
+}
+
+export function createRepoRunnerRegistrationToken(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveWriteCard7Client(input, "repos.actions.runners.registration_token.create").createRepoRunnerRegistrationToken(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { ...result.body, connector: "github", action: "repos.actions.runners.registration_token.create", source: "connector" };
+    });
+  }
+  return { connector: "github", action: "repos.actions.runners.registration_token.create", source: "connector", validated: validateCreateRepoRunnerRegistrationTokenInput(input) };
+}
+
+export function createOrgRunnerRemoveToken(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveWriteCard7Client(input, "orgs.actions.runners.remove_token.create").createOrgRunnerRemoveToken(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { ...result.body, connector: "github", action: "orgs.actions.runners.remove_token.create", source: "connector" };
+    });
+  }
+  return { connector: "github", action: "orgs.actions.runners.remove_token.create", source: "connector", validated: validateCreateOrgRunnerRemoveTokenInput(input) };
+}
+
+export function createRepoRunnerRemoveToken(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveWriteCard7Client(input, "repos.actions.runners.remove_token.create").createRepoRunnerRemoveToken(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { ...result.body, connector: "github", action: "repos.actions.runners.remove_token.create", source: "connector" };
+    });
+  }
+  return { connector: "github", action: "repos.actions.runners.remove_token.create", source: "connector", validated: validateCreateRepoRunnerRemoveTokenInput(input) };
+}
+
+export function addInstallationRepository(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveWriteCard7Client(input, "user.installations.repositories.add").addInstallationRepository(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "user.installations.repositories.add", source: "connector", added: result.added, installationId: result.installationId, repositoryId: result.repositoryId };
+    });
+  }
+  return { connector: "github", action: "user.installations.repositories.add", source: "connector", validated: validateAddInstallationRepositoryInput(input) };
+}
+
+export function removeInstallationRepository(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveWriteCard7Client(input, "user.installations.repositories.remove").removeInstallationRepository(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "user.installations.repositories.remove", source: "connector", removed: result.removed, installationId: result.installationId, repositoryId: result.repositoryId };
+    });
+  }
+  return { connector: "github", action: "user.installations.repositories.remove", source: "connector", validated: validateRemoveInstallationRepositoryInput(input) };
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────

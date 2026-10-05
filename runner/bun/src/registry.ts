@@ -592,6 +592,13 @@ import {
   deleteThreadSubscription as ghDeleteThreadSubscription,
   markThreadDone as ghMarkThreadDone,
   setThreadSubscription as ghSetThreadSubscription,
+  deleteMilestone as ghDeleteMilestone,
+  createOrgRunnerRegistrationToken as ghCreateOrgRunnerRegistrationToken,
+  createRepoRunnerRegistrationToken as ghCreateRepoRunnerRegistrationToken,
+  createOrgRunnerRemoveToken as ghCreateOrgRunnerRemoveToken,
+  createRepoRunnerRemoveToken as ghCreateRepoRunnerRemoveToken,
+  addInstallationRepository as ghAddInstallationRepository,
+  removeInstallationRepository as ghRemoveInstallationRepository,
 } from "../../connectors/github/src/actions";
 import { healthcheck as githubHealthcheck } from "../../connectors/github/src/healthcheck";
 import { executeIssuesListSync as listGitHubIssues, executePullRequestsListSync as listGitHubPRs, executeCommitsListSync as listGitHubCommits, executeRepositoriesListSync as listGitHubRepos } from "../../connectors/github/src/sync";
@@ -1952,6 +1959,13 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
       "notifications.threads.subscription.delete": ghDeleteThreadSubscription,
       "notifications.threads.mark_done": ghMarkThreadDone,
       "notifications.threads.subscription.set": ghSetThreadSubscription,
+      "milestones.delete": ghDeleteMilestone,
+      "orgs.actions.runners.registration_token.create": ghCreateOrgRunnerRegistrationToken,
+      "repos.actions.runners.registration_token.create": ghCreateRepoRunnerRegistrationToken,
+      "orgs.actions.runners.remove_token.create": ghCreateOrgRunnerRemoveToken,
+      "repos.actions.runners.remove_token.create": ghCreateRepoRunnerRemoveToken,
+      "user.installations.repositories.add": ghAddInstallationRepository,
+      "user.installations.repositories.remove": ghRemoveInstallationRepository,
     },
     salesforce: {
       "contacts.create": createContact,

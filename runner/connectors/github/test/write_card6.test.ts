@@ -28,10 +28,10 @@ function empty(status: number) {
 }
 
 describe("github write card 6 notifications and project writes", () => {
-  test("version is 0.55.0 at 575 ops with the write breakdown", () => {
-    expect(manifest.version).toBe("0.55.0");
+  test("version is 0.56.0 at 582 ops with the write breakdown", () => {
+    expect(manifest.version).toBe("0.56.0");
     const ops = manifest.operations as Record<string, Record<string, unknown>>;
-    expect(Object.keys(ops)).toHaveLength(575);
+    expect(Object.keys(ops)).toHaveLength(582);
     const kinds = { action: 0, sync: 0, webhook: 0 };
     const side = { read: 0, write: 0, absent: 0 };
     for (const op of Object.values(ops)) {
@@ -42,8 +42,8 @@ describe("github write card 6 notifications and project writes", () => {
         else side.absent += 1;
       }
     }
-    expect(kinds).toEqual({ action: 525, sync: 4, webhook: 46 });
-    expect(side).toEqual({ read: 328, write: 182, absent: 15 });
+    expect(kinds).toEqual({ action: 532, sync: 4, webhook: 46 });
+    expect(side).toEqual({ read: 328, write: 189, absent: 15 });
     for (const [key, path] of Object.entries(PATHS)) {
       expect(String(ops[key].description)).toContain(path);
       expect(ops[key].kind).toBe("action");
