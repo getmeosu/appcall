@@ -5,6 +5,7 @@ import {
   CAMPAIGN_GET_FIELDS,
   ADSET_GET_FIELDS,
   AD_GET_FIELDS,
+  CREATIVE_GET_FIELDS,
   resolveObserveFields,
   getCampaign,
   createCampaign,
@@ -329,6 +330,12 @@ describe("Reconcile observe default fields", () => {
     for (const wire of Object.values(adWire)) {
       expect(AD_GET_FIELDS.includes(wire)).toBe(true);
     }
+
+    // G2 ad_creatives.update mutables (exported CREATIVE_GET_FIELDS)
+    const creativeWire = { name: "name", status: "status" };
+    for (const wire of Object.values(creativeWire)) {
+      expect(CREATIVE_GET_FIELDS.split(",")).toContain(wire);
+    }
   });
 
   test("observe ignores caller-supplied fields on a reused update-shaped input", async () => {
@@ -375,5 +382,16 @@ describe("Reconcile observe default fields", () => {
       fetch: adCalls.impl,
     });
     expect(new URL(adCalls.calls[0]!.url).searchParams.get("fields")).toBe(AD_GET_FIELDS);
+
+    const creativeCalls = stubFetch(creativeGet);
+    await getAdCreative({
+      ...auth,
+      creativeId: "23851234567890456",
+      name: "Hero Photo v2",
+      status: "ACTIVE",
+      fields: "id,name",
+      fetch: creativeCalls.impl,
+    });
+    expect(new URL(creativeCalls.calls[0]!.url).searchParams.get("fields")).toBe(CREATIVE_GET_FIELDS);
   });
 });

@@ -1066,6 +1066,23 @@ import {
   getAdAccount as metaAdsGetAdAccount,
   searchTargeting as metaAdsSearchTargeting,
 } from "../../connectors/meta-ads/src/g1";
+import {
+  deleteCampaign as metaAdsDeleteCampaign,
+  deleteAdSet as metaAdsDeleteAdSet,
+  deleteAd as metaAdsDeleteAd,
+  updateAdCreative as metaAdsUpdateAdCreative,
+  previewAdCreative as metaAdsPreviewAdCreative,
+  listAdImages as metaAdsListAdImages,
+  uploadAdImage as metaAdsUploadAdImage,
+  createAdVideo as metaAdsCreateAdVideo,
+  getAdVideo as metaAdsGetAdVideo,
+  listCustomAudiences as metaAdsListCustomAudiences,
+  getCustomAudience as metaAdsGetCustomAudience,
+  createCustomAudience as metaAdsCreateCustomAudience,
+  createAsyncInsights as metaAdsCreateAsyncInsights,
+  getAsyncInsights as metaAdsGetAsyncInsights,
+  getReachEstimate as metaAdsGetReachEstimate,
+} from "../../connectors/meta-ads/src/g2";
 import linkedinAdsManifest from "../../connectors/linkedin-ads/manifest.json";
 import { healthcheck as linkedinAdsHealthcheck } from "../../connectors/linkedin-ads/src/healthcheck";
 import {
@@ -2486,6 +2503,21 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
       "insights.get": metaAdsGetInsights,
       "ad_accounts.get": metaAdsGetAdAccount,
       "targeting.search": metaAdsSearchTargeting,
+      "campaigns.delete": metaAdsDeleteCampaign,
+      "ad_sets.delete": metaAdsDeleteAdSet,
+      "ads.delete": metaAdsDeleteAd,
+      "ad_creatives.update": metaAdsUpdateAdCreative,
+      "ad_creatives.preview": metaAdsPreviewAdCreative,
+      "ad_images.list": metaAdsListAdImages,
+      "ad_images.upload": metaAdsUploadAdImage,
+      "ad_videos.create": metaAdsCreateAdVideo,
+      "ad_videos.get": metaAdsGetAdVideo,
+      "custom_audiences.list": metaAdsListCustomAudiences,
+      "custom_audiences.get": metaAdsGetCustomAudience,
+      "custom_audiences.create": metaAdsCreateCustomAudience,
+      "insights.async.create": metaAdsCreateAsyncInsights,
+      "insights.async.get": metaAdsGetAsyncInsights,
+      "reach_estimate.get": metaAdsGetReachEstimate,
     },
     "linkedin-ads": {
       "campaigns.get": linkedinAdsGetCampaign,

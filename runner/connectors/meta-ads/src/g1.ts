@@ -7,7 +7,8 @@
  * - ad_sets.update → Reconcile → ad_sets.get
  * - ads.update → Reconcile → ads.get
  * - Reconcile observes always use default GET field sets (resolveObserveFields)
- * - ads.update omits bidAmount (Ad-level write deprecated; set on ad set)
+ * - ads.create/update omit bidAmount (Ad-level write deprecated; set on ad set)
+ * - ad_creatives.get uses resolveObserveFields for G2 Reconcile observe
  * - all creates omit effectPolicy/reconcile/observe
  * - Never Idempotent
  */
@@ -195,7 +196,7 @@ export function resolveObserveFields(
   return defaults;
 }
 
-const CREATIVE_GET_FIELDS =
+export const CREATIVE_GET_FIELDS =
   "id,name,status,object_type,thumbnail_url,body,title,image_hash,video_id,call_to_action_type,object_story_spec";
 const ACCOUNT_GET_FIELDS = "id,name,account_status,currency,timezone_name,business_name";
 const INSIGHTS_DEFAULT_FIELDS = "impressions,clicks,spend,reach,cpc,cpm,ctr,frequency,account_id,campaign_id,adset_id,ad_id,date_start,date_stop";
@@ -443,8 +444,9 @@ export function createAd(input: unknown): ActionResult {
   };
   const status = optionalString(input.status);
   if (status) fields.status = status;
-  const bidAmount = optionalNumber(input.bidAmount);
-  if (bidAmount != null) fields.bid_amount = bidAmount;
+  // Ad-level bid_amount write is deprecated on Marketing API v26.0 Ad (adgroup):
+  // https://developers.facebook.com/docs/marketing-api/reference/adgroup/
+  // Fold-in from G2: drop bidAmount from ads.create (already dropped from ads.update in G1).
   if (Array.isArray(input.trackingSpecs)) fields.tracking_specs = input.trackingSpecs;
 
   return graphPostForm(auth, "ads.create", `/${adAccountId}/ads`, fields).then((body) => {
@@ -523,7 +525,7 @@ export function getAdCreative(input: unknown): ActionResult {
   if (!isRecord(input)) throw new Error("ad_creatives.get input must be an object");
   const accessToken = requireAccessToken(input);
   const creativeId = requireString(input.creativeId, "creativeId");
-  const fields = optionalString(input.fields) ?? CREATIVE_GET_FIELDS;
+  const fields = resolveObserveFields(input, CREATIVE_GET_FIELDS, ["creativeId"]);
   const auth: MetaAuthInput = { accessToken, fetch: input.fetch as typeof fetch | undefined };
   return graphGet(auth, "ad_creatives.get", `/${creativeId}`, { fields }).then((body) => {
     if (!isRecord(body) || typeof body.id !== "string") {
