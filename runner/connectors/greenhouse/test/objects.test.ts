@@ -191,10 +191,10 @@ describe("Greenhouse normalizeApplication", () => {
     expect(app.prospect).toBe(false);
     expect(app.status).toBe("active");
     expect(app.jobId).toBe("107761");
-    expect(app.jobName).toBe("UX Designer - Boston");
+    expect(app.jobName).toBeNull(); // v3 no longer embeds jobs[]
     expect(app.stageId).toBe("767358");
     expect(app.stageName).toBe("Application Review");
-    expect(app.source).toBe("Jobs page on your website");
+    expect(app.source).toBe("2"); // v3 source_id only
   });
 
   it("handles prospect without stage", () => {

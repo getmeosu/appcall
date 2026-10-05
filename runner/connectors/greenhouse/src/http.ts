@@ -55,6 +55,10 @@ export type GreenhouseAuthClient = {
    * (returns `undefined` when the body is empty).
    */
   patchJSON(path: string, body?: Record<string, unknown>): Promise<unknown>;
+  /**
+   * DELETE `path`. Accepts 2xx including 204 No Content.
+   */
+  deleteJSON(path: string): Promise<unknown>;
 };
 
 type OperationBounds = { maxResponseBytes: number; timeoutMs: number };
@@ -232,7 +236,7 @@ export function createAuthClient(config: GreenhouseAuthClientConfig): Greenhouse
   }
 
   async function harvestRequest(
-    method: "GET" | "POST" | "PATCH",
+    method: "GET" | "POST" | "PATCH" | "DELETE",
     path: string,
     init: { body?: string; contentType?: string } = {},
     retried = false,
@@ -309,6 +313,11 @@ export function createAuthClient(config: GreenhouseAuthClientConfig): Greenhouse
 
     async patchJSON(path: string, body: Record<string, unknown> = {}): Promise<unknown> {
       const response = await harvestRequest("PATCH", path, { body: JSON.stringify(body) });
+      return parseJsonOrEmpty(response);
+    },
+
+    async deleteJSON(path: string): Promise<unknown> {
+      const response = await harvestRequest("DELETE", path);
       return parseJsonOrEmpty(response);
     },
   };

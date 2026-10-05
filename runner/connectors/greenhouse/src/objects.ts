@@ -202,13 +202,18 @@ interface GreenhouseCandidate {
   title?: string | null;
   created_at?: string | null;
   updated_at?: string | null;
+  /** v1 field name */
   last_activity?: string | null;
+  /** v3 field name */
+  last_activity_at?: string | null;
   email_addresses?: Array<{ value?: string | null; type?: string | null }> | null;
   phone_numbers?: Array<{ value?: string | null; type?: string | null }> | null;
   application_ids?: unknown;
   tags?: unknown;
   recruiter?: { id?: number | string | null } | null;
   coordinator?: { id?: number | string | null } | null;
+  recruiter_id?: number | string | null;
+  coordinator_id?: number | string | null;
 }
 
 export function normalizeCandidate(candidate: GreenhouseCandidate): NormalizedCandidate {
@@ -230,11 +235,11 @@ export function normalizeCandidate(candidate: GreenhouseCandidate): NormalizedCa
     phones: contactValues(candidate.phone_numbers),
     applicationIds: asStringArray(candidate.application_ids),
     tags: asStringArray(candidate.tags),
-    recruiterId: asStringId(candidate.recruiter?.id ?? null),
-    coordinatorId: asStringId(candidate.coordinator?.id ?? null),
+    recruiterId: asStringId(candidate.recruiter?.id ?? candidate.recruiter_id ?? null),
+    coordinatorId: asStringId(candidate.coordinator?.id ?? candidate.coordinator_id ?? null),
     createdAt: asIso(candidate.created_at),
     updatedAt: asIso(candidate.updated_at),
-    lastActivityAt: asIso(candidate.last_activity),
+    lastActivityAt: asIso(candidate.last_activity_at ?? candidate.last_activity),
   };
 }
 
@@ -251,10 +256,17 @@ interface GreenhouseApplication {
   prospect?: boolean | null;
   status?: string | null;
   applied_at?: string | null;
+  created_at?: string | null;
   rejected_at?: string | null;
   last_activity_at?: string | null;
+  /** v3 flat job id (preferred); v1 nested jobs[] still accepted */
+  job_id?: number | string | null;
   jobs?: Array<{ id?: number | string | null; name?: string | null }> | null;
+  /** v3 flat stage fields */
+  stage_id?: number | string | null;
+  stage_name?: string | null;
   current_stage?: { id?: number | string | null; name?: string | null } | null;
+  source_id?: number | string | null;
   source?: { id?: number | string | null; public_name?: string | null } | null;
 }
 
@@ -267,12 +279,13 @@ export function normalizeApplication(application: GreenhouseApplication): Normal
     candidateId: asStringId(application.candidate_id ?? null),
     prospect: application.prospect === true,
     status: application.status ?? null,
-    jobId: asStringId(firstJob?.id ?? null),
+    jobId: asStringId(application.job_id ?? firstJob?.id ?? null),
     jobName: firstJob?.name ?? null,
-    stageId: asStringId(application.current_stage?.id ?? null),
-    stageName: application.current_stage?.name ?? null,
-    source: application.source?.public_name ?? null,
-    appliedAt: asIso(application.applied_at),
+    stageId: asStringId(application.stage_id ?? application.current_stage?.id ?? null),
+    stageName: application.stage_name ?? application.current_stage?.name ?? null,
+    // v3 returns source_id only (child source no longer embedded); keep nested public_name for legacy fixtures
+    source: application.source?.public_name ?? (application.source_id != null ? String(application.source_id) : null),
+    appliedAt: asIso(application.applied_at ?? application.created_at),
     rejectedAt: asIso(application.rejected_at),
     lastActivityAt: asIso(application.last_activity_at),
   };
@@ -291,6 +304,8 @@ interface GreenhouseUser {
   first_name?: string | null;
   last_name?: string | null;
   primary_email_address?: string | null;
+  /** v3 */
+  primary_email?: string | null;
   emails?: unknown;
   employee_id?: string | null;
   disabled?: boolean | null;
@@ -308,9 +323,14 @@ export function normalizeUser(user: GreenhouseUser): NormalizedUser {
   );
   const name =
     typeof user.name === "string" && user.name.length > 0 ? user.name : nameParts.join(" ");
+  const primary =
+    (typeof user.primary_email_address === "string" && user.primary_email_address.length > 0
+      ? user.primary_email_address
+      : null) ??
+    (typeof user.primary_email === "string" && user.primary_email.length > 0 ? user.primary_email : null);
   const emails = asStringArray(user.emails);
-  if (emails.length === 0 && typeof user.primary_email_address === "string") {
-    emails.push(user.primary_email_address);
+  if (emails.length === 0 && primary) {
+    emails.push(primary);
   }
   return {
     id: `gh-user:${id}`,
@@ -318,7 +338,7 @@ export function normalizeUser(user: GreenhouseUser): NormalizedUser {
     name,
     firstName,
     lastName,
-    primaryEmail: user.primary_email_address ?? null,
+    primaryEmail: primary,
     emails,
     employeeId: user.employee_id ?? null,
     disabled: user.disabled === true,
