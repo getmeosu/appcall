@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, test, beforeEach } from "bun:test";
 import {
   executeCandidatesCreateSync,
   executeCandidatesUpdateSync,
@@ -13,6 +13,7 @@ import {
   executeUsersGetSync,
   executeApplicationsRejectSync,
 } from "../src/sync";
+import { clearGreenhouseTokenCache } from "../src/http";
 import candidateCreatedFixture from "../fixtures/candidate_created.json";
 import offersFixture from "../fixtures/offers_list.json";
 import offerGetFixture from "../fixtures/offer_get.json";
@@ -24,16 +25,67 @@ import sourcesFixture from "../fixtures/sources_list.json";
 import closeReasonsFixture from "../fixtures/close_reasons_list.json";
 import userGetFixture from "../fixtures/user_get.json";
 
+
+const TEST_ACCESS_TOKEN = "test-access-token";
+const TOKEN_JSON = JSON.stringify({
+  access_token: TEST_ACCESS_TOKEN,
+  token_type: "Bearer",
+  expires_in: 3600,
+});
+
+function isTokenUrl(input: string | URL | Request): boolean {
+  return String(input).includes("auth.greenhouse.io/token");
+}
+
+// Every request is served by an injected fetch. No real network.
+// Authenticated Harvest calls mint a Bearer token first.
 function stubFetch(body: string, init: { status?: number; headers?: Record<string, string> } = {}) {
   const calls: Request[] = [];
   const impl = (async (input: string | URL | Request, requestInit?: RequestInit) => {
     calls.push(new Request(input as string, requestInit));
+    if (isTokenUrl(input)) {
+      return new Response(TOKEN_JSON, {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
+    }
     return new Response(body, { status: init.status ?? 200, headers: init.headers });
   }) as unknown as typeof fetch;
   return { calls, impl };
 }
 
-const auth = { apiKey: "fixturekey" };
+function stubSequence(
+  responses: Array<{ body: string; status?: number; headers?: Record<string, string> }>,
+) {
+  const calls: Request[] = [];
+  let i = 0;
+  const impl = (async (input: string | URL | Request, requestInit?: RequestInit) => {
+    calls.push(new Request(input as string, requestInit));
+    if (isTokenUrl(input)) {
+      return new Response(TOKEN_JSON, {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
+    }
+    const next = responses[Math.min(i, responses.length - 1)]!;
+    i += 1;
+    return new Response(next.body, {
+      status: next.status ?? 200,
+      headers: next.headers,
+    });
+  }) as unknown as typeof fetch;
+  return { calls, impl };
+}
+
+function harvestCalls(calls: Request[]): Request[] {
+  return calls.filter((c) => c.url.includes("harvest.greenhouse.io"));
+}
+
+const auth = { clientId: "fixture-client", clientSecret: "fixture-secret" };
+
+beforeEach(() => {
+  clearGreenhouseTokenCache();
+});
 
 describe("Greenhouse candidates.create (POST only; runner owns Idempotent)", () => {
   test("POSTs /v3/candidates and returns primary payload", async () => {
@@ -46,10 +98,10 @@ describe("Greenhouse candidates.create (POST only; runner owns Idempotent)", () 
       jobId: 107761,
       fetch: impl,
     });
-    expect(calls).toHaveLength(1);
-    expect(new URL(calls[0].url).pathname).toBe("/v3/candidates");
-    expect(calls[0].method).toBe("POST");
-    expect(JSON.parse(await calls[0].text())).toEqual({
+    expect(harvestCalls(calls).length).toBe(1);
+    expect(new URL(harvestCalls(calls)[0]!.url).pathname).toBe("/v3/candidates");
+    expect(harvestCalls(calls)[0]!.method).toBe("POST");
+    expect(JSON.parse(await harvestCalls(calls)[0]!.clone().text())).toEqual({
       first_name: "John",
       last_name: "Locke",
       email_addresses: [{ value: "test@example.com", type: "personal" }],
@@ -77,10 +129,10 @@ describe("Greenhouse candidates.update (PATCH; runner owns Reconcile)", () => {
       title: "Engineer",
       fetch: impl,
     });
-    expect(calls).toHaveLength(1);
-    expect(calls[0].method).toBe("PATCH");
-    expect(new URL(calls[0].url).pathname).toBe("/v3/candidates/57683957");
-    expect(JSON.parse(await calls[0].text())).toEqual({ company: "Acme", title: "Engineer" });
+    expect(harvestCalls(calls).length).toBe(1);
+    expect(harvestCalls(calls)[0]!.method).toBe("PATCH");
+    expect(new URL(harvestCalls(calls)[0]!.url).pathname).toBe("/v3/candidates/57683957");
+    expect(JSON.parse(await harvestCalls(calls)[0]!.clone().text())).toEqual({ company: "Acme", title: "Engineer" });
     expect(result.candidate).toBeNull();
   });
 
@@ -97,16 +149,17 @@ describe("Greenhouse offers.list / get", () => {
   test("GETs /v3/offers", async () => {
     const { calls, impl } = stubFetch(JSON.stringify(offersFixture));
     const result = await executeOffersListSync({ ...auth, jobId: 149995, fetch: impl });
-    expect(new URL(calls[0].url).pathname).toBe("/v3/offers");
-    expect(new URL(calls[0].url).searchParams.get("job_id")).toBe("149995");
+    expect(new URL(harvestCalls(calls)[0]!.url).pathname).toBe("/v3/offers");
+    expect(new URL(harvestCalls(calls)[0]!.url).searchParams.get("job_ids")).toBe("149995");
     expect(result.offers[0].id).toBe("gh-offer:400544");
     expect(result.offers[0].status).toBe("unresolved");
   });
 
-  test("GETs /v3/offers/{id}", async () => {
+  test("GETs /v3/offers?ids=", async () => {
     const { calls, impl } = stubFetch(JSON.stringify(offerGetFixture));
     const result = await executeOffersGetSync({ ...auth, id: "400544", fetch: impl });
-    expect(new URL(calls[0].url).pathname).toBe("/v3/offers/400544");
+    expect(new URL(harvestCalls(calls)[0]!.url).pathname).toBe("/v3/offers");
+    expect(new URL(harvestCalls(calls)[0]!.url).searchParams.get("ids")).toBe("400544");
     expect(result.offer?.applicationId).toBe("69306314");
   });
 });
@@ -121,7 +174,7 @@ describe("Greenhouse scorecards.list / get", () => {
     expect(result.scorecards[1].status).toBe("draft");
   });
 
-  test("GETs /v3/scorecards/{id}", async () => {
+  test("GETs /v3/scorecards?ids=", async () => {
     const { impl } = stubFetch(JSON.stringify(scorecardGetFixture));
     const result = await executeScorecardsGetSync({ ...auth, id: "88112", fetch: impl });
     expect(result.scorecard?.applicationId).toBe("69306314");
@@ -158,17 +211,18 @@ describe("Greenhouse departments / offices / sources / close_reasons", () => {
 });
 
 describe("Greenhouse users.get", () => {
-  test("GETs /v3/users/{id}", async () => {
+  test("GETs /v3/users?ids=", async () => {
     const { calls, impl } = stubFetch(JSON.stringify(userGetFixture));
     const result = await executeUsersGetSync({ ...auth, id: "1049756", fetch: impl });
-    expect(new URL(calls[0].url).pathname).toBe("/v3/users/1049756");
+    expect(new URL(harvestCalls(calls)[0]!.url).pathname).toBe("/v3/users");
+    expect(new URL(harvestCalls(calls)[0]!.url).searchParams.get("ids")).toBe("1049756");
     expect(result.user?.id).toBe("gh-user:1049756");
     expect(result.user?.primaryEmail).toBe("integrationuser@example.com");
   });
 });
 
 describe("Greenhouse applications.reject (write; runner owns Reconcile)", () => {
-  test("POSTs /v3/applications/{id}/reject without in-handler GET", async () => {
+  test("POSTs /v3/applications?ids=/reject without in-handler GET", async () => {
     const { calls, impl } = stubFetch("", { status: 204 });
     const result = await executeApplicationsRejectSync({
       ...auth,
@@ -177,10 +231,10 @@ describe("Greenhouse applications.reject (write; runner owns Reconcile)", () => 
       notes: "Not a fit",
       fetch: impl,
     });
-    expect(calls).toHaveLength(1);
-    expect(calls[0].method).toBe("POST");
-    expect(new URL(calls[0].url).pathname).toBe("/v3/applications/69306314/reject");
-    expect(JSON.parse(await calls[0].text())).toEqual({
+    expect(harvestCalls(calls).length).toBe(1);
+    expect(harvestCalls(calls)[0]!.method).toBe("POST");
+    expect(new URL(harvestCalls(calls)[0]!.url).pathname).toBe("/v3/applications/69306314/reject");
+    expect(JSON.parse(await harvestCalls(calls)[0]!.clone().text())).toEqual({
       rejection_reason_id: 700,
       notes: "Not a fit",
     });

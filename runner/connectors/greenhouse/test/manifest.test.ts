@@ -6,28 +6,36 @@ describe("Greenhouse manifest", () => {
     expect(manifest.key).toBe("greenhouse");
   });
 
-  it("has version 0.6.0", () => {
-    expect(manifest.version).toBe("0.6.0");
+  it("has version 0.7.0", () => {
+    expect(manifest.version).toBe("0.7.0");
   });
 
   it("uses bun runtime", () => {
     expect(manifest.runtime).toBe("bun");
   });
 
-  it("declares api_key auth with setup fields", () => {
+  it("declares OAuth client credential fields (no Harvest apiKey)", () => {
     expect(manifest.auth.type).toBe("api_key");
     expect(manifest.auth.setup.mode).toBe("api_key");
-    expect(manifest.auth.setup.fields.some((field: { key: string }) => field.key === "apiKey")).toBe(true);
+    const keys = manifest.auth.setup.fields.map((field: { key: string }) => field.key);
+    expect(keys).toContain("clientId");
+    expect(keys).toContain("clientSecret");
+    expect(keys).toContain("userId");
+    expect(keys).not.toContain("apiKey");
   });
 
-  it("allows expected hosts", () => {
-    expect(manifest.network.allowedHosts).toEqual(["harvest.greenhouse.io", "boards-api.greenhouse.io"]);
+  it("allows Harvest, boards, and auth hosts", () => {
+    expect(manifest.network.allowedHosts).toEqual([
+      "harvest.greenhouse.io",
+      "boards-api.greenhouse.io",
+      "auth.greenhouse.io",
+    ]);
   });
 
-  it("uses Harvest v3 Basic auth and keeps boards host", () => {
+  it("documents Bearer auth metadata (token minted at runtime)", () => {
     expect(manifest.http.baseUrl).toBe("https://harvest.greenhouse.io/v3");
-    expect(manifest.http.auth.basic).toEqual({ username: "{{apiKey}}", password: "" });
-    expect(manifest.network.allowedHosts).toContain("boards-api.greenhouse.io");
+    expect(manifest.http.auth.value).toBe("Bearer {{accessToken}}");
+    expect((manifest.http.auth as { basic?: unknown }).basic).toBeUndefined();
   });
 
   it("declares list/get + write/move + stages ops", () => {
@@ -57,7 +65,6 @@ describe("Greenhouse manifest", () => {
     expect(move.reconcile).toBe("applications.get");
   });
 
-
   it("wires applications.create EffectPolicy Idempotent to applications.get", () => {
     const create = manifest.operations["applications.create"] as {
       kind: string;
@@ -69,6 +76,14 @@ describe("Greenhouse manifest", () => {
     expect(create.sideEffect).toBe("write");
     expect(create.effectPolicy).toBe("Idempotent");
     expect(create.reconcile).toBe("applications.get");
+  });
+
+  it("requires rejectionReasonId on applications.reject", () => {
+    const reject = manifest.operations["applications.reject"] as {
+      inputSchema: { required: string[] };
+    };
+    expect(reject.inputSchema.required).toContain("id");
+    expect(reject.inputSchema.required).toContain("rejectionReasonId");
   });
 
   it("declares scorecards, offers, and candidate write ops", () => {
@@ -86,9 +101,9 @@ describe("Greenhouse manifest", () => {
     expect(manifest.operations["users.get"]).toBeTruthy();
   });
 
-  it("declares authenticated healthcheck request", () => {
-    expect(manifest.operations.healthcheck.request).toBeTruthy();
+  it("keeps healthcheck as a code-backed action (no declarative request)", () => {
     expect(manifest.operations.healthcheck.kind).toBe("action");
+    expect((manifest.operations.healthcheck as { request?: unknown }).request).toBeUndefined();
   });
 
   it("declares job/candidate/application/user/interview/stage models", () => {
@@ -106,5 +121,9 @@ describe("Greenhouse manifest", () => {
       "source",
       "close_reason",
     ]);
+  });
+
+  it("stays at 24 ops on v0.7.0", () => {
+    expect(Object.keys(manifest.operations)).toHaveLength(24);
   });
 });
