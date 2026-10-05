@@ -825,6 +825,24 @@ import {
   validateUploadCodeScanningSarifInput,
 } from "./gap_g9";
 import {
+  createGapG10Client,
+  validateAddOrgDependabotSecretRepositoryInput,
+  validateDeleteOrgDependabotSecretInput,
+  validateGetOrgDependabotSecretInput,
+  validateGetRepoCodespacesSecretsPublicKeyInput,
+  validateGetRepoDependabotSecretInput,
+  validateGetRepoDependabotSecretsPublicKeyInput,
+  validateListOrgDependabotSecretRepositoriesInput,
+  validateListOrgDependabotSecretsInput,
+  validateListRepoCodespacesSecretsInput,
+  validateListRepoDependabotSecretsInput,
+  validateRemoveOrgDependabotSecretRepositoryInput,
+  validateSetOrgDependabotSecretRepositoriesInput,
+  validateUpsertOrgDependabotSecretInput,
+  validateUpsertRepoCodespacesSecretInput,
+  validateUpsertRepoDependabotSecretInput,
+} from "./gap_g10";
+import {
   createReposReadsClient,
   validateGetAutolinkInput,
   validateGetReadmeInput,
@@ -10000,6 +10018,165 @@ export function listAuthenticatedUserPackageVersions(input: unknown): Record<str
     });
   }
   return { connector: "github", action: "user.packages.versions.list", source: "connector", validated: validateListUserPackageVersionsInput(input) };
+}
+
+
+function liveGapG10Client(input: Record<string, unknown>, operation: string) {
+  void operation;
+  return createGapG10Client({
+    accessToken: input.accessToken as string,
+    fetch: typeof input.fetch === "function" ? (input.fetch as typeof fetch) : undefined,
+  });
+}
+
+export function getRepoDependabotSecretsPublicKey(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG10Client(input, "dependabot.secrets.public_key.get").getRepoDependabotSecretsPublicKey(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "dependabot.secrets.public_key.get", source: "connector", publicKey: result.publicKey };
+    });
+  }
+  return { connector: "github", action: "dependabot.secrets.public_key.get", source: "connector", validated: validateGetRepoDependabotSecretsPublicKeyInput(input) };
+}
+
+export function listRepoDependabotSecrets(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG10Client(input, "dependabot.secrets.list").listRepoDependabotSecrets(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "dependabot.secrets.list", source: "connector", totalCount: result.totalCount, secrets: result.secrets };
+    });
+  }
+  return { connector: "github", action: "dependabot.secrets.list", source: "connector", validated: validateListRepoDependabotSecretsInput(input) };
+}
+
+export function getRepoDependabotSecret(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG10Client(input, "dependabot.secrets.get").getRepoDependabotSecret(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "dependabot.secrets.get", source: "connector", secret: result.secret };
+    });
+  }
+  return { connector: "github", action: "dependabot.secrets.get", source: "connector", validated: validateGetRepoDependabotSecretInput(input) };
+}
+
+export function upsertRepoDependabotSecret(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG10Client(input, "dependabot.secrets.create_or_update").upsertRepoDependabotSecret(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "dependabot.secrets.create_or_update", source: "connector", upserted: result.upserted, created: result.created, status: result.status, owner: result.owner, repo: result.repo, secretName: result.secretName };
+    });
+  }
+  return { connector: "github", action: "dependabot.secrets.create_or_update", source: "connector", validated: validateUpsertRepoDependabotSecretInput(input) };
+}
+
+export function listOrgDependabotSecrets(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG10Client(input, "orgs.dependabot.secrets.list").listOrgDependabotSecrets(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "orgs.dependabot.secrets.list", source: "connector", totalCount: result.totalCount, secrets: result.secrets };
+    });
+  }
+  return { connector: "github", action: "orgs.dependabot.secrets.list", source: "connector", validated: validateListOrgDependabotSecretsInput(input) };
+}
+
+export function getOrgDependabotSecret(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG10Client(input, "orgs.dependabot.secrets.get").getOrgDependabotSecret(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "orgs.dependabot.secrets.get", source: "connector", secret: result.secret };
+    });
+  }
+  return { connector: "github", action: "orgs.dependabot.secrets.get", source: "connector", validated: validateGetOrgDependabotSecretInput(input) };
+}
+
+export function upsertOrgDependabotSecret(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG10Client(input, "orgs.dependabot.secrets.create_or_update").upsertOrgDependabotSecret(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "orgs.dependabot.secrets.create_or_update", source: "connector", upserted: result.upserted, created: result.created, status: result.status, org: result.org, secretName: result.secretName, visibility: result.visibility };
+    });
+  }
+  return { connector: "github", action: "orgs.dependabot.secrets.create_or_update", source: "connector", validated: validateUpsertOrgDependabotSecretInput(input) };
+}
+
+export function deleteOrgDependabotSecret(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG10Client(input, "orgs.dependabot.secrets.delete").deleteOrgDependabotSecret(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "orgs.dependabot.secrets.delete", source: "connector", deleted: result.deleted, org: result.org, secretName: result.secretName };
+    });
+  }
+  return { connector: "github", action: "orgs.dependabot.secrets.delete", source: "connector", validated: validateDeleteOrgDependabotSecretInput(input) };
+}
+
+export function listOrgDependabotSecretRepositories(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG10Client(input, "orgs.dependabot.secrets.repositories.list").listOrgDependabotSecretRepositories(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "orgs.dependabot.secrets.repositories.list", source: "connector", totalCount: result.totalCount, repositories: result.repositories };
+    });
+  }
+  return { connector: "github", action: "orgs.dependabot.secrets.repositories.list", source: "connector", validated: validateListOrgDependabotSecretRepositoriesInput(input) };
+}
+
+export function setOrgDependabotSecretRepositories(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG10Client(input, "orgs.dependabot.secrets.repositories.set").setOrgDependabotSecretRepositories(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "orgs.dependabot.secrets.repositories.set", source: "connector", set: result.set, org: result.org, secretName: result.secretName, selectedRepositoryIds: result.selectedRepositoryIds };
+    });
+  }
+  return { connector: "github", action: "orgs.dependabot.secrets.repositories.set", source: "connector", validated: validateSetOrgDependabotSecretRepositoriesInput(input) };
+}
+
+export function addOrgDependabotSecretRepository(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG10Client(input, "orgs.dependabot.secrets.repositories.add").addOrgDependabotSecretRepository(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "orgs.dependabot.secrets.repositories.add", source: "connector", added: result.added, org: result.org, secretName: result.secretName, repositoryId: result.repositoryId };
+    });
+  }
+  return { connector: "github", action: "orgs.dependabot.secrets.repositories.add", source: "connector", validated: validateAddOrgDependabotSecretRepositoryInput(input) };
+}
+
+export function removeOrgDependabotSecretRepository(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG10Client(input, "orgs.dependabot.secrets.repositories.remove").removeOrgDependabotSecretRepository(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "orgs.dependabot.secrets.repositories.remove", source: "connector", removed: result.removed, org: result.org, secretName: result.secretName, repositoryId: result.repositoryId };
+    });
+  }
+  return { connector: "github", action: "orgs.dependabot.secrets.repositories.remove", source: "connector", validated: validateRemoveOrgDependabotSecretRepositoryInput(input) };
+}
+
+export function getRepoCodespacesSecretsPublicKey(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG10Client(input, "repos.codespaces.secrets.public_key.get").getRepoCodespacesSecretsPublicKey(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "repos.codespaces.secrets.public_key.get", source: "connector", publicKey: result.publicKey };
+    });
+  }
+  return { connector: "github", action: "repos.codespaces.secrets.public_key.get", source: "connector", validated: validateGetRepoCodespacesSecretsPublicKeyInput(input) };
+}
+
+export function listRepoCodespacesSecrets(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG10Client(input, "repos.codespaces.secrets.list").listRepoCodespacesSecrets(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "repos.codespaces.secrets.list", source: "connector", totalCount: result.totalCount, secrets: result.secrets };
+    });
+  }
+  return { connector: "github", action: "repos.codespaces.secrets.list", source: "connector", validated: validateListRepoCodespacesSecretsInput(input) };
+}
+
+export function upsertRepoCodespacesSecret(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG10Client(input, "repos.codespaces.secrets.create_or_update").upsertRepoCodespacesSecret(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "repos.codespaces.secrets.create_or_update", source: "connector", upserted: result.upserted, created: result.created, status: result.status, owner: result.owner, repo: result.repo, secretName: result.secretName };
+    });
+  }
+  return { connector: "github", action: "repos.codespaces.secrets.create_or_update", source: "connector", validated: validateUpsertRepoCodespacesSecretInput(input) };
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
