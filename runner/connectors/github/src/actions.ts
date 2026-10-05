@@ -494,6 +494,21 @@ import {
   validateDeleteEnvironmentSecretInput,
   validateUpdateAuthenticatedUserInput,
 } from "./write_card3";
+import {
+  createWriteCard4Client,
+  validateRemoveCodespaceSecretRepositoryInput,
+  validateSetCodespaceSecretRepositoriesInput,
+  validateAddRestrictionAppsInput,
+  validateAddStatusCheckContextsInput,
+  validateAddRestrictionTeamsInput,
+  validateAddRestrictionUsersInput,
+  validateCreateRequiredSignaturesInput,
+  validateDeleteRestrictionsInput,
+  validateDeleteEnforceAdminsInput,
+  validateDeleteBranchProtectionInput,
+  validateDeleteRequiredSignaturesInput,
+  validateDeleteRequiredPullRequestReviewsInput,
+} from "./write_card4";
 
 
 
@@ -7025,6 +7040,137 @@ export function updateAuthenticatedUser(input: unknown): Record<string, unknown>
     });
   }
   return { connector: "github", action: "user.update", source: "connector", validated: validateUpdateAuthenticatedUserInput(input) };
+}
+
+// ─── write card 4: branch protection writes ──────────────────────────────────
+
+function liveWriteCard4Client(input: Record<string, unknown>, operation: string) {
+  const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
+  return createWriteCard4Client({
+    accessToken: input.accessToken as string,
+    fetch: fetchFn,
+    githubClient: createGitHubClient({ accessToken: input.accessToken as string, fetch: fetchFn, operation }),
+  });
+}
+
+export function removeCodespaceSecretRepository(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveWriteCard4Client(input, "user.codespaces.secrets.repositories.remove").removeCodespaceSecretRepository(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "user.codespaces.secrets.repositories.remove", source: "connector", removed: result.removed, secretName: result.secretName, repositoryId: result.repositoryId };
+    });
+  }
+  return { connector: "github", action: "user.codespaces.secrets.repositories.remove", source: "connector", validated: validateRemoveCodespaceSecretRepositoryInput(input) };
+}
+
+export function setCodespaceSecretRepositories(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveWriteCard4Client(input, "user.codespaces.secrets.repositories.set").setCodespaceSecretRepositories(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "user.codespaces.secrets.repositories.set", source: "connector", set: result.set, secretName: result.secretName, selectedRepositoryIds: result.selectedRepositoryIds };
+    });
+  }
+  return { connector: "github", action: "user.codespaces.secrets.repositories.set", source: "connector", validated: validateSetCodespaceSecretRepositoriesInput(input) };
+}
+
+export function addBranchProtectionRestrictionApps(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveWriteCard4Client(input, "branches.protection.restrictions.apps.add").addRestrictionApps(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "branches.protection.restrictions.apps.add", source: "connector", apps: result.apps };
+    });
+  }
+  return { connector: "github", action: "branches.protection.restrictions.apps.add", source: "connector", validated: validateAddRestrictionAppsInput(input) };
+}
+
+export function addBranchProtectionStatusCheckContexts(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveWriteCard4Client(input, "branches.protection.required_status_checks.contexts.add").addStatusCheckContexts(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "branches.protection.required_status_checks.contexts.add", source: "connector", contexts: result.contexts };
+    });
+  }
+  return { connector: "github", action: "branches.protection.required_status_checks.contexts.add", source: "connector", validated: validateAddStatusCheckContextsInput(input) };
+}
+
+export function addBranchProtectionRestrictionTeams(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveWriteCard4Client(input, "branches.protection.restrictions.teams.add").addRestrictionTeams(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "branches.protection.restrictions.teams.add", source: "connector", teams: result.teams };
+    });
+  }
+  return { connector: "github", action: "branches.protection.restrictions.teams.add", source: "connector", validated: validateAddRestrictionTeamsInput(input) };
+}
+
+export function addBranchProtectionRestrictionUsers(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveWriteCard4Client(input, "branches.protection.restrictions.users.add").addRestrictionUsers(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "branches.protection.restrictions.users.add", source: "connector", users: result.users };
+    });
+  }
+  return { connector: "github", action: "branches.protection.restrictions.users.add", source: "connector", validated: validateAddRestrictionUsersInput(input) };
+}
+
+export function createBranchProtectionRequiredSignatures(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveWriteCard4Client(input, "branches.protection.required_signatures.create").createRequiredSignatures(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "branches.protection.required_signatures.create", source: "connector", protection: result.protection };
+    });
+  }
+  return { connector: "github", action: "branches.protection.required_signatures.create", source: "connector", validated: validateCreateRequiredSignaturesInput(input) };
+}
+
+export function deleteBranchProtectionRestrictions(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveWriteCard4Client(input, "branches.protection.restrictions.delete").deleteRestrictions(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "branches.protection.restrictions.delete", source: "connector", deleted: result.deleted, owner: result.owner, repo: result.repo, branch: result.branch };
+    });
+  }
+  return { connector: "github", action: "branches.protection.restrictions.delete", source: "connector", validated: validateDeleteRestrictionsInput(input) };
+}
+
+export function deleteBranchProtectionEnforceAdmins(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveWriteCard4Client(input, "branches.protection.enforce_admins.delete").deleteEnforceAdmins(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "branches.protection.enforce_admins.delete", source: "connector", deleted: result.deleted, owner: result.owner, repo: result.repo, branch: result.branch };
+    });
+  }
+  return { connector: "github", action: "branches.protection.enforce_admins.delete", source: "connector", validated: validateDeleteEnforceAdminsInput(input) };
+}
+
+export function deleteBranchProtection(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveWriteCard4Client(input, "branches.protection.delete").deleteBranchProtection(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "branches.protection.delete", source: "connector", deleted: result.deleted, owner: result.owner, repo: result.repo, branch: result.branch };
+    });
+  }
+  return { connector: "github", action: "branches.protection.delete", source: "connector", validated: validateDeleteBranchProtectionInput(input) };
+}
+
+export function deleteBranchProtectionRequiredSignatures(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveWriteCard4Client(input, "branches.protection.required_signatures.delete").deleteRequiredSignatures(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "branches.protection.required_signatures.delete", source: "connector", deleted: result.deleted, owner: result.owner, repo: result.repo, branch: result.branch };
+    });
+  }
+  return { connector: "github", action: "branches.protection.required_signatures.delete", source: "connector", validated: validateDeleteRequiredSignaturesInput(input) };
+}
+
+export function deleteBranchProtectionRequiredPullRequestReviews(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveWriteCard4Client(input, "branches.protection.required_pull_request_reviews.delete").deleteRequiredPullRequestReviews(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "branches.protection.required_pull_request_reviews.delete", source: "connector", deleted: result.deleted, owner: result.owner, repo: result.repo, branch: result.branch };
+    });
+  }
+  return { connector: "github", action: "branches.protection.required_pull_request_reviews.delete", source: "connector", validated: validateDeleteRequiredPullRequestReviewsInput(input) };
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
