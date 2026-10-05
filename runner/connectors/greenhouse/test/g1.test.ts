@@ -99,6 +99,41 @@ describe("Greenhouse G1 applications.hire / update", () => {
     expect(body.source_id).toBe(2);
     expect(body.recruiter_id).toBe(92120);
   });
+
+  test("update sends v3 custom_fields array", async () => {
+    clearGreenhouseTokenCache();
+    const { calls, impl } = stubSequence([{ body: "", status: 204 }]);
+    const customFields = [
+      { name_key: "referral_bonus", value: "yes" },
+      { custom_field_id: 42, value: null },
+    ];
+    await executeApplicationsUpdate({ ...auth, id: "69306314", customFields, fetch: impl });
+    const body = JSON.parse(String(harvestCalls(calls)[0]!.init?.body));
+    expect(body.custom_fields).toEqual(customFields);
+  });
+
+  test("update rejects legacy object-map customFields and bad entries before network", async () => {
+    const noNet = (async () => {
+      throw new Error("network must not be called");
+    }) as any;
+    await expect(
+      executeApplicationsUpdate({ ...auth, id: "1", customFields: { referral_bonus: "yes" } as any, fetch: noNet }),
+    ).rejects.toThrow(/array/);
+    await expect(
+      executeApplicationsUpdate({ ...auth, id: "1", customFields: [{ value: "x" }], fetch: noNet }),
+    ).rejects.toThrow(/exactly one/);
+    await expect(
+      executeApplicationsUpdate({
+        ...auth,
+        id: "1",
+        customFields: [{ name_key: "a", custom_field_id: 1, value: "x" }],
+        fetch: noNet,
+      }),
+    ).rejects.toThrow(/exactly one/);
+    await expect(
+      executeApplicationsUpdate({ ...auth, id: "1", customFields: [{ name_key: "a" }], fetch: noNet }),
+    ).rejects.toThrow(/value/);
+  });
 });
 
 describe("Greenhouse G1 agent-tool lists", () => {
@@ -261,5 +296,30 @@ describe("Greenhouse G1 interviews / offers", () => {
     const body = JSON.parse(String(harvestCalls(calls)[0]!.init?.body));
     expect(body.application_id).toBe(69306314);
     expect(body.starts_on).toBe("2017-11-01");
+    expect(body.custom_fields).toBeUndefined();
+  });
+
+  test("offers.create sends v3 custom_fields array and rejects object map", async () => {
+    clearGreenhouseTokenCache();
+    const { calls, impl } = stubSequence([{ body: JSON.stringify(offerCreated), status: 201 }]);
+    const customFields = [
+      { name_key: "salary", value: { amount: 100000, currency_code: "USD" } },
+      { custom_field_id: 7, value: "Remote" },
+    ];
+    const result = await executeOffersCreate({ ...auth, applicationId: 69306314, customFields, fetch: impl });
+    expect((result as any).id).toBe(12345);
+    const body = JSON.parse(String(harvestCalls(calls)[0]!.init?.body));
+    expect(body.custom_fields).toEqual(customFields);
+
+    await expect(
+      executeOffersCreate({
+        ...auth,
+        applicationId: 1,
+        customFields: { salary: 1 } as any,
+        fetch: (async () => {
+          throw new Error("network must not be called");
+        }) as any,
+      }),
+    ).rejects.toThrow(/array/);
   });
 });

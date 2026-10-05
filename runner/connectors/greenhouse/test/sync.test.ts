@@ -338,7 +338,7 @@ describe("Greenhouse applications.move (write; runner owns Reconcile)", () => {
   });
 });
 
-describe("Greenhouse applications.create (POST only; runner owns Idempotent)", () => {
+describe("Greenhouse applications.create (POST only; creates omit effect keys)", () => {
   test("POSTs /v3/applications and returns primary payload (no in-handler GET)", async () => {
     const { calls, impl } = stubFetch(JSON.stringify(applicationCreatedFixture), { status: 201 });
 
