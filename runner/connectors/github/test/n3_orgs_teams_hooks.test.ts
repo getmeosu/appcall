@@ -47,9 +47,9 @@ const N3_READS = [
 ] as const;
 
 describe("github N3 orgs teams hooks", () => {
-  test("manifest is v0.53.0 with 556 ops and the N3 effect policies", () => {
-    expect(manifest.version).toBe("0.53.0");
-    expect(Object.keys(manifest.operations).length).toBe(556);
+  test("manifest is v0.54.0 with 570 ops and the N3 effect policies", () => {
+    expect(manifest.version).toBe("0.54.0");
+    expect(Object.keys(manifest.operations).length).toBe(570);
     for (const key of N3_READS) {
       const op = manifest.operations[key] as Record<string, unknown>;
       expect(op.kind).toBe("action");
@@ -79,7 +79,7 @@ describe("github N3 orgs teams hooks", () => {
     expect(manifest.operations["contents.delete"]).toBeUndefined();
     expect(manifest.operations["contents.push_files"]).toBeUndefined();
     expect(manifest.operations["repos.delete"]).toBeDefined();
-    expect(manifest.operations["branches.protection.update"]).toBeUndefined();
+    expect(manifest.operations["branches.protection.update"]).toBeDefined();
     expect(manifest.operations["repos.contents.put"].effectPolicy).toBe("Reconcile");
     expect(manifest.operations["repos.contents.delete"].effectPolicy).toBe("Idempotent");
     expect(manifest.operations["repos.contents.push_files"].reconcile).toBe("commits.get");

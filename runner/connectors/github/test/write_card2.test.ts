@@ -46,10 +46,10 @@ function empty(status: number) {
 }
 
 describe("github write card 2 repo writes", () => {
-  test("version is 0.53.0 at 556 ops with the write breakdown", () => {
-    expect(manifest.version).toBe("0.53.0");
+  test("version is 0.54.0 at 570 ops with the write breakdown", () => {
+    expect(manifest.version).toBe("0.54.0");
     const ops = manifest.operations as Record<string, Record<string, unknown>>;
-    expect(Object.keys(ops)).toHaveLength(556);
+    expect(Object.keys(ops)).toHaveLength(570);
     const kinds = { action: 0, sync: 0, webhook: 0 };
     const side = { read: 0, write: 0, absent: 0 };
     for (const op of Object.values(ops)) {
@@ -60,8 +60,8 @@ describe("github write card 2 repo writes", () => {
         else side.absent += 1;
       }
     }
-    expect(kinds).toEqual({ action: 506, sync: 4, webhook: 46 });
-    expect(side).toEqual({ read: 328, write: 163, absent: 15 });
+    expect(kinds).toEqual({ action: 520, sync: 4, webhook: 46 });
+    expect(side).toEqual({ read: 328, write: 177, absent: 15 });
     expect(String(ops["repos.topics.get"].description)).toContain("GET /repos/{owner}/{repo}/topics");
     expect(String(ops["repos.subscription.get"].description)).toContain("GET /repos/{owner}/{repo}/subscription");
     expect(String(ops["repos.interaction_limits.get"].description)).toContain("GET /repos/{owner}/{repo}/interaction-limits");
