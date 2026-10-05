@@ -1,7 +1,7 @@
 {
   "key": "greenhouse",
   "name": "Greenhouse",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "runtime": "bun",
   "categories": [
     "ats-recruitment"
@@ -572,6 +572,816 @@
           }
         }
       }
+    },
+    "applications.hire": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Hire application",
+      "description": "Mark an application as hired via POST /v3/applications/{id}/hire (204). EffectPolicy Reconcile observes via applications.get.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Harvest application id."
+          },
+          "startDate": {
+            "type": "string",
+            "description": "Optional start date (ISO)."
+          },
+          "openingId": {
+            "type": [
+              "string",
+              "integer"
+            ],
+            "description": "Optional opening id to close."
+          },
+          "closeReasonId": {
+            "type": [
+              "string",
+              "integer"
+            ],
+            "description": "Optional close reason id."
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "application"
+        ],
+        "properties": {
+          "application": {
+            "type": [
+              "object",
+              "null"
+            ]
+          }
+        }
+      },
+      "effectPolicy": "Reconcile",
+      "reconcile": "applications.get"
+    },
+    "applications.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Update application",
+      "description": "Patch application attribution/metadata via PATCH /v3/applications/{id}. EffectPolicy Reconcile observes via applications.get.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Harvest application id."
+          },
+          "sourceId": {
+            "type": [
+              "string",
+              "integer"
+            ],
+            "description": "Optional source id."
+          },
+          "referrerId": {
+            "type": [
+              "string",
+              "integer"
+            ],
+            "description": "Optional referrer id."
+          },
+          "recruiterId": {
+            "type": [
+              "string",
+              "integer"
+            ],
+            "description": "Optional recruiter user id."
+          },
+          "coordinatorId": {
+            "type": [
+              "string",
+              "integer"
+            ],
+            "description": "Optional coordinator user id."
+          },
+          "prospectPoolId": {
+            "type": [
+              "string",
+              "integer"
+            ],
+            "description": "Optional prospect pool id."
+          },
+          "prospectStageId": {
+            "type": [
+              "string",
+              "integer"
+            ],
+            "description": "Optional prospect stage id."
+          },
+          "customFields": {
+            "type": "object",
+            "description": "Optional custom fields map."
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "application"
+        ],
+        "properties": {
+          "application": {
+            "type": [
+              "object",
+              "null"
+            ]
+          }
+        }
+      },
+      "effectPolicy": "Reconcile",
+      "reconcile": "applications.get"
+    },
+    "application_stages.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List application stages",
+      "description": "List application stage history rows via GET /v3/application_stages (agent tool).",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "applicationIds": {
+            "type": [
+              "string",
+              "array"
+            ],
+            "description": "Optional Harvest ids filter (comma string or array)."
+          },
+          "jobInterviewStageIds": {
+            "type": [
+              "string",
+              "array"
+            ],
+            "description": "Optional Harvest ids filter (comma string or array)."
+          },
+          "current": {
+            "type": "boolean",
+            "description": "When true, only current stages."
+          },
+          "ids": {
+            "type": [
+              "string",
+              "array"
+            ],
+            "description": "Optional Harvest ids filter (comma string or array)."
+          },
+          "perPage": {
+            "type": "integer",
+            "description": "Page size."
+          },
+          "cursor": {
+            "type": "string",
+            "description": "Harvest v3 cursor from Link rel=next."
+          }
+        },
+        "required": []
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {}
+      }
+    },
+    "rejection_reasons.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List rejection reasons",
+      "description": "List rejection reasons via GET /v3/rejection_reasons (agent tool).",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "includeDefaults": {
+            "type": "boolean"
+          },
+          "ids": {
+            "type": [
+              "string",
+              "array"
+            ],
+            "description": "Optional Harvest ids filter (comma string or array)."
+          },
+          "perPage": {
+            "type": "integer",
+            "description": "Page size."
+          },
+          "cursor": {
+            "type": "string",
+            "description": "Harvest v3 cursor from Link rel=next."
+          }
+        },
+        "required": []
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {}
+      }
+    },
+    "rejection_details.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List rejection details",
+      "description": "List rejection details via GET /v3/rejection_details (agent tool).",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "applicationIds": {
+            "type": [
+              "string",
+              "array"
+            ],
+            "description": "Optional Harvest ids filter (comma string or array)."
+          },
+          "rejectionReasonIds": {
+            "type": [
+              "string",
+              "array"
+            ],
+            "description": "Optional Harvest ids filter (comma string or array)."
+          },
+          "ids": {
+            "type": [
+              "string",
+              "array"
+            ],
+            "description": "Optional Harvest ids filter (comma string or array)."
+          },
+          "perPage": {
+            "type": "integer",
+            "description": "Page size."
+          },
+          "cursor": {
+            "type": "string",
+            "description": "Harvest v3 cursor from Link rel=next."
+          }
+        },
+        "required": []
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {}
+      }
+    },
+    "notes.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Create note",
+      "description": "Create a candidate note/email/activity via POST /v3/notes. Visibility create enums: admin_only|private|public. Effect keys omitted (no note.get).",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "candidateId": {
+            "type": [
+              "string",
+              "integer"
+            ],
+            "description": "Candidate id."
+          },
+          "body": {
+            "type": "string",
+            "description": "Note body."
+          },
+          "visibility": {
+            "type": "string",
+            "enum": [
+              "admin_only",
+              "private",
+              "public"
+            ],
+            "description": "Create-time visibility."
+          },
+          "noteType": {
+            "type": "string",
+            "enum": [
+              "NOTE",
+              "EMAIL",
+              "ACTIVITY"
+            ],
+            "description": "Note classification."
+          },
+          "applicationId": {
+            "type": [
+              "string",
+              "integer"
+            ],
+            "description": "Optional application id."
+          },
+          "subject": {
+            "type": "string",
+            "description": "Subject (required for EMAIL)."
+          },
+          "userId": {
+            "type": [
+              "string",
+              "integer"
+            ],
+            "description": "Optional author user id."
+          },
+          "emailFrom": {
+            "type": [
+              "string",
+              "array"
+            ],
+            "description": "EMAIL From addresses."
+          },
+          "emailTo": {
+            "type": [
+              "string",
+              "array"
+            ],
+            "description": "EMAIL To addresses."
+          },
+          "emailCc": {
+            "type": [
+              "string",
+              "array"
+            ],
+            "description": "EMAIL Cc addresses (required array for EMAIL, may be empty)."
+          }
+        },
+        "required": [
+          "candidateId",
+          "body",
+          "visibility",
+          "noteType"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {}
+      }
+    },
+    "notes.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List notes",
+      "description": "List notes via GET /v3/notes (agent tool). List visibility filter uses *_visible enums.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "candidateIds": {
+            "type": [
+              "string",
+              "array"
+            ],
+            "description": "Optional Harvest ids filter (comma string or array)."
+          },
+          "applicationIds": {
+            "type": [
+              "string",
+              "array"
+            ],
+            "description": "Optional Harvest ids filter (comma string or array)."
+          },
+          "userIds": {
+            "type": [
+              "string",
+              "array"
+            ],
+            "description": "Optional Harvest ids filter (comma string or array)."
+          },
+          "type": {
+            "type": "string",
+            "description": "Optional note type filter."
+          },
+          "visibility": {
+            "type": "string",
+            "enum": [
+              "admin_only_visible",
+              "privately_visible",
+              "publicly_visible"
+            ],
+            "description": "List visibility filter (not create enums)."
+          },
+          "ids": {
+            "type": [
+              "string",
+              "array"
+            ],
+            "description": "Optional Harvest ids filter (comma string or array)."
+          },
+          "perPage": {
+            "type": "integer",
+            "description": "Page size."
+          },
+          "cursor": {
+            "type": "string",
+            "description": "Harvest v3 cursor from Link rel=next."
+          }
+        },
+        "required": []
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {}
+      }
+    },
+    "candidate_tags.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List candidate tags",
+      "description": "List org candidate-tag dictionary via GET /v3/candidate_tags (agent tool).",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "ids": {
+            "type": [
+              "string",
+              "array"
+            ],
+            "description": "Optional Harvest ids filter (comma string or array)."
+          },
+          "perPage": {
+            "type": "integer",
+            "description": "Page size."
+          },
+          "cursor": {
+            "type": "string",
+            "description": "Harvest v3 cursor from Link rel=next."
+          }
+        },
+        "required": []
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {}
+      }
+    },
+    "candidates.apply_tag": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Apply candidate tag",
+      "description": "Apply a tag to a candidate via POST /v3/applied_candidate_tags. Input id is the candidate id (Reconcile \u2192 candidates.get).",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": [
+              "string",
+              "integer"
+            ],
+            "description": "Candidate id (Reconcile-safe)."
+          },
+          "candidateTagId": {
+            "type": [
+              "string",
+              "integer"
+            ],
+            "description": "Candidate tag dictionary id."
+          }
+        },
+        "required": [
+          "id",
+          "candidateTagId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {}
+      },
+      "effectPolicy": "Reconcile",
+      "reconcile": "candidates.get"
+    },
+    "candidates.remove_tag": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Remove applied candidate tag",
+      "description": "Detach an applied candidate tag via DELETE /v3/applied_candidate_tags/{id}. id is the applied-tag row id.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Applied candidate tag row id."
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {}
+      }
+    },
+    "interviews.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Create interview",
+      "description": "Schedule an interview via POST /v3/interviews. Each interviewer requires responseStatus plus exactly one of userId/email/employeeId. Effect keys omitted.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "applicationId": {
+            "type": [
+              "string",
+              "integer"
+            ],
+            "description": "Application id."
+          },
+          "jobInterviewId": {
+            "type": [
+              "string",
+              "integer"
+            ],
+            "description": "Job interview slot id."
+          },
+          "interviewers": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            },
+            "description": "Interviewer panel."
+          },
+          "startsAt": {
+            "type": "string",
+            "description": "Start time ISO."
+          },
+          "endsAt": {
+            "type": "string",
+            "description": "End time ISO."
+          },
+          "externalEventId": {
+            "type": "string",
+            "description": "External calendar event id."
+          },
+          "location": {
+            "type": "string",
+            "description": "Optional location."
+          },
+          "videoConferencingUrl": {
+            "type": "string",
+            "description": "Optional video URL."
+          }
+        },
+        "required": [
+          "applicationId",
+          "jobInterviewId",
+          "interviewers",
+          "startsAt",
+          "endsAt",
+          "externalEventId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {}
+      }
+    },
+    "interviews.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Update interview",
+      "description": "Patch a scheduled interview via PATCH /v3/interviews/{id}. Effect keys omitted.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Interview id."
+          },
+          "startsAt": {
+            "type": "string",
+            "description": "Optional start time."
+          },
+          "endsAt": {
+            "type": "string",
+            "description": "Optional end time."
+          },
+          "location": {
+            "type": "string",
+            "description": "Optional location."
+          },
+          "videoConferencingUrl": {
+            "type": "string",
+            "description": "Optional video URL."
+          },
+          "interviewers": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "externalEventId": {
+            "type": "string",
+            "description": "Optional external event id."
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {}
+      }
+    },
+    "interviews.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Delete interview",
+      "description": "Cancel/delete an interview via DELETE /v3/interviews/{id}.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Interview id."
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {}
+      }
+    },
+    "offers.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Create offer",
+      "description": "Create an offer via POST /v3/offers. EffectPolicy Idempotent observes via offers.get (response top-level id).",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "applicationId": {
+            "type": [
+              "string",
+              "integer"
+            ],
+            "description": "Application id."
+          },
+          "startsOn": {
+            "type": "string",
+            "description": "Optional starts_on date."
+          },
+          "customFields": {
+            "type": "object",
+            "description": "Optional custom fields."
+          }
+        },
+        "required": [
+          "applicationId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {}
+      },
+      "effectPolicy": "Idempotent",
+      "reconcile": "offers.get"
+    },
+    "jobs.list_internal": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List jobs (Harvest internal)",
+      "description": "List Harvest jobs via GET /v3/jobs (agent tool). Singular departmentId/officeId filters. Distinct from public boards jobs.list.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "status": {
+            "type": "string",
+            "description": "Optional job status."
+          },
+          "departmentId": {
+            "type": [
+              "string",
+              "integer"
+            ],
+            "description": "Singular department_id filter."
+          },
+          "officeId": {
+            "type": [
+              "string",
+              "integer"
+            ],
+            "description": "Singular office_id filter."
+          },
+          "requisitionId": {
+            "type": "string",
+            "description": "Optional requisition id."
+          },
+          "openedAt": {
+            "type": "string",
+            "description": "Optional opened_at filter."
+          },
+          "closedAt": {
+            "type": "string",
+            "description": "Optional closed_at filter."
+          },
+          "confidential": {
+            "type": "boolean"
+          },
+          "ids": {
+            "type": [
+              "string",
+              "array"
+            ],
+            "description": "Optional Harvest ids filter (comma string or array)."
+          },
+          "perPage": {
+            "type": "integer",
+            "description": "Page size."
+          },
+          "cursor": {
+            "type": "string",
+            "description": "Harvest v3 cursor from Link rel=next."
+          }
+        },
+        "required": []
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {}
+      }
     }
   },
   "models": [
@@ -586,6 +1396,12 @@
     "department",
     "office",
     "source",
-    "close_reason"
+    "close_reason",
+    "application_stage",
+    "rejection_reason",
+    "rejection_detail",
+    "note",
+    "candidate_tag",
+    "applied_candidate_tag"
   ]
 }
