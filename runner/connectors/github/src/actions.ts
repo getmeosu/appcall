@@ -444,6 +444,23 @@ import {
   validateListUserProjectsInput,
 } from "./card19_reads";
 
+import {
+  createWriteCard1Client,
+  validateAssignOrgRoleInput,
+  validateBlockOrgUserInput,
+  validateDeleteOrgInput,
+  validateRemoveAllOrgRolesInput,
+  validateRemoveOrgMemberInput,
+  validateRemoveOrgRoleInput,
+  validateDeleteOrgPropertySchemaInput,
+  validateDeleteOrgInteractionLimitsInput,
+  validateRemoveOutsideCollaboratorInput,
+  validateSetOrgInteractionLimitsInput,
+  validateUnblockOrgUserInput,
+  validateUnlockOrgMigrationRepoInput,
+  validateUpdateOrgInput,
+} from "./write_card1";
+
 
 
 import {
@@ -6531,6 +6548,147 @@ export function listUserProjects(input: unknown): Record<string, unknown> | Prom
     });
   }
   return { connector: "github", action: "users.projects_v2.list", source: "connector", validated: validateListUserProjectsInput(input) };
+}
+
+// ─── write card 1: organization writes ───────────────────────────────────────
+
+function liveWriteCard1Client(input: Record<string, unknown>, operation: string) {
+  const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
+  return createWriteCard1Client({
+    accessToken: input.accessToken as string,
+    fetch: fetchFn,
+    githubClient: createGitHubClient({ accessToken: input.accessToken as string, fetch: fetchFn, operation }),
+  });
+}
+
+export function assignOrgRoleToUser(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveWriteCard1Client(input, "orgs.organization_roles.users.assign").assignOrgRole(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "orgs.organization_roles.users.assign", source: "connector", assigned: result.assigned, org: result.org, username: result.username, roleId: result.roleId };
+    });
+  }
+  return { connector: "github", action: "orgs.organization_roles.users.assign", source: "connector", validated: validateAssignOrgRoleInput(input) };
+}
+
+export function blockOrgUser(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveWriteCard1Client(input, "orgs.blocks.block").blockOrgUser(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "orgs.blocks.block", source: "connector", blocked: result.blocked, org: result.org, username: result.username };
+    });
+  }
+  return { connector: "github", action: "orgs.blocks.block", source: "connector", validated: validateBlockOrgUserInput(input) };
+}
+
+export function deleteOrg(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveWriteCard1Client(input, "orgs.delete").deleteOrg(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "orgs.delete", source: "connector", deleted: result.deleted, org: result.org };
+    });
+  }
+  return { connector: "github", action: "orgs.delete", source: "connector", validated: validateDeleteOrgInput(input) };
+}
+
+export function removeAllOrgRolesFromUser(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveWriteCard1Client(input, "orgs.organization_roles.users.remove_all").removeAllOrgRoles(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "orgs.organization_roles.users.remove_all", source: "connector", removed: result.removed, org: result.org, username: result.username };
+    });
+  }
+  return { connector: "github", action: "orgs.organization_roles.users.remove_all", source: "connector", validated: validateRemoveAllOrgRolesInput(input) };
+}
+
+export function removeOrgMember(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveWriteCard1Client(input, "orgs.members.remove").removeOrgMember(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "orgs.members.remove", source: "connector", removed: result.removed, org: result.org, username: result.username };
+    });
+  }
+  return { connector: "github", action: "orgs.members.remove", source: "connector", validated: validateRemoveOrgMemberInput(input) };
+}
+
+export function removeOrgRoleFromUser(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveWriteCard1Client(input, "orgs.organization_roles.users.remove").removeOrgRole(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "orgs.organization_roles.users.remove", source: "connector", removed: result.removed, org: result.org, username: result.username, roleId: result.roleId };
+    });
+  }
+  return { connector: "github", action: "orgs.organization_roles.users.remove", source: "connector", validated: validateRemoveOrgRoleInput(input) };
+}
+
+export function deleteOrgPropertySchema(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveWriteCard1Client(input, "orgs.properties.schema.delete").deleteOrgPropertySchema(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "orgs.properties.schema.delete", source: "connector", deleted: result.deleted, org: result.org, customPropertyName: result.customPropertyName };
+    });
+  }
+  return { connector: "github", action: "orgs.properties.schema.delete", source: "connector", validated: validateDeleteOrgPropertySchemaInput(input) };
+}
+
+export function deleteOrgInteractionLimits(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveWriteCard1Client(input, "orgs.interaction_limits.delete").deleteOrgInteractionLimits(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "orgs.interaction_limits.delete", source: "connector", deleted: result.deleted, org: result.org };
+    });
+  }
+  return { connector: "github", action: "orgs.interaction_limits.delete", source: "connector", validated: validateDeleteOrgInteractionLimitsInput(input) };
+}
+
+export function removeOutsideCollaborator(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveWriteCard1Client(input, "orgs.outside_collaborators.remove").removeOutsideCollaborator(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "orgs.outside_collaborators.remove", source: "connector", removed: result.removed, org: result.org, username: result.username };
+    });
+  }
+  return { connector: "github", action: "orgs.outside_collaborators.remove", source: "connector", validated: validateRemoveOutsideCollaboratorInput(input) };
+}
+
+export function setOrgInteractionLimits(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveWriteCard1Client(input, "orgs.interaction_limits.set").setOrgInteractionLimits(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "orgs.interaction_limits.set", source: "connector", limits: result.limits };
+    });
+  }
+  return { connector: "github", action: "orgs.interaction_limits.set", source: "connector", validated: validateSetOrgInteractionLimitsInput(input) };
+}
+
+export function unblockOrgUser(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveWriteCard1Client(input, "orgs.blocks.unblock").unblockOrgUser(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "orgs.blocks.unblock", source: "connector", unblocked: result.unblocked, org: result.org, username: result.username };
+    });
+  }
+  return { connector: "github", action: "orgs.blocks.unblock", source: "connector", validated: validateUnblockOrgUserInput(input) };
+}
+
+export function unlockOrgMigrationRepo(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveWriteCard1Client(input, "orgs.migrations.repos.unlock").unlockOrgMigrationRepo(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "orgs.migrations.repos.unlock", source: "connector", unlocked: result.unlocked, org: result.org, migrationId: result.migrationId, repoName: result.repoName };
+    });
+  }
+  return { connector: "github", action: "orgs.migrations.repos.unlock", source: "connector", validated: validateUnlockOrgMigrationRepoInput(input) };
+}
+
+export function updateOrg(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveWriteCard1Client(input, "orgs.update").updateOrg(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "orgs.update", source: "connector", organization: result.organization };
+    });
+  }
+  return { connector: "github", action: "orgs.update", source: "connector", validated: validateUpdateOrgInput(input) };
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
