@@ -6801,9 +6801,11 @@ export function listRepoPullComments(input: unknown): Record<string, unknown> | 
 
 function liveCard19Client(input: Record<string, unknown>, operation: string) {
   const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
+  const sleepFn = typeof input.sleep === "function" ? input.sleep as (ms: number) => Promise<void> : undefined;
   return createCard19ReadsClient({
     accessToken: input.accessToken as string,
     fetch: fetchFn,
+    sleep: sleepFn,
     githubClient: createGitHubClient({ accessToken: input.accessToken as string, fetch: fetchFn, operation }),
   });
 }

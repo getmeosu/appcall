@@ -36,8 +36,8 @@ const READS = [
 ] as const;
 
 describe("github card-10 reads", () => {
-  test("manifest stays v0.78.0 at 812 ops and these reads omit effect policy", () => {
-    expect(manifest.version).toBe("0.78.0");
+  test("manifest stays v0.78.1 at 812 ops and these reads omit effect policy", () => {
+    expect(manifest.version).toBe("0.78.1");
     expect(manifest.version).not.toBe("0.37.0");
     expect(Object.keys(manifest.operations).length).toBe(812);
     for (const key of READS) {

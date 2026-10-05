@@ -32,8 +32,8 @@ const pkg = {
 };
 
 describe("github card8 app and package reads", () => {
-  test("version stays 0.78.0 and the five reads omit effect fields", () => {
-    expect(manifest.version).toBe("0.78.0");
+  test("version stays 0.78.1 and the five reads omit effect fields", () => {
+    expect(manifest.version).toBe("0.78.1");
     expect(READS).toHaveLength(5);
     expect(Object.keys(manifest.operations)).toHaveLength(812);
     for (const key of READS) {

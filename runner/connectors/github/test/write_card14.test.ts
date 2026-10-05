@@ -54,8 +54,8 @@ function html(status: number, body: string) {
 }
 
 describe("github write card 14 org permissions pages markdown writes", () => {
-  test("version is 0.78.0 at 812 ops with the write breakdown", () => {
-    expect(manifest.version).toBe("0.78.0");
+  test("version is 0.78.1 at 812 ops with the write breakdown", () => {
+    expect(manifest.version).toBe("0.78.1");
     const ops = manifest.operations as Record<string, Record<string, unknown>>;
     expect(Object.keys(ops)).toHaveLength(812);
     const kinds = { action: 0, sync: 0, webhook: 0 };

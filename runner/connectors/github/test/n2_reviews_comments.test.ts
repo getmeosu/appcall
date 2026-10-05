@@ -44,7 +44,7 @@ const N2_RECONCILE = [
 
 describe("github N2 reviews comments timeline checks", () => {
   test("manifest wires exactly the N2 effect policies on the N1 tip", () => {
-    expect(manifest.version).toBe("0.78.0");
+    expect(manifest.version).toBe("0.78.1");
     expect(Object.keys(manifest.operations).length).toBe(812);
     for (const key of N2_READS) {
       const op = manifest.operations[key] as Record<string, unknown>;

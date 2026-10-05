@@ -44,8 +44,8 @@ const user = { id: 1, login: "octocat", html_url: "https://github.com/octocat", 
 const team = { id: 2, name: "owners", slug: "owners", html_url: "https://github.com/orgs/acme/teams/owners" };
 
 describe("github card5 secret, protection, and project field reads", () => {
-  test("version is 0.78.0 and the 13 reads omit effect fields", () => {
-    expect(manifest.version).toBe("0.78.0");
+  test("version is 0.78.1 and the 13 reads omit effect fields", () => {
+    expect(manifest.version).toBe("0.78.1");
     expect(manifest.version).not.toBe("0.32.0");
     expect(READS).toHaveLength(13);
     expect(Object.keys(manifest.operations)).toHaveLength(812);

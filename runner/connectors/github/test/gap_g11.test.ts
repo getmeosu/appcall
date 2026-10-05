@@ -12,6 +12,7 @@ import {
   getGraphqlResource,
   getGraphqlTopic,
   getGraphqlViewer,
+  getMetaRoot,
   listGraphqlCodesOfConduct,
   listGraphqlLicenses,
   listGraphqlSecurityAdvisories,
@@ -72,8 +73,8 @@ function gqlBody(data: unknown, errors?: unknown[]) {
 }
 
 describe("github gap G11 GraphQL reads + enrichment", () => {
-  test("version is 0.78.0 at 812 ops with the read/write breakdown", () => {
-    expect(manifest.version).toBe("0.78.0");
+  test("version is 0.78.1 at 812 ops with the read/write breakdown", () => {
+    expect(manifest.version).toBe("0.78.1");
     const ops = manifest.operations as Record<string, Record<string, unknown>>;
     expect(Object.keys(ops)).toHaveLength(812);
     const kinds = { action: 0, sync: 0, webhook: 0 };
@@ -157,6 +158,20 @@ describe("github gap G11 GraphQL reads + enrichment", () => {
     const missing = recorder([json(gqlBody(null, [{ type: "NOT_FOUND", message: "Could not resolve" }]))]);
     expect(await getGraphqlNode({ accessToken: "t", fetch: missing.fetch, id: "missing" }))
       .toMatchObject({ found: false, node: null });
+  });
+
+  test("REST fetchJSON does not send X-Github-Next-Global-ID", async () => {
+    const rest = recorder([json({ current_user_url: "https://api.github.com/user" })]);
+    expect(await getMetaRoot({ accessToken: "t", fetch: rest.fetch }))
+      .toMatchObject({ root: { current_user_url: "https://api.github.com/user" } });
+    expect(rest.seen).toHaveLength(1);
+    expect(rest.seen[0].method).toBe("GET");
+    expect(rest.seen[0].url).toBe("https://api.github.com/");
+    expect(rest.seen[0].url).not.toContain("/graphql");
+    const headers = new Headers(rest.seen[0].headers);
+    expect(headers.get("X-Github-Next-Global-ID")).toBeNull();
+    expect(headers.get("Authorization")).toBe("Bearer t");
+    expect(headers.get("X-GitHub-Api-Version")).toBe("2022-11-28");
   });
 
   test("viewer.get selects status including organization id", async () => {
