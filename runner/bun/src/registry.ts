@@ -1296,6 +1296,7 @@ import {
 
 import { createConnectorHttpClient, type ConnectorHttpClient } from "./http";
 import { withDeclarativeConnectors } from "./declarative/loader";
+import { buildInputValidators, validateDispatchInput } from "./input_schema";
 
 type Manifest = {
   key: string;
@@ -3090,6 +3091,9 @@ export function createConnectorRegistry(input: {
   const descriptions = buildConnectorDescriptions(input.manifests);
   const operationSpecs = buildConnectorOperationSpecs(input.manifests);
   const connectorNetworks = buildConnectorNetworks(input.manifests);
+  // Every inputSchema is checked here; each operation's validator is compiled
+  // once on first dispatch and cached (input_schema.ts).
+  const inputValidators = buildInputValidators(input.manifests);
 
   return {
     describe(connectorKey: string): Record<string, unknown> | undefined {
@@ -3181,6 +3185,17 @@ export function createConnectorRegistry(input: {
       if (!handler) {
         return { ok: false, code: "UNKNOWN_ACTION", message: "Action is not registered." };
       }
+      // Validate against the manifest inputSchema before any handler runs, so
+      // a hand-written handler gets the same contract as a compiled one. A
+      // healthcheck is exempt: its input is the stored credential bundle (sent
+      // unvalidated by the control plane's connection test), not caller
+      // arguments, so a caller-argument schema does not describe it.
+      if (action !== "healthcheck") {
+        const schemaFailure = validateDispatchInput(inputValidators, connectorKey, action, inputValue);
+        if (schemaFailure) {
+          return schemaFailure;
+        }
+      }
       if (action === "healthcheck") {
         try {
           return {
@@ -3260,6 +3275,10 @@ export function createConnectorRegistry(input: {
       const handler = input.syncs[connectorKey][sync];
       if (!handler) {
         return { ok: false, code: "UNKNOWN_SYNC", message: "Sync is not registered." };
+      }
+      const schemaFailure = validateDispatchInput(inputValidators, connectorKey, sync, inputValue);
+      if (schemaFailure) {
+        return schemaFailure;
       }
       return { ok: true, output: runExecution(() => boundedOutput(handler(inputValue), operationSpec.maxResponseBytes), operationSpec.timeoutMs) };
     },
