@@ -36,6 +36,7 @@
  */
 import { assertSafePathSegment } from "../../_shared/jobboard";
 import { createApiClient } from "./http";
+import { candidateIdSegment, jobIdSegment } from "./ids";
 import { normalizeCandidate, type NormalizedCandidate } from "./objects";
 
 export interface SmartRecruitersG1AuthInput {
@@ -91,6 +92,14 @@ function requiredString(value: unknown, field: string): string {
 function seg(value: unknown, field: string): string {
   if (typeof value !== "string") throw new Error(`${field} is required`);
   return assertSafePathSegment(value, field);
+}
+
+function candSeg(value: unknown, field = "id"): string {
+  return candidateIdSegment(value, field);
+}
+
+function jobSeg(value: unknown, field = "jobId"): string {
+  return jobIdSegment(value, field);
 }
 
 function totalOf(raw: Record<string, unknown>, items: unknown[]): number {
@@ -246,7 +255,7 @@ export async function executeCandidatesCreate(
 export async function executeApplicationsCreate(
   input: SmartRecruitersG1AuthInput & CandidateCreateFields & { jobId: string },
 ): Promise<CandidateCreatedOutput & { jobId: string }> {
-  const jobId = seg(input.jobId, "jobId");
+  const jobId = jobSeg(input.jobId, "jobId");
   const body = buildCandidateInput(input);
   const raw = await client(input, "applications.create").request("POST", `/jobs/${jobId}/candidates`, body);
   return { ...createdCandidate(raw), jobId };
@@ -267,7 +276,7 @@ export async function executeCandidatesUpdate(
     phoneNumber?: string;
   },
 ): Promise<{ candidate: NormalizedCandidate | null }> {
-  const id = seg(input.id, "id");
+  const id = candSeg(input.id, "id");
   const body: Record<string, unknown> = {};
   for (const field of CANDIDATE_UPDATE_FIELDS) {
     const value = optionalString((input as Record<string, unknown>)[field], field);
@@ -329,8 +338,8 @@ export function normalizeApplication(raw: unknown, candidateId: string, jobId: s
 export async function executeApplicationsGet(
   input: SmartRecruitersG1AuthInput & { id: string; jobId: string },
 ): Promise<{ application: NormalizedApplication | null }> {
-  const id = seg(input.id, "id");
-  const jobId = seg(input.jobId, "jobId");
+  const id = candSeg(input.id, "id");
+  const jobId = jobSeg(input.jobId, "jobId");
   const raw = await client(input, "applications.get").getJSON(`/candidates/${id}/jobs/${jobId}`);
   return { application: normalizeApplication(raw, id, jobId) };
 }
@@ -350,8 +359,8 @@ export async function executeApplicationsUpdateStatus(
     reason?: string;
   },
 ): Promise<{ ok: true }> {
-  const id = seg(input.id, "id");
-  const jobId = seg(input.jobId, "jobId");
+  const id = candSeg(input.id, "id");
+  const jobId = jobSeg(input.jobId, "jobId");
   if (typeof input.status !== "string" || !STATUS_SET.has(input.status)) {
     throw new Error(`status must be one of ${CANDIDATE_STATUSES.join(", ")}`);
   }
@@ -384,8 +393,8 @@ export interface StatusHistoryEntry {
 export async function executeApplicationsStatusHistory(
   input: SmartRecruitersG1AuthInput & { id: string; jobId: string },
 ): Promise<{ history: StatusHistoryEntry[]; total: number }> {
-  const id = seg(input.id, "id");
-  const jobId = seg(input.jobId, "jobId");
+  const id = candSeg(input.id, "id");
+  const jobId = jobSeg(input.jobId, "jobId");
   const raw = await client(input, "applications.status_history").getJSON(
     `/candidates/${id}/jobs/${jobId}/status/history`,
   );
@@ -413,14 +422,14 @@ function parseTags(raw: unknown): { tags: string[] } {
 export async function executeCandidatesTagsGet(
   input: SmartRecruitersG1AuthInput & { id: string },
 ): Promise<{ tags: string[] }> {
-  const id = seg(input.id, "id");
+  const id = candSeg(input.id, "id");
   return parseTags(await client(input, "candidates.tags.get").getJSON(`/candidates/${id}/tags`));
 }
 
 export async function executeCandidatesTagsAdd(
   input: SmartRecruitersG1AuthInput & { id: string; tags: string[] },
 ): Promise<{ tags: string[] }> {
-  const id = seg(input.id, "id");
+  const id = candSeg(input.id, "id");
   const tags = tagList(input.tags, "tags", 1);
   return parseTags(await client(input, "candidates.tags.add").request("POST", `/candidates/${id}/tags`, { tags }));
 }
@@ -428,7 +437,7 @@ export async function executeCandidatesTagsAdd(
 export async function executeCandidatesTagsReplace(
   input: SmartRecruitersG1AuthInput & { id: string; tags: string[] },
 ): Promise<{ tags: string[] }> {
-  const id = seg(input.id, "id");
+  const id = candSeg(input.id, "id");
   const tags = tagList(input.tags, "tags", 0);
   return parseTags(await client(input, "candidates.tags.replace").request("PUT", `/candidates/${id}/tags`, { tags }));
 }
@@ -468,15 +477,15 @@ function parseAttachments(raw: unknown): { attachments: NormalizedAttachment[]; 
 export async function executeCandidatesAttachmentsList(
   input: SmartRecruitersG1AuthInput & { id: string },
 ): Promise<{ attachments: NormalizedAttachment[]; total: number }> {
-  const id = seg(input.id, "id");
+  const id = candSeg(input.id, "id");
   return parseAttachments(await client(input, "candidates.attachments.list").getJSON(`/candidates/${id}/attachments`));
 }
 
 export async function executeApplicationsAttachmentsList(
   input: SmartRecruitersG1AuthInput & { id: string; jobId: string },
 ): Promise<{ attachments: NormalizedAttachment[]; total: number }> {
-  const id = seg(input.id, "id");
-  const jobId = seg(input.jobId, "jobId");
+  const id = candSeg(input.id, "id");
+  const jobId = jobSeg(input.jobId, "jobId");
   return parseAttachments(
     await client(input, "applications.attachments.list").getJSON(`/candidates/${id}/jobs/${jobId}/attachments`),
   );
@@ -503,8 +512,8 @@ export async function executeApplicationsPropertiesGet(
     includeMultiSelect?: boolean;
   },
 ): Promise<{ properties: NormalizedProperty[] }> {
-  const id = seg(input.id, "id");
-  const jobId = seg(input.jobId, "jobId");
+  const id = candSeg(input.id, "id");
+  const jobId = jobSeg(input.jobId, "jobId");
   const qs = new URLSearchParams();
   if (input.context != null) {
     if (!CONTEXT_SET.has(input.context)) throw new Error(`context must be one of ${PROPERTY_CONTEXTS.join(", ")}`);
@@ -593,8 +602,8 @@ export function buildPropertyValues(entries: unknown): Array<{ id: string; value
 export async function executeApplicationsPropertiesUpdate(
   input: SmartRecruitersG1AuthInput & { id: string; jobId: string; properties: PropertyValueInput[] },
 ): Promise<{ ok: true; updated: number }> {
-  const id = seg(input.id, "id");
-  const jobId = seg(input.jobId, "jobId");
+  const id = candSeg(input.id, "id");
+  const jobId = jobSeg(input.jobId, "jobId");
   const body = buildPropertyValues(input.properties);
   await client(input, "applications.properties.update").request("PUT", `/candidates/${id}/jobs/${jobId}/properties`, body);
   return { ok: true, updated: body.length };
@@ -616,8 +625,8 @@ export interface ScreeningAnswer {
 export async function executeApplicationsScreeningAnswersGet(
   input: SmartRecruitersG1AuthInput & { id: string; jobId: string },
 ): Promise<{ answers: ScreeningAnswer[]; total: number }> {
-  const id = seg(input.id, "id");
-  const jobId = seg(input.jobId, "jobId");
+  const id = candSeg(input.id, "id");
+  const jobId = jobSeg(input.jobId, "jobId");
   const raw = await client(input, "applications.screening_answers.get").getJSON(
     `/candidates/${id}/jobs/${jobId}/screening-answers`,
   );

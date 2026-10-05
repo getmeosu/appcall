@@ -178,6 +178,14 @@ describe("SmartRecruiters candidates.get sync", () => {
     expect(calls).toHaveLength(0);
   });
 
+  test("accepts sr-candidate: prefix and strips it before the upstream path", async () => {
+    const { calls, impl } = stubFetch(JSON.stringify(candidateGetFixture));
+    const result = await executeCandidatesGetSync({ ...auth, id: "sr-candidate:cand-001", fetch: impl });
+    expect(calls).toHaveLength(1);
+    expect(new URL(calls[0].url).pathname).toBe("/candidates/cand-001");
+    expect(result.candidate?.id).toBe("sr-candidate:cand-001");
+  });
+
   test("classifies upstream errors", async () => {
     const { impl } = stubFetch("{}", { status: 404 });
     await expect(
@@ -276,6 +284,38 @@ describe("SmartRecruiters jobs.get sync", () => {
     const { calls, impl } = stubFetch("{}");
     await expect(executeJobsGetSync({ ...auth, id: "", fetch: impl })).rejects.toThrow(/id/);
     expect(calls).toHaveLength(0);
+  });
+
+  test("raw and sr-job:-prefixed ids produce the identical request URL", async () => {
+    const raw = stubFetch(JSON.stringify(jobGetFixture));
+    await executeJobsGetSync({ ...auth, id: "job-100", fetch: raw.impl });
+    const pref = stubFetch(JSON.stringify(jobGetFixture));
+    await executeJobsGetSync({ ...auth, id: "sr-job:job-100", fetch: pref.impl });
+    expect(String(pref.calls[0].url)).toBe(String(raw.calls[0].url));
+  });
+
+  test("rejects unsafe ids (raw or prefixed) before fetch", async () => {
+    for (const bad of ["../x", "a/b", "sr-job:", "sr-job:../x", "sr-job:a/b"]) {
+      const { calls, impl } = stubFetch("{}");
+      await expect(executeJobsGetSync({ ...auth, id: bad, fetch: impl })).rejects.toThrow(/id/);
+      expect(calls).toHaveLength(0);
+    }
+  });
+
+  test("rejects dot-segment ids (raw or sr-job:) before fetch", async () => {
+    for (const bad of [".", "..", "sr-job:.", "sr-job:.."]) {
+      const { calls, impl } = stubFetch("{}");
+      await expect(executeJobsGetSync({ ...auth, id: bad, fetch: impl })).rejects.toThrow("must not be a dot segment");
+      expect(calls).toHaveLength(0);
+    }
+  });
+
+  test("accepts sr-job: prefix and strips it before the upstream path", async () => {
+    const { calls, impl } = stubFetch(JSON.stringify(jobGetFixture));
+    const result = await executeJobsGetSync({ ...auth, id: "sr-job:job-100", fetch: impl });
+    expect(calls).toHaveLength(1);
+    expect(new URL(calls[0].url).pathname).toBe("/jobs/job-100");
+    expect(result.job?.id).toBe("sr-job:job-100");
   });
 
   test("classifies upstream errors", async () => {

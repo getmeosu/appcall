@@ -1226,6 +1226,23 @@ import {
   executeApplicationsScreeningAnswersGet as getSmartRecruitersScreeningAnswers,
   executeJobApplicationsGet as getSmartRecruitersJobApplication,
 } from "../../connectors/smartrecruiters/src/g1";
+import {
+  executeJobsSearch as searchSmartRecruitersJobs,
+  executeJobsCreate as createSmartRecruitersJob,
+  executeJobsUpdate as updateSmartRecruitersJob,
+  executeJobsUpdateStatus as updateSmartRecruitersJobStatus,
+  executeJobsStatusHistory as getSmartRecruitersJobStatusHistory,
+  executeJobsHiringTeamGet as getSmartRecruitersHiringTeam,
+  executeJobsHiringTeamAdd as addSmartRecruitersHiringTeamMember,
+  executeJobsHiringTeamRemove as removeSmartRecruitersHiringTeamMember,
+  executeJobsNoteGet as getSmartRecruitersJobNote,
+  executeJobsNoteUpdate as updateSmartRecruitersJobNote,
+  executeJobsPublish as publishSmartRecruitersJob,
+  executeJobsUnpublish as unpublishSmartRecruitersJob,
+  executeJobsPublicationsList as listSmartRecruitersJobPublications,
+  executeJobsPositionsList as listSmartRecruitersJobPositions,
+  executePostingsGet as getSmartRecruitersPosting,
+} from "../../connectors/smartrecruiters/src/g2";
 import recruiteeManifest from "../../connectors/recruitee/manifest.json";
 import { healthcheck as recruiteeHealthcheck } from "../../connectors/recruitee/src/healthcheck";
 import {
@@ -3292,6 +3309,21 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
       "applications.properties.update": updateSmartRecruitersApplicationProperties,
       "applications.screening_answers.get": getSmartRecruitersScreeningAnswers,
       "job_applications.get": getSmartRecruitersJobApplication,
+      "jobs.search": searchSmartRecruitersJobs,
+      "jobs.create": createSmartRecruitersJob,
+      "jobs.update": updateSmartRecruitersJob,
+      "jobs.update_status": updateSmartRecruitersJobStatus,
+      "jobs.status_history": getSmartRecruitersJobStatusHistory,
+      "jobs.hiring_team.get": getSmartRecruitersHiringTeam,
+      "jobs.hiring_team.add": addSmartRecruitersHiringTeamMember,
+      "jobs.hiring_team.remove": removeSmartRecruitersHiringTeamMember,
+      "jobs.note.get": getSmartRecruitersJobNote,
+      "jobs.note.update": updateSmartRecruitersJobNote,
+      "jobs.publish": publishSmartRecruitersJob,
+      "jobs.unpublish": unpublishSmartRecruitersJob,
+      "jobs.publications.list": listSmartRecruitersJobPublications,
+      "jobs.positions.list": listSmartRecruitersJobPositions,
+      "postings.get": getSmartRecruitersPosting,
     },
     intercom: {
       "conversations.reply": replyIntercomConversation,
