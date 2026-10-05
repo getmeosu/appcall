@@ -1,7 +1,7 @@
 {
   "key": "github",
   "name": "GitHub",
-  "version": "0.62.0",
+  "version": "0.63.0",
   "runtime": "bun",
   "categories": [
     "dev-tools"
@@ -31900,6 +31900,517 @@
         "type": "object",
         "properties": {
           "team": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "actions.org_variables.repositories.add": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 65536,
+      "sideEffect": "write",
+      "title": "Add a selected repository to an organization variable",
+      "description": "PUT /orgs/{org}/actions/variables/{name}/repositories/{repository_id}. kind=action, sideEffect=write. Success is 204. No effectPolicy, no reconcile, and no effect. A 404 is CONNECTOR_UPSTREAM_ERROR. Bearer auth only.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "org": {
+            "type": "string",
+            "description": "Organization login. Not case sensitive."
+          },
+          "name": {
+            "type": "string",
+            "description": "Actions variable name."
+          },
+          "repositoryId": {
+            "type": "integer",
+            "description": "Repository id to add."
+          }
+        },
+        "required": [
+          "org",
+          "name",
+          "repositoryId"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "added": {
+            "type": "boolean"
+          },
+          "org": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "repositoryId": {
+            "type": "integer"
+          }
+        }
+      }
+    },
+    "actions.runs.logs.delete": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 65536,
+      "sideEffect": "write",
+      "title": "Delete workflow run logs",
+      "description": "DELETE /repos/{owner}/{repo}/actions/runs/{run_id}/logs. kind=action, sideEffect=write. Success is 204. No effectPolicy, no reconcile, and no effect. A 404 is CONNECTOR_UPSTREAM_ERROR, not success. Bearer auth only.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "runId": {
+            "type": "integer",
+            "description": "Workflow run id."
+          }
+        },
+        "required": [
+          "owner",
+          "repo",
+          "runId"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "deleted": {
+            "type": "boolean"
+          },
+          "owner": {
+            "type": "string"
+          },
+          "repo": {
+            "type": "string"
+          },
+          "runId": {
+            "type": "integer"
+          }
+        }
+      }
+    },
+    "orgs.actions.permissions.workflow.set": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "effectPolicy": "Reconcile",
+      "reconcile": "orgs.actions.permissions.workflow.get",
+      "title": "Set organization default workflow permissions",
+      "description": "PUT /orgs/{org}/actions/permissions/workflow. kind=action, sideEffect=write. Success is 204. effectPolicy Reconcile, reconcile orgs.actions.permissions.workflow.get. A 404 is CONNECTOR_UPSTREAM_ERROR. Bearer auth only.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "org": {
+            "type": "string",
+            "description": "Organization login. Not case sensitive."
+          },
+          "defaultWorkflowPermissions": {
+            "type": "string",
+            "description": "Default GITHUB_TOKEN permission.",
+            "enum": [
+              "read",
+              "write"
+            ]
+          },
+          "canApprovePullRequestReviews": {
+            "type": "boolean",
+            "description": "Whether GitHub Actions can approve pull request reviews."
+          }
+        },
+        "required": [
+          "org",
+          "defaultWorkflowPermissions",
+          "canApprovePullRequestReviews"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "permissions": {
+            "type": "object",
+            "properties": {
+              "defaultWorkflowPermissions": {
+                "type": "string"
+              },
+              "canApprovePullRequestReviews": {
+                "type": "boolean"
+              }
+            }
+          }
+        }
+      }
+    },
+    "orgs.actions.permissions.set": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "effectPolicy": "Reconcile",
+      "reconcile": "orgs.actions.permissions.get",
+      "title": "Set organization Actions permissions",
+      "description": "PUT /orgs/{org}/actions/permissions. kind=action, sideEffect=write. Success is 204. effectPolicy Reconcile, reconcile orgs.actions.permissions.get. A 404 is CONNECTOR_UPSTREAM_ERROR. Bearer auth only.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "org": {
+            "type": "string",
+            "description": "Organization login. Not case sensitive."
+          },
+          "enabledRepositories": {
+            "type": "string",
+            "description": "Which repositories may run Actions.",
+            "enum": [
+              "all",
+              "none",
+              "selected"
+            ]
+          },
+          "allowedActions": {
+            "type": "string",
+            "description": "Which actions and reusable workflows may run.",
+            "enum": [
+              "all",
+              "local_only",
+              "selected"
+            ]
+          },
+          "shaPinningRequired": {
+            "type": "boolean",
+            "description": "Whether actions must be pinned to a full-length commit SHA."
+          }
+        },
+        "required": [
+          "org",
+          "enabledRepositories"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "permissions": {
+            "type": "object",
+            "properties": {
+              "enabledRepositories": {
+                "type": "string"
+              },
+              "allowedActions": {
+                "type": "string"
+              },
+              "shaPinningRequired": {
+                "type": "boolean"
+              }
+            }
+          }
+        }
+      }
+    },
+    "markdown.render": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Render a Markdown document",
+      "description": "POST /markdown. kind=action, sideEffect=read. Success is 200 HTML. Persists nothing and is safe to retry. No effectPolicy, no reconcile, and no effect. Bearer auth only.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string",
+            "description": "Markdown text to render as HTML."
+          },
+          "mode": {
+            "type": "string",
+            "description": "Rendering mode.",
+            "enum": [
+              "markdown",
+              "gfm"
+            ]
+          },
+          "context": {
+            "type": "string",
+            "description": "Repository context (owner/repo) for gfm mode."
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "html": {
+            "type": "string",
+            "description": "Rendered HTML."
+          }
+        }
+      }
+    },
+    "repos.pages.deployments.cancel": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 65536,
+      "sideEffect": "write",
+      "title": "Cancel a GitHub Pages deployment",
+      "description": "POST /repos/{owner}/{repo}/pages/deployments/{pages_deployment_id}/cancel. kind=action, sideEffect=write. Success is 204. No effectPolicy, no reconcile, and no effect. A 404 is CONNECTOR_UPSTREAM_ERROR. Bearer auth only.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "pagesDeploymentId": {
+            "type": [
+              "string",
+              "number"
+            ],
+            "description": "Pages deployment id or commit SHA."
+          }
+        },
+        "required": [
+          "owner",
+          "repo",
+          "pagesDeploymentId"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "cancelled": {
+            "type": "boolean"
+          },
+          "owner": {
+            "type": "string"
+          },
+          "repo": {
+            "type": "string"
+          },
+          "pagesDeploymentId": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "repos.pages.deployments.create": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Create a GitHub Pages deployment",
+      "description": "POST /repos/{owner}/{repo}/pages/deployments. kind=action, sideEffect=write. Success is 200. No effectPolicy, no reconcile, and no effect. A 404 is CONNECTOR_UPSTREAM_ERROR. Bearer auth only.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "artifactId": {
+            "type": "integer",
+            "description": "Artifact id containing the site archive."
+          },
+          "artifactUrl": {
+            "type": "string",
+            "description": "Artifact URL containing the site archive."
+          },
+          "environment": {
+            "type": "string",
+            "description": "Target environment. Defaults to github-pages."
+          },
+          "pagesBuildVersion": {
+            "type": "string",
+            "description": "Unique build version string."
+          },
+          "oidcToken": {
+            "type": "string",
+            "description": "OIDC token certifying the deployment origin."
+          }
+        },
+        "required": [
+          "owner",
+          "repo",
+          "pagesBuildVersion",
+          "oidcToken"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "deployment": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "repos.pages.create": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Create a GitHub Pages site",
+      "description": "POST /repos/{owner}/{repo}/pages. kind=action, sideEffect=write. Success is 201. No effectPolicy, no reconcile, and no effect. A 404 is CONNECTOR_UPSTREAM_ERROR. Bearer auth only.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "buildType": {
+            "type": "string",
+            "description": "legacy or workflow.",
+            "enum": [
+              "legacy",
+              "workflow"
+            ]
+          },
+          "source": {
+            "type": "object",
+            "description": "Source branch and path for legacy builds.",
+            "properties": {
+              "branch": {
+                "type": "string",
+                "description": "Source branch."
+              },
+              "path": {
+                "type": "string",
+                "description": "/ or /docs.",
+                "enum": [
+                  "/",
+                  "/docs"
+                ]
+              }
+            },
+            "required": [
+              "branch"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "owner",
+          "repo"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "pages": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "repos.pages.delete": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 65536,
+      "sideEffect": "write",
+      "title": "Delete a GitHub Pages site",
+      "description": "DELETE /repos/{owner}/{repo}/pages. kind=action, sideEffect=write. Success is 204. No effectPolicy, no reconcile, and no effect. A 404 is CONNECTOR_UPSTREAM_ERROR, not success. Bearer auth only.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          }
+        },
+        "required": [
+          "owner",
+          "repo"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "deleted": {
+            "type": "boolean"
+          },
+          "owner": {
+            "type": "string"
+          },
+          "repo": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "repos.pages.builds.request": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Request a GitHub Pages build",
+      "description": "POST /repos/{owner}/{repo}/pages/builds. kind=action, sideEffect=write. Success is 201. Triggers a build and does not create a named resource. No effectPolicy, no reconcile, and no effect. A 404 is CONNECTOR_UPSTREAM_ERROR. Bearer auth only.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          }
+        },
+        "required": [
+          "owner",
+          "repo"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "build": {
             "type": "object"
           }
         }

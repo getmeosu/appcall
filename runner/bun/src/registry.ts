@@ -656,6 +656,16 @@ import {
   removeOrgRoleFromTeam as ghRemoveOrgRoleFromTeam,
   removeTeamRepo as ghRemoveTeamRepo,
   updateOrgTeam as ghUpdateOrgTeam,
+  addOrgVariableRepository as ghAddOrgVariableRepository,
+  deleteRunLogs as ghDeleteRunLogs,
+  setOrgWorkflowPermissions as ghSetOrgWorkflowPermissions,
+  setOrgActionsPermissions as ghSetOrgActionsPermissions,
+  renderMarkdown as ghRenderMarkdown,
+  cancelPagesDeployment as ghCancelPagesDeployment,
+  createPagesDeployment as ghCreatePagesDeployment,
+  createPagesSite as ghCreatePagesSite,
+  deletePagesSite as ghDeletePagesSite,
+  requestPagesBuild as ghRequestPagesBuild,
 } from "../../connectors/github/src/actions";
 import { healthcheck as githubHealthcheck } from "../../connectors/github/src/healthcheck";
 import { executeIssuesListSync as listGitHubIssues, executePullRequestsListSync as listGitHubPRs, executeCommitsListSync as listGitHubCommits, executeRepositoriesListSync as listGitHubRepos } from "../../connectors/github/src/sync";
@@ -2080,6 +2090,16 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
       "orgs.organization_roles.teams.remove": ghRemoveOrgRoleFromTeam,
       "orgs.teams.repos.remove": ghRemoveTeamRepo,
       "orgs.teams.update": ghUpdateOrgTeam,
+      "actions.org_variables.repositories.add": ghAddOrgVariableRepository,
+      "actions.runs.logs.delete": ghDeleteRunLogs,
+      "orgs.actions.permissions.workflow.set": ghSetOrgWorkflowPermissions,
+      "orgs.actions.permissions.set": ghSetOrgActionsPermissions,
+      "markdown.render": ghRenderMarkdown,
+      "repos.pages.deployments.cancel": ghCancelPagesDeployment,
+      "repos.pages.deployments.create": ghCreatePagesDeployment,
+      "repos.pages.create": ghCreatePagesSite,
+      "repos.pages.delete": ghDeletePagesSite,
+      "repos.pages.builds.request": ghRequestPagesBuild,
     },
     salesforce: {
       "contacts.create": createContact,

@@ -48,9 +48,9 @@ function schemaKeys(schema: unknown, acc: string[] = []): string[] {
 }
 
 describe("github N4 alerts refs tags gist delete", () => {
-  test("manifest is 0.62.0 with exactly 639 ops and the N4 policies", () => {
-    expect(manifest.version).toBe("0.62.0");
-    expect(Object.keys(manifest.operations).length).toBe(639);
+  test("manifest is 0.63.0 with exactly 649 ops and the N4 policies", () => {
+    expect(manifest.version).toBe("0.63.0");
+    expect(Object.keys(manifest.operations).length).toBe(649);
     for (const key of N4_READS) {
       const op = manifest.operations[key] as Record<string, unknown>;
       expect(op.kind).toBe("action");

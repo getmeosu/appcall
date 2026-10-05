@@ -63,9 +63,9 @@ function empty(status: number) {
 }
 
 describe("github card-12 reads", () => {
-  test("version stays 0.62.0 at 639 ops and the new reads omit effect policy", () => {
-    expect(manifest.version).toBe("0.62.0");
-    expect(Object.keys(manifest.operations).length).toBe(639);
+  test("version stays 0.63.0 at 649 ops and the new reads omit effect policy", () => {
+    expect(manifest.version).toBe("0.63.0");
+    expect(Object.keys(manifest.operations).length).toBe(649);
     for (const key of READS) {
       const op = manifest.operations[key] as Record<string, unknown>;
       expect(op.sideEffect).toBe("read");
