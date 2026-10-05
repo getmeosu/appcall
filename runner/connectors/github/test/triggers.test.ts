@@ -95,8 +95,8 @@ describe("github composio-class webhook triggers", () => {
     }
   });
 
-  test("version and operation count match 0.65.0 / 619", () => {
-    expect(manifest.version).toBe("0.65.0");
-    expect(Object.keys(manifest.operations)).toHaveLength(658);
+  test("version and operation count match 0.66.0 / 671", () => {
+    expect(manifest.version).toBe("0.66.0");
+    expect(Object.keys(manifest.operations)).toHaveLength(671);
   });
 });
