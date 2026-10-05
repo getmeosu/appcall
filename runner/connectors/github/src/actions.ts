@@ -842,6 +842,25 @@ import {
   validateUpsertRepoCodespacesSecretInput,
   validateUpsertRepoDependabotSecretInput,
 } from "./gap_g10";
+
+import {
+  createGapG11Client,
+  validateGetGraphqlCodeOfConductInput,
+  validateGetGraphqlLicenseInput,
+  validateGetGraphqlNodeInput,
+  validateGetGraphqlNodesInput,
+  validateGetGraphqlOrganizationInput,
+  validateGetGraphqlRateLimitInput,
+  validateGetGraphqlRepositoryInput,
+  validateGetGraphqlRepositoryOwnerInput,
+  validateGetGraphqlResourceInput,
+  validateGetGraphqlTopicInput,
+  validateGetGraphqlViewerInput,
+  validateListGraphqlCodesOfConductInput,
+  validateListGraphqlLicensesInput,
+  validateListGraphqlSecurityAdvisoriesInput,
+  validateListGraphqlSecurityVulnerabilitiesInput,
+} from "./gap_g11";
 import {
   createReposReadsClient,
   validateGetAutolinkInput,
@@ -10180,6 +10199,166 @@ export function upsertRepoCodespacesSecret(input: unknown): Record<string, unkno
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
+
+
+function liveGapG11Client(input: Record<string, unknown>, operation: string) {
+  void operation;
+  return createGapG11Client({
+    accessToken: input.accessToken as string,
+    fetch: typeof input.fetch === "function" ? (input.fetch as typeof fetch) : undefined,
+  });
+}
+
+export function getGraphqlNode(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG11Client(input, "graphql.node.get").getNode(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "graphql.node.get", source: "connector", found: result.found, node: result.node };
+    });
+  }
+  return { connector: "github", action: "graphql.node.get", source: "connector", validated: validateGetGraphqlNodeInput(input) };
+}
+
+export function getGraphqlNodes(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG11Client(input, "graphql.nodes.get").getNodes(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "graphql.nodes.get", source: "connector", nodes: result.nodes };
+    });
+  }
+  return { connector: "github", action: "graphql.nodes.get", source: "connector", validated: validateGetGraphqlNodesInput(input) };
+}
+
+export function getGraphqlRateLimit(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG11Client(input, "graphql.rate_limit.get").getRateLimit(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "graphql.rate_limit.get", source: "connector", rateLimit: result.rateLimit };
+    });
+  }
+  return { connector: "github", action: "graphql.rate_limit.get", source: "connector", validated: validateGetGraphqlRateLimitInput(input) };
+}
+
+export function getGraphqlViewer(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG11Client(input, "graphql.viewer.get").getViewer(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "graphql.viewer.get", source: "connector", viewer: result.viewer };
+    });
+  }
+  return { connector: "github", action: "graphql.viewer.get", source: "connector", validated: validateGetGraphqlViewerInput(input) };
+}
+
+export function getGraphqlRepository(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG11Client(input, "graphql.repository.get").getRepository(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "graphql.repository.get", source: "connector", found: result.found, repository: result.repository };
+    });
+  }
+  return { connector: "github", action: "graphql.repository.get", source: "connector", validated: validateGetGraphqlRepositoryInput(input) };
+}
+
+export function getGraphqlOrganization(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG11Client(input, "graphql.organization.get").getOrganization(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "graphql.organization.get", source: "connector", found: result.found, organization: result.organization };
+    });
+  }
+  return { connector: "github", action: "graphql.organization.get", source: "connector", validated: validateGetGraphqlOrganizationInput(input) };
+}
+
+export function getGraphqlRepositoryOwner(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG11Client(input, "graphql.repository_owner.get").getRepositoryOwner(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "graphql.repository_owner.get", source: "connector", found: result.found, repositoryOwner: result.repositoryOwner };
+    });
+  }
+  return { connector: "github", action: "graphql.repository_owner.get", source: "connector", validated: validateGetGraphqlRepositoryOwnerInput(input) };
+}
+
+export function getGraphqlTopic(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG11Client(input, "graphql.topic.get").getTopic(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "graphql.topic.get", source: "connector", found: result.found, topic: result.topic };
+    });
+  }
+  return { connector: "github", action: "graphql.topic.get", source: "connector", validated: validateGetGraphqlTopicInput(input) };
+}
+
+export function getGraphqlResource(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG11Client(input, "graphql.resource.get").getResource(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "graphql.resource.get", source: "connector", found: result.found, resource: result.resource };
+    });
+  }
+  return { connector: "github", action: "graphql.resource.get", source: "connector", validated: validateGetGraphqlResourceInput(input) };
+}
+
+export function getGraphqlCodeOfConduct(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG11Client(input, "graphql.codes_of_conduct.get").getCodeOfConduct(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "graphql.codes_of_conduct.get", source: "connector", found: result.found, codeOfConduct: result.codeOfConduct };
+    });
+  }
+  return { connector: "github", action: "graphql.codes_of_conduct.get", source: "connector", validated: validateGetGraphqlCodeOfConductInput(input) };
+}
+
+export function listGraphqlCodesOfConduct(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG11Client(input, "graphql.codes_of_conduct.list").listCodesOfConduct(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "graphql.codes_of_conduct.list", source: "connector", codesOfConduct: result.codesOfConduct };
+    });
+  }
+  return { connector: "github", action: "graphql.codes_of_conduct.list", source: "connector", validated: validateListGraphqlCodesOfConductInput(input) };
+}
+
+export function getGraphqlLicense(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG11Client(input, "graphql.licenses.get").getLicense(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "graphql.licenses.get", source: "connector", found: result.found, license: result.license };
+    });
+  }
+  return { connector: "github", action: "graphql.licenses.get", source: "connector", validated: validateGetGraphqlLicenseInput(input) };
+}
+
+export function listGraphqlLicenses(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG11Client(input, "graphql.licenses.list").listLicenses(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "graphql.licenses.list", source: "connector", licenses: result.licenses };
+    });
+  }
+  return { connector: "github", action: "graphql.licenses.list", source: "connector", validated: validateListGraphqlLicensesInput(input) };
+}
+
+export function listGraphqlSecurityAdvisories(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG11Client(input, "graphql.security_advisories.list").listSecurityAdvisories(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "graphql.security_advisories.list", source: "connector", advisories: result.advisories, pageInfo: result.pageInfo, totalCount: result.totalCount };
+    });
+  }
+  return { connector: "github", action: "graphql.security_advisories.list", source: "connector", validated: validateListGraphqlSecurityAdvisoriesInput(input) };
+}
+
+export function listGraphqlSecurityVulnerabilities(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG11Client(input, "graphql.security_vulnerabilities.list").listSecurityVulnerabilities(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "graphql.security_vulnerabilities.list", source: "connector", vulnerabilities: result.vulnerabilities, pageInfo: result.pageInfo, totalCount: result.totalCount };
+    });
+  }
+  return { connector: "github", action: "graphql.security_vulnerabilities.list", source: "connector", validated: validateListGraphqlSecurityVulnerabilitiesInput(input) };
+}
+
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);

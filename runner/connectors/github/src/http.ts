@@ -85,7 +85,11 @@ export function createGitHubClient(options: GitHubClientOptions) {
     async graphql(query: string, variables: Record<string, unknown> = {}) {
       return this.fetchJSON("/graphql", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          // Prefer new-format global node ids (U_kgDO…) on every GraphQL call.
+          "X-Github-Next-Global-ID": "1",
+        },
         body: JSON.stringify({ query, variables }),
       });
     },
