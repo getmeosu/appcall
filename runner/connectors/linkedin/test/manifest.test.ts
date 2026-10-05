@@ -4,18 +4,28 @@ import manifest from "../manifest.json";
 describe("linkedin manifest", () => {
   it("has correct key and version", () => {
     expect(manifest.key).toBe("linkedin");
-    expect(manifest.version).toBe("0.1.0");
+    expect(manifest.version).toBe("0.1.1");
     expect(manifest.runtime).toBe("bun");
   });
 
-  it("uses oauth2 auth with scopes", () => {
+  it("uses oauth2 auth with OpenID Connect scopes", () => {
     expect(manifest.auth.type).toBe("oauth2");
     expect(manifest.auth.setup.mode).toBe("oauth2");
-    expect(manifest.auth.scopes).toContain("r_liteprofile");
-    expect(manifest.auth.scopes).toContain("r_emailaddress");
-    expect(manifest.auth.scopes).toContain("w_member_social");
-    expect(manifest.auth.scopes).toContain("r_organization_social");
-    expect(manifest.auth.scopes).toContain("r_organization_admin");
+    expect(manifest.auth.scopes).toEqual([
+      "openid",
+      "profile",
+      "email",
+      "w_member_social",
+      "r_organization_social",
+      "r_organization_admin",
+    ]);
+  });
+
+  it("no longer declares legacy Sign In with LinkedIn scopes", () => {
+    expect(manifest.auth.scopes).not.toContain("r_liteprofile");
+    expect(manifest.auth.scopes).not.toContain("r_emailaddress");
+    expect(JSON.stringify(manifest)).not.toContain("r_liteprofile");
+    expect(JSON.stringify(manifest)).not.toContain("r_emailaddress");
   });
 
   it("allows linkedin hosts", () => {
@@ -30,6 +40,7 @@ describe("linkedin manifest", () => {
     expect(ops).toContain("organizations.list");
     expect(ops).toContain("posts.create");
     expect(ops).toContain("healthcheck");
+    expect(ops).toHaveLength(5);
   });
 
   it("has correct models", () => {
