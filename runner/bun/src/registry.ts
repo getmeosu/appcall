@@ -886,6 +886,23 @@ import {
   executeInterviewStagesListSync as listAshbyInterviewStages,
   executeOpeningsListSync as listAshbyOpenings,
 } from "../../connectors/ashby/src/sync";
+import {
+  executeCandidatesCreateNote as createAshbyCandidateNote,
+  executeCandidatesListNotes as listAshbyCandidateNotes,
+  executeCandidatesAddTag as addAshbyCandidateTag,
+  executeCandidateTagsList as listAshbyCandidateTags,
+  executeCandidateTagsCreate as createAshbyCandidateTag,
+  executeApplicationsChangeSource as changeAshbyApplicationSource,
+  executeApplicationsTransfer as transferAshbyApplication,
+  executeApplicationsUpdate as updateAshbyApplication,
+  executeApplicationsListHistory as listAshbyApplicationHistory,
+  executeApplicationFeedbackList as listAshbyApplicationFeedback,
+  executeApplicationFeedbackSubmit as submitAshbyApplicationFeedback,
+  executeHiringTeamAddMember as addAshbyHiringTeamMember,
+  executeHiringTeamRemoveMember as removeAshbyHiringTeamMember,
+  executeHiringTeamRolesList as listAshbyHiringTeamRoles,
+  executeUsersGet as getAshbyUser,
+} from "../../connectors/ashby/src/g1";
 import { parseWebhook as ashbyParseWebhook } from "../../connectors/ashby/src/webhook";
 import intercomManifest from "../../connectors/intercom/manifest.json";
 import {
@@ -2476,6 +2493,21 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
       "applications.hire": hireAshbyApplication,
       "interviews.schedule": scheduleAshbyInterview,
       "interviews.cancel": cancelAshbyInterview,
+      "candidates.create_note": createAshbyCandidateNote,
+      "candidates.list_notes": listAshbyCandidateNotes,
+      "candidates.add_tag": addAshbyCandidateTag,
+      "candidate_tags.list": listAshbyCandidateTags,
+      "candidate_tags.create": createAshbyCandidateTag,
+      "applications.change_source": changeAshbyApplicationSource,
+      "applications.transfer": transferAshbyApplication,
+      "applications.update": updateAshbyApplication,
+      "applications.list_history": listAshbyApplicationHistory,
+      "application_feedback.list": listAshbyApplicationFeedback,
+      "application_feedback.submit": submitAshbyApplicationFeedback,
+      "hiring_team.add_member": addAshbyHiringTeamMember,
+      "hiring_team.remove_member": removeAshbyHiringTeamMember,
+      "hiring_team_roles.list": listAshbyHiringTeamRoles,
+      "users.get": getAshbyUser,
     },
     intercom: {
       "conversations.reply": replyIntercomConversation,

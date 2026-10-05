@@ -1,7 +1,7 @@
 {
   "key": "ashby",
   "name": "Ashby",
-  "version": "0.6.1",
+  "version": "0.7.0",
   "runtime": "bun",
   "categories": [
     "ats-recruitment"
@@ -790,6 +790,504 @@
       "maxInputBytes": 1048576,
       "maxResponseBytes": 1048576,
       "sideEffect": "read"
+    },
+    "candidates.create_note": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Create candidate note",
+      "description": "Create a note on a candidate via authenticated POST /candidate.createNote. Requires candidateId and note. No effect keys (no note get).",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "candidateId",
+          "note"
+        ],
+        "properties": {
+          "candidateId": {
+            "type": "string",
+            "description": "Ashby candidate UUID."
+          },
+          "note": {
+            "description": "Note body as a plain string or Ashby {type, value} object.",
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "object"
+              }
+            ]
+          },
+          "sendNotifications": {
+            "type": "boolean",
+            "description": "Whether to notify followers."
+          },
+          "isPrivate": {
+            "type": "boolean",
+            "description": "Whether the note is private."
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "Optional created-at override (ISO-8601)."
+          }
+        }
+      }
+    },
+    "candidates.list_notes": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "List candidate notes",
+      "description": "List notes on a candidate via authenticated POST /candidate.listNotes. Requires candidateId. Optional limit, cursor, and syncToken.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "candidateId"
+        ],
+        "properties": {
+          "candidateId": {
+            "type": "string",
+            "description": "Ashby candidate UUID."
+          },
+          "limit": {
+            "type": "number",
+            "description": "Page size."
+          },
+          "cursor": {
+            "type": "string",
+            "description": "Pagination cursor."
+          },
+          "syncToken": {
+            "type": "string",
+            "description": "Incremental sync token."
+          }
+        }
+      }
+    },
+    "candidates.add_tag": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Add candidate tag",
+      "description": "Add a tag to a candidate via authenticated POST /candidate.addTag. Requires candidateId and tagId. Effect keys omitted: tip candidates.get does not expose tags.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "candidateId",
+          "tagId"
+        ],
+        "properties": {
+          "candidateId": {
+            "type": "string",
+            "description": "Ashby candidate UUID."
+          },
+          "tagId": {
+            "type": "string",
+            "description": "Ashby candidate tag UUID."
+          }
+        }
+      }
+    },
+    "candidate_tags.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "List candidate tags",
+      "description": "List candidate tags via authenticated POST /candidateTag.list. Optional includeArchived, limit, cursor, and syncToken.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [],
+        "properties": {
+          "includeArchived": {
+            "type": "boolean",
+            "description": "Include archived tags."
+          },
+          "limit": {
+            "type": "number",
+            "description": "Page size."
+          },
+          "cursor": {
+            "type": "string",
+            "description": "Pagination cursor."
+          },
+          "syncToken": {
+            "type": "string",
+            "description": "Incremental sync token."
+          }
+        }
+      }
+    },
+    "candidate_tags.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Create candidate tag",
+      "description": "Create a candidate tag via authenticated POST /candidateTag.create. Requires title. No effect keys (no tag get).",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "title"
+        ],
+        "properties": {
+          "title": {
+            "type": "string",
+            "description": "Tag title."
+          }
+        }
+      }
+    },
+    "applications.change_source": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Change application source",
+      "description": "Change an application's source via authenticated POST /application.changeSource. Requires applicationId and sourceId. Effect keys omitted: tip applications.get does not expose source.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "applicationId",
+          "sourceId"
+        ],
+        "properties": {
+          "applicationId": {
+            "type": "string",
+            "description": "Ashby application UUID."
+          },
+          "sourceId": {
+            "type": "string",
+            "description": "Ashby source UUID."
+          }
+        }
+      }
+    },
+    "applications.transfer": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Transfer application",
+      "description": "Transfer an application to another job via authenticated POST /application.transfer. Requires applicationId, jobId, interviewPlanId, and interviewStageId. EffectPolicy Reconcile observes via applications.get (jobId/stageId).",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "applicationId",
+          "jobId",
+          "interviewPlanId",
+          "interviewStageId"
+        ],
+        "properties": {
+          "applicationId": {
+            "type": "string",
+            "description": "Ashby application UUID."
+          },
+          "jobId": {
+            "type": "string",
+            "description": "Destination job UUID."
+          },
+          "interviewPlanId": {
+            "type": "string",
+            "description": "Destination interview plan UUID."
+          },
+          "interviewStageId": {
+            "type": "string",
+            "description": "Destination interview stage UUID."
+          },
+          "startAutomaticActivities": {
+            "type": "boolean",
+            "description": "Whether to start automatic activities on transfer."
+          }
+        }
+      },
+      "effectPolicy": "Reconcile",
+      "reconcile": "applications.get"
+    },
+    "applications.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Update application",
+      "description": "Update an application via authenticated POST /application.update. Requires applicationId. Optional sourceId, creditedToUserId, createdAt, sendNotifications. Effect keys omitted: tip applications.get does not expose source or creditedToUser.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "applicationId"
+        ],
+        "properties": {
+          "applicationId": {
+            "type": "string",
+            "description": "Ashby application UUID."
+          },
+          "sourceId": {
+            "type": "string",
+            "description": "Ashby source UUID."
+          },
+          "creditedToUserId": {
+            "type": "string",
+            "description": "User UUID to credit."
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "Created-at override (ISO-8601)."
+          },
+          "sendNotifications": {
+            "type": "boolean",
+            "description": "Whether to send notifications."
+          }
+        }
+      }
+    },
+    "applications.list_history": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "List application history",
+      "description": "List application history via authenticated POST /application.listHistory. Requires applicationId. Optional limit and cursor.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "applicationId"
+        ],
+        "properties": {
+          "applicationId": {
+            "type": "string",
+            "description": "Ashby application UUID."
+          },
+          "limit": {
+            "type": "number",
+            "description": "Page size."
+          },
+          "cursor": {
+            "type": "string",
+            "description": "Pagination cursor."
+          }
+        }
+      }
+    },
+    "application_feedback.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "List application feedback",
+      "description": "List application feedback via authenticated POST /applicationFeedback.list. Optional applicationId, createdAfter, limit, cursor, and syncToken.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [],
+        "properties": {
+          "applicationId": {
+            "type": "string",
+            "description": "Ashby application UUID."
+          },
+          "createdAfter": {
+            "type": "string",
+            "description": "ISO-8601 lower bound on createdAt."
+          },
+          "limit": {
+            "type": "number",
+            "description": "Page size."
+          },
+          "cursor": {
+            "type": "string",
+            "description": "Pagination cursor."
+          },
+          "syncToken": {
+            "type": "string",
+            "description": "Incremental sync token."
+          }
+        }
+      }
+    },
+    "application_feedback.submit": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Submit application feedback",
+      "description": "Submit application feedback via authenticated POST /applicationFeedback.submit. Requires applicationId, formDefinitionId, and feedbackForm. No effect keys (no feedback get).",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "applicationId",
+          "formDefinitionId",
+          "feedbackForm"
+        ],
+        "properties": {
+          "applicationId": {
+            "type": "string",
+            "description": "Ashby application UUID."
+          },
+          "formDefinitionId": {
+            "type": "string",
+            "description": "Feedback form definition UUID."
+          },
+          "feedbackForm": {
+            "type": "object",
+            "description": "Map of form field path to submitted value.",
+            "additionalProperties": true
+          },
+          "userId": {
+            "type": "string",
+            "description": "Submitting user UUID."
+          },
+          "interviewEventId": {
+            "type": "string",
+            "description": "Optional interview event UUID."
+          }
+        }
+      }
+    },
+    "hiring_team.add_member": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Add hiring team member",
+      "description": "Add a user to a hiring team via authenticated POST /hiringTeam.addMember. Requires teamMemberId, roleId, and exactly one of applicationId, jobId, or openingId. No effect keys.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "teamMemberId",
+          "roleId"
+        ],
+        "properties": {
+          "teamMemberId": {
+            "type": "string",
+            "description": "Ashby user UUID to add."
+          },
+          "roleId": {
+            "type": "string",
+            "description": "Hiring team role id or name."
+          },
+          "applicationId": {
+            "type": "string",
+            "description": "Application-scoped hiring team."
+          },
+          "jobId": {
+            "type": "string",
+            "description": "Job-scoped hiring team."
+          },
+          "openingId": {
+            "type": "string",
+            "description": "Opening-scoped hiring team."
+          }
+        }
+      }
+    },
+    "hiring_team.remove_member": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Remove hiring team member",
+      "description": "Remove a user from a hiring team via authenticated POST /hiringTeam.removeMember. Requires teamMemberId, roleId, and exactly one of applicationId, jobId, or openingId. No effect keys.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "teamMemberId",
+          "roleId"
+        ],
+        "properties": {
+          "teamMemberId": {
+            "type": "string",
+            "description": "Ashby user UUID to remove."
+          },
+          "roleId": {
+            "type": "string",
+            "description": "Hiring team role id or name."
+          },
+          "applicationId": {
+            "type": "string",
+            "description": "Application-scoped hiring team."
+          },
+          "jobId": {
+            "type": "string",
+            "description": "Job-scoped hiring team."
+          },
+          "openingId": {
+            "type": "string",
+            "description": "Opening-scoped hiring team."
+          }
+        }
+      }
+    },
+    "hiring_team_roles.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "List hiring team roles",
+      "description": "List hiring team roles via authenticated POST /hiringTeamRole.list. Requires namesOnly (boolean).",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "namesOnly"
+        ],
+        "properties": {
+          "namesOnly": {
+            "type": "boolean",
+            "description": "When true, results are role name strings."
+          }
+        }
+      }
+    },
+    "users.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get user",
+      "description": "Fetch a user via authenticated POST /user.info. Requires userId.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "userId"
+        ],
+        "properties": {
+          "userId": {
+            "type": "string",
+            "description": "Ashby user UUID."
+          }
+        }
+      }
     }
   },
   "models": [
