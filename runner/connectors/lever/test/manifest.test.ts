@@ -6,8 +6,8 @@ describe("Lever manifest", () => {
     expect(manifest.key).toBe("lever");
   });
 
-  it("has version 0.5.1", () => {
-    expect(manifest.version).toBe("0.5.1");
+  it("has version 0.6.0", () => {
+    expect(manifest.version).toBe("0.6.0");
   });
 
   it("uses bun runtime", () => {
@@ -45,23 +45,39 @@ describe("Lever manifest", () => {
       "interviews.get",
       "interviews.list",
       "jobs.list",
+      "notes.create",
+      "notes.delete",
+      "notes.get",
       "notes.list",
+      "notes.update",
       "offers.get",
       "offers.list",
+      "opportunities.add_links",
+      "opportunities.add_sources",
+      "opportunities.add_tags",
       "opportunities.archive",
+      "opportunities.create",
       "opportunities.feedback.list",
       "opportunities.get",
       "opportunities.interviews.list",
       "opportunities.list",
+      "opportunities.remove_links",
+      "opportunities.remove_sources",
+      "opportunities.remove_tags",
       "opportunities.update",
       "opportunities.update_stage",
       "postings.get",
       "postings.list",
+      "referrals.list",
       "requisitions.list",
+      "sources.list",
+      "stages.get",
       "stages.list",
+      "tags.list",
       "users.get",
       "users.list",
     ]);
+    expect(Object.keys(manifest.operations)).toHaveLength(38);
     expect(manifest.operations["jobs.list"].kind).toBe("sync");
     expect(manifest.operations["opportunities.list"].kind).toBe("sync");
     expect(manifest.operations["opportunities.get"].kind).toBe("sync");

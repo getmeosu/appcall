@@ -1,7 +1,7 @@
 {
   "key": "lever",
   "name": "Lever",
-  "version": "0.5.1",
+  "version": "0.6.0",
   "runtime": "bun",
   "categories": [
     "ats-recruitment"
@@ -515,6 +515,1108 @@
       "maxResponseBytes": 1048576,
       "title": "Get feedback",
       "description": "Fetch a single feedback form via authenticated GET /v1/opportunities/{id}/feedback/{feedbackId}."
+    },
+    "opportunities.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Create opportunity",
+      "description": "Create a candidate opportunity via authenticated POST /v1/opportunities?perform_as={performAs} (JSON only; resume multipart is out of scope). Lever dedupes by email or contactId onto an existing contact. Result surfaces the created opportunity UID (data.id) as top-level id. No EffectPolicy: a retried POST would create a duplicate opportunity.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "performAs"
+        ],
+        "properties": {
+          "performAs": {
+            "type": "string",
+            "minLength": 1,
+            "description": "User UID to perform_as (query; required by Lever). Defaults the creator and owner."
+          },
+          "name": {
+            "type": "string",
+            "description": "Contact full name."
+          },
+          "emails": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "description": "Contact email addresses (used for dedupe)."
+          },
+          "headline": {
+            "type": "string",
+            "description": "Contact headline (prior companies or schools)."
+          },
+          "location": {
+            "type": "string",
+            "description": "Contact current location."
+          },
+          "phones": {
+            "type": "array",
+            "description": "Contact phone numbers.",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "value"
+              ],
+              "properties": {
+                "value": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Phone number."
+                },
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "mobile",
+                    "home",
+                    "work",
+                    "skype",
+                    "other"
+                  ],
+                  "description": "Optional number type."
+                }
+              }
+            }
+          },
+          "links": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "description": "Contact links (personal site, LinkedIn, ...)."
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "description": "Tags to apply; unknown tags are created."
+          },
+          "sources": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "description": "Sources to apply; unknown sources are created."
+          },
+          "origin": {
+            "type": "string",
+            "enum": [
+              "agency",
+              "applied",
+              "internal",
+              "referred",
+              "sourced",
+              "university"
+            ],
+            "description": "How the opportunity was added."
+          },
+          "owner": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Owner user UID; defaults to the perform_as user."
+          },
+          "stage": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Stage UID; Lever defaults to New Lead when omitted."
+          },
+          "postings": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "description": "Posting UIDs. Lever rejects more than one posting per request."
+          },
+          "contactId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Existing contact UID to attach this opportunity to; sent as Lever body field contact."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "data"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Created Lever opportunity UID (from data.id)."
+          },
+          "data": {
+            "type": "object",
+            "description": "Created opportunity object."
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/opportunities",
+        "query": {
+          "perform_as": "{{performAs}}"
+        },
+        "body": {
+          "name": "{{name}}",
+          "headline": "{{headline}}",
+          "stage": "{{stage}}",
+          "location": "{{location}}",
+          "phones": "{{phones}}",
+          "emails": "{{emails}}",
+          "links": "{{links}}",
+          "tags": "{{tags}}",
+          "sources": "{{sources}}",
+          "origin": "{{origin}}",
+          "owner": "{{owner}}",
+          "postings": "{{postings}}",
+          "contact": "{{contactId}}"
+        },
+        "success": [
+          200,
+          201
+        ],
+        "result": {
+          "id": "{{response.data.id}}",
+          "data": "{{response.data}}"
+        }
+      },
+      "responseFormat": "json",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated"
+    },
+    "opportunities.add_tags": {
+      "kind": "action",
+      "sideEffect": "write",
+      "effectPolicy": "Reconcile",
+      "reconcile": "opportunities.get",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Add opportunity tags",
+      "description": "Add tags to an opportunity via authenticated POST /v1/opportunities/{id}/addTags. EffectPolicy Reconcile observes via opportunities.get.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "tags"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Lever opportunity UID."
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "description": "Tags to add.",
+            "minItems": 1
+          },
+          "performAs": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Optional user UID to perform_as (query)."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/opportunities/{{id}}/addTags",
+        "query": {
+          "perform_as": "{{performAs}}"
+        },
+        "body": {
+          "tags": "{{tags}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated"
+    },
+    "opportunities.remove_tags": {
+      "kind": "action",
+      "sideEffect": "write",
+      "effectPolicy": "Reconcile",
+      "reconcile": "opportunities.get",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Remove opportunity tags",
+      "description": "Remove tags from an opportunity via authenticated POST /v1/opportunities/{id}/removeTags. EffectPolicy Reconcile observes via opportunities.get.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "tags"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Lever opportunity UID."
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "description": "Tags to remove.",
+            "minItems": 1
+          },
+          "performAs": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Optional user UID to perform_as (query)."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/opportunities/{{id}}/removeTags",
+        "query": {
+          "perform_as": "{{performAs}}"
+        },
+        "body": {
+          "tags": "{{tags}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated"
+    },
+    "opportunities.add_links": {
+      "kind": "action",
+      "sideEffect": "write",
+      "effectPolicy": "Reconcile",
+      "reconcile": "opportunities.get",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Add contact links by opportunity",
+      "description": "Add links to the opportunity contact via authenticated POST /v1/opportunities/{id}/addLinks. Links live on the contact; the opportunity object has no links field, so the observe confirms the opportunity still resolves (durability only). EffectPolicy Reconcile observes via opportunities.get.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "links"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Lever opportunity UID."
+          },
+          "links": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "description": "Links to add.",
+            "minItems": 1
+          },
+          "performAs": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Optional user UID to perform_as (query)."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/opportunities/{{id}}/addLinks",
+        "query": {
+          "perform_as": "{{performAs}}"
+        },
+        "body": {
+          "links": "{{links}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated"
+    },
+    "opportunities.remove_links": {
+      "kind": "action",
+      "sideEffect": "write",
+      "effectPolicy": "Reconcile",
+      "reconcile": "opportunities.get",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Remove contact links by opportunity",
+      "description": "Remove links from the opportunity contact via authenticated POST /v1/opportunities/{id}/removeLinks. Links live on the contact; the opportunity object has no links field, so the observe confirms the opportunity still resolves (durability only). EffectPolicy Reconcile observes via opportunities.get.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "links"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Lever opportunity UID."
+          },
+          "links": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "description": "Links to remove.",
+            "minItems": 1
+          },
+          "performAs": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Optional user UID to perform_as (query)."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/opportunities/{{id}}/removeLinks",
+        "query": {
+          "perform_as": "{{performAs}}"
+        },
+        "body": {
+          "links": "{{links}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated"
+    },
+    "opportunities.add_sources": {
+      "kind": "action",
+      "sideEffect": "write",
+      "effectPolicy": "Reconcile",
+      "reconcile": "opportunities.get",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Add opportunity sources",
+      "description": "Add sources to an opportunity via authenticated POST /v1/opportunities/{id}/addSources. EffectPolicy Reconcile observes via opportunities.get.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "sources"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Lever opportunity UID."
+          },
+          "sources": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "description": "Sources to add.",
+            "minItems": 1
+          },
+          "performAs": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Optional user UID to perform_as (query)."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/opportunities/{{id}}/addSources",
+        "query": {
+          "perform_as": "{{performAs}}"
+        },
+        "body": {
+          "sources": "{{sources}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated"
+    },
+    "opportunities.remove_sources": {
+      "kind": "action",
+      "sideEffect": "write",
+      "effectPolicy": "Reconcile",
+      "reconcile": "opportunities.get",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Remove opportunity sources",
+      "description": "Remove sources from an opportunity via authenticated POST /v1/opportunities/{id}/removeSources. EffectPolicy Reconcile observes via opportunities.get.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "sources"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Lever opportunity UID."
+          },
+          "sources": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "description": "Sources to remove.",
+            "minItems": 1
+          },
+          "performAs": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Optional user UID to perform_as (query)."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/opportunities/{{id}}/removeSources",
+        "query": {
+          "perform_as": "{{performAs}}"
+        },
+        "body": {
+          "sources": "{{sources}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated"
+    },
+    "notes.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Create note",
+      "description": "Create a note on an opportunity via authenticated POST /v1/opportunities/{opportunityId}/notes. Optional noteId (query note_id) adds a threaded comment to an existing note. Lever returns only data.noteId (no id), so no EffectPolicy is declared.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "opportunityId",
+          "value"
+        ],
+        "properties": {
+          "opportunityId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Lever opportunity UID."
+          },
+          "value": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Note body; @username mentions notify users."
+          },
+          "secret": {
+            "type": "boolean",
+            "description": "Restrict visibility to SIP users and mentioned users."
+          },
+          "score": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 4,
+            "description": "Score 1 (strong no) to 4 (strong yes)."
+          },
+          "notifyFollowers": {
+            "type": "boolean",
+            "description": "Notify all users following the candidate."
+          },
+          "createdAt": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Historical create time (ms epoch); cannot be in the future."
+          },
+          "noteId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Existing note UID to add a threaded comment to (query note_id)."
+          },
+          "performAs": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Optional user UID to perform_as (query)."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/opportunities/{{opportunityId}}/notes",
+        "query": {
+          "perform_as": "{{performAs}}",
+          "note_id": "{{noteId}}"
+        },
+        "body": {
+          "value": "{{value}}",
+          "secret": "{{secret}}",
+          "score": "{{score}}",
+          "notifyFollowers": "{{notifyFollowers}}",
+          "createdAt": "{{createdAt}}"
+        },
+        "success": [
+          200,
+          201
+        ]
+      },
+      "responseFormat": "json",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated"
+    },
+    "notes.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get note",
+      "description": "Fetch a single note via authenticated GET /v1/opportunities/{opportunityId}/notes/{noteId}.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "opportunityId",
+          "noteId"
+        ],
+        "properties": {
+          "opportunityId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Lever opportunity UID."
+          },
+          "noteId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Lever note UID."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/opportunities/{{opportunityId}}/notes/{{noteId}}",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated"
+    },
+    "notes.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Update note",
+      "description": "Replace an API-created note via authenticated PUT /v1/opportunities/{opportunityId}/notes/{noteId}. Atomic: values replaces every comment in the note thread. No EffectPolicy (no observe GET for notes on tip).",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "opportunityId",
+          "noteId",
+          "values"
+        ],
+        "properties": {
+          "opportunityId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Lever opportunity UID."
+          },
+          "noteId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Lever note UID."
+          },
+          "values": {
+            "type": "array",
+            "minItems": 1,
+            "description": "Comments that replace the note thread (note field type only).",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "value"
+              ],
+              "properties": {
+                "value": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Comment body."
+                },
+                "user": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "User UID who wrote the comment."
+                },
+                "secret": {
+                  "type": "boolean",
+                  "description": "Whether the note is secret."
+                },
+                "score": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 4,
+                  "description": "Score 1-4 (applies to the whole thread)."
+                },
+                "createdAt": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "description": "Comment create time (ms epoch)."
+                },
+                "completedAt": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "description": "Comment completion time (ms epoch)."
+                }
+              }
+            }
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/opportunities/{{opportunityId}}/notes/{{noteId}}",
+        "body": {
+          "values": "{{values}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated"
+    },
+    "notes.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Delete note",
+      "description": "Delete an API-created note via authenticated DELETE /v1/opportunities/{opportunityId}/notes/{noteId} (204). Notes created in the Lever app cannot be deleted via API.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "opportunityId",
+          "noteId"
+        ],
+        "properties": {
+          "opportunityId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Lever opportunity UID."
+          },
+          "noteId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Lever note UID."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "deleted",
+          "opportunityId",
+          "noteId"
+        ],
+        "properties": {
+          "deleted": {
+            "type": "boolean"
+          },
+          "opportunityId": {
+            "type": "string"
+          },
+          "noteId": {
+            "type": "string"
+          }
+        }
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/opportunities/{{opportunityId}}/notes/{{noteId}}",
+        "success": [
+          204
+        ],
+        "result": {
+          "deleted": true,
+          "opportunityId": "{{input.opportunityId}}",
+          "noteId": "{{input.noteId}}"
+        }
+      },
+      "responseFormat": "json",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated"
+    },
+    "sources.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List sources",
+      "description": "List account candidate sources with counts via authenticated GET /v1/sources. Optional limit and offset.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Page size (1-100)."
+          },
+          "offset": {
+            "type": "string",
+            "description": "Opaque pagination offset token from a prior next field."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/sources",
+        "query": {
+          "limit": "{{limit}}",
+          "offset": "{{offset}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated"
+    },
+    "tags.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List tags",
+      "description": "List account candidate tags with counts via authenticated GET /v1/tags. Optional limit and offset.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Page size (1-100)."
+          },
+          "offset": {
+            "type": "string",
+            "description": "Opaque pagination offset token from a prior next field."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/tags",
+        "query": {
+          "limit": "{{limit}}",
+          "offset": "{{offset}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated"
+    },
+    "stages.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get stage",
+      "description": "Fetch a single pipeline stage via authenticated GET /v1/stages/{stageId}.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "stageId"
+        ],
+        "properties": {
+          "stageId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Lever stage UID."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/stages/{{stageId}}",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated"
+    },
+    "referrals.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List referrals",
+      "description": "List referral forms for an opportunity via authenticated GET /v1/opportunities/{opportunityId}/referrals. Optional limit and offset.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "opportunityId"
+        ],
+        "properties": {
+          "opportunityId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Lever opportunity UID."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Page size (1-100)."
+          },
+          "offset": {
+            "type": "string",
+            "description": "Opaque pagination offset token from a prior next field."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/opportunities/{{opportunityId}}/referrals",
+        "query": {
+          "limit": "{{limit}}",
+          "offset": "{{offset}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated"
     }
   },
   "models": [

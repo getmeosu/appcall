@@ -813,3 +813,317 @@ export async function executeFeedbackGetSync(
   const raw = await client.getJSON(`/opportunities/${opportunityId}/feedback/${feedbackId}`);
   return parseFeedbackGetResponse(raw);
 }
+
+// ---------------------------------------------------------------------------
+// Lever G1 (v0.6.0): opportunity create + tag/link/source mutations, notes
+// CRUD, and dictionary reads. Every handler goes through createAuthClient so
+// region=eu reaches api.eu.lever.co (the declarative manifest request blocks
+// default to the US root and only serve fixture replay; a registered handler
+// always wins at runtime). Outputs mirror the manifest outputSchema:
+// raw Lever envelope under `data`.
+//
+// opportunities.create          → POST /v1/opportunities?perform_as=…
+//                                 (no EffectPolicy — a retried POST would
+//                                 duplicate; surfaces data.id as top-level id)
+// opportunities.add_tags        → POST /v1/opportunities/{id}/addTags
+// opportunities.remove_tags     → POST /v1/opportunities/{id}/removeTags
+// opportunities.add_links       → POST /v1/opportunities/{id}/addLinks
+// opportunities.remove_links    → POST /v1/opportunities/{id}/removeLinks
+// opportunities.add_sources     → POST /v1/opportunities/{id}/addSources
+// opportunities.remove_sources  → POST /v1/opportunities/{id}/removeSources
+//                                 (all six: EffectPolicy Reconcile → opportunities.get)
+// notes.create                  → POST /v1/opportunities/{opportunityId}/notes
+//                                 (no effect: Lever returns data.noteId only)
+// notes.get                     → GET  /v1/opportunities/{opportunityId}/notes/{noteId}
+// notes.update                  → PUT  /v1/opportunities/{opportunityId}/notes/{noteId}
+// notes.delete                  → DELETE /v1/opportunities/{opportunityId}/notes/{noteId}
+// sources.list                  → GET  /v1/sources
+// tags.list                     → GET  /v1/tags
+// stages.get                    → GET  /v1/stages/{stageId}
+// referrals.list                → GET  /v1/opportunities/{opportunityId}/referrals
+// ---------------------------------------------------------------------------
+
+export interface LeverEnvelopeOutput {
+  data: Record<string, unknown>;
+}
+
+function asEnvelopeObject(raw: unknown): Record<string, unknown> {
+  if (raw != null && typeof raw === "object" && !Array.isArray(raw)) {
+    return raw as Record<string, unknown>;
+  }
+  throw {
+    ok: false,
+    code: "CONNECTOR_RESPONSE_INVALID",
+    message: "Lever returned a non-object response.",
+  };
+}
+
+function requireStringArray(value: unknown, field: string): string[] {
+  if (!Array.isArray(value) || value.length === 0) {
+    throw new Error(`${field} must be a non-empty array`);
+  }
+  for (const item of value) {
+    if (typeof item !== "string" || item.length === 0) {
+      throw new Error(`${field} must contain non-empty strings`);
+    }
+  }
+  return value as string[];
+}
+
+function requireNonEmptyString(value: unknown, field: string): string {
+  if (typeof value !== "string" || value.length === 0) {
+    throw new Error(`${field} is required`);
+  }
+  return value;
+}
+
+/** Path-segment guard: tip charset check plus an explicit dot-segment reject. */
+function safeSegment(value: unknown, field: string): string {
+  const segment = assertSafePathSegment(requireNonEmptyString(value, field), field);
+  if (segment === "." || segment === "..") {
+    throw new Error(`${field} may not be a dot segment`);
+  }
+  return segment;
+}
+
+function authClientFor(input: LeverAuthInput, operation: string) {
+  return createAuthClient({
+    apiKey: input.apiKey,
+    region: input.region,
+    fetch: input.fetch,
+    operation,
+  });
+}
+
+function pagingQuery(limit: number | undefined, offset: string | undefined): string {
+  return buildQuery({
+    limit: limit != null ? String(limit) : undefined,
+    offset,
+  });
+}
+
+// --- opportunities.create ---------------------------------------------------
+
+export interface ExecuteOpportunitiesCreateInput extends LeverAuthInput {
+  performAs: string;
+  name?: string;
+  emails?: string[];
+  headline?: string;
+  location?: string;
+  phones?: Array<{ value: string; type?: string }>;
+  links?: string[];
+  tags?: string[];
+  sources?: string[];
+  origin?: string;
+  owner?: string;
+  stage?: string;
+  postings?: string[];
+  contactId?: string;
+}
+
+export interface ExecuteOpportunitiesCreateOutput {
+  /** Created Lever opportunity UID (data.id), surfaced for follow-up calls. */
+  id: string;
+  data: Record<string, unknown>;
+}
+
+export async function executeOpportunitiesCreate(
+  input: ExecuteOpportunitiesCreateInput,
+): Promise<ExecuteOpportunitiesCreateOutput> {
+  const performAs = requireNonEmptyString(input.performAs, "performAs");
+  const client = authClientFor(input, "opportunities.create");
+  const raw = await client.postJSON(
+    "/opportunities" + buildQuery({ perform_as: performAs }),
+    compactBody({
+      name: input.name,
+      headline: input.headline,
+      stage: input.stage,
+      location: input.location,
+      phones: input.phones,
+      emails: input.emails,
+      links: input.links,
+      tags: input.tags,
+      sources: input.sources,
+      origin: input.origin,
+      owner: input.owner,
+      postings: input.postings,
+      // Official body field for an existing contact is `contact`.
+      contact: input.contactId,
+    }),
+  );
+  const envelope = asEnvelopeObject(raw);
+  const data = envelope.data;
+  if (data == null || typeof data !== "object" || Array.isArray(data)) {
+    throw {
+      ok: false,
+      code: "CONNECTOR_RESPONSE_INVALID",
+      message: "Lever create opportunity response is missing data.",
+    };
+  }
+  const id = (data as { id?: unknown }).id;
+  if (typeof id !== "string" || id.length === 0) {
+    throw {
+      ok: false,
+      code: "CONNECTOR_RESPONSE_INVALID",
+      message: "Lever create opportunity response is missing data.id.",
+    };
+  }
+  return { id, data: data as Record<string, unknown> };
+}
+
+// --- opportunities.{add,remove}_{tags,links,sources} -------------------------
+
+type OpportunityListField = "tags" | "links" | "sources";
+
+export interface ExecuteOpportunitiesListMutationInput extends LeverAuthInput {
+  id: string;
+  tags?: string[];
+  links?: string[];
+  sources?: string[];
+  performAs?: string;
+}
+
+function opportunityListMutation(
+  operation: string,
+  pathSuffix: string,
+  field: OpportunityListField,
+) {
+  return async (input: ExecuteOpportunitiesListMutationInput): Promise<LeverEnvelopeOutput> => {
+    const id = safeSegment(input.id, "id");
+    const values = requireStringArray(input[field], field);
+    const client = authClientFor(input, operation);
+    const raw = await client.postJSON(
+      `/opportunities/${id}/${pathSuffix}` + buildQuery({ perform_as: input.performAs }),
+      { [field]: values },
+    );
+    return { data: raw == null ? {} : asEnvelopeObject(raw) };
+  };
+}
+
+export const executeOpportunitiesAddTags = opportunityListMutation("opportunities.add_tags", "addTags", "tags");
+export const executeOpportunitiesRemoveTags = opportunityListMutation("opportunities.remove_tags", "removeTags", "tags");
+export const executeOpportunitiesAddLinks = opportunityListMutation("opportunities.add_links", "addLinks", "links");
+export const executeOpportunitiesRemoveLinks = opportunityListMutation("opportunities.remove_links", "removeLinks", "links");
+export const executeOpportunitiesAddSources = opportunityListMutation("opportunities.add_sources", "addSources", "sources");
+export const executeOpportunitiesRemoveSources = opportunityListMutation("opportunities.remove_sources", "removeSources", "sources");
+
+// --- notes ------------------------------------------------------------------
+
+export interface ExecuteNotesCreateInput extends LeverAuthInput {
+  opportunityId: string;
+  value: string;
+  secret?: boolean;
+  score?: number;
+  notifyFollowers?: boolean;
+  createdAt?: number;
+  /** Existing note UID → threaded comment (query note_id). */
+  noteId?: string;
+  performAs?: string;
+}
+
+export async function executeNotesCreate(input: ExecuteNotesCreateInput): Promise<LeverEnvelopeOutput> {
+  const opportunityId = safeSegment(input.opportunityId, "opportunityId");
+  const value = requireNonEmptyString(input.value, "value");
+  const client = authClientFor(input, "notes.create");
+  const raw = await client.postJSON(
+    `/opportunities/${opportunityId}/notes` +
+      buildQuery({ perform_as: input.performAs, note_id: input.noteId }),
+    compactBody({
+      value,
+      secret: input.secret,
+      score: input.score,
+      notifyFollowers: input.notifyFollowers,
+      createdAt: input.createdAt,
+    }),
+  );
+  // Lever returns { data: { noteId } } only; no EffectPolicy (create omits effect keys).
+  return { data: asEnvelopeObject(raw) };
+}
+
+export interface ExecuteNoteRefInput extends LeverAuthInput {
+  opportunityId: string;
+  noteId: string;
+}
+
+export async function executeNotesGet(input: ExecuteNoteRefInput): Promise<LeverEnvelopeOutput> {
+  const opportunityId = safeSegment(input.opportunityId, "opportunityId");
+  const noteId = safeSegment(input.noteId, "noteId");
+  const client = authClientFor(input, "notes.get");
+  const raw = await client.getJSON(`/opportunities/${opportunityId}/notes/${noteId}`);
+  return { data: asEnvelopeObject(raw) };
+}
+
+export interface ExecuteNotesUpdateInput extends ExecuteNoteRefInput {
+  values: Array<Record<string, unknown>>;
+}
+
+export async function executeNotesUpdate(input: ExecuteNotesUpdateInput): Promise<LeverEnvelopeOutput> {
+  const opportunityId = safeSegment(input.opportunityId, "opportunityId");
+  const noteId = safeSegment(input.noteId, "noteId");
+  if (!Array.isArray(input.values) || input.values.length === 0) {
+    throw new Error("values must be a non-empty array");
+  }
+  const client = authClientFor(input, "notes.update");
+  const raw = await client.putJSON(`/opportunities/${opportunityId}/notes/${noteId}`, {
+    values: input.values,
+  });
+  return { data: raw == null ? {} : asEnvelopeObject(raw) };
+}
+
+export interface ExecuteNotesDeleteOutput {
+  deleted: true;
+  opportunityId: string;
+  noteId: string;
+}
+
+export async function executeNotesDelete(input: ExecuteNoteRefInput): Promise<ExecuteNotesDeleteOutput> {
+  const opportunityId = safeSegment(input.opportunityId, "opportunityId");
+  const noteId = safeSegment(input.noteId, "noteId");
+  const client = authClientFor(input, "notes.delete");
+  // 204 on success; 404 (or any non-2xx) → CONNECTOR_UPSTREAM_ERROR.
+  await client.deleteJSON(`/opportunities/${opportunityId}/notes/${noteId}`);
+  return { deleted: true, opportunityId, noteId };
+}
+
+// --- dictionary / nested reads ----------------------------------------------
+
+export interface ExecutePagedReadInput extends LeverAuthInput {
+  limit?: number;
+  offset?: string;
+}
+
+export async function executeSourcesList(input: ExecutePagedReadInput): Promise<LeverEnvelopeOutput> {
+  const client = authClientFor(input, "sources.list");
+  const raw = await client.getJSON("/sources" + pagingQuery(input.limit, input.offset));
+  return { data: asEnvelopeObject(raw) };
+}
+
+export async function executeTagsList(input: ExecutePagedReadInput): Promise<LeverEnvelopeOutput> {
+  const client = authClientFor(input, "tags.list");
+  const raw = await client.getJSON("/tags" + pagingQuery(input.limit, input.offset));
+  return { data: asEnvelopeObject(raw) };
+}
+
+export interface ExecuteStagesGetInput extends LeverAuthInput {
+  stageId: string;
+}
+
+export async function executeStagesGet(input: ExecuteStagesGetInput): Promise<LeverEnvelopeOutput> {
+  const stageId = safeSegment(input.stageId, "stageId");
+  const client = authClientFor(input, "stages.get");
+  const raw = await client.getJSON(`/stages/${stageId}`);
+  return { data: asEnvelopeObject(raw) };
+}
+
+export interface ExecuteReferralsListInput extends ExecutePagedReadInput {
+  opportunityId: string;
+}
+
+export async function executeReferralsList(input: ExecuteReferralsListInput): Promise<LeverEnvelopeOutput> {
+  const opportunityId = safeSegment(input.opportunityId, "opportunityId");
+  const client = authClientFor(input, "referrals.list");
+  const raw = await client.getJSON(
+    `/opportunities/${opportunityId}/referrals` + pagingQuery(input.limit, input.offset),
+  );
+  return { data: asEnvelopeObject(raw) };
+}
