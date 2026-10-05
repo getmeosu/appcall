@@ -6,8 +6,8 @@ describe("Ashby manifest", () => {
     expect(manifest.key).toBe("ashby");
   });
 
-  it("has version 0.9.1", () => {
-    expect(manifest.version).toBe("0.9.1");
+  it("has version 0.10.0", () => {
+    expect(manifest.version).toBe("0.10.0");
   });
 
   it("uses bun runtime", () => {
@@ -33,7 +33,7 @@ describe("Ashby manifest", () => {
     expect(manifest.operations.healthcheck.kind).toBe("action");
   });
 
-  it("declares tip+G1+G2+G3 operations", () => {
+  it("declares tip+G1+G2+G3+G4 operations", () => {
     expect(Object.keys(manifest.operations).sort()).toEqual([
       "application_feedback.list",
       "application_feedback.submit",
@@ -43,6 +43,7 @@ describe("Ashby manifest", () => {
       "applications.get",
       "applications.hire",
       "applications.list",
+      "applications.list_criteria_evaluations",
       "applications.list_history",
       "applications.move",
       "applications.reject",
@@ -61,15 +62,27 @@ describe("Ashby manifest", () => {
       "candidates.update",
       "close_reasons.list",
       "communication_templates.list",
+      "custom_fields.get",
+      "custom_fields.list",
+      "custom_fields.set_value",
+      "custom_fields.set_values",
       "departments.get",
       "departments.list",
+      "feedback_form_definitions.get",
+      "feedback_form_definitions.list",
+      "files.get",
       "healthcheck",
       "hiring_team.add_member",
       "hiring_team.remove_member",
       "hiring_team_roles.list",
+      "interview_events.list",
+      "interview_plans.list",
       "interview_schedules.list",
+      "interview_stage_groups.list",
+      "interview_stages.get",
       "interview_stages.list",
       "interviews.cancel",
+      "interviews.get",
       "interviews.list",
       "interviews.schedule",
       "job_interview_plans.get",
@@ -102,6 +115,8 @@ describe("Ashby manifest", () => {
       "openings.set_archived",
       "openings.set_state",
       "openings.update",
+      "referral_forms.get",
+      "referrals.create",
       "sources.list",
       "users.get",
       "users.list",
@@ -185,7 +200,7 @@ describe("Ashby manifest", () => {
   });
 
   it("declares 75 operations (G3 +15) and no interview_schedules.get (Ashby-0 cite-drop)", () => {
-    expect(Object.keys(manifest.operations)).toHaveLength(75);
+    expect(Object.keys(manifest.operations)).toHaveLength(90);
     expect(manifest.operations["interview_schedules.get"]).toBeUndefined();
   });
 
@@ -365,5 +380,51 @@ describe("Ashby manifest", () => {
         ]);
       }
     }
+  });
+});
+
+describe("Ashby G4 effect keys", () => {
+  it("G4 ops omit effect keys; no Idempotent anywhere", () => {
+    const g4 = [
+      "interviews.get",
+      "interview_stages.get",
+      "interview_events.list",
+      "interview_plans.list",
+      "interview_stage_groups.list",
+      "feedback_form_definitions.list",
+      "feedback_form_definitions.get",
+      "custom_fields.list",
+      "custom_fields.get",
+      "custom_fields.set_value",
+      "custom_fields.set_values",
+      "referrals.create",
+      "referral_forms.get",
+      "files.get",
+      "applications.list_criteria_evaluations",
+    ];
+    for (const id of g4) {
+      const op = (manifest.operations as Record<string, any>)[id];
+      expect(op).toBeTruthy();
+      expect(op.kind).toBe("action");
+      expect(op.effectPolicy).toBeUndefined();
+      expect(op.reconcile).toBeUndefined();
+      expect(op.observe).toBeUndefined();
+    }
+    // referralForm.info can create the default form → write (linus ruling)
+    expect((manifest.operations as Record<string, any>)["referral_forms.get"].sideEffect).toBe(
+      "write",
+    );
+    for (const [id, op] of Object.entries(manifest.operations as Record<string, any>)) {
+      expect(op.effectPolicy === "Idempotent").toBe(false);
+    }
+    expect(Object.keys(manifest.operations)).toHaveLength(90);
+  });
+
+  it("jobs.list description cites documented board path without /jobs", () => {
+    expect(manifest.operations["jobs.list"].description).toContain(
+      "/posting-api/job-board/{boardName}",
+    );
+    expect(manifest.operations["jobs.list"].description).not.toContain("/jobs.");
+    expect(manifest.operations["jobs.list"].description).not.toMatch(/boardName\}\/jobs/);
   });
 });

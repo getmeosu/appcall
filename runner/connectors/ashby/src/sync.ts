@@ -1,7 +1,7 @@
 /**
  * Ashby list/get/search/write syncs.
  *
- * jobs.list               → public GET /posting-api/job-board/{board}/jobs
+ * jobs.list               → public GET /posting-api/job-board/{board}
  * candidates.list         → authenticated POST /candidate.list
  * applications.list       → authenticated POST /application.list
  * candidates.get          → authenticated POST /candidate.info
@@ -69,7 +69,7 @@ export async function executeJobsListSync(
   input: ExecuteJobsListSyncInput,
 ): Promise<ExecuteJobsListSyncOutput> {
   const client = createClient({ boardName: input.boardName, fetch: input.fetch });
-  const raw = await client.getJSON("/jobs");
+  const raw = await client.getJSON("");
   return { jobs: parseJobsResponse(raw) };
 }
 

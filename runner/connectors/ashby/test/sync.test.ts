@@ -57,7 +57,7 @@ function stubSequence(
 const auth = { apiKey: "fixturekey" };
 
 describe("Ashby jobs.list sync", () => {
-  test("requests the documented endpoint on the allowed host", async () => {
+  test("requests GET /posting-api/job-board/{board} (not .../jobs) on the allowed host", async () => {
     const { calls, impl } = stubFetch('{"jobs":[{"id":"j1","title":"Engineer"}]}');
 
     await executeJobsListSync({ boardName: "acme", fetch: impl });
@@ -65,7 +65,7 @@ describe("Ashby jobs.list sync", () => {
     expect(calls).toHaveLength(1);
     const url = new URL(calls[0].url);
     expect(url.hostname).toBe("api.ashbyhq.com");
-    expect(url.pathname).toBe("/posting-api/job-board/acme/jobs");
+    expect(url.pathname).toBe("/posting-api/job-board/acme");
     expect(calls[0].method).toBe("GET");
   });
 

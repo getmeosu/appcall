@@ -937,6 +937,23 @@ import {
   executeCommunicationTemplatesList as listAshbyCommunicationTemplates,
   executeApplicationHiringTeamRolesList as listAshbyApplicationHiringTeamRoles,
 } from "../../connectors/ashby/src/g3";
+import {
+  executeInterviewsGet as getAshbyInterview,
+  executeInterviewStagesGet as getAshbyInterviewStage,
+  executeInterviewEventsList as listAshbyInterviewEvents,
+  executeInterviewPlansList as listAshbyInterviewPlans,
+  executeInterviewStageGroupsList as listAshbyInterviewStageGroups,
+  executeFeedbackFormDefinitionsList as listAshbyFeedbackFormDefinitions,
+  executeFeedbackFormDefinitionsGet as getAshbyFeedbackFormDefinition,
+  executeCustomFieldsList as listAshbyCustomFields,
+  executeCustomFieldsGet as getAshbyCustomField,
+  executeCustomFieldsSetValue as setAshbyCustomFieldValue,
+  executeCustomFieldsSetValues as setAshbyCustomFieldValues,
+  executeReferralsCreate as createAshbyReferral,
+  executeReferralFormsGet as getAshbyReferralForm,
+  executeFilesGet as getAshbyFile,
+  executeApplicationsListCriteriaEvaluations as listAshbyApplicationCriteriaEvaluations,
+} from "../../connectors/ashby/src/g4";
 import { parseWebhook as ashbyParseWebhook } from "../../connectors/ashby/src/webhook";
 import intercomManifest from "../../connectors/intercom/manifest.json";
 import {
@@ -2572,6 +2589,21 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
       "offer_processes.start": startAshbyOfferProcess,
       "communication_templates.list": listAshbyCommunicationTemplates,
       "application_hiring_team_roles.list": listAshbyApplicationHiringTeamRoles,
+      "interviews.get": getAshbyInterview,
+      "interview_stages.get": getAshbyInterviewStage,
+      "interview_events.list": listAshbyInterviewEvents,
+      "interview_plans.list": listAshbyInterviewPlans,
+      "interview_stage_groups.list": listAshbyInterviewStageGroups,
+      "feedback_form_definitions.list": listAshbyFeedbackFormDefinitions,
+      "feedback_form_definitions.get": getAshbyFeedbackFormDefinition,
+      "custom_fields.list": listAshbyCustomFields,
+      "custom_fields.get": getAshbyCustomField,
+      "custom_fields.set_value": setAshbyCustomFieldValue,
+      "custom_fields.set_values": setAshbyCustomFieldValues,
+      "referrals.create": createAshbyReferral,
+      "referral_forms.get": getAshbyReferralForm,
+      "files.get": getAshbyFile,
+      "applications.list_criteria_evaluations": listAshbyApplicationCriteriaEvaluations,
     },
     intercom: {
       "conversations.reply": replyIntercomConversation,
