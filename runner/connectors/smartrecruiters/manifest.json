@@ -1,7 +1,7 @@
 {
   "key": "smartrecruiters",
   "name": "SmartRecruiters",
-  "version": "0.3.2",
+  "version": "0.4.0",
   "runtime": "bun",
   "categories": [
     "ats-recruitment"
@@ -144,6 +144,1236 @@
       "responseFormat": "json",
       "enforceOutputSchema": true,
       "validationMode": "strict-generated"
+    },
+    "candidates.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Create candidate",
+      "description": "Create a candidate in the Talent Pool via authenticated POST /candidates (201 CandidateDetails). Returns the raw candidate id plus the normalized candidate. Creates omit effectPolicy. OAuth scope candidates_create (declared per operation; not part of the default connect set). API keys need the matching SmartRecruiters user permission.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "firstName",
+          "lastName",
+          "email"
+        ],
+        "properties": {
+          "firstName": {
+            "type": "string",
+            "minLength": 1,
+            "description": "First name."
+          },
+          "lastName": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Last name."
+          },
+          "email": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Email address."
+          },
+          "phoneNumber": {
+            "type": "string",
+            "description": "Phone number."
+          },
+          "location": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "country": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Country name."
+              },
+              "countryCode": {
+                "type": "string",
+                "minLength": 2,
+                "maxLength": 2,
+                "description": "ISO 3166-1 alpha-2 country code."
+              },
+              "regionCode": {
+                "type": "string",
+                "description": "Region code."
+              },
+              "region": {
+                "type": "string",
+                "description": "Region name."
+              },
+              "city": {
+                "type": "string",
+                "minLength": 1,
+                "description": "City."
+              },
+              "lat": {
+                "type": "number",
+                "minimum": -90,
+                "maximum": 90,
+                "description": "Latitude."
+              },
+              "lng": {
+                "type": "number",
+                "minimum": -180,
+                "maximum": 180,
+                "description": "Longitude."
+              }
+            },
+            "description": "Candidate location."
+          },
+          "web": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "skype": {
+                "type": "string",
+                "description": "skype profile URL or handle."
+              },
+              "linkedin": {
+                "type": "string",
+                "description": "linkedin profile URL or handle."
+              },
+              "facebook": {
+                "type": "string",
+                "description": "facebook profile URL or handle."
+              },
+              "twitter": {
+                "type": "string",
+                "description": "twitter profile URL or handle."
+              },
+              "website": {
+                "type": "string",
+                "description": "website profile URL or handle."
+              }
+            },
+            "description": "Web profiles."
+          },
+          "tags": {
+            "type": "array",
+            "maxItems": 100,
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 150
+            },
+            "description": "Candidate tags (max 100, each up to 150 characters)."
+          },
+          "education": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "institution": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Institution."
+                },
+                "degree": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Degree."
+                },
+                "major": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Major."
+                },
+                "current": {
+                  "type": "boolean",
+                  "description": "Currently studying."
+                },
+                "location": {
+                  "type": "string",
+                  "description": "Location."
+                },
+                "startDate": {
+                  "type": "string",
+                  "description": "Date as YYYY, YYYY-MM or YYYY-MM-DD."
+                },
+                "endDate": {
+                  "type": "string",
+                  "description": "Date as YYYY, YYYY-MM or YYYY-MM-DD."
+                },
+                "description": {
+                  "type": "string",
+                  "description": "Description."
+                }
+              }
+            },
+            "description": "Education entries."
+          },
+          "experience": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "title": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Job title."
+                },
+                "company": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Company."
+                },
+                "current": {
+                  "type": "boolean",
+                  "description": "Current position."
+                },
+                "startDate": {
+                  "type": "string",
+                  "description": "Date as YYYY, YYYY-MM or YYYY-MM-DD."
+                },
+                "endDate": {
+                  "type": "string",
+                  "description": "Date as YYYY, YYYY-MM or YYYY-MM-DD."
+                },
+                "location": {
+                  "type": "string",
+                  "description": "Location."
+                },
+                "description": {
+                  "type": "string",
+                  "description": "Description."
+                }
+              }
+            },
+            "description": "Experience entries."
+          },
+          "sourceDetails": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "sourceTypeId",
+              "sourceId"
+            ],
+            "properties": {
+              "sourceTypeId": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Source type id (GET /configuration/sources)."
+              },
+              "sourceSubTypeId": {
+                "type": "string",
+                "description": "Optional source subtype id."
+              },
+              "sourceId": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Source id (GET /configuration/sources/{sourceTypeId}/values)."
+              }
+            },
+            "description": "Candidate source; omitted defaults to the API source."
+          },
+          "internal": {
+            "type": "boolean",
+            "description": "Mark the candidate as internal."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "candidate"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Raw SmartRecruiters candidate id."
+          },
+          "candidate": {
+            "type": "object",
+            "description": "Normalized candidate (same shape as candidates.get)."
+          }
+        }
+      }
+    },
+    "applications.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Create candidate on job",
+      "description": "Create a candidate and assign them to a job via authenticated POST /jobs/{jobId}/candidates (201 CandidateDetails with primaryAssignment). Read the application UUID with applications.get. Creates omit effectPolicy. OAuth scope candidates_create (declared per operation; not part of the default connect set). API keys need the matching SmartRecruiters user permission.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "jobId",
+          "firstName",
+          "lastName",
+          "email"
+        ],
+        "properties": {
+          "jobId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "SmartRecruiters job id to apply the new candidate to."
+          },
+          "firstName": {
+            "type": "string",
+            "minLength": 1,
+            "description": "First name."
+          },
+          "lastName": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Last name."
+          },
+          "email": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Email address."
+          },
+          "phoneNumber": {
+            "type": "string",
+            "description": "Phone number."
+          },
+          "location": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "country": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Country name."
+              },
+              "countryCode": {
+                "type": "string",
+                "minLength": 2,
+                "maxLength": 2,
+                "description": "ISO 3166-1 alpha-2 country code."
+              },
+              "regionCode": {
+                "type": "string",
+                "description": "Region code."
+              },
+              "region": {
+                "type": "string",
+                "description": "Region name."
+              },
+              "city": {
+                "type": "string",
+                "minLength": 1,
+                "description": "City."
+              },
+              "lat": {
+                "type": "number",
+                "minimum": -90,
+                "maximum": 90,
+                "description": "Latitude."
+              },
+              "lng": {
+                "type": "number",
+                "minimum": -180,
+                "maximum": 180,
+                "description": "Longitude."
+              }
+            },
+            "description": "Candidate location."
+          },
+          "web": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "skype": {
+                "type": "string",
+                "description": "skype profile URL or handle."
+              },
+              "linkedin": {
+                "type": "string",
+                "description": "linkedin profile URL or handle."
+              },
+              "facebook": {
+                "type": "string",
+                "description": "facebook profile URL or handle."
+              },
+              "twitter": {
+                "type": "string",
+                "description": "twitter profile URL or handle."
+              },
+              "website": {
+                "type": "string",
+                "description": "website profile URL or handle."
+              }
+            },
+            "description": "Web profiles."
+          },
+          "tags": {
+            "type": "array",
+            "maxItems": 100,
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 150
+            },
+            "description": "Candidate tags (max 100, each up to 150 characters)."
+          },
+          "education": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "institution": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Institution."
+                },
+                "degree": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Degree."
+                },
+                "major": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Major."
+                },
+                "current": {
+                  "type": "boolean",
+                  "description": "Currently studying."
+                },
+                "location": {
+                  "type": "string",
+                  "description": "Location."
+                },
+                "startDate": {
+                  "type": "string",
+                  "description": "Date as YYYY, YYYY-MM or YYYY-MM-DD."
+                },
+                "endDate": {
+                  "type": "string",
+                  "description": "Date as YYYY, YYYY-MM or YYYY-MM-DD."
+                },
+                "description": {
+                  "type": "string",
+                  "description": "Description."
+                }
+              }
+            },
+            "description": "Education entries."
+          },
+          "experience": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "title": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Job title."
+                },
+                "company": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Company."
+                },
+                "current": {
+                  "type": "boolean",
+                  "description": "Current position."
+                },
+                "startDate": {
+                  "type": "string",
+                  "description": "Date as YYYY, YYYY-MM or YYYY-MM-DD."
+                },
+                "endDate": {
+                  "type": "string",
+                  "description": "Date as YYYY, YYYY-MM or YYYY-MM-DD."
+                },
+                "location": {
+                  "type": "string",
+                  "description": "Location."
+                },
+                "description": {
+                  "type": "string",
+                  "description": "Description."
+                }
+              }
+            },
+            "description": "Experience entries."
+          },
+          "sourceDetails": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "sourceTypeId",
+              "sourceId"
+            ],
+            "properties": {
+              "sourceTypeId": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Source type id (GET /configuration/sources)."
+              },
+              "sourceSubTypeId": {
+                "type": "string",
+                "description": "Optional source subtype id."
+              },
+              "sourceId": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Source id (GET /configuration/sources/{sourceTypeId}/values)."
+              }
+            },
+            "description": "Candidate source; omitted defaults to the API source."
+          },
+          "internal": {
+            "type": "boolean",
+            "description": "Mark the candidate as internal."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "jobId",
+          "candidate"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Raw SmartRecruiters candidate id."
+          },
+          "jobId": {
+            "type": "string",
+            "description": "Job id."
+          },
+          "candidate": {
+            "type": "object",
+            "description": "Normalized candidate."
+          }
+        }
+      }
+    },
+    "candidates.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "effectPolicy": "Reconcile",
+      "reconcile": "candidates.get",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Update candidate",
+      "description": "Update candidate personal details via authenticated PATCH /candidates/{id}. Only firstName, lastName, email and phoneNumber are accepted, because candidates.get returns exactly those fields. EffectPolicy Reconcile observes via candidates.get [id]. OAuth scope candidates_manage (declared per operation; not part of the default connect set). API keys need the matching SmartRecruiters user permission.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "SmartRecruiters candidate id (raw id, e.g. from candidates.create or candidates.list)."
+          },
+          "firstName": {
+            "type": "string",
+            "minLength": 1,
+            "description": "First name."
+          },
+          "lastName": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Last name."
+          },
+          "email": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Email address."
+          },
+          "phoneNumber": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Phone number."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "candidate"
+        ],
+        "properties": {
+          "candidate": {
+            "description": "Normalized candidate after Reconcile via candidates.get; null when not found."
+          }
+        }
+      }
+    },
+    "applications.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get application",
+      "description": "Get a candidate's application to a job via authenticated GET /candidates/{id}/jobs/{jobId}: status, subStatus, startsOn, source, rejection/withdrawal reason and the application UUID (applicationId) used by interviews.list and job_applications.get. OAuth scope candidates_read (declared per operation; not part of the default connect set). API keys need the matching SmartRecruiters user permission.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "jobId"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "SmartRecruiters candidate id (raw id, e.g. from candidates.create or candidates.list)."
+          },
+          "jobId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "SmartRecruiters job id the candidate is assigned to."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "application"
+        ],
+        "properties": {
+          "application": {
+            "description": "Normalized application (candidateId, jobId, applicationId, status, subStatus, startsOn, source, reasonOfRejection, reasonOfWithdrawal, url); null when not found."
+          }
+        }
+      }
+    },
+    "applications.update_status": {
+      "kind": "action",
+      "sideEffect": "write",
+      "effectPolicy": "Reconcile",
+      "reconcile": "applications.get",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Update application status",
+      "description": "Move a candidate's application to another status (stage) via authenticated PUT /candidates/{id}/jobs/{jobId}/status (204). reason is a rejection or withdrawal reason id and is only valid with status REJECTED or WITHDRAWN. EffectPolicy Reconcile observes via applications.get [id, jobId]. OAuth scope candidates_manage (declared per operation; not part of the default connect set). API keys need the matching SmartRecruiters user permission.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "jobId",
+          "status"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "SmartRecruiters candidate id (raw id, e.g. from candidates.create or candidates.list)."
+          },
+          "jobId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "SmartRecruiters job id the candidate is assigned to."
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "LEAD",
+              "NEW",
+              "IN_REVIEW",
+              "INTERVIEW",
+              "OFFERED",
+              "HIRED",
+              "REJECTED",
+              "WITHDRAWN",
+              "TRANSFERRED"
+            ],
+            "description": "Target application status."
+          },
+          "subStatus": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Optional sub-status label."
+          },
+          "startsOn": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Optional ISO 8601 date-time the status takes effect (e.g. hire start date)."
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Rejection reason id (GET /configuration/rejection-reasons) or withdrawal reason id (GET /configuration/withdrawal-reasons)."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "application"
+        ],
+        "properties": {
+          "application": {
+            "description": "Normalized application (candidateId, jobId, applicationId, status, subStatus, startsOn, source, reasonOfRejection, reasonOfWithdrawal, url); null when not found."
+          }
+        }
+      }
+    },
+    "applications.status_history": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get application status history",
+      "description": "List status changes for a candidate's application via authenticated GET /candidates/{id}/jobs/{jobId}/status/history. OAuth scope candidates_read and candidate_status_read (declared per operation; not part of the default connect set). API keys need the matching SmartRecruiters user permission.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "jobId"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "SmartRecruiters candidate id (raw id, e.g. from candidates.create or candidates.list)."
+          },
+          "jobId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "SmartRecruiters job id the candidate is assigned to."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "history",
+          "total"
+        ],
+        "properties": {
+          "history": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            },
+            "description": "Status changes (changedOn, status, subStatus)."
+          },
+          "total": {
+            "type": "integer",
+            "description": "totalFound."
+          }
+        }
+      }
+    },
+    "candidates.tags.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get candidate tags",
+      "description": "Get the tags on a candidate via authenticated GET /candidates/{id}/tags. OAuth scope candidates_read (declared per operation; not part of the default connect set). API keys need the matching SmartRecruiters user permission.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "SmartRecruiters candidate id (raw id, e.g. from candidates.create or candidates.list)."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "tags"
+        ],
+        "properties": {
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Tags on the candidate."
+          }
+        }
+      }
+    },
+    "candidates.tags.add": {
+      "kind": "action",
+      "sideEffect": "write",
+      "effectPolicy": "Reconcile",
+      "reconcile": "candidates.tags.get",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Add candidate tags",
+      "description": "Add tags to a candidate without removing existing ones via authenticated POST /candidates/{id}/tags. EffectPolicy Reconcile observes the full tag set via candidates.tags.get [id]. OAuth scope candidates_manage (declared per operation; not part of the default connect set). API keys need the matching SmartRecruiters user permission.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "tags"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "SmartRecruiters candidate id (raw id, e.g. from candidates.create or candidates.list)."
+          },
+          "tags": {
+            "type": "array",
+            "maxItems": 100,
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 150
+            },
+            "description": "Candidate tags (max 100, each up to 150 characters).",
+            "minItems": 1
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "tags"
+        ],
+        "properties": {
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Tags on the candidate."
+          }
+        }
+      }
+    },
+    "candidates.tags.replace": {
+      "kind": "action",
+      "sideEffect": "write",
+      "effectPolicy": "Reconcile",
+      "reconcile": "candidates.tags.get",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Replace candidate tags",
+      "description": "Replace all tags on a candidate with the given array via authenticated PUT /candidates/{id}/tags. EffectPolicy Reconcile observes via candidates.tags.get [id]. OAuth scope candidates_manage (declared per operation; not part of the default connect set). API keys need the matching SmartRecruiters user permission.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "tags"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "SmartRecruiters candidate id (raw id, e.g. from candidates.create or candidates.list)."
+          },
+          "tags": {
+            "type": "array",
+            "maxItems": 100,
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 150
+            },
+            "description": "Candidate tags (max 100, each up to 150 characters)."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "tags"
+        ],
+        "properties": {
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Tags on the candidate."
+          }
+        }
+      }
+    },
+    "candidates.attachments.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List candidate attachments",
+      "description": "List a candidate's attachments (metadata only) via authenticated GET /candidates/{id}/attachments. OAuth scope candidates_read (declared per operation; not part of the default connect set). API keys need the matching SmartRecruiters user permission.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "SmartRecruiters candidate id (raw id, e.g. from candidates.create or candidates.list)."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "attachments",
+          "total"
+        ],
+        "properties": {
+          "attachments": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            },
+            "description": "Attachments (id, name, type, contentType, downloadUrl)."
+          },
+          "total": {
+            "type": "integer",
+            "description": "totalFound."
+          }
+        }
+      }
+    },
+    "applications.attachments.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List application attachments",
+      "description": "List a candidate's attachments in the context of a job (metadata only) via authenticated GET /candidates/{id}/jobs/{jobId}/attachments. OAuth scope candidates_read (declared per operation; not part of the default connect set). API keys need the matching SmartRecruiters user permission.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "jobId"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "SmartRecruiters candidate id (raw id, e.g. from candidates.create or candidates.list)."
+          },
+          "jobId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "SmartRecruiters job id the candidate is assigned to."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "attachments",
+          "total"
+        ],
+        "properties": {
+          "attachments": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            },
+            "description": "Attachments (id, name, type, contentType, downloadUrl)."
+          },
+          "total": {
+            "type": "integer",
+            "description": "totalFound."
+          }
+        }
+      }
+    },
+    "applications.properties.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get application properties",
+      "description": "Get candidate property values for a candidate's job via authenticated GET /candidates/{id}/jobs/{jobId}/properties. OAuth scope candidates_read (declared per operation; not part of the default connect set). API keys need the matching SmartRecruiters user permission.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "jobId"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "SmartRecruiters candidate id (raw id, e.g. from candidates.create or candidates.list)."
+          },
+          "jobId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "SmartRecruiters job id the candidate is assigned to."
+          },
+          "context": {
+            "type": "string",
+            "enum": [
+              "PROFILE",
+              "OFFER_FORM",
+              "HIRE_FORM",
+              "OFFER_APPROVAL_FORM"
+            ],
+            "description": "Optional form context."
+          },
+          "includeMultiSelect": {
+            "type": "boolean",
+            "description": "Include MULTI_SELECT properties (early access)."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "properties"
+        ],
+        "properties": {
+          "properties": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            },
+            "description": "Properties (id, key, label, type, value, selectedValueLabels)."
+          }
+        }
+      }
+    },
+    "applications.properties.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Update application properties",
+      "description": "Set candidate property values for a candidate's job via authenticated PUT /candidates/{id}/jobs/{jobId}/properties (204). Batch upsert, so effectPolicy is omitted. OAuth scope candidates_manage (declared per operation; not part of the default connect set). API keys need the matching SmartRecruiters user permission.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "jobId",
+          "properties"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "SmartRecruiters candidate id (raw id, e.g. from candidates.create or candidates.list)."
+          },
+          "jobId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "SmartRecruiters job id the candidate is assigned to."
+          },
+          "properties": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 100,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "id"
+              ],
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Candidate property id or key."
+                },
+                "textValue": {
+                  "type": "string",
+                  "description": "TEXT, DATE (ISO 8601), COUNTRY (ISO 3166-1 alpha-2, lowercase), REGION (ISO 3166-2, lowercase), USER (user id) or SINGLE_SELECT (value id)."
+                },
+                "numberValue": {
+                  "type": "number",
+                  "description": "NUMBER or PERCENT."
+                },
+                "booleanValue": {
+                  "type": "boolean",
+                  "description": "BOOLEAN."
+                },
+                "currencyValue": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "code",
+                    "value"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "minLength": 3,
+                      "maxLength": 3,
+                      "description": "ISO 4217 currency code."
+                    },
+                    "value": {
+                      "type": "number",
+                      "description": "Amount."
+                    }
+                  },
+                  "description": "CURRENCY."
+                },
+                "optionIds": {
+                  "type": "array",
+                  "maxItems": 200,
+                  "items": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "description": "MULTI_SELECT option ids; an empty array clears the field."
+                }
+              },
+              "description": "One property value. Set at most one value field; none resets the value."
+            },
+            "description": "Property values to set (1-100)."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "ok",
+          "updated"
+        ],
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "const": true,
+            "description": "Always true on 204."
+          },
+          "updated": {
+            "type": "integer",
+            "description": "Number of property entries sent."
+          }
+        }
+      }
+    },
+    "applications.screening_answers.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get screening answers",
+      "description": "Get screening question answers for a candidate's job via authenticated GET /candidates/{id}/jobs/{jobId}/screening-answers. OAuth scope candidates_read (declared per operation; not part of the default connect set). API keys need the matching SmartRecruiters user permission.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "jobId"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "SmartRecruiters candidate id (raw id, e.g. from candidates.create or candidates.list)."
+          },
+          "jobId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "SmartRecruiters job id the candidate is assigned to."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "answers",
+          "total"
+        ],
+        "properties": {
+          "answers": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            },
+            "description": "Answers (id, type, category, name, label, records[].fields[].values[])."
+          },
+          "total": {
+            "type": "integer",
+            "description": "totalFound."
+          }
+        }
+      }
+    },
+    "job_applications.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get job application",
+      "description": "Get a job application by its UUID via authenticated GET /job-applications-api/v202112/job-applications/{jobApplicationId} (status, subStatus, profileId, jobId, sourceIdentifier, createDate). The UUID is applicationId from applications.get. OAuth scope job_applications_read (declared per operation; not part of the default connect set). API keys need the matching SmartRecruiters user permission.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "jobApplicationId"
+        ],
+        "properties": {
+          "jobApplicationId": {
+            "type": "string",
+            "minLength": 36,
+            "maxLength": 36,
+            "description": "Job application UUID (applicationId from applications.get)."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "jobApplication"
+        ],
+        "properties": {
+          "jobApplication": {
+            "description": "Normalized job application; null when the body is empty."
+          }
+        }
+      }
     }
   },
   "models": [
