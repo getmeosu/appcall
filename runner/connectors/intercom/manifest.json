@@ -1,7 +1,7 @@
 {
   "key": "intercom",
   "name": "Intercom",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "runtime": "bun",
   "visibility": "public",
   "categories": [
@@ -2894,6 +2894,241 @@
       "request": {
         "method": "GET",
         "path": "/tags/{{id}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "contacts.block": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Block contact",
+      "description": "Block an Intercom contact (POST /contacts/{id}/block). Intercom also archives the contact's conversations and the API has no unblock route. No EffectPolicy: the contact object returned by contacts.get has no blocked field.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Intercom contact id."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/contacts/{{id}}/block",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "contacts.get_by_external_id": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get contact by external id",
+      "description": "Get an Intercom user contact by your external id (GET /contacts/find_by_external_id/{externalId}). Users only, not leads.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "externalId"
+        ],
+        "properties": {
+          "externalId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "External id you assigned to the user (maps to the external_id path segment)."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/contacts/find_by_external_id/{{externalId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "tags.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Delete tag",
+      "description": "Delete an Intercom workspace tag (DELETE /tags/{id}). Intercom answers 200 with no body, so the result is a fixed {type, id, deleted} envelope.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Intercom tag id."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/tags/{{id}}",
+        "success": [
+          200
+        ],
+        "result": {
+          "data": {
+            "type": "tag",
+            "id": "{{input.id}}",
+            "deleted": true
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "companies.list_notes": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List company notes",
+      "description": "List the notes on an Intercom company (GET /companies/{id}/notes). This route first appears in Intercom-Version 2.15, so this op alone sends 2.15.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Intercom company id."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/companies/{{id}}/notes",
+        "headers": {
+          "Intercom-Version": "2.15"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "companies.scroll": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Scroll companies",
+      "description": "Iterate over all Intercom companies with the Scroll API (GET /companies/scroll). Omit scrollParam to open a scroll, then pass the returned scroll_param. One open scroll per app, and it expires after 1 minute idle.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "scrollParam": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Scroll cursor returned by the previous call (maps to scroll_param)."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/companies/scroll",
+        "query": {
+          "scroll_param": "{{scrollParam}}"
+        },
         "success": [
           200
         ]

@@ -114,7 +114,12 @@
       "contacts.list_companies",
       "companies.list_contacts",
       "contacts.list_tags",
-      "tags.get"
+      "tags.get",
+      "contacts.block",
+      "contacts.get_by_external_id",
+      "tags.delete",
+      "companies.list_notes",
+      "companies.scroll"
     ],
     "upstreamSha": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
     "marketFocus": "international",
@@ -847,12 +852,77 @@
       "adaptations": [
         "GET /tags/{id}; preserves raw provider tag JSON."
       ]
+    },
+    "contacts.block": {
+      "upstreamActionId": "block_contact",
+      "sourceRefs": [
+        "runtime-auth-request"
+      ],
+      "documentationUrls": [
+        "https://developers.intercom.com/docs/references/rest-api/contacts"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "POST /contacts/{id}/block without a body; destructive (archives conversations, no unblock route); no EffectPolicy because the contact object has no blocked field."
+      ]
+    },
+    "contacts.get_by_external_id": {
+      "upstreamActionId": "show_contact_by_external_id",
+      "sourceRefs": [
+        "runtime-auth-request"
+      ],
+      "documentationUrls": [
+        "https://developers.intercom.com/docs/references/rest-api/contacts"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "GET /contacts/find_by_external_id/{externalId}; users only; preserves raw provider contact JSON."
+      ]
+    },
+    "tags.delete": {
+      "upstreamActionId": "delete_tag",
+      "sourceRefs": [
+        "runtime-auth-request"
+      ],
+      "documentationUrls": [
+        "https://developers.intercom.com/docs/references/rest-api/tags"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "DELETE /tags/{id}; 2.13 returns 200 with no body, so a static result envelope {type, id, deleted} is returned; 400 tag_has_dependent_objects and 404 surface as CONNECTOR_UPSTREAM_ERROR."
+      ]
+    },
+    "companies.list_notes": {
+      "upstreamActionId": "list_company_notes",
+      "sourceRefs": [
+        "runtime-auth-request"
+      ],
+      "documentationUrls": [
+        "https://developers.intercom.com/docs/references/rest-api/companies"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "GET /companies/{id}/notes; first available in Intercom-Version 2.15, so this op sends a per-op Intercom-Version 2.15 header; preserves raw provider note_list JSON."
+      ]
+    },
+    "companies.scroll": {
+      "upstreamActionId": "scroll_over_all_companies",
+      "sourceRefs": [
+        "runtime-auth-request"
+      ],
+      "documentationUrls": [
+        "https://developers.intercom.com/docs/references/rest-api/companies"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "GET /companies/scroll with optional scroll_param; preserves raw provider company_scroll JSON."
+      ]
     }
   },
   "manifest": {
     "key": "intercom",
     "name": "Intercom",
-    "version": "0.6.0",
+    "version": "0.7.0",
     "runtime": "bun",
     "visibility": "public",
     "categories": [
@@ -3745,6 +3815,241 @@
         "request": {
           "method": "GET",
           "path": "/tags/{{id}}",
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "contacts.block": {
+        "kind": "action",
+        "sideEffect": "destructive",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Block contact",
+        "description": "Block an Intercom contact (POST /contacts/{id}/block). Intercom also archives the contact's conversations and the API has no unblock route. No EffectPolicy: the contact object returned by contacts.get has no blocked field.",
+        "inputSchema": {
+          "type": "object",
+          "required": [
+            "id"
+          ],
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Intercom contact id."
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "POST",
+          "path": "/contacts/{{id}}/block",
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "contacts.get_by_external_id": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Get contact by external id",
+        "description": "Get an Intercom user contact by your external id (GET /contacts/find_by_external_id/{externalId}). Users only, not leads.",
+        "inputSchema": {
+          "type": "object",
+          "required": [
+            "externalId"
+          ],
+          "properties": {
+            "externalId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "External id you assigned to the user (maps to the external_id path segment)."
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/contacts/find_by_external_id/{{externalId}}",
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "tags.delete": {
+        "kind": "action",
+        "sideEffect": "destructive",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Delete tag",
+        "description": "Delete an Intercom workspace tag (DELETE /tags/{id}). Intercom answers 200 with no body, so the result is a fixed {type, id, deleted} envelope.",
+        "inputSchema": {
+          "type": "object",
+          "required": [
+            "id"
+          ],
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Intercom tag id."
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "DELETE",
+          "path": "/tags/{{id}}",
+          "success": [
+            200
+          ],
+          "result": {
+            "data": {
+              "type": "tag",
+              "id": "{{input.id}}",
+              "deleted": true
+            }
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "companies.list_notes": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "List company notes",
+        "description": "List the notes on an Intercom company (GET /companies/{id}/notes). This route first appears in Intercom-Version 2.15, so this op alone sends 2.15.",
+        "inputSchema": {
+          "type": "object",
+          "required": [
+            "id"
+          ],
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Intercom company id."
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/companies/{{id}}/notes",
+          "headers": {
+            "Intercom-Version": "2.15"
+          },
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "companies.scroll": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Scroll companies",
+        "description": "Iterate over all Intercom companies with the Scroll API (GET /companies/scroll). Omit scrollParam to open a scroll, then pass the returned scroll_param. One open scroll per app, and it expires after 1 minute idle.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "scrollParam": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Scroll cursor returned by the previous call (maps to scroll_param)."
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/companies/scroll",
+          "query": {
+            "scroll_param": "{{scrollParam}}"
+          },
           "success": [
             200
           ]
