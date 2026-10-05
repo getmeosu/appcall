@@ -38,10 +38,10 @@ function json(status: number, body: unknown) {
 }
 
 describe("github write card 15 advisories keys rulesets writes", () => {
-  test("version is 0.65.0 at 658 ops with the write breakdown", () => {
-    expect(manifest.version).toBe("0.65.0");
+  test("version is 0.66.0 at 671 ops with the write breakdown", () => {
+    expect(manifest.version).toBe("0.66.0");
     const ops = manifest.operations as Record<string, Record<string, unknown>>;
-    expect(Object.keys(ops)).toHaveLength(658);
+    expect(Object.keys(ops)).toHaveLength(671);
     const kinds = { action: 0, sync: 0, webhook: 0 };
     const side = { read: 0, write: 0, absent: 0 };
     for (const op of Object.values(ops)) {
@@ -52,8 +52,8 @@ describe("github write card 15 advisories keys rulesets writes", () => {
         else side.absent += 1;
       }
     }
-    expect(kinds).toEqual({ action: 608, sync: 4, webhook: 46 });
-    expect(side).toEqual({ read: 329, write: 264, absent: 15 });
+    expect(kinds).toEqual({ action: 621, sync: 4, webhook: 46 });
+    expect(side).toEqual({ read: 329, write: 277, absent: 15 });
     for (const [key, path] of Object.entries(PATHS)) {
       const op = ops[key];
       expect(String(op.description)).toContain(path);

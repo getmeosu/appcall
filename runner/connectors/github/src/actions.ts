@@ -660,6 +660,23 @@ import {
   validateUpdateReleaseAssetInput,
 } from "./write_card16";
 
+import {
+  createWriteCard17Client,
+  validateCreateUserProjectFieldInput,
+  validateCreateUserProjectItemInput,
+  validateCreateUserProjectDraftInput,
+  validateCreateUserProjectViewInput,
+  validateDeleteAutolinkInput,
+  validateDeleteCodeScanningAnalysisInput,
+  validateDeleteUserPackageInput,
+  validateRemoveRunnerLabelInput,
+  validateTestRepoHookInput,
+  validateUpdateCodeScanningDefaultSetupInput,
+  validateUpdateOrgHookConfigInput,
+  validateUpdateRepoHookConfigInput,
+  validateUpdateUserProjectItemInput,
+} from "./write_card17";
+
 
 
 
@@ -8479,6 +8496,148 @@ export function updateReleaseAsset(input: unknown): Record<string, unknown> | Pr
     });
   }
   return { connector: "github", action: "releases.assets.update", source: "connector", validated: validateUpdateReleaseAssetInput(input) };
+}
+
+
+// ─── write card 17: fuzzy writes (projects, packages, hooks config, scanning) ─
+
+function liveWriteCard17Client(input: Record<string, unknown>, operation: string) {
+  const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
+  return createWriteCard17Client({
+    accessToken: input.accessToken as string,
+    fetch: fetchFn,
+    githubClient: createGitHubClient({ accessToken: input.accessToken as string, fetch: fetchFn, operation }),
+  });
+}
+
+export function createUserProjectField(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveWriteCard17Client(input, "users.projects_v2.fields.create").createUserProjectField(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "users.projects_v2.fields.create", source: "connector", field: result.field };
+    });
+  }
+  return { connector: "github", action: "users.projects_v2.fields.create", source: "connector", validated: validateCreateUserProjectFieldInput(input) };
+}
+
+export function createUserProjectItem(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveWriteCard17Client(input, "users.projects_v2.items.create").createUserProjectItem(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "users.projects_v2.items.create", source: "connector", item: result.item };
+    });
+  }
+  return { connector: "github", action: "users.projects_v2.items.create", source: "connector", validated: validateCreateUserProjectItemInput(input) };
+}
+
+export function createUserProjectDraft(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveWriteCard17Client(input, "users.projects_v2.drafts.create").createUserProjectDraft(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "users.projects_v2.drafts.create", source: "connector", draft: result.draft };
+    });
+  }
+  return { connector: "github", action: "users.projects_v2.drafts.create", source: "connector", validated: validateCreateUserProjectDraftInput(input) };
+}
+
+export function createUserProjectView(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveWriteCard17Client(input, "users.projects_v2.views.create").createUserProjectView(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "users.projects_v2.views.create", source: "connector", view: result.view };
+    });
+  }
+  return { connector: "github", action: "users.projects_v2.views.create", source: "connector", validated: validateCreateUserProjectViewInput(input) };
+}
+
+export function deleteAutolink(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveWriteCard17Client(input, "repos.autolinks.delete").deleteAutolink(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "repos.autolinks.delete", source: "connector", deleted: result.deleted, owner: result.owner, repo: result.repo, autolinkId: result.autolinkId };
+    });
+  }
+  return { connector: "github", action: "repos.autolinks.delete", source: "connector", validated: validateDeleteAutolinkInput(input) };
+}
+
+export function deleteCodeScanningAnalysis(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveWriteCard17Client(input, "code_scanning.analyses.delete").deleteCodeScanningAnalysis(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "code_scanning.analyses.delete", source: "connector", deletion: result.deletion };
+    });
+  }
+  return { connector: "github", action: "code_scanning.analyses.delete", source: "connector", validated: validateDeleteCodeScanningAnalysisInput(input) };
+}
+
+export function deleteUserPackage(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveWriteCard17Client(input, "users.packages.delete").deleteUserPackage(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "users.packages.delete", source: "connector", deleted: result.deleted, username: result.username, packageType: result.packageType, packageName: result.packageName };
+    });
+  }
+  return { connector: "github", action: "users.packages.delete", source: "connector", validated: validateDeleteUserPackageInput(input) };
+}
+
+export function removeRunnerLabel(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveWriteCard17Client(input, "repos.actions.runners.labels.remove").removeRunnerLabel(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "repos.actions.runners.labels.remove", source: "connector", totalCount: result.totalCount, labels: result.labels };
+    });
+  }
+  return { connector: "github", action: "repos.actions.runners.labels.remove", source: "connector", validated: validateRemoveRunnerLabelInput(input) };
+}
+
+export function testRepoHook(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveWriteCard17Client(input, "repos.hooks.test").testRepoHook(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "repos.hooks.test", source: "connector", tested: result.tested, owner: result.owner, repo: result.repo, hookId: result.hookId };
+    });
+  }
+  return { connector: "github", action: "repos.hooks.test", source: "connector", validated: validateTestRepoHookInput(input) };
+}
+
+export function updateCodeScanningDefaultSetup(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveWriteCard17Client(input, "code_scanning.default_setup.update").updateCodeScanningDefaultSetup(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "code_scanning.default_setup.update", source: "connector", setup: result.setup };
+    });
+  }
+  return { connector: "github", action: "code_scanning.default_setup.update", source: "connector", validated: validateUpdateCodeScanningDefaultSetupInput(input) };
+}
+
+export function updateOrgHookConfig(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveWriteCard17Client(input, "orgs.hooks.config.update").updateOrgHookConfig(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "orgs.hooks.config.update", source: "connector", config: result.config };
+    });
+  }
+  return { connector: "github", action: "orgs.hooks.config.update", source: "connector", validated: validateUpdateOrgHookConfigInput(input) };
+}
+
+export function updateRepoHookConfig(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveWriteCard17Client(input, "repos.hooks.config.update").updateRepoHookConfig(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "repos.hooks.config.update", source: "connector", config: result.config };
+    });
+  }
+  return { connector: "github", action: "repos.hooks.config.update", source: "connector", validated: validateUpdateRepoHookConfigInput(input) };
+}
+
+export function updateUserProjectItem(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveWriteCard17Client(input, "users.projects_v2.items.update").updateUserProjectItem(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "users.projects_v2.items.update", source: "connector", item: result.item };
+    });
+  }
+  return { connector: "github", action: "users.projects_v2.items.update", source: "connector", validated: validateUpdateUserProjectItemInput(input) };
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
