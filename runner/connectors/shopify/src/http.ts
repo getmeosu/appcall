@@ -1,6 +1,14 @@
 import { createConnectorHttpClient } from "../../../bun/src/http";
 import manifest from "../manifest.json";
 
+// Admin REST API version pin. Shopify-0 bumps 2025-01→2026-10 (2025-01 past
+// 12-mo support; fall-forward is not a pin). Keep REST routes; GraphQL migrate
+// is out of scope. Caller-only notes (no tip code change): orders.update tax
+// recalc if shipping address is later added (2026-10); webhook.orders.create
+// consumers of checkout_id (removed 2026-04 — tip does not map it).
+export const SHOPIFY_API_VERSION = "2026-10";
+export const SHOPIFY_ADMIN_API_PREFIX = `/admin/api/${SHOPIFY_API_VERSION}`;
+
 export function parseShopifyRateLimit(status: number, headers: Record<string, string>): { limited: boolean; retryAfterSeconds: number } {
   if (status === 429) {
     const retryAfter = Number(headers["retry-after"] ?? "2");
@@ -30,7 +38,7 @@ export function createShopifyClient(options: ShopifyClientOptions) {
   const httpClient = createConnectorHttpClient({ allowedHosts: [`${shop}.myshopify.com`], maxResponseBytes, fetch: options.fetch });
   return {
     async fetchJSON(path: string, init: RequestInit = {}): Promise<{ status: number; headers: Record<string, string>; body: unknown }> {
-      const response = await httpClient.fetchText(`${baseUrl}/admin/api/2025-01${path}`, {
+      const response = await httpClient.fetchText(`${baseUrl}${SHOPIFY_ADMIN_API_PREFIX}${path}`, {
         ...init, headers: { "X-Shopify-Access-Token": options.accessToken, "Content-Type": "application/json", ...(init.headers as Record<string, string>) },
       });
       let body: unknown;

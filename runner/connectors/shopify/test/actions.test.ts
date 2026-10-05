@@ -37,7 +37,7 @@ describe("products.get", () => {
       },
     });
     expect(requests).toHaveLength(1);
-    expect(requests[0].url).toContain(`${SHOP}.myshopify.com/admin/api/2025-01/products/123.json`);
+    expect(requests[0].url).toContain(`${SHOP}.myshopify.com/admin/api/2026-10/products/123.json`);
     expect(requests[0].headers.get("X-Shopify-Access-Token")).toBe(TOKEN);
     expect(result).toMatchObject({ connector: "shopify", action: "products.get", source: "connector" });
     expect((result as Record<string, unknown>).product).toBeDefined();
@@ -77,7 +77,7 @@ describe("products.create", () => {
       },
     });
     expect(requests).toHaveLength(1);
-    expect(requests[0].url).toContain(`${SHOP}.myshopify.com/admin/api/2025-01/products.json`);
+    expect(requests[0].url).toContain(`${SHOP}.myshopify.com/admin/api/2026-10/products.json`);
     expect(requests[0].method).toBe("POST");
     expect(requests[0].headers.get("X-Shopify-Access-Token")).toBe(TOKEN);
     expect(result).toMatchObject({ connector: "shopify", action: "products.create", source: "connector" });

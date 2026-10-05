@@ -201,12 +201,12 @@ describe("parseCustomersResponse", () => {
 
 describe("extractNextPageToken", () => {
   test("extracts page_info from Link header", () => {
-    const headers = { link: '<https://test.myshopify.com/admin/api/2025-01/products.json?page_info=abc123>; rel="next"' };
+    const headers = { link: '<https://test.myshopify.com/admin/api/2026-10/products.json?page_info=abc123>; rel="next"' };
     expect(extractNextPageToken(headers)).toBe("abc123");
   });
 
   test("handles lowercase Link header", () => {
-    const headers = { Link: '<https://test.myshopify.com/admin/api/2025-01/products.json?page_info=xyz789>; rel="next"' };
+    const headers = { Link: '<https://test.myshopify.com/admin/api/2026-10/products.json?page_info=xyz789>; rel="next"' };
     expect(extractNextPageToken(headers)).toBe("xyz789");
   });
 
@@ -215,7 +215,7 @@ describe("extractNextPageToken", () => {
   });
 
   test("returns null when Link header has no page_info", () => {
-    const headers = { link: '<https://test.myshopify.com/admin/api/2025-01/products.json>; rel="next"' };
+    const headers = { link: '<https://test.myshopify.com/admin/api/2026-10/products.json>; rel="next"' };
     expect(extractNextPageToken(headers)).toBeNull();
   });
 });
