@@ -647,6 +647,15 @@ import {
   createGistFork as ghCreateGistFork,
   starGist as ghStarGist,
   unstarGist as ghUnstarGist,
+  addSubIssue as ghAddSubIssue,
+  removeAllIssueLabels as ghRemoveAllIssueLabels,
+  addTeamRepo as ghAddTeamRepo,
+  assignOrgRoleToTeam as ghAssignOrgRoleToTeam,
+  deleteOrgTeam as ghDeleteOrgTeam,
+  removeAllOrgRolesFromTeam as ghRemoveAllOrgRolesFromTeam,
+  removeOrgRoleFromTeam as ghRemoveOrgRoleFromTeam,
+  removeTeamRepo as ghRemoveTeamRepo,
+  updateOrgTeam as ghUpdateOrgTeam,
 } from "../../connectors/github/src/actions";
 import { healthcheck as githubHealthcheck } from "../../connectors/github/src/healthcheck";
 import { executeIssuesListSync as listGitHubIssues, executePullRequestsListSync as listGitHubPRs, executeCommitsListSync as listGitHubCommits, executeRepositoriesListSync as listGitHubRepos } from "../../connectors/github/src/sync";
@@ -2062,6 +2071,15 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
       "gists.forks.create": ghCreateGistFork,
       "gists.star": ghStarGist,
       "gists.unstar": ghUnstarGist,
+      "issues.sub_issues.add": ghAddSubIssue,
+      "issues.labels.remove_all": ghRemoveAllIssueLabels,
+      "orgs.teams.repos.add": ghAddTeamRepo,
+      "orgs.organization_roles.teams.assign": ghAssignOrgRoleToTeam,
+      "orgs.teams.delete": ghDeleteOrgTeam,
+      "orgs.organization_roles.teams.remove_all": ghRemoveAllOrgRolesFromTeam,
+      "orgs.organization_roles.teams.remove": ghRemoveOrgRoleFromTeam,
+      "orgs.teams.repos.remove": ghRemoveTeamRepo,
+      "orgs.teams.update": ghUpdateOrgTeam,
     },
     salesforce: {
       "contacts.create": createContact,

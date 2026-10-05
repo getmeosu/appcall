@@ -35,10 +35,10 @@ function empty(status: number) {
 }
 
 describe("github write card 4 branch protection writes", () => {
-  test("version is 0.61.0 at 630 ops with the write breakdown", () => {
-    expect(manifest.version).toBe("0.61.0");
+  test("version is 0.62.0 at 639 ops with the write breakdown", () => {
+    expect(manifest.version).toBe("0.62.0");
     const ops = manifest.operations as Record<string, Record<string, unknown>>;
-    expect(Object.keys(ops)).toHaveLength(630);
+    expect(Object.keys(ops)).toHaveLength(639);
     const kinds = { action: 0, sync: 0, webhook: 0 };
     const side = { read: 0, write: 0, absent: 0 };
     for (const op of Object.values(ops)) {
@@ -49,8 +49,8 @@ describe("github write card 4 branch protection writes", () => {
         else side.absent += 1;
       }
     }
-    expect(kinds).toEqual({ action: 580, sync: 4, webhook: 46 });
-    expect(side).toEqual({ read: 328, write: 237, absent: 15 });
+    expect(kinds).toEqual({ action: 589, sync: 4, webhook: 46 });
+    expect(side).toEqual({ read: 328, write: 246, absent: 15 });
     expect(String(ops["branches.protection.get"].description)).toContain("GET /repos/{owner}/{repo}/branches/{branch}/protection");
     expect(ops["branches.protection.get"].sideEffect).toBe("read");
     for (const key of NO_POLICY) {

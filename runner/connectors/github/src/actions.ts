@@ -615,6 +615,19 @@ import {
   validateUnstarGistInput,
 } from "./write_card12";
 
+import {
+  createWriteCard13Client,
+  validateAddSubIssueInput,
+  validateRemoveAllIssueLabelsInput,
+  validateAddTeamRepoInput,
+  validateAssignOrgRoleToTeamInput,
+  validateDeleteOrgTeamInput,
+  validateRemoveAllOrgRolesFromTeamInput,
+  validateRemoveOrgRoleFromTeamInput,
+  validateRemoveTeamRepoInput,
+  validateUpdateOrgTeamInput,
+} from "./write_card13";
+
 
 
 import {
@@ -8105,6 +8118,107 @@ export function unstarGist(input: unknown): Record<string, unknown> | Promise<Re
     });
   }
   return { connector: "github", action: "gists.unstar", source: "connector", validated: validateUnstarGistInput(input) };
+}
+
+// ─── write card 13: sub-issues, issue labels, teams, org-role teams ────────────
+
+function liveWriteCard13Client(input: Record<string, unknown>, operation: string) {
+  const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
+  return createWriteCard13Client({
+    accessToken: input.accessToken as string,
+    fetch: fetchFn,
+    githubClient: createGitHubClient({ accessToken: input.accessToken as string, fetch: fetchFn, operation }),
+  });
+}
+
+export function addSubIssue(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveWriteCard13Client(input, "issues.sub_issues.add").addSubIssue(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "issues.sub_issues.add", source: "connector", issue: result.issue };
+    });
+  }
+  return { connector: "github", action: "issues.sub_issues.add", source: "connector", validated: validateAddSubIssueInput(input) };
+}
+
+export function removeAllIssueLabels(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveWriteCard13Client(input, "issues.labels.remove_all").removeAllIssueLabels(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "issues.labels.remove_all", source: "connector", deleted: result.deleted, owner: result.owner, repo: result.repo, issueNumber: result.issueNumber };
+    });
+  }
+  return { connector: "github", action: "issues.labels.remove_all", source: "connector", validated: validateRemoveAllIssueLabelsInput(input) };
+}
+
+export function addTeamRepo(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveWriteCard13Client(input, "orgs.teams.repos.add").addTeamRepo(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "orgs.teams.repos.add", source: "connector", added: result.added, org: result.org, teamSlug: result.teamSlug, owner: result.owner, repo: result.repo, permission: result.permission };
+    });
+  }
+  return { connector: "github", action: "orgs.teams.repos.add", source: "connector", validated: validateAddTeamRepoInput(input) };
+}
+
+export function assignOrgRoleToTeam(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveWriteCard13Client(input, "orgs.organization_roles.teams.assign").assignOrgRoleToTeam(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "orgs.organization_roles.teams.assign", source: "connector", assigned: result.assigned, org: result.org, teamSlug: result.teamSlug, roleId: result.roleId };
+    });
+  }
+  return { connector: "github", action: "orgs.organization_roles.teams.assign", source: "connector", validated: validateAssignOrgRoleToTeamInput(input) };
+}
+
+export function deleteOrgTeam(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveWriteCard13Client(input, "orgs.teams.delete").deleteOrgTeam(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "orgs.teams.delete", source: "connector", deleted: result.deleted, org: result.org, teamSlug: result.teamSlug };
+    });
+  }
+  return { connector: "github", action: "orgs.teams.delete", source: "connector", validated: validateDeleteOrgTeamInput(input) };
+}
+
+export function removeAllOrgRolesFromTeam(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveWriteCard13Client(input, "orgs.organization_roles.teams.remove_all").removeAllOrgRolesFromTeam(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "orgs.organization_roles.teams.remove_all", source: "connector", removed: result.removed, org: result.org, teamSlug: result.teamSlug };
+    });
+  }
+  return { connector: "github", action: "orgs.organization_roles.teams.remove_all", source: "connector", validated: validateRemoveAllOrgRolesFromTeamInput(input) };
+}
+
+export function removeOrgRoleFromTeam(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveWriteCard13Client(input, "orgs.organization_roles.teams.remove").removeOrgRoleFromTeam(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "orgs.organization_roles.teams.remove", source: "connector", removed: result.removed, org: result.org, teamSlug: result.teamSlug, roleId: result.roleId };
+    });
+  }
+  return { connector: "github", action: "orgs.organization_roles.teams.remove", source: "connector", validated: validateRemoveOrgRoleFromTeamInput(input) };
+}
+
+export function removeTeamRepo(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveWriteCard13Client(input, "orgs.teams.repos.remove").removeTeamRepo(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "orgs.teams.repos.remove", source: "connector", removed: result.removed, org: result.org, teamSlug: result.teamSlug, owner: result.owner, repo: result.repo };
+    });
+  }
+  return { connector: "github", action: "orgs.teams.repos.remove", source: "connector", validated: validateRemoveTeamRepoInput(input) };
+}
+
+export function updateOrgTeam(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveWriteCard13Client(input, "orgs.teams.update").updateOrgTeam(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "orgs.teams.update", source: "connector", team: result.team };
+    });
+  }
+  return { connector: "github", action: "orgs.teams.update", source: "connector", validated: validateUpdateOrgTeamInput(input) };
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
