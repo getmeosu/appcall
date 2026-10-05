@@ -97,6 +97,13 @@ interface AshbyJob {
   title?: string | null;
   locationName?: string | null;
   departmentName?: string | null;
+  /**
+   * Live public posting-api (jobs.list) returns `location` / `department` as
+   * strings; authenticated job.info returns `location` as an object
+   * ({ id, name, ... }, when expanded) and no department name.
+   */
+  location?: unknown;
+  department?: unknown;
   employmentType?: string | null;
   descriptionHtml?: string | null;
   url?: string | null;
@@ -149,13 +156,22 @@ function sourceTitle(source: unknown): string | null {
   return null;
 }
 
+function nameOf(value: unknown): string | null {
+  if (typeof value === "string") return value.length > 0 ? value : null;
+  if (value != null && typeof value === "object") {
+    const name = (value as { name?: unknown }).name;
+    return typeof name === "string" && name.length > 0 ? name : null;
+  }
+  return null;
+}
+
 export function normalizeJob(job: AshbyJob): NormalizedJob {
   return {
     id: `ash-job:${job.id}`,
     provider: "ashby",
     title: job.title ?? "",
-    location: job.locationName ?? null,
-    department: job.departmentName ?? null,
+    location: job.locationName ?? nameOf(job.location),
+    department: job.departmentName ?? nameOf(job.department),
     employmentType: job.employmentType ?? null,
     createdAt: job.publishedAt ?? job.createdAt ?? null,
     status: job.status ?? null,
@@ -518,7 +534,15 @@ interface AshbyOffer {
   decidedAt?: string | null;
   createdAt?: string | null;
   updatedAt?: string | null;
-  latestVersion?: { id?: string | null; startDate?: string | null } | null;
+  /**
+   * Live offer.list / offer.info carry no top-level createdAt/updatedAt; the
+   * creation timestamp lives at latestVersion.createdAt.
+   */
+  latestVersion?: {
+    id?: string | null;
+    startDate?: string | null;
+    createdAt?: string | null;
+  } | null;
 }
 
 export function normalizeOffer(offer: AshbyOffer): NormalizedOffer {
@@ -532,7 +556,7 @@ export function normalizeOffer(offer: AshbyOffer): NormalizedOffer {
     decidedAt: asIso(offer.decidedAt),
     latestVersionId: asStringId(offer.latestVersion?.id ?? null),
     startDate: asIso(offer.latestVersion?.startDate),
-    createdAt: asIso(offer.createdAt),
+    createdAt: asIso(offer.createdAt) ?? asIso(offer.latestVersion?.createdAt),
     updatedAt: asIso(offer.updatedAt),
   };
 }
@@ -798,12 +822,42 @@ export interface NormalizedOpening {
   openingState: string | null;
 }
 
+/**
+ * Live Ashby opening shape (opening.list / opening.info / opening.search /
+ * opening.create / opening.update): top level carries id, openedAt, closedAt,
+ * isArchived, closeReasonId, archivedAt, openingState; the version fields
+ * (identifier, description, teamId, targetHireDate, targetStartDate,
+ * isBackfill, employmentType, jobIds, locationIds, ...) are nested under
+ * `latestVersion` (nullable). There is no top-level jobId or isOpen.
+ * The legacy top-level keys are kept only as a fallback.
+ */
+interface AshbyOpeningVersion {
+  id?: string | null;
+  identifier?: string | null;
+  description?: string | null;
+  authorId?: string | null;
+  createdAt?: string | null;
+  teamId?: string | null;
+  targetHireDate?: string | null;
+  targetStartDate?: string | null;
+  isBackfill?: boolean | null;
+  employmentType?: string | null;
+  jobIds?: unknown;
+  locationIds?: unknown;
+}
+
 interface AshbyOpening {
   id: string;
-  jobId?: string | null;
-  isOpen?: boolean | null;
   openedAt?: string | null;
   closedAt?: string | null;
+  isArchived?: boolean | null;
+  closeReasonId?: string | null;
+  archivedAt?: string | null;
+  openingState?: string | null;
+  latestVersion?: AshbyOpeningVersion | null;
+  /** Legacy top-level fallbacks (not in the live response). */
+  jobId?: string | null;
+  isOpen?: boolean | null;
   identifier?: string | null;
   description?: string | null;
   teamId?: string | null;
@@ -811,25 +865,51 @@ interface AshbyOpening {
   targetStartDate?: string | null;
   isBackfill?: boolean | null;
   employmentType?: string | null;
-  openingState?: string | null;
+}
+
+function nonEmptyString(value: unknown): string | null {
+  return typeof value === "string" && value.length > 0 ? value : null;
+}
+
+function firstStringId(list: unknown): string | null {
+  if (!Array.isArray(list)) return null;
+  for (const item of list) {
+    const id = asStringId(item);
+    if (id != null) return id;
+  }
+  return null;
 }
 
 export function normalizeOpening(opening: AshbyOpening): NormalizedOpening {
+  const version: AshbyOpeningVersion =
+    opening.latestVersion != null && typeof opening.latestVersion === "object"
+      ? opening.latestVersion
+      : {};
+  const isBackfill =
+    typeof version.isBackfill === "boolean"
+      ? version.isBackfill
+      : typeof opening.isBackfill === "boolean"
+        ? opening.isBackfill
+        : null;
+  const openingState = nonEmptyString(opening.openingState);
   return {
     id: `ash-opening:${asStringId(opening.id) ?? ""}`,
     provider: "ashby",
-    jobId: asStringId(opening.jobId ?? null),
-    isOpen: opening.isOpen === true,
+    jobId: firstStringId(version.jobIds) ?? asStringId(opening.jobId ?? null),
+    isOpen: typeof opening.isOpen === "boolean" ? opening.isOpen : openingState === "Open",
     openedAt: asIso(opening.openedAt),
     closedAt: asIso(opening.closedAt),
-    identifier: opening.identifier ?? null,
-    description: opening.description ?? null,
-    teamId: asStringId(opening.teamId ?? null),
-    targetHireDate: opening.targetHireDate ?? null,
-    targetStartDate: opening.targetStartDate ?? null,
-    isBackfill: typeof opening.isBackfill === "boolean" ? opening.isBackfill : null,
-    employmentType: opening.employmentType ?? null,
-    openingState: opening.openingState ?? null,
+    identifier: nonEmptyString(version.identifier) ?? nonEmptyString(opening.identifier),
+    description: nonEmptyString(version.description) ?? nonEmptyString(opening.description),
+    teamId: asStringId(version.teamId ?? null) ?? asStringId(opening.teamId ?? null),
+    targetHireDate:
+      nonEmptyString(version.targetHireDate) ?? nonEmptyString(opening.targetHireDate),
+    targetStartDate:
+      nonEmptyString(version.targetStartDate) ?? nonEmptyString(opening.targetStartDate),
+    isBackfill,
+    employmentType:
+      nonEmptyString(version.employmentType) ?? nonEmptyString(opening.employmentType),
+    openingState,
   };
 }
 

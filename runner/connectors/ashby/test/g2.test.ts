@@ -42,6 +42,7 @@ function stubFetch(body: string, init: { status?: number } = {}) {
 }
 
 const auth = { apiKey: "fixturekey" };
+const OPENING_ID = "3f1c2a4b-5d6e-4f70-8a91-b2c3d4e5f601";
 
 describe("Ashby G2 jobs list/search/create/update/status", () => {
   test("jobs.list_internal POSTs /job.list", async () => {
@@ -186,16 +187,18 @@ describe("Ashby G2 templates / interview plan / postings", () => {
 describe("Ashby G2 openings / close reasons", () => {
   test("openings.get POSTs /opening.info with openingId", async () => {
     const { calls, impl } = stubFetch(JSON.stringify(openingInfo));
-    const result = await executeOpeningsGet({ ...auth, openingId: "open-1", fetch: impl });
+    const result = await executeOpeningsGet({ ...auth, openingId: OPENING_ID, fetch: impl });
     expect(new URL(calls[0]!.url).pathname).toBe("/opening.info");
-    expect(JSON.parse(await calls[0]!.text())).toEqual({ openingId: "open-1" });
-    expect((result.opening as { id?: string })?.id).toBe("open-1");
+    expect(JSON.parse(await calls[0]!.text())).toEqual({ openingId: OPENING_ID });
+    expect((result.opening as { id?: string })?.id).toBe(OPENING_ID);
+    // raw passthrough keeps the live nesting: version fields live under latestVersion
+    expect((result.opening as Record<string, any>).latestVersion.identifier).toBe("ENG-12");
   });
 
   test("openings.get accepts id alias for Idempotent observe", async () => {
     const { calls, impl } = stubFetch(JSON.stringify(openingInfo));
-    await executeOpeningsGet({ ...auth, id: "open-1", fetch: impl });
-    expect(JSON.parse(await calls[0]!.text())).toEqual({ openingId: "open-1" });
+    await executeOpeningsGet({ ...auth, id: OPENING_ID, fetch: impl });
+    expect(JSON.parse(await calls[0]!.text())).toEqual({ openingId: OPENING_ID });
   });
 
   test("openings.search POSTs /opening.search", async () => {
@@ -214,14 +217,14 @@ describe("Ashby G2 openings / close reasons", () => {
       fetch: impl,
     });
     expect(new URL(calls[0]!.url).pathname).toBe("/opening.create");
-    expect(result.id).toBe("open-1");
+    expect(result.id).toBe(OPENING_ID);
   });
 
   test("openings.update POSTs /opening.update and returns null for Reconcile", async () => {
     const { calls, impl } = stubFetch(JSON.stringify(openingUpdated));
     const result = await executeOpeningsUpdate({
       ...auth,
-      openingId: "open-1",
+      openingId: OPENING_ID,
       description: "Updated opening description",
       fetch: impl,
     });
