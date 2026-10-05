@@ -48,8 +48,8 @@ describe("normalizeCampaign", () => {
     expect(c.status).toBe("ENABLED");
     expect(c.budget).toBe(5000);
     expect(c.biddingStrategy).toBe("MAXIMIZE_CLICKS");
-    expect(c.startDate).toBe("20240601");
-    expect(c.endDate).toBe("20240831");
+    expect(c.startDate).toBe("2024-06-01 00:00:00");
+    expect(c.endDate).toBe("2024-08-31 00:00:00");
   });
 
   test("maps campaign metrics from micros", () => {

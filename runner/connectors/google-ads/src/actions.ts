@@ -281,7 +281,7 @@ export function getCampaign(input: unknown): ActionResult {
     const customerId = sanitizeCustomerId(validated.customerId);
     const query =
       `SELECT campaign.id, campaign.name, campaign.status, campaign.resource_name, ` +
-      `campaign.bidding_strategy_type, campaign.start_date, campaign.end_date ` +
+      `campaign.bidding_strategy_type, campaign.start_date_time, campaign.end_date_time ` +
       `FROM campaign WHERE campaign.id = ${escapeGaqlLiteral(validated.campaignId)}`;
     return createGoogleAdsClient(clientOpts(input, "campaigns.get"))
       .fetchJSON(customerPath(customerId, "/googleAds:search"), {
@@ -321,7 +321,7 @@ export function getCampaignByName(input: unknown): ActionResult {
     const customerId = sanitizeCustomerId(validated.customerId);
     const query =
       `SELECT campaign.id, campaign.name, campaign.status, campaign.resource_name, ` +
-      `campaign.bidding_strategy_type, campaign.start_date, campaign.end_date ` +
+      `campaign.bidding_strategy_type, campaign.start_date_time, campaign.end_date_time ` +
       `FROM campaign WHERE campaign.name = '${escapeGaqlLiteral(validated.name)}'`;
     return createGoogleAdsClient(clientOpts(input, "campaigns.getByName"))
       .fetchJSON(customerPath(customerId, "/googleAds:search"), {
@@ -565,6 +565,59 @@ function validateConversionActionsGetInput(input: unknown): ConversionActionsGet
 }
 
 // ---------------------------------------------------------------------------
+// campaigns.mutate create rewrites (v23 dates + optional EU political declaration)
+// ---------------------------------------------------------------------------
+
+/**
+ * Map public startDate/endDate (and legacy start_date/end_date) onto v25
+ * start_date_time/end_date_time for campaign *create* ops only.
+ * Semantics: same campaign calendar bounds; field type is datetime since v23.
+ * Optionally pass through containsEuPoliticalAdvertising — never invent a default.
+ */
+export function rewriteCampaignCreateOperations(
+  operations: unknown[],
+  containsEuPoliticalAdvertising?: string,
+): unknown[] {
+  return operations.map((op) => {
+    if (!isRecord(op) || !isRecord(op.create)) return op;
+    const create: Record<string, unknown> = { ...op.create };
+
+    if (typeof create.startDate === "string") {
+      if (create.start_date_time == null) create.start_date_time = create.startDate;
+      delete create.startDate;
+    }
+    if (typeof create.endDate === "string") {
+      if (create.end_date_time == null) create.end_date_time = create.endDate;
+      delete create.endDate;
+    }
+    if (typeof create.start_date === "string") {
+      if (create.start_date_time == null) create.start_date_time = create.start_date;
+      delete create.start_date;
+    }
+    if (typeof create.end_date === "string") {
+      if (create.end_date_time == null) create.end_date_time = create.end_date;
+      delete create.end_date;
+    }
+
+    if (typeof create.containsEuPoliticalAdvertising === "string") {
+      if (create.contains_eu_political_advertising == null) {
+        create.contains_eu_political_advertising = create.containsEuPoliticalAdvertising;
+      }
+      delete create.containsEuPoliticalAdvertising;
+    }
+    if (
+      containsEuPoliticalAdvertising != null &&
+      containsEuPoliticalAdvertising.length > 0 &&
+      create.contains_eu_political_advertising == null
+    ) {
+      create.contains_eu_political_advertising = containsEuPoliticalAdvertising;
+    }
+
+    return { ...op, create };
+  });
+}
+
+// ---------------------------------------------------------------------------
 // Shared mutate validators
 // ---------------------------------------------------------------------------
 
@@ -600,7 +653,27 @@ function mutateAction(
 }
 
 export function mutateCampaigns(input: unknown): ActionResult {
-  return mutateAction(input, "campaigns.mutate", "/campaigns:mutate");
+  if (!isRecord(input)) throw new Error("campaigns.mutate input must be an object");
+  const containsEuPoliticalAdvertising = optionalString(input.containsEuPoliticalAdvertising);
+  const validated = validateMutateInput(input, "campaigns.mutate");
+  const operations = rewriteCampaignCreateOperations(
+    validated.operations,
+    containsEuPoliticalAdvertising,
+  );
+  const payload = {
+    ...validated,
+    operations,
+    containsEuPoliticalAdvertising,
+  };
+  if (hasLiveAuth(input, true)) {
+    return postMutate(input, "campaigns.mutate", "/campaigns:mutate", payload);
+  }
+  return {
+    connector: "google-ads",
+    action: "campaigns.mutate",
+    source: "connector",
+    validated: payload,
+  };
 }
 
 export function mutateAdGroups(input: unknown): ActionResult {

@@ -17,6 +17,16 @@ import customerLists from "../fixtures/customer_lists_list.json";
 import conversionActions from "../fixtures/conversion_actions_list.json";
 
 describe("campaigns.list sync", () => {
+  test("maps fixture start_date_time/end_date_time to public startDate/endDate", () => {
+    const result = executeCampaignsListSync({ response: campaignsList });
+    expect(result.items.length).toBeGreaterThan(0);
+    expect(result.items[0]!.startDate).toBe("2024-06-01 00:00:00");
+    expect(result.items[0]!.endDate).toBe("2024-08-31 00:00:00");
+    // fixture uses v25 field names
+    expect(JSON.stringify(campaignsList)).toContain("start_date_time");
+    expect(JSON.stringify(campaignsList)).not.toContain('"start_date"');
+  });
+
   test("returns normalized campaigns with page token", () => {
     const result = executeCampaignsListSync({ response: campaignsList });
 
