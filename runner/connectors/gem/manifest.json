@@ -1,1 +1,1349 @@
-{"auth":{"scopes":[],"setup":{"fields":[{"key":"apiKey","label":"Gem team API key","required":true,"secret":true}],"mode":"api_key"},"type":"api_key"},"categories":["ats-recruitment"],"evidence":{"fixture":{"status":"supplied"},"live":{"status":"unverified"}},"http":{"auth":{"field":"apiKey","in":"header","name":"X-API-Key","value":"{{apiKey}}"},"baseUrl":"https://api.gem.com","errors":{"defaultRetryAfterSeconds":30,"messagePaths":["message","status","error"],"rateLimitStatuses":[429],"retryAfterHeader":"retry-after"},"headers":{"Accept":"application/json"}},"key":"gem","models":["user","candidate","project"],"name":"Gem","network":{"allowedHosts":["api.gem.com"]},"operations":{"candidates.get":{"description":"Get one Gem candidate by ID.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{"candidate_id":{"minLength":1,"type":"string"}},"required":["candidate_id"],"type":"object"},"kind":"action","maxInputBytes":65536,"maxResponseBytes":5242880,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/v0/candidates/{{candidate_id}}","success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":15000,"title":"Get candidate","validationMode":"strict-generated"},"candidates.list":{"description":"List Gem CRM candidates with optional email and page filters.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{"email":{"minLength":1,"type":"string"},"page":{"minimum":1,"type":"integer"},"page_size":{"maximum":100,"minimum":1,"type":"integer"}},"type":"object"},"kind":"action","maxInputBytes":65536,"maxResponseBytes":5242880,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"array"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/v0/candidates","query":{"email":"{{email}}","page":"{{page}}","page_size":"{{page_size}}"},"success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":15000,"title":"List candidates","validationMode":"strict-generated"},"healthcheck":{"description":"Validate the Gem team API key with a one-user list probe.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{},"type":"object"},"kind":"action","maxInputBytes":4096,"maxResponseBytes":65536,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"array"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/v0/users","query":{"page_size":1},"success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":5000,"title":"Healthcheck","validationMode":"strict-generated"},"projects.list":{"description":"List Gem CRM projects with optional page filters.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{"page":{"minimum":1,"type":"integer"},"page_size":{"maximum":100,"minimum":1,"type":"integer"}},"type":"object"},"kind":"action","maxInputBytes":65536,"maxResponseBytes":5242880,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"array"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/v0/projects","query":{"page":"{{page}}","page_size":"{{page_size}}"},"success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":15000,"title":"List projects","validationMode":"strict-generated"},"users.list":{"description":"List Gem users visible to the API key with optional email and page filters.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{"email":{"minLength":1,"type":"string"},"page":{"minimum":1,"type":"integer"},"page_size":{"maximum":100,"minimum":1,"type":"integer"}},"type":"object"},"kind":"action","maxInputBytes":65536,"maxResponseBytes":5242880,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"array"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/v0/users","query":{"email":"{{email}}","page":"{{page}}","page_size":"{{page_size}}"},"success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":15000,"title":"List users","validationMode":"strict-generated"}},"provenance":{"source":{"revision":"33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a","url":"https://github.com/oomol-lab/open-connector"}},"runtime":"bun","version":"0.1.0","visibility":"public"}
+{
+  "key": "gem",
+  "name": "Gem",
+  "version": "0.2.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "ats-recruitment"
+  ],
+  "auth": {
+    "type": "api_key",
+    "scopes": [],
+    "setup": {
+      "mode": "api_key",
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "Gem team API key",
+          "required": true,
+          "secret": true
+        }
+      ]
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "api.gem.com"
+    ]
+  },
+  "models": [
+    "user",
+    "candidate",
+    "project",
+    "note",
+    "sequence",
+    "custom-field"
+  ],
+  "http": {
+    "baseUrl": "https://api.gem.com",
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "X-API-Key",
+      "value": "{{apiKey}}"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after",
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "message",
+        "status",
+        "error"
+      ]
+    },
+    "headers": {
+      "Accept": "application/json"
+    }
+  },
+  "operations": {
+    "healthcheck": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 5000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "title": "Healthcheck",
+      "description": "Validate the Gem team API key with a one-user list probe.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v0/users",
+        "query": {
+          "page_size": 1
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "users.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List users",
+      "description": "List Gem users visible to the API key with optional email and page filters.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "minLength": 1
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "page_size": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v0/users",
+        "query": {
+          "email": "{{email}}",
+          "page": "{{page}}",
+          "page_size": "{{page_size}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "candidates.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List candidates",
+      "description": "List Gem CRM candidates with optional email and page filters.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "minLength": 1
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "page_size": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v0/candidates",
+        "query": {
+          "email": "{{email}}",
+          "page": "{{page}}",
+          "page_size": "{{page_size}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "candidates.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get candidate",
+      "description": "Get one Gem candidate by ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "candidate_id": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "candidate_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v0/candidates/{{candidate_id}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "projects.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List projects",
+      "description": "List Gem CRM projects with optional page filters.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "page_size": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v0/projects",
+        "query": {
+          "page": "{{page}}",
+          "page_size": "{{page_size}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "candidates.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "title": "Create candidate",
+      "description": "Create a Gem CRM candidate.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "created_by": {
+            "type": "string",
+            "description": "Gem user ObjectID.",
+            "minLength": 1
+          },
+          "first_name": {
+            "type": "string",
+            "description": "Candidate first name."
+          },
+          "last_name": {
+            "type": "string",
+            "description": "Candidate last name."
+          },
+          "primary_email": {
+            "type": "string",
+            "description": "Primary email address.",
+            "minLength": 1
+          },
+          "title": {
+            "type": "string",
+            "description": "Current title."
+          },
+          "company": {
+            "type": "string",
+            "description": "Current company."
+          },
+          "linked_in_handle": {
+            "type": "string",
+            "description": "LinkedIn handle used for dedupe."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "created_by"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v0/candidates",
+        "success": [
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "created_by": "{{created_by}}",
+          "first_name": "{{first_name}}",
+          "last_name": "{{last_name}}",
+          "title": "{{title}}",
+          "company": "{{company}}",
+          "linked_in_handle": "{{linked_in_handle}}",
+          "emails": [
+            {
+              "email_address": "{{primary_email}}",
+              "is_primary": true
+            }
+          ]
+        }
+      }
+    },
+    "candidates.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "title": "Update candidate",
+      "description": "Modify a Gem candidate. Only supplied fields are updated.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "candidate_id": {
+            "type": "string",
+            "description": "Gem candidate ObjectID.",
+            "minLength": 1
+          },
+          "first_name": {
+            "type": "string",
+            "description": "Updated first name."
+          },
+          "last_name": {
+            "type": "string",
+            "description": "Updated last name."
+          },
+          "title": {
+            "type": "string",
+            "description": "Updated title."
+          },
+          "company": {
+            "type": "string",
+            "description": "Updated company."
+          },
+          "phone_number": {
+            "type": "string",
+            "description": "Updated phone number."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "candidate_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/v0/candidates/{{candidate_id}}",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "first_name": "{{first_name}}",
+          "last_name": "{{last_name}}",
+          "title": "{{title}}",
+          "company": "{{company}}",
+          "phone_number": "{{phone_number}}"
+        }
+      }
+    },
+    "candidates.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "title": "Delete candidate",
+      "description": "Delete a Gem candidate on behalf of a team user.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "candidate_id": {
+            "type": "string",
+            "description": "Gem candidate ObjectID.",
+            "minLength": 1
+          },
+          "on_behalf_of_user_id": {
+            "type": "string",
+            "description": "Gem user ObjectID.",
+            "minLength": 1
+          },
+          "permanently_remove_contact_info": {
+            "type": "boolean",
+            "description": "Prevent contact info from being re-added."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "candidate_id",
+          "on_behalf_of_user_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/v0/candidates/{{candidate_id}}",
+        "success": [
+          204
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "on_behalf_of_user_id": "{{on_behalf_of_user_id}}",
+          "permanently_remove_contact_info": "{{permanently_remove_contact_info}}"
+        },
+        "result": {
+          "data": {
+            "deleted": true
+          }
+        }
+      }
+    },
+    "candidates.notes.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "title": "List candidate notes",
+      "description": "List notes that belong to a Gem candidate.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "candidate_id": {
+            "type": "string",
+            "description": "Gem candidate ObjectID.",
+            "minLength": 1
+          },
+          "page": {
+            "type": "integer",
+            "description": "1-indexed page number.",
+            "minimum": 1
+          },
+          "page_size": {
+            "type": "integer",
+            "description": "Page size, maximum 100.",
+            "minimum": 1,
+            "maximum": 100
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "candidate_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v0/candidates/{{candidate_id}}/notes",
+        "query": {
+          "page": "{{page}}",
+          "page_size": "{{page_size}}"
+        },
+        "success": [
+          200
+        ]
+      }
+    },
+    "notes.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "title": "Create note",
+      "description": "Create a note on a Gem candidate.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "candidate_id": {
+            "type": "string",
+            "description": "Gem candidate ObjectID.",
+            "minLength": 1
+          },
+          "user_id": {
+            "type": "string",
+            "description": "Gem user ObjectID.",
+            "minLength": 1
+          },
+          "content": {
+            "type": "string",
+            "description": "Note body.",
+            "minLength": 1
+          },
+          "is_private": {
+            "type": "boolean",
+            "description": "Whether the note is private."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "candidate_id",
+          "user_id",
+          "content"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v0/notes",
+        "success": [
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "candidate_id": "{{candidate_id}}",
+          "user_id": "{{user_id}}",
+          "content": "{{content}}",
+          "is_private": "{{is_private}}"
+        }
+      }
+    },
+    "notes.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "title": "Get note",
+      "description": "Get one Gem note by ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "note_id": {
+            "type": "string",
+            "description": "Note ObjectID.",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "note_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v0/notes/{{note_id}}",
+        "success": [
+          200
+        ]
+      }
+    },
+    "notes.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "title": "Delete note",
+      "description": "Delete a Gem note by ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "note_id": {
+            "type": "string",
+            "description": "Note ObjectID.",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "note_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/v0/notes/{{note_id}}",
+        "success": [
+          204
+        ],
+        "result": {
+          "data": {
+            "deleted": true
+          }
+        }
+      }
+    },
+    "projects.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "title": "Get project",
+      "description": "Get one Gem project by ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "project_id": {
+            "type": "string",
+            "description": "Gem project ObjectID.",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "project_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v0/projects/{{project_id}}",
+        "success": [
+          200
+        ]
+      }
+    },
+    "projects.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "title": "Create project",
+      "description": "Create a Gem CRM project.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "user_id": {
+            "type": "string",
+            "description": "Gem user ObjectID.",
+            "minLength": 1
+          },
+          "name": {
+            "type": "string",
+            "description": "Project name.",
+            "minLength": 1
+          },
+          "privacy_type": {
+            "type": "string",
+            "description": "Project privacy.",
+            "enum": [
+              "confidential",
+              "personal",
+              "shared"
+            ]
+          },
+          "description": {
+            "type": "string",
+            "description": "Project description."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "user_id",
+          "name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v0/projects",
+        "success": [
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "user_id": "{{user_id}}",
+          "name": "{{name}}",
+          "privacy_type": "{{privacy_type}}",
+          "description": "{{description}}"
+        }
+      }
+    },
+    "projects.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "title": "Update project",
+      "description": "Modify a Gem project.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "project_id": {
+            "type": "string",
+            "description": "Gem project ObjectID.",
+            "minLength": 1
+          },
+          "name": {
+            "type": "string",
+            "description": "Updated name.",
+            "minLength": 1
+          },
+          "privacy_type": {
+            "type": "string",
+            "description": "Updated privacy.",
+            "enum": [
+              "confidential",
+              "personal",
+              "shared"
+            ]
+          },
+          "description": {
+            "type": "string",
+            "description": "Updated description."
+          },
+          "is_archived": {
+            "type": "boolean",
+            "description": "Archive flag."
+          },
+          "user_id": {
+            "type": "string",
+            "description": "Gem user ObjectID.",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "project_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/v0/projects/{{project_id}}",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "name": "{{name}}",
+          "privacy_type": "{{privacy_type}}",
+          "description": "{{description}}",
+          "is_archived": "{{is_archived}}",
+          "user_id": "{{user_id}}"
+        }
+      }
+    },
+    "projects.candidates.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "title": "List project candidates",
+      "description": "List candidates in a Gem project.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "project_id": {
+            "type": "string",
+            "description": "Gem project ObjectID.",
+            "minLength": 1
+          },
+          "page": {
+            "type": "integer",
+            "description": "1-indexed page number.",
+            "minimum": 1
+          },
+          "page_size": {
+            "type": "integer",
+            "description": "Page size, maximum 100.",
+            "minimum": 1,
+            "maximum": 100
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "project_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v0/projects/{{project_id}}/candidates",
+        "query": {
+          "page": "{{page}}",
+          "page_size": "{{page_size}}"
+        },
+        "success": [
+          200
+        ]
+      }
+    },
+    "projects.candidates.add": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "title": "Add project candidates",
+      "description": "Add candidates to a Gem project. Returns 204 on success.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "project_id": {
+            "type": "string",
+            "description": "Gem project ObjectID.",
+            "minLength": 1
+          },
+          "candidate_ids": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string",
+              "description": "Gem candidate ObjectID.",
+              "minLength": 1
+            },
+            "description": "Candidate ObjectIDs to add."
+          },
+          "user_id": {
+            "type": "string",
+            "description": "Gem user ObjectID.",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "project_id",
+          "candidate_ids"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/v0/projects/{{project_id}}/candidates",
+        "success": [
+          204
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "candidate_ids": "{{candidate_ids}}",
+          "user_id": "{{user_id}}"
+        },
+        "result": {
+          "data": {
+            "added": true
+          }
+        }
+      }
+    },
+    "sequences.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "title": "List sequences",
+      "description": "List Gem sequences with optional owner and page filters.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer",
+            "description": "1-indexed page number.",
+            "minimum": 1
+          },
+          "page_size": {
+            "type": "integer",
+            "description": "Page size, maximum 100.",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "user_id": {
+            "type": "string",
+            "description": "Gem user ObjectID.",
+            "minLength": 1
+          },
+          "sort": {
+            "type": "string",
+            "description": "Sort direction.",
+            "enum": [
+              "asc",
+              "desc"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v0/sequences",
+        "query": {
+          "page": "{{page}}",
+          "page_size": "{{page_size}}",
+          "user_id": "{{user_id}}",
+          "sort": "{{sort}}"
+        },
+        "success": [
+          200
+        ]
+      }
+    },
+    "sequences.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "title": "Get sequence",
+      "description": "Get one Gem sequence by ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "sequence_id": {
+            "type": "string",
+            "description": "Sequence ObjectID.",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "sequence_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v0/sequences/{{sequence_id}}",
+        "success": [
+          200
+        ]
+      }
+    },
+    "customFields.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "title": "List custom fields",
+      "description": "List Gem custom fields.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer",
+            "description": "1-indexed page number.",
+            "minimum": 1
+          },
+          "page_size": {
+            "type": "integer",
+            "description": "Page size, maximum 100.",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "scope": {
+            "type": "string",
+            "description": "Field scope.",
+            "enum": [
+              "team",
+              "project"
+            ]
+          },
+          "project_id": {
+            "type": "string",
+            "description": "Gem project ObjectID.",
+            "minLength": 1
+          },
+          "name": {
+            "type": "string",
+            "description": "Field name filter."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v0/custom_fields",
+        "query": {
+          "page": "{{page}}",
+          "page_size": "{{page_size}}",
+          "scope": "{{scope}}",
+          "project_id": "{{project_id}}",
+          "name": "{{name}}"
+        },
+        "success": [
+          200
+        ]
+      }
+    },
+    "customFields.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "title": "Get custom field",
+      "description": "Get one Gem custom field by ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "custom_field_id": {
+            "type": "string",
+            "description": "Custom field ObjectID.",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "custom_field_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v0/custom_fields/{{custom_field_id}}",
+        "success": [
+          200
+        ]
+      }
+    }
+  },
+  "provenance": {
+    "source": {
+      "url": "https://github.com/oomol-lab/open-connector",
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"
+    }
+  },
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
+    }
+  }
+}
