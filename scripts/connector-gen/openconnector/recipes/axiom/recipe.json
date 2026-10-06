@@ -248,91 +248,182 @@
     },
     "operations": {
       "healthcheck": {
+        "kind": "action",
         "timeoutMs": 5000,
         "maxInputBytes": 4096,
         "maxResponseBytes": 65536,
-        "kind": "action",
         "sideEffect": "read",
         "title": "Healthcheck",
-        "description": "Validate the Axiom API token by listing datasets.",
+        "description": "Verify the Axiom API token by listing datasets.",
         "inputSchema": {
           "type": "object",
-          "properties": {},
-          "additionalProperties": false
+          "properties": {}
         },
         "outputSchema": {
           "type": "object",
-          "required": [
-            "data"
-          ],
           "properties": {
-            "data": {
-              "type": "array",
-              "items": {
-                "type": "object"
-              }
+            "status": {
+              "type": "string"
             }
-          },
-          "additionalProperties": false
+          }
         },
         "request": {
           "method": "GET",
           "path": "/v2/datasets",
           "success": [
             200
-          ]
+          ],
+          "echo": {
+            "status": "ok"
+          },
+          "result": {
+            "status": "ok",
+            "datasets": "{{response}}"
+          }
         },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
+        "enforceOutputSchema": true
       },
       "datasets.list": {
-        "timeoutMs": 15000,
+        "kind": "action",
+        "timeoutMs": 10000,
         "maxInputBytes": 4096,
         "maxResponseBytes": 5242880,
-        "kind": "action",
         "sideEffect": "read",
-        "title": "List datasets",
+        "title": "List Datasets",
         "description": "List Axiom datasets visible to the current token.",
         "inputSchema": {
           "type": "object",
-          "properties": {},
-          "additionalProperties": false
+          "properties": {}
         },
         "outputSchema": {
           "type": "object",
-          "required": [
-            "data"
-          ],
           "properties": {
-            "data": {
+            "datasets": {
               "type": "array",
               "items": {
                 "type": "object"
               }
             }
-          },
-          "additionalProperties": false
+          }
         },
         "request": {
           "method": "GET",
           "path": "/v2/datasets",
           "success": [
             200
-          ]
+          ],
+          "result": {
+            "datasets": "{{response}}"
+          }
         },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
+        "enforceOutputSchema": true
       },
       "datasets.get": {
-        "timeoutMs": 15000,
+        "kind": "action",
+        "timeoutMs": 10000,
+        "maxInputBytes": 4096,
+        "maxResponseBytes": 1048576,
+        "sideEffect": "read",
+        "title": "Get Dataset",
+        "description": "Get an Axiom dataset by ID or unique name.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "datasetId": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "datasetId"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "dataset": {
+              "type": "object"
+            }
+          }
+        },
+        "request": {
+          "method": "GET",
+          "path": "/v2/datasets/{{datasetId}}",
+          "success": [
+            200
+          ],
+          "result": {
+            "dataset": "{{response}}"
+          }
+        },
+        "enforceOutputSchema": true
+      },
+      "datasets.create": {
+        "kind": "action",
+        "sideEffect": "write",
+        "timeoutMs": 10000,
         "maxInputBytes": 65536,
         "maxResponseBytes": 1048576,
+        "title": "Create Dataset",
+        "description": "Create an Axiom dataset by unique name.",
+        "inputSchema": {
+          "type": "object",
+          "required": [
+            "name"
+          ],
+          "properties": {
+            "name": {
+              "type": "string",
+              "minLength": 1
+            },
+            "description": {
+              "type": "string",
+              "minLength": 1
+            },
+            "retentionDays": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "dataset": {
+              "type": "object"
+            }
+          }
+        },
+        "request": {
+          "method": "POST",
+          "path": "/v2/datasets",
+          "success": [
+            200,
+            201
+          ],
+          "body": {
+            "name": "{{name}}",
+            "description": "{{description}}",
+            "retentionDays": "{{retentionDays}}"
+          },
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "result": {
+            "dataset": "{{response}}"
+          }
+        },
+        "enforceOutputSchema": true
+      },
+      "datasets.update": {
         "kind": "action",
-        "sideEffect": "read",
-        "title": "Get dataset",
-        "description": "Get one Axiom dataset by ID or unique name.",
+        "sideEffect": "write",
+        "timeoutMs": 10000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
+        "title": "Update Dataset",
+        "description": "Update an Axiom dataset description or retention.",
         "inputSchema": {
           "type": "object",
           "required": [
@@ -342,32 +433,560 @@
             "datasetId": {
               "type": "string",
               "minLength": 1
+            },
+            "description": {
+              "type": "string",
+              "minLength": 1
+            },
+            "retentionDays": {
+              "type": "integer",
+              "minimum": 1
             }
           },
           "additionalProperties": false
         },
         "outputSchema": {
           "type": "object",
+          "properties": {
+            "dataset": {
+              "type": "object"
+            }
+          }
+        },
+        "request": {
+          "method": "PUT",
+          "path": "/v2/datasets/{{datasetId}}",
+          "success": [
+            200,
+            201
+          ],
+          "body": {
+            "description": "{{description}}",
+            "retentionDays": "{{retentionDays}}"
+          },
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "result": {
+            "dataset": "{{response}}"
+          }
+        },
+        "enforceOutputSchema": true
+      },
+      "monitors.list": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 10000,
+        "maxInputBytes": 4096,
+        "maxResponseBytes": 5242880,
+        "title": "List Monitors",
+        "description": "List Axiom monitors visible to the current token.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "monitors": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "request": {
+          "method": "GET",
+          "path": "/v2/monitors",
+          "success": [
+            200
+          ],
+          "result": {
+            "monitors": "{{response}}"
+          }
+        },
+        "enforceOutputSchema": true
+      },
+      "monitors.get": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 10000,
+        "maxInputBytes": 4096,
+        "maxResponseBytes": 1048576,
+        "title": "Get Monitor",
+        "description": "Get one Axiom monitor by ID.",
+        "inputSchema": {
+          "type": "object",
           "required": [
-            "data"
+            "monitorId"
           ],
           "properties": {
-            "data": {
-              "type": "object"
+            "monitorId": {
+              "type": "string",
+              "minLength": 1
             }
           },
           "additionalProperties": false
         },
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "monitor": {
+              "type": "object"
+            }
+          }
+        },
         "request": {
           "method": "GET",
-          "path": "/v2/datasets/{{datasetId}}",
+          "path": "/v2/monitors/{{monitorId}}",
           "success": [
             200
-          ]
+          ],
+          "result": {
+            "monitor": "{{response}}"
+          }
         },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
+        "enforceOutputSchema": true
+      },
+      "notifiers.list": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 10000,
+        "maxInputBytes": 4096,
+        "maxResponseBytes": 5242880,
+        "title": "List Notifiers",
+        "description": "List Axiom notifiers visible to the current token.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "notifiers": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "request": {
+          "method": "GET",
+          "path": "/v2/notifiers",
+          "success": [
+            200
+          ],
+          "result": {
+            "notifiers": "{{response}}"
+          }
+        },
+        "enforceOutputSchema": true
+      },
+      "notifiers.get": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 10000,
+        "maxInputBytes": 4096,
+        "maxResponseBytes": 1048576,
+        "title": "Get Notifier",
+        "description": "Get one Axiom notifier by ID.",
+        "inputSchema": {
+          "type": "object",
+          "required": [
+            "notifierId"
+          ],
+          "properties": {
+            "notifierId": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "notifier": {
+              "type": "object"
+            }
+          }
+        },
+        "request": {
+          "method": "GET",
+          "path": "/v2/notifiers/{{notifierId}}",
+          "success": [
+            200
+          ],
+          "result": {
+            "notifier": "{{response}}"
+          }
+        },
+        "enforceOutputSchema": true
+      },
+      "users.list": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 10000,
+        "maxInputBytes": 4096,
+        "maxResponseBytes": 5242880,
+        "title": "List Users",
+        "description": "List users in the Axiom organization.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "users": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "request": {
+          "method": "GET",
+          "path": "/v2/users",
+          "success": [
+            200
+          ],
+          "result": {
+            "users": "{{response}}"
+          }
+        },
+        "enforceOutputSchema": true
+      },
+      "users.get": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 10000,
+        "maxInputBytes": 4096,
+        "maxResponseBytes": 1048576,
+        "title": "Get User",
+        "description": "Get one Axiom user by ID.",
+        "inputSchema": {
+          "type": "object",
+          "required": [
+            "userId"
+          ],
+          "properties": {
+            "userId": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "user": {
+              "type": "object"
+            }
+          }
+        },
+        "request": {
+          "method": "GET",
+          "path": "/v2/users/{{userId}}",
+          "success": [
+            200
+          ],
+          "result": {
+            "user": "{{response}}"
+          }
+        },
+        "enforceOutputSchema": true
+      },
+      "annotations.list": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 10000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "List Annotations",
+        "description": "List Axiom chart annotations, optionally filtered by dataset or time range.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "dataset": {
+              "type": "string",
+              "minLength": 1
+            },
+            "start": {
+              "type": "string",
+              "minLength": 1
+            },
+            "end": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "annotations": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "request": {
+          "method": "GET",
+          "path": "/v2/annotations",
+          "success": [
+            200
+          ],
+          "query": {
+            "datasets": "{{dataset}}",
+            "start": "{{start}}",
+            "end": "{{end}}"
+          },
+          "result": {
+            "annotations": "{{response}}"
+          }
+        },
+        "enforceOutputSchema": true
+      },
+      "annotations.create": {
+        "kind": "action",
+        "sideEffect": "write",
+        "timeoutMs": 10000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
+        "title": "Create Annotation",
+        "description": "Create an Axiom chart annotation. datasets and type are required.",
+        "inputSchema": {
+          "type": "object",
+          "required": [
+            "datasets",
+            "type"
+          ],
+          "properties": {
+            "datasets": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "type": {
+              "type": "string",
+              "minLength": 1
+            },
+            "title": {
+              "type": "string",
+              "minLength": 1
+            },
+            "description": {
+              "type": "string",
+              "minLength": 1
+            },
+            "url": {
+              "type": "string",
+              "minLength": 1
+            },
+            "time": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "annotation": {
+              "type": "object"
+            }
+          }
+        },
+        "request": {
+          "method": "POST",
+          "path": "/v2/annotations",
+          "success": [
+            200,
+            201
+          ],
+          "body": {
+            "datasets": "{{datasets}}",
+            "type": "{{type}}",
+            "title": "{{title}}",
+            "description": "{{description}}",
+            "url": "{{url}}",
+            "time": "{{time}}"
+          },
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "result": {
+            "annotation": "{{response}}"
+          }
+        },
+        "enforceOutputSchema": true
+      },
+      "dashboards.list": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 10000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "List Dashboards",
+        "description": "List Axiom dashboards visible to the current token.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            },
+            "offset": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "dashboards": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "request": {
+          "method": "GET",
+          "path": "/v2/dashboards",
+          "success": [
+            200
+          ],
+          "query": {
+            "limit": "{{limit}}",
+            "offset": "{{offset}}"
+          },
+          "result": {
+            "dashboards": "{{response}}"
+          }
+        },
+        "enforceOutputSchema": true
+      },
+      "dashboards.get": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 10000,
+        "maxInputBytes": 4096,
+        "maxResponseBytes": 1048576,
+        "title": "Get Dashboard",
+        "description": "Get one Axiom dashboard by ID.",
+        "inputSchema": {
+          "type": "object",
+          "required": [
+            "dashboardId"
+          ],
+          "properties": {
+            "dashboardId": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "dashboard": {
+              "type": "object"
+            }
+          }
+        },
+        "request": {
+          "method": "GET",
+          "path": "/v2/dashboards/{{dashboardId}}",
+          "success": [
+            200
+          ],
+          "result": {
+            "dashboard": "{{response}}"
+          }
+        },
+        "enforceOutputSchema": true
+      },
+      "query.run": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Run APL Query",
+        "description": "Run an APL query against Axiom datasets on the management host.",
+        "inputSchema": {
+          "type": "object",
+          "required": [
+            "apl"
+          ],
+          "properties": {
+            "apl": {
+              "type": "string",
+              "minLength": 1
+            },
+            "startTime": {
+              "type": "string",
+              "minLength": 1
+            },
+            "endTime": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "result": {
+              "type": "object"
+            }
+          }
+        },
+        "request": {
+          "method": "POST",
+          "path": "/v1/datasets/_apl",
+          "success": [
+            200,
+            201
+          ],
+          "query": {
+            "format": "tabular"
+          },
+          "body": {
+            "apl": "{{apl}}",
+            "startTime": "{{startTime}}",
+            "endTime": "{{endTime}}"
+          },
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "result": {
+            "result": "{{response}}"
+          }
+        },
+        "enforceOutputSchema": true
       }
     },
     "provenance": {
