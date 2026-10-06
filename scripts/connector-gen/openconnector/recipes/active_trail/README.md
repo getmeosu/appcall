@@ -4,7 +4,7 @@ International ActiveTrail / MyMarketing API recipe. Create an access token in th
 
 ## Operations
 
-232 operations from the official ActiveTrail help catalog at https://webapi.mymarketing.co.il/api/docs/user. Existing operation keys are unchanged. New actions cover the rest of that catalog: account, automations and automation reports, campaigns and campaign reports, templates, commerce, contacts, groups, mailing lists, operational messages, push, SMS, WhatsApp, webhooks configuration, signup forms, segmentation, external ids, and smart code sites.
+159 operations, one per Composio ACTIVE_TRAIL tool (index version 20260615_00). Help-catalog endpoints that are not in that index are omitted. `smscampaign.operationalMessage.list` is GET /smscampaign/Campaign with FilterType fixed to 3. `operationalMessage.email.create` is POST /OperationalMessage/Message with email_package required, distinct from `operationalMessage.message.create` where email_package is optional.
 
 Webhook rows in the help catalog are webhook-configuration HTTP calls, not inbound events. ActiveTrail does not publish an inbound webhook event catalog on this API, so no EventOnly webhook operations are declared.
 
