@@ -1,11 +1,9 @@
 # Feathery
 
-Read-only Feathery REST recipe for the US-hosted forms API. Create an admin API key in Feathery developer settings. The runner sends `Authorization: Token <apiKey>` to `https://api.feathery.io`.
+Feathery REST recipe for the US-hosted forms API (v0.2.0). Create an admin API key in Feathery developer settings. The runner sends `Authorization: Token <apiKey>` to `https://api.feathery.io`.
 
-This recipe pins the documented US default host. Official regional hosts (`api-ca.feathery.io`, `api-eu.feathery.io`, `api-au.feathery.io`) are not caller-supplied and are not included.
-
-Covered operations: credential-only `healthcheck` (`GET /api/account/`), `forms.list`, `forms.get`, `hidden-fields.list`, and `users.list`. Writes and user-session/field-data reads are omitted. `forms.get` uses official `GET /api/form/{form_id}/` rather than the pinned source `/schema/` suffix. User list admits optional `created_after` and `created_before`; paired `filter_field_id`/`filter_field_value` is omitted.
+Covered HTTP operations: `healthcheck`, form list/get/create/update/delete/copy, submissions list/create, user list/create/delete/session/events/data, hidden-field list/create, workspaces, extractions, and document templates. EventOnly webhooks: `webhook.form_completion`, `webhook.data_received`.
 
 Official docs live at `https://api-docs.feathery.io/`. Host is `api.feathery.io`. Native category is `forms`.
 
-Source attribution: oomol-lab/open-connector at `33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a` (Apache License 2.0). Fixtures are independently derived from official docs plus pinned source and do not represent live provider access. Live smoke is unverified: configure the API key, call `healthcheck` with `{}`, then `forms.list`.
+Source attribution: oomol-lab/open-connector at `33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a` (Apache License 2.0). Fixtures are independently derived from official docs plus pinned source and do not represent live provider access.

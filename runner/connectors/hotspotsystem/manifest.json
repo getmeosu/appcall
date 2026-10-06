@@ -1,7 +1,17 @@
 {
+  "key": "hotspotsystem",
+  "name": "HotspotSystem",
+  "version": "0.2.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "productivity"
+  ],
   "auth": {
+    "type": "api_key",
     "scopes": [],
     "setup": {
+      "mode": "api_key",
       "fields": [
         {
           "key": "apiKey",
@@ -9,140 +19,70 @@
           "required": true,
           "secret": true
         }
-      ],
-      "mode": "api_key"
-    },
-    "type": "api_key"
-  },
-  "categories": [
-    "productivity"
-  ],
-  "evidence": {
-    "fixture": {
-      "status": "supplied"
-    },
-    "live": {
-      "status": "unverified"
+      ]
     }
   },
+  "network": {
+    "allowedHosts": [
+      "api.hotspotsystem.com"
+    ]
+  },
+  "models": [
+    "owner",
+    "location",
+    "customer",
+    "subscriber",
+    "voucher",
+    "transaction"
+  ],
   "http": {
+    "baseUrl": "https://api.hotspotsystem.com/v2.0",
     "auth": {
       "field": "apiKey",
       "in": "header",
       "name": "sn-apikey",
       "value": "{{apiKey}}"
     },
-    "baseUrl": "https://api.hotspotsystem.com/v2.0",
+    "headers": {
+      "Accept": "application/json"
+    },
     "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after",
       "defaultRetryAfterSeconds": 30,
       "messagePaths": [
         "error",
         "message"
-      ],
-      "rateLimitStatuses": [
-        429
-      ],
-      "retryAfterHeader": "retry-after"
-    },
-    "headers": {
-      "Accept": "application/json"
+      ]
     }
   },
-  "key": "hotspotsystem",
-  "models": [
-    "owner",
-    "location",
-    "customer",
-    "subscriber"
-  ],
-  "name": "HotspotSystem",
-  "network": {
-    "allowedHosts": [
-      "api.hotspotsystem.com"
-    ]
-  },
   "operations": {
-    "customers.list": {
-      "description": "List HotspotSystem customers with optional pagination.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "fields": {
-            "minLength": 1,
-            "type": "string"
-          },
-          "limit": {
-            "minimum": 1,
-            "type": "integer"
-          },
-          "offset": {
-            "minimum": 0,
-            "type": "integer"
-          },
-          "sort": {
-            "minLength": 1,
-            "type": "string"
-          }
-        },
-        "type": "object"
-      },
-      "kind": "action",
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "outputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "type": "object"
-      },
-      "request": {
-        "method": "GET",
-        "path": "/customers",
-        "query": {
-          "fields": "{{fields}}",
-          "limit": "{{limit}}",
-          "offset": "{{offset}}",
-          "sort": "{{sort}}"
-        },
-        "success": [
-          200
-        ]
-      },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "title": "List customers",
-      "validationMode": "strict-generated"
-    },
     "healthcheck": {
-      "description": "Validate the HotspotSystem API key with the current operator.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {},
-        "type": "object"
-      },
-      "kind": "action",
+      "timeoutMs": 5000,
       "maxInputBytes": 4096,
       "maxResponseBytes": 65536,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Healthcheck",
+      "description": "Validate the HotspotSystem API key with the current operator.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
       "outputSchema": {
-        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "required": [
-          "data"
-        ],
-        "type": "object"
+        "additionalProperties": false
       },
       "request": {
         "method": "GET",
@@ -151,34 +91,93 @@
           200
         ]
       },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 5000,
-      "title": "Healthcheck",
-      "validationMode": "strict-generated"
-    },
-    "location-options.list": {
-      "description": "List HotspotSystem locations as id-name options.",
       "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {},
-        "type": "object"
-      },
-      "kind": "action",
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "locations.list": {
+      "timeoutMs": 15000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List locations",
+      "description": "List HotspotSystem locations with optional pagination.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "fields": {
+            "type": "string",
+            "minLength": 1
+          },
+          "sort": {
+            "type": "string",
+            "minLength": 1
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "additionalProperties": false
+      },
       "outputSchema": {
-        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/locations",
+        "success": [
+          200
+        ],
+        "query": {
+          "fields": "{{fields}}",
+          "sort": "{{sort}}",
+          "limit": "{{limit}}",
+          "offset": "{{offset}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "location-options.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List location options",
+      "description": "List HotspotSystem locations as id-name options.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
         "required": [
           "data"
         ],
-        "type": "object"
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
       },
       "request": {
         "method": "GET",
@@ -187,138 +186,989 @@
           200
         ]
       },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "title": "List location options",
-      "validationMode": "strict-generated"
-    },
-    "locations.list": {
-      "description": "List HotspotSystem locations with optional pagination.",
       "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "fields": {
-            "minLength": 1,
-            "type": "string"
-          },
-          "limit": {
-            "minimum": 1,
-            "type": "integer"
-          },
-          "offset": {
-            "minimum": 0,
-            "type": "integer"
-          },
-          "sort": {
-            "minLength": 1,
-            "type": "string"
-          }
-        },
-        "type": "object"
-      },
-      "kind": "action",
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "customers.list": {
+      "timeoutMs": 15000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List customers",
+      "description": "List HotspotSystem customers with optional pagination.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "fields": {
+            "type": "string",
+            "minLength": 1
+          },
+          "sort": {
+            "type": "string",
+            "minLength": 1
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "additionalProperties": false
+      },
       "outputSchema": {
-        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "required": [
-          "data"
-        ],
-        "type": "object"
+        "additionalProperties": false
       },
       "request": {
         "method": "GET",
-        "path": "/locations",
-        "query": {
-          "fields": "{{fields}}",
-          "limit": "{{limit}}",
-          "offset": "{{offset}}",
-          "sort": "{{sort}}"
-        },
+        "path": "/customers",
         "success": [
           200
-        ]
+        ],
+        "query": {
+          "fields": "{{fields}}",
+          "sort": "{{sort}}",
+          "limit": "{{limit}}",
+          "offset": "{{offset}}"
+        }
       },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "title": "List locations",
-      "validationMode": "strict-generated"
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
     },
     "subscribers.list": {
-      "description": "List HotspotSystem subscribers with optional pagination.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "fields": {
-            "minLength": 1,
-            "type": "string"
-          },
-          "limit": {
-            "minimum": 1,
-            "type": "integer"
-          },
-          "offset": {
-            "minimum": 0,
-            "type": "integer"
-          },
-          "sort": {
-            "minLength": 1,
-            "type": "string"
-          }
-        },
-        "type": "object"
-      },
-      "kind": "action",
+      "timeoutMs": 15000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List subscribers",
+      "description": "List HotspotSystem subscribers with optional pagination.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "fields": {
+            "type": "string",
+            "minLength": 1
+          },
+          "sort": {
+            "type": "string",
+            "minLength": 1
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "additionalProperties": false
+      },
       "outputSchema": {
-        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "required": [
-          "data"
-        ],
-        "type": "object"
+        "additionalProperties": false
       },
       "request": {
         "method": "GET",
         "path": "/subscribers",
+        "success": [
+          200
+        ],
         "query": {
           "fields": "{{fields}}",
+          "sort": "{{sort}}",
           "limit": "{{limit}}",
-          "offset": "{{offset}}",
-          "sort": "{{sort}}"
+          "offset": "{{offset}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "locations.customers.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List location customers",
+      "description": "List HotspotSystem customers at one location.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "locationId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Location ID."
+          },
+          "fields": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Comma-separated response fields."
+          },
+          "sort": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Sort field. Prefix with - for descending."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Page size."
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Page offset."
+          }
         },
+        "additionalProperties": false,
+        "required": [
+          "locationId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/locations/{{locationId}}/customers",
+        "success": [
+          200
+        ],
+        "query": {
+          "fields": "{{fields}}",
+          "sort": "{{sort}}",
+          "limit": "{{limit}}",
+          "offset": "{{offset}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "locations.subscribers.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List location subscribers",
+      "description": "List HotspotSystem subscribers at one location.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "locationId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Location ID."
+          },
+          "fields": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Comma-separated response fields."
+          },
+          "sort": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Sort field. Prefix with - for descending."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Page size."
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Page offset."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "locationId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/locations/{{locationId}}/subscribers",
+        "success": [
+          200
+        ],
+        "query": {
+          "fields": "{{fields}}",
+          "sort": "{{sort}}",
+          "limit": "{{limit}}",
+          "offset": "{{offset}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "locations.vouchers.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List location vouchers",
+      "description": "List HotspotSystem vouchers at one location.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "locationId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Location ID."
+          },
+          "fields": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Comma-separated response fields."
+          },
+          "sort": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Sort field. Prefix with - for descending."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Page size."
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Page offset."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "locationId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/locations/{{locationId}}/vouchers",
+        "success": [
+          200
+        ],
+        "query": {
+          "fields": "{{fields}}",
+          "sort": "{{sort}}",
+          "limit": "{{limit}}",
+          "offset": "{{offset}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "vouchers.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List vouchers",
+      "description": "List HotspotSystem vouchers with optional pagination.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "fields": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Comma-separated response fields."
+          },
+          "sort": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Sort field. Prefix with - for descending."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Page size."
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Page offset."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/vouchers",
+        "success": [
+          200
+        ],
+        "query": {
+          "fields": "{{fields}}",
+          "sort": "{{sort}}",
+          "limit": "{{limit}}",
+          "offset": "{{offset}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "transactions.mac.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List MAC transactions",
+      "description": "List HotspotSystem MAC transactions with optional pagination.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "fields": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Comma-separated response fields."
+          },
+          "sort": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Sort field. Prefix with - for descending."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Page size."
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Page offset."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/transactions/mac",
+        "success": [
+          200
+        ],
+        "query": {
+          "fields": "{{fields}}",
+          "sort": "{{sort}}",
+          "limit": "{{limit}}",
+          "offset": "{{offset}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "transactions.voucher.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List voucher transactions",
+      "description": "List HotspotSystem voucher transactions with optional pagination.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "fields": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Comma-separated response fields."
+          },
+          "sort": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Sort field. Prefix with - for descending."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Page size."
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Page offset."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/transactions/voucher",
+        "success": [
+          200
+        ],
+        "query": {
+          "fields": "{{fields}}",
+          "sort": "{{sort}}",
+          "limit": "{{limit}}",
+          "offset": "{{offset}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "transactions.social.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List social transactions",
+      "description": "List HotspotSystem social transactions with optional pagination.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "fields": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Comma-separated response fields."
+          },
+          "sort": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Sort field. Prefix with - for descending."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Page size."
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Page offset."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/transactions/social",
+        "success": [
+          200
+        ],
+        "query": {
+          "fields": "{{fields}}",
+          "sort": "{{sort}}",
+          "limit": "{{limit}}",
+          "offset": "{{offset}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "transactions.paid.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List paid transactions",
+      "description": "List HotspotSystem paid transactions with optional pagination.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "fields": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Comma-separated response fields."
+          },
+          "sort": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Sort field. Prefix with - for descending."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Page size."
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Page offset."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/transactions/paid",
+        "success": [
+          200
+        ],
+        "query": {
+          "fields": "{{fields}}",
+          "sort": "{{sort}}",
+          "limit": "{{limit}}",
+          "offset": "{{offset}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "locations.transactions.mac.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List location MAC transactions",
+      "description": "List HotspotSystem MAC transactions at one location.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "locationId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Location ID."
+          },
+          "fields": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Comma-separated response fields."
+          },
+          "sort": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Sort field. Prefix with - for descending."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Page size."
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Page offset."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "locationId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/locations/{{locationId}}/transactions/mac",
+        "success": [
+          200
+        ],
+        "query": {
+          "fields": "{{fields}}",
+          "sort": "{{sort}}",
+          "limit": "{{limit}}",
+          "offset": "{{offset}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "locations.transactions.voucher.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List location voucher transactions",
+      "description": "List HotspotSystem voucher transactions at one location.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "locationId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Location ID."
+          },
+          "fields": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Comma-separated response fields."
+          },
+          "sort": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Sort field. Prefix with - for descending."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Page size."
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Page offset."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "locationId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/locations/{{locationId}}/transactions/voucher",
+        "success": [
+          200
+        ],
+        "query": {
+          "fields": "{{fields}}",
+          "sort": "{{sort}}",
+          "limit": "{{limit}}",
+          "offset": "{{offset}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "locations.transactions.social.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List location social transactions",
+      "description": "List HotspotSystem social transactions at one location.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "locationId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Location ID."
+          },
+          "fields": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Comma-separated response fields."
+          },
+          "sort": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Sort field. Prefix with - for descending."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Page size."
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Page offset."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "locationId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/locations/{{locationId}}/transactions/social",
+        "success": [
+          200
+        ],
+        "query": {
+          "fields": "{{fields}}",
+          "sort": "{{sort}}",
+          "limit": "{{limit}}",
+          "offset": "{{offset}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "locations.transactions.paid.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List location paid transactions",
+      "description": "List HotspotSystem paid transactions at one location.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "locationId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Location ID."
+          },
+          "fields": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Comma-separated response fields."
+          },
+          "sort": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Sort field. Prefix with - for descending."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Page size."
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Page offset."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "locationId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/locations/{{locationId}}/transactions/paid",
+        "success": [
+          200
+        ],
+        "query": {
+          "fields": "{{fields}}",
+          "sort": "{{sort}}",
+          "limit": "{{limit}}",
+          "offset": "{{offset}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "ping": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Ping",
+      "description": "Check that the HotspotSystem API is reachable.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/ping",
         "success": [
           200
         ]
       },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "title": "List subscribers",
-      "validationMode": "strict-generated"
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
     }
   },
   "provenance": {
     "source": {
-      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
-      "url": "https://github.com/oomol-lab/open-connector"
+      "url": "https://github.com/oomol-lab/open-connector",
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"
     }
   },
-  "runtime": "bun",
-  "version": "0.1.0",
-  "visibility": "public"
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
+    }
+  }
 }
