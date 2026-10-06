@@ -1,8 +1,9 @@
 {
   "key": "dribbble",
   "name": "Dribbble",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "runtime": "bun",
+  "visibility": "public",
   "description": "Authenticated Dribbble API operations using a manually supplied OAuth2 access token.",
   "categories": [
     "social"
@@ -30,6 +31,12 @@
       "api.dribbble.com"
     ]
   },
+  "models": [
+    "user",
+    "shot",
+    "project",
+    "attachment"
+  ],
   "http": {
     "baseUrl": "https://api.dribbble.com/v2",
     "auth": {
@@ -59,104 +66,112 @@
   "operations": {
     "healthcheck": {
       "kind": "action",
+      "sideEffect": "read",
       "timeoutMs": 10000,
       "maxInputBytes": 65536,
-      "maxResponseBytes": 2097152,
-      "sideEffect": "read",
+      "maxResponseBytes": 5242880,
       "title": "Healthcheck",
       "description": "Verify the OAuth2 user access token by reading the authenticated user.",
       "inputSchema": {
         "type": "object",
-        "properties": {}
+        "properties": {},
+        "additionalProperties": false
       },
       "outputSchema": {
         "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
-          "user": {
-            "type": "object",
-            "description": "Provider result."
+          "data": {
+            "type": "object"
           }
-        }
+        },
+        "additionalProperties": false
       },
       "request": {
         "method": "GET",
         "path": "/user",
         "success": [
           200
-        ],
-        "echo": {
-          "status": "ok"
-        },
-        "result": {
-          "user": "{{response}}"
-        }
-      }
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
     },
     "users.me": {
       "kind": "action",
+      "sideEffect": "read",
       "timeoutMs": 10000,
       "maxInputBytes": 65536,
-      "maxResponseBytes": 2097152,
-      "sideEffect": "read",
-      "title": "Users Me",
-      "description": "Read the authenticated user profile.",
+      "maxResponseBytes": 5242880,
+      "title": "Get authenticated user",
+      "description": "Read the authenticated Dribbble user profile.",
       "inputSchema": {
         "type": "object",
-        "properties": {}
+        "properties": {},
+        "additionalProperties": false
       },
       "outputSchema": {
         "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
-          "user": {
-            "type": "object",
-            "description": "Provider result."
+          "data": {
+            "type": "object"
           }
-        }
+        },
+        "additionalProperties": false
       },
       "request": {
         "method": "GET",
         "path": "/user",
         "success": [
           200
-        ],
-        "result": {
-          "user": "{{response}}"
-        }
-      }
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
     },
     "shots.list": {
       "kind": "action",
+      "sideEffect": "read",
       "timeoutMs": 10000,
       "maxInputBytes": 65536,
-      "maxResponseBytes": 2097152,
-      "sideEffect": "read",
-      "title": "Shots List",
-      "description": "List shots owned by the authenticated user. Returns the raw Link header; read rel=next to request the next page. Never assume a short page is the last page.",
+      "maxResponseBytes": 5242880,
+      "title": "List shots",
+      "description": "List shots owned by the authenticated user.",
       "inputSchema": {
         "type": "object",
         "properties": {
           "page": {
             "type": "integer",
-            "description": "Page number, starting at 1. Use the page indicated by paginationLink rel=next."
+            "description": "Page number starting at 1.",
+            "minimum": 1
           },
           "perPage": {
             "type": "integer",
-            "description": "Page size up to 100; some endpoints may ignore this value."
+            "description": "Page size up to 100.",
+            "minimum": 1,
+            "maximum": 100
           }
-        }
+        },
+        "additionalProperties": false
       },
       "outputSchema": {
         "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
-          "shots": {
-            "type": "array",
-            "description": "Provider result."
-          },
-          "paginationLink": {
-            "type": "string",
-            "description": "Provider result."
+          "data": {
+            "type": "array"
           }
-        }
+        },
+        "additionalProperties": false
       },
       "request": {
         "method": "GET",
@@ -167,97 +182,177 @@
         "query": {
           "page": "{{page}}",
           "per_page": "{{perPage}}"
-        },
-        "result": {
-          "shots": "{{response}}",
-          "paginationLink": "{{headers.link}}"
         }
-      }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
     },
     "shots.get": {
       "kind": "action",
+      "sideEffect": "read",
       "timeoutMs": 10000,
       "maxInputBytes": 65536,
-      "maxResponseBytes": 2097152,
-      "sideEffect": "read",
-      "title": "Shots Get",
-      "description": "Get an existing shot owned by the authenticated user; this is not a public discovery endpoint.",
+      "maxResponseBytes": 5242880,
+      "title": "Get shot",
+      "description": "Get an existing shot owned by the authenticated user.",
       "inputSchema": {
         "type": "object",
         "properties": {
           "id": {
             "type": "integer",
-            "description": "Shot ID owned by the authenticated user."
+            "description": "Shot ID owned by the authenticated user.",
+            "minimum": 1
           }
         },
+        "additionalProperties": false,
         "required": [
           "id"
         ]
       },
       "outputSchema": {
         "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
-          "shot": {
-            "type": "object",
-            "description": "Provider result."
+          "data": {
+            "type": "object"
           }
-        }
+        },
+        "additionalProperties": false
       },
       "request": {
         "method": "GET",
         "path": "/shots/{{id}}",
         "success": [
           200
-        ],
-        "result": {
-          "shot": "{{response}}"
-        }
-      }
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
     },
-    "shots.update": {
+    "shots.create": {
       "kind": "action",
+      "sideEffect": "write",
       "timeoutMs": 10000,
       "maxInputBytes": 65536,
-      "maxResponseBytes": 2097152,
-      "sideEffect": "write",
-      "title": "Shots Update",
-      "description": "Update an owned shot title, description, tags or visibility. Requires upload scope. Omitted fields are unchanged; uploading media is unsupported.",
+      "maxResponseBytes": 5242880,
+      "title": "Create shot",
+      "description": "Create a Dribbble shot metadata record. Image upload is asynchronous; requires the upload scope.",
       "inputSchema": {
         "type": "object",
         "properties": {
-          "id": {
-            "type": "integer",
-            "description": "Shot ID owned by the authenticated user."
-          },
           "title": {
             "type": "string",
-            "description": "Shot title."
+            "minLength": 1,
+            "description": "Shot or project title."
           },
           "description": {
             "type": "string",
-            "description": "Shot description."
+            "minLength": 1,
+            "description": "HTML or text description."
           },
           "tags": {
             "type": "array",
-            "description": "Replacement tags, maximum 12. Existing omitted tags are removed."
+            "description": "Replacement tags, maximum 12."
           },
           "lowProfile": {
             "type": "boolean",
             "description": "Whether the shot is low profile."
           }
         },
+        "additionalProperties": false,
+        "required": [
+          "title"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/shots",
+        "success": [
+          202,
+          201,
+          200
+        ],
+        "body": {
+          "title": "{{title}}",
+          "description": "{{description}}",
+          "tags": "{{tags}}",
+          "low_profile": "{{lowProfile}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "shots.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Update shot",
+      "description": "Update an owned shot title, description, tags, or visibility. Requires the upload scope.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "description": "Shot ID owned by the authenticated user.",
+            "minimum": 1
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Shot or project title."
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "description": "HTML or text description."
+          },
+          "tags": {
+            "type": "array",
+            "description": "Replacement tags, maximum 12."
+          },
+          "lowProfile": {
+            "type": "boolean",
+            "description": "Whether the shot is low profile."
+          }
+        },
+        "additionalProperties": false,
         "required": [
           "id"
         ]
       },
       "outputSchema": {
         "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
-          "shot": {
-            "type": "object",
-            "description": "Provider result."
+          "data": {
+            "type": "object"
           }
-        }
+        },
+        "additionalProperties": false
       },
       "request": {
         "method": "PUT",
@@ -271,54 +366,590 @@
           "tags": "{{tags}}",
           "low_profile": "{{lowProfile}}"
         },
-        "result": {
-          "shot": "{{response}}"
+        "headers": {
+          "Content-Type": "application/json"
         }
-      }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
     },
     "shots.delete": {
       "kind": "action",
+      "sideEffect": "destructive",
       "timeoutMs": 10000,
       "maxInputBytes": 65536,
-      "maxResponseBytes": 2097152,
-      "sideEffect": "write",
-      "title": "Shots Delete",
-      "description": "Permanently delete a shot owned by the authenticated user. Requires upload scope.",
+      "maxResponseBytes": 5242880,
+      "title": "Delete shot",
+      "description": "Permanently delete a shot owned by the authenticated user. Requires the upload scope.",
       "inputSchema": {
         "type": "object",
         "properties": {
           "id": {
             "type": "integer",
-            "description": "Shot ID owned by the authenticated user."
+            "description": "Shot ID owned by the authenticated user.",
+            "minimum": 1
           }
         },
+        "additionalProperties": false,
         "required": [
           "id"
         ]
       },
       "outputSchema": {
         "type": "object",
+        "required": [
+          "deleted",
+          "id"
+        ],
         "properties": {
           "deleted": {
-            "type": "boolean",
-            "description": "Provider result."
+            "type": "boolean"
+          },
+          "id": {
+            "type": [
+              "string",
+              "integer"
+            ]
           }
-        }
+        },
+        "additionalProperties": false
       },
       "request": {
         "method": "DELETE",
         "path": "/shots/{{id}}",
         "success": [
-          204
+          204,
+          200
         ],
         "result": {
-          "deleted": true
+          "deleted": true,
+          "id": "{{input.id}}"
         }
-      }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "projects.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List projects",
+      "description": "List projects owned by the authenticated user.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer",
+            "description": "Page number starting at 1.",
+            "minimum": 1
+          },
+          "perPage": {
+            "type": "integer",
+            "description": "Page size up to 100.",
+            "minimum": 1,
+            "maximum": 100
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/user/projects",
+        "success": [
+          200
+        ],
+        "query": {
+          "page": "{{page}}",
+          "per_page": "{{perPage}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "projects.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get project",
+      "description": "Get one Dribbble project by id.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "description": "Project ID owned by the authenticated user.",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/projects/{{id}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "projects.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create project",
+      "description": "Create a Dribbble project.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Project name."
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "description": "HTML or text description."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/projects",
+        "success": [
+          201,
+          200
+        ],
+        "body": {
+          "name": "{{name}}",
+          "description": "{{description}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "projects.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Update project",
+      "description": "Update a Dribbble project name or description.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "description": "Project ID owned by the authenticated user.",
+            "minimum": 1
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Project name."
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "description": "HTML or text description."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/projects/{{id}}",
+        "success": [
+          200
+        ],
+        "body": {
+          "name": "{{name}}",
+          "description": "{{description}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "projects.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Delete project",
+      "description": "Delete a Dribbble project owned by the authenticated user.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "description": "Project ID owned by the authenticated user.",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/projects/{{id}}",
+        "success": [
+          200,
+          204
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "projects.shots.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List project shots",
+      "description": "List shots attached to a Dribbble project.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "description": "Project ID owned by the authenticated user.",
+            "minimum": 1
+          },
+          "page": {
+            "type": "integer",
+            "description": "Page number starting at 1.",
+            "minimum": 1
+          },
+          "perPage": {
+            "type": "integer",
+            "description": "Page size up to 100.",
+            "minimum": 1,
+            "maximum": 100
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/projects/{{id}}/shots",
+        "success": [
+          200
+        ],
+        "query": {
+          "page": "{{page}}",
+          "per_page": "{{perPage}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "projects.shots.add": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Add shot to project",
+      "description": "Attach an owned shot to a Dribbble project.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "projectId": {
+            "type": "integer",
+            "description": "Project ID owned by the authenticated user.",
+            "minimum": 1
+          },
+          "shotId": {
+            "type": "integer",
+            "description": "Shot ID owned by the authenticated user.",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "projectId",
+          "shotId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "attached",
+          "projectId"
+        ],
+        "properties": {
+          "attached": {
+            "type": "boolean"
+          },
+          "projectId": {
+            "type": [
+              "string",
+              "integer"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/projects/{{projectId}}/shots/{{shotId}}",
+        "success": [
+          204,
+          200
+        ],
+        "result": {
+          "attached": true,
+          "projectId": "{{input.projectId}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "projects.shots.remove": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Remove shot from project",
+      "description": "Detach a shot from a Dribbble project.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "projectId": {
+            "type": "integer",
+            "description": "Project ID owned by the authenticated user.",
+            "minimum": 1
+          },
+          "shotId": {
+            "type": "integer",
+            "description": "Shot ID owned by the authenticated user.",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "projectId",
+          "shotId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "deleted",
+          "projectId"
+        ],
+        "properties": {
+          "deleted": {
+            "type": "boolean"
+          },
+          "projectId": {
+            "type": [
+              "string",
+              "integer"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/projects/{{projectId}}/shots/{{shotId}}",
+        "success": [
+          204,
+          200
+        ],
+        "result": {
+          "deleted": true,
+          "projectId": "{{input.projectId}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "attachments.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Delete attachment",
+      "description": "Delete a shot attachment owned by the authenticated user. Requires the upload scope.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "shotId": {
+            "type": "integer",
+            "description": "Shot ID owned by the authenticated user.",
+            "minimum": 1
+          },
+          "id": {
+            "type": "integer",
+            "description": "Resource ID owned by the authenticated user.",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "shotId",
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "deleted",
+          "id"
+        ],
+        "properties": {
+          "deleted": {
+            "type": "boolean"
+          },
+          "id": {
+            "type": [
+              "string",
+              "integer"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/shots/{{shotId}}/attachments/{{id}}",
+        "success": [
+          204,
+          200
+        ],
+        "result": {
+          "deleted": true,
+          "id": "{{input.id}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
     }
   },
-  "models": [
-    "user",
-    "shot"
-  ]
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
+    }
+  }
 }
