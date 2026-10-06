@@ -4,7 +4,7 @@ ClickSend REST API v3 recipe. Configure the dashboard API username (non-secret) 
 
 Selected operations cover the official ClickSend REST v3 JSON surface: account, subaccounts, contacts and lists, SMS, MMS, voice, fax, email, post, campaigns, automations, numbers, statistics, reseller, and recharge. PDF transaction downloads and the SDK file download are omitted. Existing `list_id` and `contact_id` inputs stay required positive integers. SMS send and price still take a `messages` array whose items require `body` and `to`.
 
-ClickSend delivers SMS delivery receipts and inbound SMS to a registered HTTPS URL. Those inbound events are declared as EventOnly webhook operations (`webhook.sms_receipt`, `webhook.sms_inbound`) in the apollo `webhook.phone_revealed` shape. There is no Bun webhook handler or registry entry.
+ClickSend delivers SMS delivery receipts and inbound SMS to a registered HTTPS URL. Those inbound events are not connector operations: there is no Bun webhook handler or registry entry. Registering a receipt or inbound URL stays on the existing receipt and inbound actions. This recipe also covers MMS campaigns, copying a contact, subaccount usage, a recharge transaction by id, GET /country-list, and the user-countries endpoints. Contact transfer uses PUT /lists/{from_list_id}/contacts/{contact_id}/transfer/{to_list_id}.
 
 Adaptations versus the pinned OpenConnector source: native Basic auth uses `http.auth.basic`; GET requests omit `Content-Type`; JSON writes set `Content-Type: application/json`; responses keep raw provider JSON under `data`.
 
