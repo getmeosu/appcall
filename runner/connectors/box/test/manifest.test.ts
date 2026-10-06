@@ -12,7 +12,7 @@ it("declares OAuth2 with manually collected credentials and bounded action schem
   expect(manifest.auth?.setup.mode).toBe("api_key");
   expect(manifest.auth?.setup.fields).toContainEqual(expect.objectContaining({key:"accessToken",secret:true,required:true}));
   expect(manifest.http?.auth.field).toBe("accessToken");
-  expect(manifest.version).toBe("0.3.0");
+  expect(manifest.version).toBe("0.4.0");
   const keys = actionOps.map(([key]) => key);
   expect(new Set(keys).size).toBe(keys.length);
   for (const op of CURATED) expect(keys).toContain(op);
@@ -26,7 +26,7 @@ it("declares OAuth2 with manually collected credentials and bounded action schem
     expect(String(op.title ?? "").length).toBeGreaterThan(0);
     expect(String(op.description ?? "").length).toBeGreaterThan(0);
     const method = String((op.request as {method?:string}).method ?? "").toUpperCase();
-    expect(op.sideEffect, key).toBe(method === "GET" || method === "HEAD" ? "read" : "write");
+    expect(op.sideEffect, key).toBe(method === "GET" || method === "HEAD" || method === "OPTIONS" ? "read" : "write");
     if (!CURATED.includes(key)) {
       expect(op.enforceOutputSchema, key).toBe(true);
       expect(op.responseFormat, key).toBe("json");
@@ -40,7 +40,7 @@ it("declares OAuth2 with manually collected credentials and bounded action schem
   for (const key of CURATED) {
     expect(operations[key]?.sideEffect).toBe(/create|move|delete|update|copy|upload/.test(key)?"write":"read");
   }
-  expect(manifest.network?.allowedHosts).toEqual(["api.box.com", "upload.box.com"]);
+  expect(manifest.network?.allowedHosts).toEqual(["api.box.com", "dl.boxcloud.com", "upload.box.com"]);
 });
 
 it("requires the fields guaranteed by each mapped response", () => {
