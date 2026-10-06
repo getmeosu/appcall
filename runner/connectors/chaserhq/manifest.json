@@ -1,7 +1,17 @@
 {
+  "key": "chaserhq",
+  "name": "ChaserHQ",
+  "version": "0.2.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "accounting"
+  ],
   "auth": {
+    "type": "api_key",
     "scopes": [],
     "setup": {
+      "mode": "api_key",
       "fields": [
         {
           "key": "apiKey",
@@ -15,138 +25,119 @@
           "required": true,
           "secret": true
         }
-      ],
-      "mode": "api_key"
-    },
-    "type": "api_key"
-  },
-  "categories": [
-    "accounting"
-  ],
-  "evidence": {
-    "fixture": {
-      "status": "supplied"
-    },
-    "live": {
-      "status": "unverified"
+      ]
     }
   },
-  "http": {
-    "auth": {
-      "basic": {
-        "password": "{{apiSecret}}",
-        "username": "{{apiKey}}"
-      },
-      "field": "apiKey",
-      "in": "header",
-      "name": "Authorization"
-    },
-    "baseUrl": "https://openapi.chaserhq.com",
-    "errors": {
-      "defaultRetryAfterSeconds": 30,
-      "messagePaths": [
-        "message",
-        "error",
-        "error.message"
-      ],
-      "rateLimitStatuses": [
-        429
-      ],
-      "retryAfterHeader": "retry-after"
-    },
-    "headers": {
-      "Accept": "application/json"
-    }
-  },
-  "key": "chaserhq",
-  "models": [
-    "organisation",
-    "customer",
-    "invoice"
-  ],
-  "name": "ChaserHQ",
   "network": {
     "allowedHosts": [
       "openapi.chaserhq.com"
     ]
   },
+  "models": [
+    "organisation",
+    "customer",
+    "invoice",
+    "credit_note",
+    "invoice_history"
+  ],
+  "http": {
+    "baseUrl": "https://openapi.chaserhq.com",
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "Authorization",
+      "basic": {
+        "username": "{{apiKey}}",
+        "password": "{{apiSecret}}"
+      }
+    },
+    "headers": {
+      "Accept": "application/json"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after",
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "message",
+        "error",
+        "error.message"
+      ]
+    }
+  },
   "operations": {
-    "customers.get": {
-      "description": "Retrieve one Chaser customer by ID or ext_ external ID.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "customerId": {
-            "minLength": 1,
-            "type": "string"
-          }
-        },
-        "required": [
-          "customerId"
-        ],
-        "type": "object"
-      },
+    "healthcheck": {
+      "timeoutMs": 5000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
       "kind": "action",
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Healthcheck",
+      "description": "Validate Chaser API key and secret with GET /v1/organisation.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
       "outputSchema": {
-        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "required": [
-          "data"
-        ],
-        "type": "object"
+        "additionalProperties": false
       },
       "request": {
         "method": "GET",
-        "path": "/v1/customers/{{customerId}}",
+        "path": "/v1/organisation",
         "success": [
           200
         ]
       },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "title": "Get customer",
-      "validationMode": "strict-generated"
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
     },
     "customers.list": {
-      "description": "List Chaser customers with optional limit and page pagination.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "limit": {
-            "maximum": 100,
-            "minimum": 1,
-            "type": "integer"
-          },
-          "page": {
-            "minimum": 0,
-            "type": "integer"
-          }
-        },
-        "type": "object"
-      },
-      "kind": "action",
+      "timeoutMs": 15000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List customers",
+      "description": "List Chaser customers with optional limit and page pagination.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "additionalProperties": false
+      },
       "outputSchema": {
-        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "required": [
-          "data"
-        ],
-        "type": "object"
+        "additionalProperties": false
       },
       "request": {
         "method": "GET",
@@ -159,124 +150,88 @@
           200
         ]
       },
-      "responseFormat": "json",
-      "sideEffect": "read",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "customers.get": {
       "timeoutMs": 15000,
-      "title": "List customers",
-      "validationMode": "strict-generated"
-    },
-    "healthcheck": {
-      "description": "Validate Chaser API key and secret with GET /v1/organisation.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {},
-        "type": "object"
-      },
-      "kind": "action",
-      "maxInputBytes": 4096,
-      "maxResponseBytes": 65536,
-      "outputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "type": "object"
-      },
-      "request": {
-        "method": "GET",
-        "path": "/v1/organisation",
-        "success": [
-          200
-        ]
-      },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 5000,
-      "title": "Healthcheck",
-      "validationMode": "strict-generated"
-    },
-    "invoices.get": {
-      "description": "Retrieve one Chaser invoice by ID.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "invoiceId": {
-            "minLength": 1,
-            "type": "string"
-          }
-        },
-        "required": [
-          "invoiceId"
-        ],
-        "type": "object"
-      },
-      "kind": "action",
       "maxInputBytes": 65536,
       "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Get customer",
+      "description": "Retrieve one Chaser customer by ID or ext_ external ID.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "customerId"
+        ],
+        "properties": {
+          "customerId": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      },
       "outputSchema": {
-        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "required": [
-          "data"
-        ],
-        "type": "object"
+        "additionalProperties": false
       },
       "request": {
         "method": "GET",
-        "path": "/v1/invoices/{{invoiceId}}",
+        "path": "/v1/customers/{{customerId}}",
         "success": [
           200
         ]
       },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "title": "Get invoice",
-      "validationMode": "strict-generated"
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
     },
     "invoices.list": {
-      "description": "List Chaser invoices with optional limit and page pagination.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "limit": {
-            "maximum": 100,
-            "minimum": 1,
-            "type": "integer"
-          },
-          "page": {
-            "minimum": 0,
-            "type": "integer"
-          }
-        },
-        "type": "object"
-      },
-      "kind": "action",
+      "timeoutMs": 15000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List invoices",
+      "description": "List Chaser invoices with optional limit and page pagination.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "additionalProperties": false
+      },
       "outputSchema": {
-        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "required": [
-          "data"
-        ],
-        "type": "object"
+        "additionalProperties": false
       },
       "request": {
         "method": "GET",
@@ -289,20 +244,757 @@
           200
         ]
       },
-      "responseFormat": "json",
-      "sideEffect": "read",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "invoices.get": {
       "timeoutMs": 15000,
-      "title": "List invoices",
-      "validationMode": "strict-generated"
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Get invoice",
+      "description": "Retrieve one Chaser invoice by ID.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "invoiceId"
+        ],
+        "properties": {
+          "invoiceId": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/invoices/{{invoiceId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "organisation.get": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Get organisation",
+      "description": "Get the Chaser organisation attached to the API credentials.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/organisation",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "status.get": {
+      "timeoutMs": 5000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Get status",
+      "description": "Get ChaserHQ API status.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/status/",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "customers.create": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Create customer",
+      "description": "Create a Chaser customer from official Open API fields.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "externalId",
+          "companyName"
+        ],
+        "properties": {
+          "externalId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "External customer id."
+          },
+          "companyName": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Company name."
+          },
+          "contactFirstName": {
+            "type": "string",
+            "description": "Contact first name."
+          },
+          "contactLastName": {
+            "type": "string",
+            "description": "Contact last name."
+          },
+          "contactEmailAddress": {
+            "type": "string",
+            "description": "Contact email."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/customers",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "external_id": "{{externalId}}",
+          "company_name": "{{companyName}}",
+          "contact_first_name": "{{contactFirstName}}",
+          "contact_last_name": "{{contactLastName}}",
+          "contact_email_address": "{{contactEmailAddress}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "customers.update": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Update customer",
+      "description": "Update a Chaser customer by ID or ext_ external ID.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "customerId"
+        ],
+        "properties": {
+          "customerId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Chaser customer id."
+          },
+          "companyName": {
+            "type": "string",
+            "description": "Company name."
+          },
+          "contactFirstName": {
+            "type": "string",
+            "description": "Contact first name."
+          },
+          "contactLastName": {
+            "type": "string",
+            "description": "Contact last name."
+          },
+          "contactEmailAddress": {
+            "type": "string",
+            "description": "Contact email."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/v1/customers/{{customerId}}",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "company_name": "{{companyName}}",
+          "contact_first_name": "{{contactFirstName}}",
+          "contact_last_name": "{{contactLastName}}",
+          "contact_email_address": "{{contactEmailAddress}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "invoices.create": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Create invoice",
+      "description": "Create a Chaser invoice for an existing customer.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "invoiceNumber",
+          "customerExternalId",
+          "currencyCode",
+          "total"
+        ],
+        "properties": {
+          "invoiceNumber": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Invoice number."
+          },
+          "customerExternalId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Customer external id."
+          },
+          "currencyCode": {
+            "type": "string",
+            "minLength": 1,
+            "description": "ISO currency code."
+          },
+          "total": {
+            "type": "number",
+            "description": "Invoice total."
+          },
+          "date": {
+            "type": "string",
+            "description": "Invoice date."
+          },
+          "dueDate": {
+            "type": "string",
+            "description": "Due date."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/invoices",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "invoice_number": "{{invoiceNumber}}",
+          "customer_external_id": "{{customerExternalId}}",
+          "currency_code": "{{currencyCode}}",
+          "total": "{{total}}",
+          "date": "{{date}}",
+          "due_date": "{{dueDate}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "invoices.update": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Update invoice",
+      "description": "Update a Chaser invoice by ID.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "invoiceId"
+        ],
+        "properties": {
+          "invoiceId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Chaser invoice id."
+          },
+          "status": {
+            "type": "string",
+            "description": "Invoice status."
+          },
+          "amountPaid": {
+            "type": "number",
+            "description": "Amount paid."
+          },
+          "amountDue": {
+            "type": "number",
+            "description": "Amount due."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/v1/invoices/{{invoiceId}}",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "status": "{{status}}",
+          "amount_paid": "{{amountPaid}}",
+          "amount_due": "{{amountDue}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "invoices.historyList": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List invoice history",
+      "description": "List Chaser invoice history records with optional pagination.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/invoices/history",
+        "success": [
+          200
+        ],
+        "query": {
+          "limit": "{{limit}}",
+          "page": "{{page}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "invoices.history": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Get invoice history",
+      "description": "Get history for one Chaser invoice.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "invoiceId"
+        ],
+        "properties": {
+          "invoiceId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Chaser invoice id."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/invoices/{{invoiceId}}/history",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "creditNotes.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List credit notes",
+      "description": "List Chaser credit notes with optional pagination.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/credit_notes",
+        "success": [
+          200
+        ],
+        "query": {
+          "limit": "{{limit}}",
+          "page": "{{page}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "creditNotes.get": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Get credit note",
+      "description": "Retrieve one Chaser credit note by ID.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "creditNoteId"
+        ],
+        "properties": {
+          "creditNoteId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Chaser credit note id."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/credit_notes/{{creditNoteId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "creditNotes.create": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Create credit note",
+      "description": "Create a Chaser credit note for an existing customer.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "creditNoteNumber",
+          "customerExternalId",
+          "currencyCode",
+          "total"
+        ],
+        "properties": {
+          "creditNoteNumber": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Credit note number."
+          },
+          "customerExternalId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Customer external id."
+          },
+          "currencyCode": {
+            "type": "string",
+            "minLength": 1,
+            "description": "ISO currency code."
+          },
+          "total": {
+            "type": "number",
+            "description": "Credit note total."
+          },
+          "date": {
+            "type": "string",
+            "description": "Credit note date."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/credit_notes",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "credit_note_number": "{{creditNoteNumber}}",
+          "customer_external_id": "{{customerExternalId}}",
+          "currency_code": "{{currencyCode}}",
+          "total": "{{total}}",
+          "date": "{{date}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "creditNotes.update": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Update credit note",
+      "description": "Update a Chaser credit note by ID.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "creditNoteId"
+        ],
+        "properties": {
+          "creditNoteId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Chaser credit note id."
+          },
+          "status": {
+            "type": "string",
+            "description": "Credit note status."
+          },
+          "remainingCredit": {
+            "type": "number",
+            "description": "Remaining credit."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/v1/credit_notes/{{creditNoteId}}",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "status": "{{status}}",
+          "remaining_credit": "{{remainingCredit}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
     }
   },
   "provenance": {
     "source": {
-      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
-      "url": "https://github.com/oomol-lab/open-connector"
+      "url": "https://github.com/oomol-lab/open-connector",
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"
     }
   },
-  "runtime": "bun",
-  "version": "0.1.0",
-  "visibility": "public"
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
+    }
+  }
 }
