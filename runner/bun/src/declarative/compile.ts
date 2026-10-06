@@ -646,6 +646,11 @@ function buildBody(request: DeclarativeRequest, input: Record<string, unknown>):
     return undefined;
   }
   const rendered = renderTemplate(request.body, input);
+  if (request.bodyEncoding === "raw") {
+    if (rendered === undefined || rendered === null) return undefined;
+    if (typeof rendered !== "string") throw new Error("raw body must render to a string");
+    return rendered;
+  }
   if (request.bodyEncoding === "form") {
     if (!isRecord(rendered) || Array.isArray(rendered) || rendered === null) throw new Error("form body must render to a plain object");
     if (isRecord(request.body)) {
@@ -678,14 +683,15 @@ function assertFormScalar(key: string, value: unknown): asserts value is string 
 }
 
 function assertBodyEncodingManifest(manifest: DeclarativeManifest, request: DeclarativeRequest): void {
-  if (request.bodyEncoding !== "form") return;
+  if (request.bodyEncoding !== "form" && request.bodyEncoding !== "raw") return;
+  const expected = request.bodyEncoding === "form" ? "application/x-www-form-urlencoded" : "application/octet-stream";
   const effective = new Map<string, unknown>();
   for (const block of [manifest.http?.headers, request.headers]) {
     if (!isRecord(block)) continue;
     for (const [key, value] of Object.entries(block)) effective.set(key.toLowerCase(), value);
   }
   const contentType = effective.get("content-type");
-  if (typeof contentType !== "string" || contentType.toLowerCase() !== "application/x-www-form-urlencoded") throw new Error(`${manifest.key}: form body requires Content-Type application/x-www-form-urlencoded`);
+  if (typeof contentType !== "string" || contentType.toLowerCase() !== expected) throw new Error(`${manifest.key}: ${request.bodyEncoding} body requires Content-Type ${expected}`);
 }
 
 function upstreamFailure(
