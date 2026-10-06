@@ -1,9 +1,9 @@
 {
   "key": "instagram",
   "name": "Instagram (Facebook Login)",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "runtime": "bun",
-  "description": "Read professional Instagram media and explicitly create, inspect, and publish public-URL image or Reel containers.",
+  "visibility": "public",
   "categories": [
     "social"
   ],
@@ -39,6 +39,14 @@
       "graph.facebook.com"
     ]
   },
+  "models": [
+    "user",
+    "media",
+    "container",
+    "comment",
+    "hashtag",
+    "insight"
+  ],
   "http": {
     "baseUrl": "https://graph.facebook.com/v26.0",
     "auth": {
@@ -496,11 +504,623 @@
           "fields": "quota_usage,config"
         }
       }
+    },
+    "insights.account.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get account insights",
+      "description": "Read Instagram professional account insights for the bound account.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "metric": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Comma-separated insight metrics."
+          },
+          "period": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Aggregation period, for example day."
+          },
+          "metric_type": {
+            "type": "string",
+            "description": "total_value or time_series."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "metric",
+          "period"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/{{instagramUserId}}/insights",
+        "success": [
+          200
+        ],
+        "query": {
+          "metric": "{{metric}}",
+          "period": "{{period}}",
+          "metric_type": "{{metric_type}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "insights.media.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get media insights",
+      "description": "Read insights for one published Instagram media object.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "mediaId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Instagram media ID."
+          },
+          "metric": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Comma-separated insight metrics."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "mediaId",
+          "metric"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/{{mediaId}}/insights",
+        "success": [
+          200
+        ],
+        "query": {
+          "metric": "{{metric}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "comments.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List comments",
+      "description": "List comments on a published Instagram media object.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "mediaId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Instagram media ID."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Provider page size."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "mediaId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/{{mediaId}}/comments",
+        "success": [
+          200
+        ],
+        "query": {
+          "fields": "id,text,username,timestamp,like_count",
+          "limit": "{{limit}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "comments.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get comment",
+      "description": "Read one Instagram comment by ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "commentId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Instagram comment ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "commentId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/{{commentId}}",
+        "success": [
+          200
+        ],
+        "query": {
+          "fields": "id,text,username,timestamp,like_count,hidden"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "comments.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create comment",
+      "description": "Create a comment on a published Instagram media object.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "mediaId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Instagram media ID."
+          },
+          "message": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Comment text."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "mediaId",
+          "message"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/{{mediaId}}/comments",
+        "success": [
+          200
+        ],
+        "body": {
+          "message": "{{message}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "comments.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Delete comment",
+      "description": "Delete an Instagram comment owned by or visible to this connection.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "commentId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Instagram comment ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "commentId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/{{commentId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "comments.hide": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Hide comment",
+      "description": "Hide or unhide an Instagram comment on media owned by the bound account.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "commentId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Instagram comment ID."
+          },
+          "hide": {
+            "type": "boolean",
+            "description": "True hides the comment; false unhides it."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "commentId",
+          "hide"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/{{commentId}}",
+        "success": [
+          200
+        ],
+        "query": {
+          "hide": "{{hide}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "stories.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List stories",
+      "description": "List currently live Instagram stories for the bound professional account.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/{{instagramUserId}}/stories",
+        "success": [
+          200
+        ],
+        "query": {
+          "fields": "id,media_type,media_url,timestamp,permalink"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "tags.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List tagged media",
+      "description": "List media objects in which the bound professional account is tagged.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Provider page size."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/{{instagramUserId}}/tags",
+        "success": [
+          200
+        ],
+        "query": {
+          "fields": "id,caption,media_type,permalink,timestamp",
+          "limit": "{{limit}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "hashtags.search": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Search hashtags",
+      "description": "Search for an Instagram hashtag ID by name using the bound professional account.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "q": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Hashtag name without the # prefix."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "q"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/ig_hashtag_search",
+        "success": [
+          200
+        ],
+        "query": {
+          "user_id": "{{instagramUserId}}",
+          "q": "{{q}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "hashtags.topMedia.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List hashtag top media",
+      "description": "List top media for an Instagram hashtag ID using the bound professional account.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "hashtagId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Instagram hashtag ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "hashtagId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/{{hashtagId}}/top_media",
+        "success": [
+          200
+        ],
+        "query": {
+          "user_id": "{{instagramUserId}}",
+          "fields": "id,caption,media_type,permalink"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "businessDiscovery.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get business discovery",
+      "description": "Read public metadata about another Instagram professional account by username.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "username": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Target Instagram username without @."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "username"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/{{instagramUserId}}",
+        "success": [
+          200
+        ],
+        "query": {
+          "fields": "business_discovery.username({{username}}){id,username,name,followers_count,media_count,website}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
     }
   },
-  "models": [
-    "user",
-    "media",
-    "container"
-  ]
+  "provenance": {
+    "source": {
+      "url": "https://github.com/oomol-lab/open-connector",
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"
+    }
+  },
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
+    }
+  },
+  "description": "Read professional Instagram media and explicitly create, inspect, and publish public-URL image or Reel containers."
 }

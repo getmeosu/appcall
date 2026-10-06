@@ -34,7 +34,7 @@ for (const c of cases) {
     expect(JSON.stringify(output)).not.toContain("test-secret");
     const op = manifest.operations[c.op];
     expect(op.kind).toBe("action");
-    expect(op.sideEffect).toBe(c.method === "GET" ? "read" : "write");
+    expect(op.sideEffect).toBe(c.method === "GET" ? "read" : c.method === "DELETE" ? "destructive" : "write");
     expect(op.inputSchema.type).toBe("object");
     expect(op.outputSchema.type).toBe("object");
     expect(op.description.length).toBeGreaterThan(10);
