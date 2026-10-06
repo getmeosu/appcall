@@ -3,10 +3,11 @@ import manifest from "../manifest.json";
 
 describe("Zoho Books manifest", () => {
   it("has correct key", () => expect(manifest.key).toBe("zoho-books"));
-  it("has version 0.2.0", () => expect(manifest.version).toBe("0.2.0"));
+  it("has version 0.3.0", () => expect(manifest.version).toBe("0.3.0"));
   it("uses bun runtime", () => expect(manifest.runtime).toBe("bun"));
   it("requires oauth2 auth", () => expect(manifest.auth.type).toBe("oauth2"));
-  it("allows books.zoho.com", () => expect(manifest.network.allowedHosts).toEqual(["books.zoho.com"]));
+  it("allows the legacy and official Zoho Books hosts", () =>
+    expect(manifest.network.allowedHosts).toEqual(["books.zoho.com", "www.zohoapis.com"]));
   it("declares write scopes", () => {
     expect(manifest.auth.scopes).toContain("ZohoBooks.contacts.CREATE");
     expect(manifest.auth.scopes).toContain("ZohoBooks.invoices.CREATE");
@@ -39,7 +40,11 @@ describe("Zoho Books manifest", () => {
       expect(op.title).toBeTruthy();
       expect(op.description).toBeTruthy();
     }
-    expect(ops).toHaveLength(20);
+    expect(ops.length).toBeGreaterThan(20);
+    expect(manifest.operations["invoices.list"].kind).toBe("sync");
+    expect(manifest.operations["contacts.list"].kind).toBe("sync");
+    expect(manifest.operations["payments.list"].kind).toBe("sync");
+    expect(manifest.operations["invoices.list"].request).toBeUndefined();
   });
   it("declares models", () => {
     expect(manifest.models).toContain("invoice");

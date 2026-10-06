@@ -100,13 +100,15 @@ function assertBasicAuthConfiguration(auth: DeclarativeHttp["auth"]): void {
 // to boot rather than shipping that silently.
 function assertTemplatedHostsAreDeclared(manifest: DeclarativeManifest): void {
   const required = new Map<string, boolean>();
-  const declare = (field: DeclarativeSetupField) => required.set(field.key, field.required === true);
+  // `declare` is a TypeScript keyword. Bun 1.3.8 erases a binding with that
+  // name, which drops every setup field and rejects a templated base URL.
+  const rememberField = (field: DeclarativeSetupField) => required.set(field.key, field.required === true);
   for (const field of manifest.auth?.setup?.fields ?? []) {
-    declare(field);
+    rememberField(field);
   }
   for (const route of manifest.auth?.setup?.routes ?? []) {
     for (const field of route.fields ?? []) {
-      declare(field);
+      rememberField(field);
     }
   }
 

@@ -2,7 +2,7 @@
 
 ClickSend REST API v3 recipe. Configure the dashboard API username (non-secret) and API key (secret). The runner sends HTTP Basic authentication with username as the Basic username and the API key as the Basic password to `https://rest.clicksend.com/v3`, plus `Accept: application/json`.
 
-Selected operations cover account healthcheck, contact lists and contacts (read and write), SMS send/price/history/receipts/inbound/templates, dedicated numbers, and SMS statistics. `list_id` and `contact_id` are required positive integers and are URL-encoded as path segments. SMS send and price take a `messages` array whose items require `body` and `to`.
+Selected operations cover the official ClickSend REST v3 JSON surface: account, subaccounts, contacts and lists, SMS, MMS, voice, fax, email, post, campaigns, automations, numbers, statistics, reseller, and recharge. PDF transaction downloads and the SDK file download are omitted. Existing `list_id` and `contact_id` inputs stay required positive integers. SMS send and price still take a `messages` array whose items require `body` and `to`.
 
 ClickSend delivers SMS delivery receipts and inbound SMS to a registered HTTPS URL. Those inbound events are declared as EventOnly webhook operations (`webhook.sms_receipt`, `webhook.sms_inbound`) in the apollo `webhook.phone_revealed` shape. There is no Bun webhook handler or registry entry.
 

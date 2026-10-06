@@ -10,6 +10,10 @@ const { actions } = compileDeclarativeConnector(manifest);
 for (const c of cases) describe(c.op, () => {
   it("validates without exposing undeclared data", async () => {
     expect(actions[c.op]).toBeFunction();
+    if (manifest.operations[c.op].validationMode === "strict-generated") {
+      expect(() => actions[c.op]!({...c.input, unexpected:"ignored"})).toThrow(/Unsupported input field/);
+      return;
+    }
     const result = await actions[c.op]!({...c.input, unexpected:"ignored"});
     expect(result).toMatchObject(c.op === "healthcheck" ? {status:"ok"} : {validated:c.input});
     expect(JSON.stringify(result)).not.toContain("ignored");
@@ -23,8 +27,8 @@ for (const c of cases) describe(c.op, () => {
       expect(init?.method).toBe(c.method);
       const headers = new Headers(init?.headers);
       expect(headers.get("Authorization")).toBe("Bearer fixture-token");
-      expect(headers.get("Content-Type")).toBe(c.body === null ? null : "application/json");
-      expect(init?.body === undefined ? null : JSON.parse(String(init.body))).toEqual(c.body);
+      expect(headers.get("Content-Type")).toBe(new Headers(manifest.operations[c.op].request.headers).get("content-type"));
+      expect(init?.body == null ? null : JSON.parse(String(init.body))).toEqual(c.body);
       return new Response(c.response === null ? null : JSON.stringify(c.response), {status:c.status});
     }});
     expect(calls).toBe(1);

@@ -41,7 +41,21 @@
     "edition": "international",
     "operations": [
       "healthcheck",
-      "checks.list"
+      "checks.list",
+      "checks.get",
+      "checks.create",
+      "checks.update",
+      "checks.delete",
+      "results.list",
+      "analysis.list",
+      "summary.average",
+      "summary.outage",
+      "probes.list",
+      "credits.get",
+      "contacts.list",
+      "teams.list",
+      "maintenance.list",
+      "actions.list"
     ],
     "upstreamSha": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
     "marketFocus": "international",
@@ -130,7 +144,7 @@
   "manifest": {
     "key": "pingdom",
     "name": "Pingdom",
-    "version": "0.1.0",
+    "version": "0.2.0",
     "runtime": "bun",
     "visibility": "public",
     "categories": [
@@ -157,7 +171,13 @@
       ]
     },
     "models": [
-      "check"
+      "check",
+      "probe",
+      "contact",
+      "team",
+      "maintenance",
+      "action",
+      "credit"
     ],
     "http": {
       "baseUrl": "https://api.pingdom.com/api/3.1",
@@ -204,19 +224,19 @@
           },
           "additionalProperties": false
         },
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
         "request": {
           "method": "GET",
           "path": "/checks",
-          "query": {
-            "limit": "1"
-          },
           "success": [
             200
-          ]
+          ],
+          "query": {
+            "limit": "1"
+          }
         },
-        "enforceOutputSchema": true
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
       },
       "checks.list": {
         "kind": "action",
@@ -225,17 +245,18 @@
         "maxInputBytes": 65536,
         "maxResponseBytes": 5242880,
         "title": "checks.list",
-        "description": "Read Pingdom checks.",
+        "description": "List Pingdom checks.",
         "inputSchema": {
           "type": "object",
-          "additionalProperties": false,
           "properties": {
             "limit": {
               "type": "integer",
               "minimum": 1,
-              "maximum": 250
+              "maximum": 250,
+              "description": "Maximum checks to return."
             }
-          }
+          },
+          "additionalProperties": false
         },
         "outputSchema": {
           "type": "object",
@@ -249,19 +270,709 @@
           },
           "additionalProperties": false
         },
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
         "request": {
           "method": "GET",
           "path": "/checks",
+          "success": [
+            200
+          ],
           "query": {
             "limit": "{{limit}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "checks.get": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "checks.get",
+        "description": "Get one Pingdom check.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "checkid": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Pingdom check id."
+            }
           },
+          "additionalProperties": false,
+          "required": [
+            "checkid"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/checks/{{checkid}}",
           "success": [
             200
           ]
         },
-        "enforceOutputSchema": true
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "checks.create": {
+        "kind": "action",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "checks.create",
+        "description": "Create a Pingdom uptime check.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Check name."
+            },
+            "host": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Hostname to check."
+            },
+            "type": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Check type.",
+              "enum": [
+                "http",
+                "httpcustom",
+                "tcp",
+                "ping",
+                "dns",
+                "udp",
+                "smtp",
+                "pop3",
+                "imap"
+              ]
+            },
+            "url": {
+              "type": "string",
+              "description": "HTTP path."
+            },
+            "port": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 65535,
+              "description": "TCP port."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "name",
+            "host",
+            "type"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "POST",
+          "path": "/checks",
+          "success": [
+            200,
+            201
+          ],
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "name": "{{name}}",
+            "host": "{{host}}",
+            "type": "{{type}}",
+            "url": "{{url}}",
+            "port": "{{port}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "checks.update": {
+        "kind": "action",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "checks.update",
+        "description": "Update a Pingdom check.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "checkid": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Pingdom check id."
+            },
+            "name": {
+              "type": "string",
+              "description": "Check name."
+            },
+            "host": {
+              "type": "string",
+              "description": "Hostname to check."
+            },
+            "paused": {
+              "type": "boolean",
+              "description": "Pause the check."
+            },
+            "url": {
+              "type": "string",
+              "description": "HTTP path."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "checkid"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "PUT",
+          "path": "/checks/{{checkid}}",
+          "success": [
+            200
+          ],
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "name": "{{name}}",
+            "host": "{{host}}",
+            "paused": "{{paused}}",
+            "url": "{{url}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "checks.delete": {
+        "kind": "action",
+        "sideEffect": "destructive",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "checks.delete",
+        "description": "Delete a Pingdom check.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "checkid": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Pingdom check id."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "checkid"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "DELETE",
+          "path": "/checks/{{checkid}}",
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "results.list": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "results.list",
+        "description": "List raw Pingdom check results.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "checkid": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Pingdom check id."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000,
+              "description": "Maximum results."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "checkid"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/results/{{checkid}}",
+          "success": [
+            200
+          ],
+          "query": {
+            "limit": "{{limit}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "analysis.list": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "analysis.list",
+        "description": "List Pingdom root-cause analysis results for a check.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "checkid": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Pingdom check id."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "checkid"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/analysis/{{checkid}}",
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "summary.average": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "summary.average",
+        "description": "Get average response time and uptime for a Pingdom check.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "checkid": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Pingdom check id."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "checkid"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/summary.average/{{checkid}}",
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "summary.outage": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "summary.outage",
+        "description": "Get outage intervals for a Pingdom check.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "checkid": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Pingdom check id."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "checkid"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/summary.outage/{{checkid}}",
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "probes.list": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "probes.list",
+        "description": "List Pingdom probe servers.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/probes",
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "credits.get": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "credits.get",
+        "description": "Get remaining Pingdom check and SMS credits.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/credits",
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "contacts.list": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "contacts.list",
+        "description": "List Pingdom alerting contacts.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/alerting/contacts",
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "teams.list": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "teams.list",
+        "description": "List Pingdom alerting teams.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/alerting/teams",
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "maintenance.list": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "maintenance.list",
+        "description": "List Pingdom maintenance windows.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Maximum windows to return."
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/maintenance",
+          "success": [
+            200
+          ],
+          "query": {
+            "limit": "{{limit}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "actions.list": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "actions.list",
+        "description": "List Pingdom alert actions.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Maximum actions to return."
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/actions",
+          "success": [
+            200
+          ],
+          "query": {
+            "limit": "{{limit}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "webhook.check_down": {
+        "kind": "webhook",
+        "timeoutMs": 30000,
+        "maxInputBytes": 1048576,
+        "maxResponseBytes": 1048576,
+        "title": "Check Down",
+        "description": "Pingdom state-change webhook. Fires when an uptime check goes DOWN or a transaction check starts FAILING.",
+        "sideEffect": "read"
+      },
+      "webhook.check_up": {
+        "kind": "webhook",
+        "timeoutMs": 30000,
+        "maxInputBytes": 1048576,
+        "maxResponseBytes": 1048576,
+        "title": "Check Up",
+        "description": "Pingdom state-change webhook. Fires when an uptime check recovers to UP or a transaction check returns to SUCCESS.",
+        "sideEffect": "read"
       }
     },
     "evidence": {
