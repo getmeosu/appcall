@@ -696,6 +696,19 @@ describe("listBounces", () => {
     expect(url).toContain("offset=20");
   });
 
+  it("filters bounces by email", async () => {
+    const requests: Request[] = [];
+    await listBounces({
+      apiKey: "SG.test-key",
+      email: "bounced@example.com",
+      fetch: async (input, init) => {
+        requests.push(new Request(input, init));
+        return new Response("[]", { status: 200, headers: { "Content-Type": "application/json" } });
+      },
+    });
+    expect(requests[0].url).toContain("email=bounced%40example.com");
+  });
+
   it("throws rate limit on 429", async () => {
     try {
       await listBounces({

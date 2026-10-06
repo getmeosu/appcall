@@ -4,7 +4,7 @@ import manifest from "../manifest.json";
 describe("sendgrid manifest", () => {
   it("has correct key and version", () => {
     expect(manifest.key).toBe("sendgrid");
-    expect(manifest.version).toBe("0.3.0");
+    expect(manifest.version).toBe("0.4.0");
     expect(manifest.runtime).toBe("bun");
   });
 
@@ -94,6 +94,13 @@ describe("sendgrid manifest", () => {
     expect(manifest.operations["suppression.invalid_emails.list"].kind).toBe("action");
     expect(manifest.operations["api_keys.list"].kind).toBe("action");
     expect(manifest.operations["alerts.list"].kind).toBe("action");
+    expect(manifest.operations["contactdb.recipients.search.list"].request.method).toBe("GET");
+    expect(manifest.operations["mail.send.v3"].request.path).toBe("/v3/mail/send");
+    expect(manifest.operations["partners.accounts.by_id.sso.create"].request.method).toBe("POST");
+    expect(manifest.operations["scopes.requests.list"].request.path).toBe("/v3/scopes/requests");
+    expect(manifest.operations["scopes.requests.by_id.approve.update"].request.method).toBe("PATCH");
+    expect(manifest.operations["scopes.requests.by_id.delete"].request.method).toBe("DELETE");
+    expect(manifest.operations["user.account.list"].request.path).toBe("/v3/user/account");
   });
 
   it("operations have timeout constraints", () => {
