@@ -1,7 +1,7 @@
 {
   "key": "box",
   "name": "Box",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "runtime": "bun",
   "description": "Box JSON metadata operations using a manually supplied OAuth2 access token.",
   "categories": [
@@ -28,6 +28,7 @@
   "network": {
     "allowedHosts": [
       "api.box.com",
+      "dl.boxcloud.com",
       "upload.box.com"
     ]
   },
@@ -21743,6 +21744,762 @@
       "maxInputBytes": 1048576,
       "maxResponseBytes": 1048576,
       "sideEffect": "read"
+    },
+    "events.longPoll": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "Get Real-Time Server URL for Long-Polling Events",
+      "description": "Return Box real-time servers for long-polling user events. OPTIONS /events. After a new_change signal, read events with events.list.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "OPTIONS",
+        "path": "/events",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated"
+    },
+    "files.preflight": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "Preflight check before upload",
+      "description": "Check that Box will accept a file before uploading it. OPTIONS the upload host. A 200 means the upload can proceed; a name conflict is an upstream error.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "File name to check. Must be unique in the destination folder."
+          },
+          "size": {
+            "type": "integer",
+            "description": "File size in bytes, used to check quota."
+          },
+          "parent_id": {
+            "type": "string",
+            "description": "Destination folder ID. 0 is the root folder."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "parent_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "OPTIONS",
+        "baseUrl": "https://upload.box.com/api/2.0",
+        "path": "/files/content",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "name": "{{name}}",
+          "size": "{{size}}",
+          "parent": {
+            "id": "{{parent_id}}"
+          }
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated"
+    },
+    "hubs.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "List Box Hubs",
+      "description": "List Box Hubs visible to the authenticated user. Requires the box-version 2025.0 header.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "Search string for Box Hubs."
+          },
+          "scope": {
+            "type": "string",
+            "description": "Hub visibility scope.",
+            "enum": [
+              "editable",
+              "view_only",
+              "all"
+            ]
+          },
+          "sort": {
+            "type": "string",
+            "description": "Sort field.",
+            "enum": [
+              "name",
+              "updated_at",
+              "last_accessed_at",
+              "view_count",
+              "relevance"
+            ]
+          },
+          "direction": {
+            "type": "string",
+            "description": "Sort direction.",
+            "enum": [
+              "ASC",
+              "DESC"
+            ]
+          },
+          "marker": {
+            "type": "string",
+            "description": "Marker from the previous page."
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Maximum hubs to return, at most 1000."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/hubs",
+        "headers": {
+          "box-version": "2025.0"
+        },
+        "query": {
+          "query": "{{query}}",
+          "scope": "{{scope}}",
+          "sort": "{{sort}}",
+          "direction": "{{direction}}",
+          "marker": "{{marker}}",
+          "limit": "{{limit}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated"
+    },
+    "files.getSharedLink": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "Get shared link for file",
+      "description": "Read a file's shared link. Pass fields=shared_link to return the shared link instead of the full file.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "file_id": {
+            "type": "string",
+            "description": "Box file ID."
+          },
+          "fields": {
+            "type": "string",
+            "description": "Comma-separated fields. Use shared_link to return the shared link."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "file_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/files/{{file_id}}",
+        "query": {
+          "fields": "{{fields}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated"
+    },
+    "folders.getSharedLink": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "Get shared link for folder",
+      "description": "Read a folder's shared link. Pass fields=shared_link to return the shared link instead of the full folder.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "folder_id": {
+            "type": "string",
+            "description": "Box folder ID. 0 is the root folder."
+          },
+          "fields": {
+            "type": "string",
+            "description": "Comma-separated fields. Use shared_link to return the shared link."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "folder_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/folders/{{folder_id}}",
+        "query": {
+          "fields": "{{fields}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated"
+    },
+    "oauth.token": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "write",
+      "title": "Request access token",
+      "description": "Exchange an authorization code, JWT assertion, or client credentials for a Box access token. POST https://api.box.com/oauth2/token as form data. The connector still sends the configured bearer token.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "grant_type": {
+            "type": "string",
+            "description": "OAuth grant type.",
+            "enum": [
+              "authorization_code",
+              "client_credentials",
+              "refresh_token",
+              "urn:ietf:params:oauth:grant-type:jwt-bearer",
+              "urn:ietf:params:oauth:grant-type:token-exchange"
+            ]
+          },
+          "client_id": {
+            "type": "string",
+            "description": "Box application client ID."
+          },
+          "client_secret": {
+            "type": "string",
+            "description": "Box application client secret."
+          },
+          "code": {
+            "type": "string",
+            "description": "Authorization code from the browser redirect."
+          },
+          "refresh_token": {
+            "type": "string",
+            "description": "Refresh token to exchange."
+          },
+          "scope": {
+            "type": "string",
+            "description": "Space-delimited scopes to apply to the new token."
+          },
+          "assertion": {
+            "type": "string",
+            "description": "JWT assertion for the JWT bearer grant."
+          },
+          "box_subject_type": {
+            "type": "string",
+            "description": "Subject type for the client credentials grant.",
+            "enum": [
+              "enterprise",
+              "user"
+            ]
+          },
+          "box_subject_id": {
+            "type": "string",
+            "description": "User or enterprise ID for the client credentials grant."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "grant_type",
+          "client_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "baseUrl": "https://api.box.com",
+        "path": "/oauth2/token",
+        "bodyEncoding": "form",
+        "headers": {
+          "Content-Type": "application/x-www-form-urlencoded"
+        },
+        "body": {
+          "grant_type": "{{grant_type}}",
+          "client_id": "{{client_id}}",
+          "client_secret": "{{client_secret}}",
+          "code": "{{code}}",
+          "refresh_token": "{{refresh_token}}",
+          "scope": "{{scope}}",
+          "assertion": "{{assertion}}",
+          "box_subject_type": "{{box_subject_type}}",
+          "box_subject_id": "{{box_subject_id}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated"
+    },
+    "oauth.refresh": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "write",
+      "title": "Refresh access token",
+      "description": "Exchange a Box refresh token for a new access token. POST https://api.box.com/oauth2/token with grant_type=refresh_token. Each refresh token can be used once.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "grant_type": {
+            "type": "string",
+            "description": "Must be refresh_token.",
+            "enum": [
+              "refresh_token"
+            ]
+          },
+          "client_id": {
+            "type": "string",
+            "description": "Box application client ID."
+          },
+          "client_secret": {
+            "type": "string",
+            "description": "Box application client secret."
+          },
+          "refresh_token": {
+            "type": "string",
+            "description": "Refresh token to exchange. Single use."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "grant_type",
+          "client_id",
+          "client_secret",
+          "refresh_token"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "baseUrl": "https://api.box.com",
+        "path": "/oauth2/token",
+        "bodyEncoding": "form",
+        "headers": {
+          "Content-Type": "application/x-www-form-urlencoded"
+        },
+        "body": {
+          "grant_type": "{{grant_type}}",
+          "client_id": "{{client_id}}",
+          "client_secret": "{{client_secret}}",
+          "refresh_token": "{{refresh_token}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated"
+    },
+    "oauth.revoke": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "write",
+      "title": "Revoke access token",
+      "description": "Revoke a Box access token. POST https://api.box.com/oauth2/revoke as form data. Box returns an empty 200 body.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "client_id": {
+            "type": "string",
+            "description": "Box application client ID."
+          },
+          "client_secret": {
+            "type": "string",
+            "description": "Box application client secret."
+          },
+          "token": {
+            "type": "string",
+            "description": "Access token to revoke."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "client_id",
+          "token"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "baseUrl": "https://api.box.com",
+        "path": "/oauth2/revoke",
+        "bodyEncoding": "form",
+        "headers": {
+          "Content-Type": "application/x-www-form-urlencoded"
+        },
+        "body": {
+          "client_id": "{{client_id}}",
+          "client_secret": "{{client_secret}}",
+          "token": "{{token}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "data": {}
+        }
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated"
+    },
+    "files.thumbnail": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "Get file thumbnail",
+      "description": "Download a Box file thumbnail as text within the connector response budget. png supports 32, 64, 128, and 256 pixel sizes. jpg supports 32, 160, and 320.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "file_id": {
+            "type": "string",
+            "description": "Box file ID."
+          },
+          "extension": {
+            "type": "string",
+            "description": "Thumbnail format.",
+            "enum": [
+              "jpg",
+              "png"
+            ]
+          },
+          "min_width": {
+            "type": "integer",
+            "description": "Minimum thumbnail width in pixels, from 32 to 320."
+          },
+          "max_width": {
+            "type": "integer",
+            "description": "Maximum thumbnail width in pixels, from 32 to 320."
+          },
+          "min_height": {
+            "type": "integer",
+            "description": "Minimum thumbnail height in pixels, from 32 to 320."
+          },
+          "max_height": {
+            "type": "integer",
+            "description": "Maximum thumbnail height in pixels, from 32 to 320."
+          }
+        },
+        "required": [
+          "file_id",
+          "extension"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "content": {
+            "type": "string",
+            "description": "Thumbnail bytes returned by Box, decoded as text."
+          }
+        },
+        "required": [
+          "content"
+        ]
+      },
+      "request": {
+        "method": "GET",
+        "path": "/files/{{file_id}}/thumbnail.{{extension}}",
+        "query": {
+          "min_width": "{{min_width}}",
+          "max_width": "{{max_width}}",
+          "min_height": "{{min_height}}",
+          "max_height": "{{max_height}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "content": "{{response}}"
+        }
+      }
+    },
+    "files.uploadVersion": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 5242880,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "write",
+      "title": "Upload file version",
+      "description": "Upload a new UTF-8 text version of a Box file via the upload host, using the same JSON body as files.upload. Name conflicts and non-text multipart uploads are outside this operation.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "fileId": {
+            "type": "string",
+            "description": "Box file ID to replace."
+          },
+          "content": {
+            "type": "string",
+            "description": "New file contents as UTF-8 text."
+          },
+          "name": {
+            "type": "string",
+            "description": "Optional new file name."
+          }
+        },
+        "required": [
+          "fileId",
+          "content"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "file": {
+            "type": "object",
+            "description": "Provider metadata for the new file version."
+          }
+        },
+        "required": [
+          "file"
+        ]
+      },
+      "request": {
+        "method": "POST",
+        "baseUrl": "https://upload.box.com/api/2.0",
+        "path": "/files/{{fileId}}/content",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "content": "{{content}}",
+          "name": "{{name}}"
+        },
+        "success": [
+          201
+        ],
+        "result": {
+          "file": "{{response.entries.0}}"
+        }
+      }
+    },
+    "user-avatars.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "Get user avatar",
+      "description": "Download a Box user's avatar image as text within the connector response budget. Box returns 404 when the user has no avatar.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "user_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Box user ID."
+          }
+        },
+        "required": [
+          "user_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "content": {
+            "type": "string",
+            "description": "Avatar image bytes returned by Box, decoded as text."
+          }
+        },
+        "required": [
+          "content"
+        ]
+      },
+      "request": {
+        "method": "GET",
+        "path": "/users/{{user_id}}/avatar",
+        "success": [
+          200
+        ],
+        "result": {
+          "content": "{{response}}"
+        }
+      }
+    },
+    "zip-downloads.download": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "Download zip archive",
+      "description": "Download a Box zip archive created by zip-downloads.create. Pass the id from the download_url on dl.boxcloud.com. The connector returns the archive bytes as text within the response budget and does not follow redirects.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "zip_download_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Zip download id from the download_url returned by zip-downloads.create."
+          }
+        },
+        "required": [
+          "zip_download_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "content": {
+            "type": "string",
+            "description": "Zip archive bytes returned by Box, decoded as text."
+          }
+        },
+        "required": [
+          "content"
+        ]
+      },
+      "request": {
+        "method": "GET",
+        "baseUrl": "https://dl.boxcloud.com/2.0",
+        "path": "/zip_downloads/{{zip_download_id}}/content",
+        "success": [
+          200
+        ],
+        "result": {
+          "content": "{{response}}"
+        }
+      }
     }
   },
   "models": [

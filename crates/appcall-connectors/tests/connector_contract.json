@@ -38178,7 +38178,7 @@
   },
   {
     "key": "box",
-    "digest": "8a61a9475cfb27993ee346feca59b1479c850c08ef5e32d76ef8b93996fcd8b2",
+    "digest": "8cbdc7829f680a78fdd1179a2ffb3be0b1a6aa668690e449d4afa041c81e8a1c",
     "public": true,
     "egress": true,
     "operations": [
@@ -41175,6 +41175,33 @@
         }
       },
       {
+        "key": "events.longPoll",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      {
         "key": "file-requests.create",
         "kind": "action",
         "timeoutMs": 15000,
@@ -41942,6 +41969,45 @@
         }
       },
       {
+        "key": "files.getSharedLink",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "file_id": {
+              "type": "string",
+              "description": "Box file ID."
+            },
+            "fields": {
+              "type": "string",
+              "description": "Comma-separated fields. Use shared_link to return the shared link."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "file_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      {
         "key": "files.move",
         "kind": "action",
         "timeoutMs": 10000,
@@ -41977,6 +42043,109 @@
           },
           "required": [
             "file"
+          ]
+        }
+      },
+      {
+        "key": "files.preflight",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "description": "File name to check. Must be unique in the destination folder."
+            },
+            "size": {
+              "type": "integer",
+              "description": "File size in bytes, used to check quota."
+            },
+            "parent_id": {
+              "type": "string",
+              "description": "Destination folder ID. 0 is the root folder."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "name",
+            "parent_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      {
+        "key": "files.thumbnail",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "file_id": {
+              "type": "string",
+              "description": "Box file ID."
+            },
+            "extension": {
+              "type": "string",
+              "description": "Thumbnail format.",
+              "enum": [
+                "jpg",
+                "png"
+              ]
+            },
+            "min_width": {
+              "type": "integer",
+              "description": "Minimum thumbnail width in pixels, from 32 to 320."
+            },
+            "max_width": {
+              "type": "integer",
+              "description": "Maximum thumbnail width in pixels, from 32 to 320."
+            },
+            "min_height": {
+              "type": "integer",
+              "description": "Minimum thumbnail height in pixels, from 32 to 320."
+            },
+            "max_height": {
+              "type": "integer",
+              "description": "Maximum thumbnail height in pixels, from 32 to 320."
+            }
+          },
+          "required": [
+            "file_id",
+            "extension"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "content": {
+              "type": "string",
+              "description": "Thumbnail bytes returned by Box, decoded as text."
+            }
+          },
+          "required": [
+            "content"
           ]
         }
       },
@@ -42059,6 +42228,49 @@
             "file": {
               "type": "object",
               "description": "Provider metadata for the created file."
+            }
+          },
+          "required": [
+            "file"
+          ]
+        }
+      },
+      {
+        "key": "files.uploadVersion",
+        "kind": "action",
+        "timeoutMs": 30000,
+        "maxInputBytes": 5242880,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "fileId": {
+              "type": "string",
+              "description": "Box file ID to replace."
+            },
+            "content": {
+              "type": "string",
+              "description": "New file contents as UTF-8 text."
+            },
+            "name": {
+              "type": "string",
+              "description": "Optional new file name."
+            }
+          },
+          "required": [
+            "fileId",
+            "content"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "file": {
+              "type": "object",
+              "description": "Provider metadata for the new file version."
             }
           },
           "required": [
@@ -42331,6 +42543,45 @@
           "required": [
             "folder"
           ]
+        }
+      },
+      {
+        "key": "folders.getSharedLink",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "folder_id": {
+              "type": "string",
+              "description": "Box folder ID. 0 is the root folder."
+            },
+            "fields": {
+              "type": "string",
+              "description": "Comma-separated fields. Use shared_link to return the shared link."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "folder_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          }
         }
       },
       {
@@ -43011,6 +43262,74 @@
           "required": [
             "user"
           ]
+        }
+      },
+      {
+        "key": "hubs.list",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "query": {
+              "type": "string",
+              "description": "Search string for Box Hubs."
+            },
+            "scope": {
+              "type": "string",
+              "description": "Hub visibility scope.",
+              "enum": [
+                "editable",
+                "view_only",
+                "all"
+              ]
+            },
+            "sort": {
+              "type": "string",
+              "description": "Sort field.",
+              "enum": [
+                "name",
+                "updated_at",
+                "last_accessed_at",
+                "view_count",
+                "relevance"
+              ]
+            },
+            "direction": {
+              "type": "string",
+              "description": "Sort direction.",
+              "enum": [
+                "ASC",
+                "DESC"
+              ]
+            },
+            "marker": {
+              "type": "string",
+              "description": "Marker from the previous page."
+            },
+            "limit": {
+              "type": "integer",
+              "description": "Maximum hubs to return, at most 1000."
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          }
         }
       },
       {
@@ -45739,6 +46058,182 @@
             "operations"
           ],
           "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      {
+        "key": "oauth.refresh",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "grant_type": {
+              "type": "string",
+              "description": "Must be refresh_token.",
+              "enum": [
+                "refresh_token"
+              ]
+            },
+            "client_id": {
+              "type": "string",
+              "description": "Box application client ID."
+            },
+            "client_secret": {
+              "type": "string",
+              "description": "Box application client secret."
+            },
+            "refresh_token": {
+              "type": "string",
+              "description": "Refresh token to exchange. Single use."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "grant_type",
+            "client_id",
+            "client_secret",
+            "refresh_token"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      {
+        "key": "oauth.revoke",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "client_id": {
+              "type": "string",
+              "description": "Box application client ID."
+            },
+            "client_secret": {
+              "type": "string",
+              "description": "Box application client secret."
+            },
+            "token": {
+              "type": "string",
+              "description": "Access token to revoke."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "client_id",
+            "token"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      {
+        "key": "oauth.token",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "grant_type": {
+              "type": "string",
+              "description": "OAuth grant type.",
+              "enum": [
+                "authorization_code",
+                "client_credentials",
+                "refresh_token",
+                "urn:ietf:params:oauth:grant-type:jwt-bearer",
+                "urn:ietf:params:oauth:grant-type:token-exchange"
+              ]
+            },
+            "client_id": {
+              "type": "string",
+              "description": "Box application client ID."
+            },
+            "client_secret": {
+              "type": "string",
+              "description": "Box application client secret."
+            },
+            "code": {
+              "type": "string",
+              "description": "Authorization code from the browser redirect."
+            },
+            "refresh_token": {
+              "type": "string",
+              "description": "Refresh token to exchange."
+            },
+            "scope": {
+              "type": "string",
+              "description": "Space-delimited scopes to apply to the new token."
+            },
+            "assertion": {
+              "type": "string",
+              "description": "JWT assertion for the JWT bearer grant."
+            },
+            "box_subject_type": {
+              "type": "string",
+              "description": "Subject type for the client credentials grant.",
+              "enum": [
+                "enterprise",
+                "user"
+              ]
+            },
+            "box_subject_id": {
+              "type": "string",
+              "description": "User or enterprise ID for the client credentials grant."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "grant_type",
+            "client_id"
+          ]
         },
         "outputSchema": {
           "type": "object",
@@ -50038,6 +50533,41 @@
         }
       },
       {
+        "key": "user-avatars.get",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "user_id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Box user ID."
+            }
+          },
+          "required": [
+            "user_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "content": {
+              "type": "string",
+              "description": "Avatar image bytes returned by Box, decoded as text."
+            }
+          },
+          "required": [
+            "content"
+          ]
+        }
+      },
+      {
         "key": "users.create",
         "kind": "action",
         "timeoutMs": 15000,
@@ -51346,6 +51876,41 @@
               "type": "object"
             }
           }
+        }
+      },
+      {
+        "key": "zip-downloads.download",
+        "kind": "action",
+        "timeoutMs": 30000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "zip_download_id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Zip download id from the download_url returned by zip-downloads.create."
+            }
+          },
+          "required": [
+            "zip_download_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "content": {
+              "type": "string",
+              "description": "Zip archive bytes returned by Box, decoded as text."
+            }
+          },
+          "required": [
+            "content"
+          ]
         }
       },
       {
