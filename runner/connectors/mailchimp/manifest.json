@@ -1,7 +1,7 @@
 {
   "key": "mailchimp",
   "name": "Mailchimp",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "runtime": "bun",
   "categories": [
     "email-marketing"
@@ -1260,6 +1260,13 @@
       "sideEffect": "read"
     },
     "webhook.cleaned": {
+      "kind": "webhook",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read"
+    },
+    "webhook.profile_update": {
       "kind": "webhook",
       "timeoutMs": 30000,
       "maxInputBytes": 1048576,
@@ -15979,6 +15986,173 @@
             "allowReserved": false
           }
         ]
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated"
+    },
+    "lists.members.archive": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Archive list member",
+      "description": "Archive list member Archive a list member. Archived members can be re-subscribed later. This is not the permanent delete endpoint.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "list_id": {
+            "type": "string",
+            "description": "The unique ID for the list (audience)."
+          },
+          "subscriber_hash": {
+            "type": "string",
+            "description": "The MD5 hash of the lowercase email address. This endpoint also accepts the email address or contact_id."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "list_id",
+          "subscriber_hash"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "null"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/lists/{{list_id}}/members/{{subscriber_hash}}/actions/archive",
+        "success": [
+          204
+        ],
+        "parameters": [
+          {
+            "wireName": "list_id",
+            "inputName": "list_id",
+            "in": "path",
+            "style": "simple",
+            "explode": false,
+            "allowReserved": false
+          },
+          {
+            "wireName": "subscriber_hash",
+            "inputName": "subscriber_hash",
+            "in": "path",
+            "style": "simple",
+            "explode": false,
+            "allowReserved": false
+          }
+        ]
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated"
+    },
+    "lists.members.tags.update": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Add or remove member tags",
+      "description": "Add or remove member tags Add tags with status active or remove them with status inactive. Tags not named in the request are left unchanged.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "list_id": {
+            "type": "string",
+            "description": "The unique ID for the list (audience)."
+          },
+          "subscriber_hash": {
+            "type": "string",
+            "description": "The MD5 hash of the lowercase email address, or the email address, or the contact_id."
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "active",
+                    "inactive"
+                  ]
+                }
+              },
+              "required": [
+                "name",
+                "status"
+              ],
+              "additionalProperties": false
+            },
+            "description": "Tag objects. status active adds the tag; inactive removes it."
+          },
+          "is_syncing": {
+            "type": "boolean",
+            "description": "When true, tag-based automations do not fire for this request."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "list_id",
+          "subscriber_hash",
+          "tags"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "null"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/lists/{{list_id}}/members/{{subscriber_hash}}/tags",
+        "success": [
+          204
+        ],
+        "parameters": [
+          {
+            "wireName": "list_id",
+            "inputName": "list_id",
+            "in": "path",
+            "style": "simple",
+            "explode": false,
+            "allowReserved": false
+          },
+          {
+            "wireName": "subscriber_hash",
+            "inputName": "subscriber_hash",
+            "in": "path",
+            "style": "simple",
+            "explode": false,
+            "allowReserved": false
+          }
+        ],
+        "body": {
+          "tags": "{{tags}}",
+          "is_syncing": "{{is_syncing}}"
+        }
       },
       "enforceOutputSchema": true,
       "responseFormat": "json",

@@ -4,7 +4,7 @@ import manifest from "../manifest.json";
 describe("mailchimp manifest", () => {
   it("has correct key and version", () => {
     expect(manifest.key).toBe("mailchimp");
-    expect(manifest.version).toBe("0.3.0");
+    expect(manifest.version).toBe("0.4.0");
     expect(manifest.runtime).toBe("bun");
   });
 
@@ -54,6 +54,9 @@ describe("mailchimp manifest", () => {
     expect(ops).toContain("webhook.unsubscribe");
     expect(ops).toContain("webhook.campaign_sent");
     expect(ops).toContain("webhook.cleaned");
+    expect(ops).toContain("webhook.profile_update");
+    expect(ops).toContain("lists.members.archive");
+    expect(ops).toContain("lists.members.tags.update");
   });
 
   it("depth actions have title, description, and object inputSchema", () => {
@@ -74,7 +77,7 @@ describe("mailchimp manifest", () => {
   });
 
   it("webhooks are EventOnly manifest operations without tool schema", () => {
-    for (const op of ["webhook.subscribe", "webhook.unsubscribe", "webhook.campaign_sent", "webhook.cleaned"]) {
+    for (const op of ["webhook.subscribe", "webhook.unsubscribe", "webhook.campaign_sent", "webhook.cleaned", "webhook.profile_update"]) {
       const operation = (manifest.operations as any)[op];
       expect(operation.kind).toBe("webhook");
       expect(operation.title).toBeUndefined();
