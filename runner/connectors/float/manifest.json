@@ -1,22 +1,1387 @@
 {
   "key": "float",
   "name": "Float",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "runtime": "bun",
   "visibility": "public",
-  "provenance": { "source": { "url": "https://github.com/oomol-lab/open-connector", "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a" } },
-  "evidence": { "fixture": { "status": "supplied" }, "live": { "status": "unverified" } },
-  "categories": ["scheduling"],
-  "auth": { "type": "api_key", "scopes": [], "setup": { "mode": "api_key", "fields": [{ "key": "apiKey", "label": "Float API token", "required": true, "secret": true }] } },
-  "network": { "allowedHosts": ["api.float.com"] },
-  "http": { "baseUrl": "https://api.float.com/v3", "auth": { "field": "apiKey", "in": "header", "name": "Authorization", "value": "Bearer {{apiKey}}" }, "headers": { "Accept": "application/json" }, "errors": { "rateLimitStatuses": [429], "retryAfterHeader": "Retry-After", "retryAfterKind": "seconds", "defaultRetryAfterSeconds": 60, "messagePaths": ["message", "error"] } },
-  "operations": {
-    "healthcheck": { "kind": "action", "timeoutMs": 10000, "maxInputBytes": 4096, "maxResponseBytes": 1048576, "sideEffect": "read", "enforceOutputSchema": true, "title": "Healthcheck", "description": "Verify the Float API token by listing accounts.", "inputSchema": { "type": "object", "properties": {} }, "outputSchema": { "type": "object", "properties": { "status": { "type": "string" }, "accounts": { "type": "array", "items": { "type": "object" } } }, "required": ["status", "accounts"] }, "request": { "method": "GET", "path": "/accounts", "query": { "per-page": "1" }, "success": [200], "echo": { "status": "ok" }, "result": { "status": "ok", "accounts": "{{response}}" } } },
-    "accounts.list": { "kind": "action", "timeoutMs": 15000, "maxInputBytes": 65536, "maxResponseBytes": 5242880, "sideEffect": "read", "enforceOutputSchema": true, "title": "List Accounts", "description": "List Float accounts.", "inputSchema": { "type": "object", "properties": { "page": { "type": "integer", "minimum": 1 }, "perPage": { "type": "integer", "minimum": 1, "maximum": 200 }, "expand": { "type": "string", "enum": ["people_id"] } } }, "outputSchema": { "type": "object", "properties": { "accounts": { "type": "array", "items": { "type": "object" } }, "pagination": { "type": "object" } }, "required": ["accounts", "pagination"] }, "request": { "method": "GET", "path": "/accounts", "query": { "page": "{{page}}", "per-page": "{{perPage}}", "expand": "{{expand}}" }, "success": [200], "result": { "accounts": "{{response}}", "pagination": { "totalCount": "{{response.headers.x-total-count}}", "pageCount": "{{response.headers.x-page-count}}", "currentPage": "{{response.headers.x-page}}", "perPage": "{{response.headers.x-per-page}}" } } } },
-    "people.list": { "kind": "action", "timeoutMs": 15000, "maxInputBytes": 65536, "maxResponseBytes": 5242880, "sideEffect": "read", "enforceOutputSchema": true, "title": "List People", "description": "List people on the Float schedule.", "inputSchema": { "type": "object", "properties": { "page": { "type": "integer", "minimum": 1 }, "perPage": { "type": "integer", "minimum": 1, "maximum": 200 }, "active": { "type": "integer", "enum": [0, 1] }, "departmentId": { "type": "integer", "minimum": 1 }, "email": { "type": "string", "minLength": 1 } } }, "outputSchema": { "type": "object", "properties": { "people": { "type": "array", "items": { "type": "object" } }, "pagination": { "type": "object" } }, "required": ["people", "pagination"] }, "request": { "method": "GET", "path": "/people", "query": { "page": "{{page}}", "per-page": "{{perPage}}", "active": "{{active}}", "department_id": "{{departmentId}}", "email": "{{email}}" }, "success": [200], "result": { "people": "{{response}}", "pagination": { "totalCount": "{{response.headers.x-total-count}}", "pageCount": "{{response.headers.x-page-count}}", "currentPage": "{{response.headers.x-page}}", "perPage": "{{response.headers.x-per-page}}" } } } },
-    "clients.list": { "kind": "action", "timeoutMs": 15000, "maxInputBytes": 65536, "maxResponseBytes": 5242880, "sideEffect": "read", "enforceOutputSchema": true, "title": "List Clients", "description": "List Float clients.", "inputSchema": { "type": "object", "properties": { "page": { "type": "integer", "minimum": 1 }, "perPage": { "type": "integer", "minimum": 1, "maximum": 200 } } }, "outputSchema": { "type": "object", "properties": { "clients": { "type": "array", "items": { "type": "object" } }, "pagination": { "type": "object" } }, "required": ["clients", "pagination"] }, "request": { "method": "GET", "path": "/clients", "query": { "page": "{{page}}", "per-page": "{{perPage}}" }, "success": [200], "result": { "clients": "{{response}}", "pagination": { "totalCount": "{{response.headers.x-total-count}}", "pageCount": "{{response.headers.x-page-count}}", "currentPage": "{{response.headers.x-page}}", "perPage": "{{response.headers.x-per-page}}" } } } },
-    "projects.list": { "kind": "action", "timeoutMs": 15000, "maxInputBytes": 65536, "maxResponseBytes": 5242880, "sideEffect": "read", "enforceOutputSchema": true, "title": "List Projects", "description": "List Float projects.", "inputSchema": { "type": "object", "properties": { "page": { "type": "integer", "minimum": 1 }, "perPage": { "type": "integer", "minimum": 1, "maximum": 200 }, "active": { "type": "integer", "enum": [0, 1] }, "clientId": { "type": "integer", "minimum": 1 } } }, "outputSchema": { "type": "object", "properties": { "projects": { "type": "array", "items": { "type": "object" } }, "pagination": { "type": "object" } }, "required": ["projects", "pagination"] }, "request": { "method": "GET", "path": "/projects", "query": { "page": "{{page}}", "per-page": "{{perPage}}", "active": "{{active}}", "client_id": "{{clientId}}" }, "success": [200], "result": { "projects": "{{response}}", "pagination": { "totalCount": "{{response.headers.x-total-count}}", "pageCount": "{{response.headers.x-page-count}}", "currentPage": "{{response.headers.x-page}}", "perPage": "{{response.headers.x-per-page}}" } } } },
-    "allocations.list": { "kind": "action", "timeoutMs": 15000, "maxInputBytes": 65536, "maxResponseBytes": 5242880, "sideEffect": "read", "enforceOutputSchema": true, "title": "List Allocations", "description": "List Float allocations (tasks).", "inputSchema": { "type": "object", "properties": { "page": { "type": "integer", "minimum": 1 }, "perPage": { "type": "integer", "minimum": 1, "maximum": 200 }, "projectId": { "type": "integer", "minimum": 1 }, "peopleId": { "type": "integer", "minimum": 1 }, "startDate": { "type": "string", "minLength": 1 }, "endDate": { "type": "string", "minLength": 1 } } }, "outputSchema": { "type": "object", "properties": { "allocations": { "type": "array", "items": { "type": "object" } }, "pagination": { "type": "object" } }, "required": ["allocations", "pagination"] }, "request": { "method": "GET", "path": "/tasks", "query": { "page": "{{page}}", "per-page": "{{perPage}}", "project_id": "{{projectId}}", "people_id": "{{peopleId}}", "start_date": "{{startDate}}", "end_date": "{{endDate}}" }, "success": [200], "result": { "allocations": "{{response}}", "pagination": { "totalCount": "{{response.headers.x-total-count}}", "pageCount": "{{response.headers.x-page-count}}", "currentPage": "{{response.headers.x-page}}", "perPage": "{{response.headers.x-per-page}}" } } } }
+  "categories": [
+    "scheduling"
+  ],
+  "auth": {
+    "type": "api_key",
+    "scopes": [],
+    "setup": {
+      "mode": "api_key",
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "Float API token",
+          "required": true,
+          "secret": true
+        }
+      ]
+    }
   },
-  "models": ["account", "person", "client", "project", "allocation"]
+  "provenance": {
+    "source": {
+      "url": "https://github.com/oomol-lab/open-connector",
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "api.float.com"
+    ]
+  },
+  "models": [
+    "account",
+    "person",
+    "client",
+    "project",
+    "allocation",
+    "timeoff",
+    "department",
+    "milestone"
+  ],
+  "http": {
+    "baseUrl": "https://api.float.com/v3",
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "Authorization",
+      "value": "Bearer {{apiKey}}"
+    },
+    "headers": {
+      "Accept": "application/json"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "Retry-After",
+      "retryAfterKind": "seconds",
+      "defaultRetryAfterSeconds": 60,
+      "messagePaths": [
+        "message",
+        "error"
+      ]
+    }
+  },
+  "operations": {
+    "healthcheck": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "title": "Healthcheck",
+      "description": "Verify the Float API token by listing accounts.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/accounts",
+        "success": [
+          200
+        ],
+        "query": {
+          "per-page": "1"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "accounts.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List accounts",
+      "description": "List Float accounts.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Page of results to return."
+          },
+          "perPage": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Items per page (max 200).",
+            "maximum": 200
+          },
+          "expand": {
+            "type": "string",
+            "enum": [
+              "people_id"
+            ],
+            "description": "Expand related people on each account."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/accounts",
+        "success": [
+          200
+        ],
+        "query": {
+          "page": "{{page}}",
+          "per-page": "{{perPage}}",
+          "expand": "{{expand}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "accounts.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get account",
+      "description": "Get one Float account by account_id.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "account_id"
+        ],
+        "properties": {
+          "account_id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Account identifier."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/accounts/{{account_id}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "people.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List people",
+      "description": "List people on the Float schedule.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Page of results to return."
+          },
+          "perPage": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Items per page (max 200).",
+            "maximum": 200
+          },
+          "active": {
+            "type": "integer",
+            "enum": [
+              0,
+              1
+            ],
+            "description": "1 for active people, 0 for inactive."
+          },
+          "department_id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Filter by department."
+          },
+          "email": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by email."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/people",
+        "success": [
+          200
+        ],
+        "query": {
+          "page": "{{page}}",
+          "per-page": "{{perPage}}",
+          "active": "{{active}}",
+          "department_id": "{{department_id}}",
+          "email": "{{email}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "people.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get person",
+      "description": "Get one Float person by people_id.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "people_id"
+        ],
+        "properties": {
+          "people_id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Person identifier."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/people/{{people_id}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "people.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create person",
+      "description": "Create a person on the Float schedule.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Person name."
+          },
+          "email": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Person email."
+          },
+          "job_title": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Job title."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/people",
+        "success": [
+          200,
+          201
+        ],
+        "body": {
+          "name": "{{name}}",
+          "email": "{{email}}",
+          "job_title": "{{job_title}}"
+        },
+        "headers": {
+          "Accept": "application/json",
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "people.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Update person",
+      "description": "Update a Float person.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "people_id"
+        ],
+        "properties": {
+          "people_id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Person identifier."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Person name."
+          },
+          "email": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Person email."
+          },
+          "job_title": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Job title."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/people/{{people_id}}",
+        "success": [
+          200
+        ],
+        "body": {
+          "name": "{{name}}",
+          "email": "{{email}}",
+          "job_title": "{{job_title}}"
+        },
+        "headers": {
+          "Accept": "application/json",
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "clients.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List clients",
+      "description": "List Float clients.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Page of results to return."
+          },
+          "perPage": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Items per page (max 200).",
+            "maximum": 200
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/clients",
+        "success": [
+          200
+        ],
+        "query": {
+          "page": "{{page}}",
+          "per-page": "{{perPage}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "clients.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get client",
+      "description": "Get one Float client by client_id.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "client_id"
+        ],
+        "properties": {
+          "client_id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Client identifier."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/clients/{{client_id}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "clients.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create client",
+      "description": "Create a Float client.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Client name."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/clients",
+        "success": [
+          200,
+          201
+        ],
+        "body": {
+          "name": "{{name}}"
+        },
+        "headers": {
+          "Accept": "application/json",
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "projects.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List projects",
+      "description": "List Float projects.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Page of results to return."
+          },
+          "perPage": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Items per page (max 200).",
+            "maximum": 200
+          },
+          "active": {
+            "type": "integer",
+            "enum": [
+              0,
+              1
+            ],
+            "description": "1 for active projects, 0 for inactive."
+          },
+          "client_id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Filter by client."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/projects",
+        "success": [
+          200
+        ],
+        "query": {
+          "page": "{{page}}",
+          "per-page": "{{perPage}}",
+          "active": "{{active}}",
+          "client_id": "{{client_id}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "projects.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get project",
+      "description": "Get one Float project by project_id.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "project_id"
+        ],
+        "properties": {
+          "project_id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Project identifier."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/projects/{{project_id}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "projects.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create project",
+      "description": "Create a Float project.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Project name."
+          },
+          "client_id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Client identifier."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/projects",
+        "success": [
+          200,
+          201
+        ],
+        "body": {
+          "name": "{{name}}",
+          "client_id": "{{client_id}}"
+        },
+        "headers": {
+          "Accept": "application/json",
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "allocations.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List allocations",
+      "description": "List Float allocations (tasks).",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Page of results to return."
+          },
+          "perPage": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Items per page (max 200).",
+            "maximum": 200
+          },
+          "project_id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Filter by project."
+          },
+          "people_id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Filter by person."
+          },
+          "start_date": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Range start date (YYYY-MM-DD)."
+          },
+          "end_date": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Range end date (YYYY-MM-DD)."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/tasks",
+        "success": [
+          200
+        ],
+        "query": {
+          "page": "{{page}}",
+          "per-page": "{{perPage}}",
+          "project_id": "{{project_id}}",
+          "people_id": "{{people_id}}",
+          "start_date": "{{start_date}}",
+          "end_date": "{{end_date}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "allocations.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get allocation",
+      "description": "Get one Float allocation (task) by task_id.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "task_id"
+        ],
+        "properties": {
+          "task_id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Task identifier."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/tasks/{{task_id}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "allocations.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create allocation",
+      "description": "Create a Float allocation (task).",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "people_id",
+          "project_id",
+          "start_date",
+          "hours"
+        ],
+        "properties": {
+          "people_id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Person identifier."
+          },
+          "project_id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Project identifier."
+          },
+          "start_date": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Start date (YYYY-MM-DD)."
+          },
+          "end_date": {
+            "type": "string",
+            "minLength": 1,
+            "description": "End date (YYYY-MM-DD)."
+          },
+          "hours": {
+            "type": "number",
+            "description": "Hours allocated per day."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Task name."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/tasks",
+        "success": [
+          200,
+          201
+        ],
+        "body": {
+          "people_id": "{{people_id}}",
+          "project_id": "{{project_id}}",
+          "start_date": "{{start_date}}",
+          "end_date": "{{end_date}}",
+          "hours": "{{hours}}",
+          "name": "{{name}}"
+        },
+        "headers": {
+          "Accept": "application/json",
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "allocations.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Update allocation",
+      "description": "Update a Float allocation (task).",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "task_id"
+        ],
+        "properties": {
+          "task_id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Task identifier."
+          },
+          "hours": {
+            "type": "number",
+            "description": "Hours allocated per day."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Task name."
+          },
+          "start_date": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Start date (YYYY-MM-DD)."
+          },
+          "end_date": {
+            "type": "string",
+            "minLength": 1,
+            "description": "End date (YYYY-MM-DD)."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/tasks/{{task_id}}",
+        "success": [
+          200
+        ],
+        "body": {
+          "hours": "{{hours}}",
+          "name": "{{name}}",
+          "start_date": "{{start_date}}",
+          "end_date": "{{end_date}}"
+        },
+        "headers": {
+          "Accept": "application/json",
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "allocations.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Delete allocation",
+      "description": "Delete a Float allocation (task) by task_id.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "task_id"
+        ],
+        "properties": {
+          "task_id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Task identifier."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "deleted",
+          "id"
+        ],
+        "properties": {
+          "deleted": {
+            "type": "boolean"
+          },
+          "id": {
+            "type": "integer"
+          }
+        }
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/tasks/{{task_id}}",
+        "success": [
+          204,
+          200
+        ],
+        "result": {
+          "deleted": true,
+          "id": "{{input.task_id}}"
+        },
+        "headers": {
+          "Accept": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "timeoffs.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List time off",
+      "description": "List Float time-off entries.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Page of results to return."
+          },
+          "perPage": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Items per page (max 200).",
+            "maximum": 200
+          },
+          "people_id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Filter by person."
+          },
+          "start_date": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Range start date (YYYY-MM-DD)."
+          },
+          "end_date": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Range end date (YYYY-MM-DD)."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/timeoffs",
+        "success": [
+          200
+        ],
+        "query": {
+          "page": "{{page}}",
+          "per-page": "{{perPage}}",
+          "people_id": "{{people_id}}",
+          "start_date": "{{start_date}}",
+          "end_date": "{{end_date}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "timeoffs.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create time off",
+      "description": "Create a Float time-off entry.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "people_id",
+          "start_date",
+          "end_date"
+        ],
+        "properties": {
+          "people_id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Person identifier."
+          },
+          "start_date": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Start date (YYYY-MM-DD)."
+          },
+          "end_date": {
+            "type": "string",
+            "minLength": 1,
+            "description": "End date (YYYY-MM-DD)."
+          },
+          "timeoff_type_id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Time-off type identifier."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/timeoffs",
+        "success": [
+          200,
+          201
+        ],
+        "body": {
+          "people_id": "{{people_id}}",
+          "start_date": "{{start_date}}",
+          "end_date": "{{end_date}}",
+          "timeoff_type_id": "{{timeoff_type_id}}"
+        },
+        "headers": {
+          "Accept": "application/json",
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "departments.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List departments",
+      "description": "List Float departments.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Page of results to return."
+          },
+          "perPage": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Items per page (max 200).",
+            "maximum": 200
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/departments",
+        "success": [
+          200
+        ],
+        "query": {
+          "page": "{{page}}",
+          "per-page": "{{perPage}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "milestones.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List milestones",
+      "description": "List Float milestones.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Page of results to return."
+          },
+          "perPage": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Items per page (max 200).",
+            "maximum": 200
+          },
+          "project_id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Filter by project."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/milestones",
+        "success": [
+          200
+        ],
+        "query": {
+          "page": "{{page}}",
+          "per-page": "{{perPage}}",
+          "project_id": "{{project_id}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    }
+  },
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
+    }
+  }
 }
