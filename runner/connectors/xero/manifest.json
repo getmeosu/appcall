@@ -1,14 +1,17 @@
 {
   "key": "xero",
   "name": "Xero",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "runtime": "bun",
-  "categories": ["accounting"],
+  "categories": [
+    "accounting"
+  ],
   "auth": {
     "type": "oauth2",
     "scopes": [
       "accounting.transactions",
       "accounting.contacts",
+      "accounting.settings",
       "offline_access"
     ],
     "setup": {
@@ -40,8 +43,995 @@
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880
     },
+    "invoices.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get Invoice",
+      "description": "Retrieve a Xero sales invoice or purchase bill by InvoiceID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "invoiceId": {
+            "type": "string",
+            "description": "Xero InvoiceID GUID."
+          }
+        },
+        "required": [
+          "invoiceId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "invoice": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "invoices.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Create Invoice",
+      "description": "Create a Xero sales invoice (ACCREC) or purchase bill (ACCPAY) with a contact and line items.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "description": "Invoice type: ACCREC (sales) or ACCPAY (bills)."
+          },
+          "contactId": {
+            "type": "string",
+            "description": "Existing Xero ContactID. Provide this or contactName."
+          },
+          "contactName": {
+            "type": "string",
+            "description": "Contact name used when contactId is omitted."
+          },
+          "lineItems": {
+            "type": "array",
+            "description": "Invoice line items. At least one Description is required.",
+            "items": {
+              "type": "object",
+              "properties": {
+                "description": {
+                  "type": "string",
+                  "description": "Line item description."
+                },
+                "quantity": {
+                  "type": "number",
+                  "description": "Quantity."
+                },
+                "unitAmount": {
+                  "type": "number",
+                  "description": "Unit price."
+                },
+                "accountCode": {
+                  "type": "string",
+                  "description": "Chart of accounts code for the line."
+                }
+              }
+            }
+          },
+          "date": {
+            "type": "string",
+            "description": "Invoice date (YYYY-MM-DD)."
+          },
+          "dueDate": {
+            "type": "string",
+            "description": "Due date (YYYY-MM-DD)."
+          },
+          "invoiceNumber": {
+            "type": "string",
+            "description": "Optional invoice number."
+          },
+          "reference": {
+            "type": "string",
+            "description": "Optional reference."
+          },
+          "status": {
+            "type": "string",
+            "description": "DRAFT, SUBMITTED, or AUTHORISED."
+          },
+          "currencyCode": {
+            "type": "string",
+            "description": "ISO currency code."
+          }
+        },
+        "required": [
+          "type",
+          "lineItems"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "invoice": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "invoices.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Update Invoice",
+      "description": "Update a draft or submitted Xero invoice. Paid invoices have restricted fields.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "invoiceId": {
+            "type": "string",
+            "description": "Xero InvoiceID GUID to update."
+          },
+          "type": {
+            "type": "string",
+            "description": "Invoice type: ACCREC or ACCPAY."
+          },
+          "contactId": {
+            "type": "string",
+            "description": "Replacement ContactID."
+          },
+          "contactName": {
+            "type": "string",
+            "description": "Replacement contact name."
+          },
+          "lineItems": {
+            "type": "array",
+            "description": "Replacement line items.",
+            "items": {
+              "type": "object",
+              "properties": {
+                "description": {
+                  "type": "string"
+                },
+                "quantity": {
+                  "type": "number"
+                },
+                "unitAmount": {
+                  "type": "number"
+                },
+                "accountCode": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "date": {
+            "type": "string",
+            "description": "Invoice date (YYYY-MM-DD)."
+          },
+          "dueDate": {
+            "type": "string",
+            "description": "Due date (YYYY-MM-DD)."
+          },
+          "invoiceNumber": {
+            "type": "string",
+            "description": "Invoice number."
+          },
+          "reference": {
+            "type": "string",
+            "description": "Reference."
+          },
+          "status": {
+            "type": "string",
+            "description": "DRAFT, SUBMITTED, AUTHORISED, VOIDED, or DELETED."
+          },
+          "currencyCode": {
+            "type": "string",
+            "description": "ISO currency code."
+          }
+        },
+        "required": [
+          "invoiceId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "invoice": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "contacts.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get Contact",
+      "description": "Retrieve a Xero contact by ContactID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "contactId": {
+            "type": "string",
+            "description": "Xero ContactID GUID."
+          }
+        },
+        "required": [
+          "contactId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "contact": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "contacts.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Create Contact",
+      "description": "Create a Xero contact (customer or supplier) with name and optional email and phone.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Contact or organisation name."
+          },
+          "firstName": {
+            "type": "string",
+            "description": "First name of the primary person."
+          },
+          "lastName": {
+            "type": "string",
+            "description": "Last name of the primary person."
+          },
+          "emailAddress": {
+            "type": "string",
+            "description": "Email address."
+          },
+          "phone": {
+            "type": "string",
+            "description": "Default phone number."
+          },
+          "isSupplier": {
+            "type": "boolean",
+            "description": "Whether the contact is a supplier."
+          },
+          "isCustomer": {
+            "type": "boolean",
+            "description": "Whether the contact is a customer."
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "contact": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "contacts.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Update Contact",
+      "description": "Update an existing Xero contact. Omitted fields keep their current values.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "contactId": {
+            "type": "string",
+            "description": "Xero ContactID GUID to update."
+          },
+          "name": {
+            "type": "string",
+            "description": "Replacement name."
+          },
+          "firstName": {
+            "type": "string",
+            "description": "Replacement first name."
+          },
+          "lastName": {
+            "type": "string",
+            "description": "Replacement last name."
+          },
+          "emailAddress": {
+            "type": "string",
+            "description": "Replacement email."
+          },
+          "phone": {
+            "type": "string",
+            "description": "Replacement default phone."
+          },
+          "isSupplier": {
+            "type": "boolean",
+            "description": "Whether the contact is a supplier."
+          },
+          "isCustomer": {
+            "type": "boolean",
+            "description": "Whether the contact is a customer."
+          }
+        },
+        "required": [
+          "contactId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "contact": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "accounts.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List Accounts",
+      "description": "List chart of accounts in the connected Xero organisation.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "number",
+            "description": "Optional 1-based page number."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "items": {
+            "type": "array"
+          }
+        }
+      }
+    },
+    "accounts.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get Account",
+      "description": "Retrieve a Xero chart-of-accounts entry by AccountID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "accountId": {
+            "type": "string",
+            "description": "Xero AccountID GUID."
+          }
+        },
+        "required": [
+          "accountId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "account": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "accounts.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Create Account",
+      "description": "Create a Xero chart-of-accounts entry with code, name, and type.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "Account code, e.g. 200."
+          },
+          "name": {
+            "type": "string",
+            "description": "Account name."
+          },
+          "type": {
+            "type": "string",
+            "description": "Account type, e.g. SALES, EXPENSE, BANK, CURRENT."
+          },
+          "description": {
+            "type": "string",
+            "description": "Optional description."
+          },
+          "taxType": {
+            "type": "string",
+            "description": "Xero tax type code."
+          }
+        },
+        "required": [
+          "code",
+          "name",
+          "type"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "account": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "accounts.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Update Account",
+      "description": "Update a Xero account's name, code, type, tax type, or status (ACTIVE/ARCHIVED).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "accountId": {
+            "type": "string",
+            "description": "Xero AccountID GUID to update."
+          },
+          "code": {
+            "type": "string",
+            "description": "Replacement account code."
+          },
+          "name": {
+            "type": "string",
+            "description": "Replacement name."
+          },
+          "type": {
+            "type": "string",
+            "description": "Replacement account type."
+          },
+          "description": {
+            "type": "string",
+            "description": "Replacement description."
+          },
+          "taxType": {
+            "type": "string",
+            "description": "Replacement tax type."
+          },
+          "status": {
+            "type": "string",
+            "description": "ACTIVE or ARCHIVED."
+          }
+        },
+        "required": [
+          "accountId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "account": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "payments.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List Payments",
+      "description": "List invoice payments in the connected Xero organisation.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "number",
+            "description": "Optional 1-based page number."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "items": {
+            "type": "array"
+          }
+        }
+      }
+    },
+    "payments.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get Payment",
+      "description": "Retrieve a Xero payment by PaymentID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "paymentId": {
+            "type": "string",
+            "description": "Xero PaymentID GUID."
+          }
+        },
+        "required": [
+          "paymentId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "payment": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "payments.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Create Payment",
+      "description": "Create a Xero payment against an invoice using a bank or payment account.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "invoiceId": {
+            "type": "string",
+            "description": "InvoiceID the payment applies to."
+          },
+          "accountId": {
+            "type": "string",
+            "description": "AccountID of the bank or payment account."
+          },
+          "amount": {
+            "type": "number",
+            "description": "Payment amount in the invoice currency."
+          },
+          "date": {
+            "type": "string",
+            "description": "Payment date (YYYY-MM-DD)."
+          },
+          "reference": {
+            "type": "string",
+            "description": "Optional payment reference."
+          }
+        },
+        "required": [
+          "invoiceId",
+          "accountId",
+          "amount"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "payment": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "payments.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Update Payment",
+      "description": "Update a Xero payment's reference, or set status to DELETED to remove it.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "paymentId": {
+            "type": "string",
+            "description": "Xero PaymentID GUID to update."
+          },
+          "reference": {
+            "type": "string",
+            "description": "Replacement payment reference."
+          },
+          "status": {
+            "type": "string",
+            "description": "Set to DELETED to remove the payment."
+          }
+        },
+        "required": [
+          "paymentId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "payment": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "items.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List Items",
+      "description": "List inventory items in the connected Xero organisation.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "number",
+            "description": "Optional 1-based page number."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "items": {
+            "type": "array"
+          }
+        }
+      }
+    },
+    "items.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get Item",
+      "description": "Retrieve a Xero inventory item by ItemID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "itemId": {
+            "type": "string",
+            "description": "Xero ItemID GUID."
+          }
+        },
+        "required": [
+          "itemId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "item": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "items.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Create Item",
+      "description": "Create a Xero inventory item with code and optional sales and purchase details.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "Unique item code."
+          },
+          "name": {
+            "type": "string",
+            "description": "Item name."
+          },
+          "description": {
+            "type": "string",
+            "description": "Sales description."
+          },
+          "purchaseDescription": {
+            "type": "string",
+            "description": "Purchase description."
+          },
+          "isSold": {
+            "type": "boolean",
+            "description": "Whether the item is sold."
+          },
+          "isPurchased": {
+            "type": "boolean",
+            "description": "Whether the item is purchased."
+          },
+          "salesUnitPrice": {
+            "type": "number",
+            "description": "Sales unit price."
+          },
+          "purchaseUnitPrice": {
+            "type": "number",
+            "description": "Purchase unit price."
+          },
+          "salesAccountCode": {
+            "type": "string",
+            "description": "Sales account code."
+          },
+          "purchaseAccountCode": {
+            "type": "string",
+            "description": "Purchase account code."
+          }
+        },
+        "required": [
+          "code"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "item": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "items.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Update Item",
+      "description": "Update a Xero inventory item's name, descriptions, or sales and purchase details.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "itemId": {
+            "type": "string",
+            "description": "Xero ItemID GUID to update."
+          },
+          "code": {
+            "type": "string",
+            "description": "Replacement item code."
+          },
+          "name": {
+            "type": "string",
+            "description": "Replacement name."
+          },
+          "description": {
+            "type": "string",
+            "description": "Replacement sales description."
+          },
+          "purchaseDescription": {
+            "type": "string",
+            "description": "Replacement purchase description."
+          },
+          "isSold": {
+            "type": "boolean",
+            "description": "Whether the item is sold."
+          },
+          "isPurchased": {
+            "type": "boolean",
+            "description": "Whether the item is purchased."
+          },
+          "salesUnitPrice": {
+            "type": "number",
+            "description": "Replacement sales unit price."
+          },
+          "purchaseUnitPrice": {
+            "type": "number",
+            "description": "Replacement purchase unit price."
+          },
+          "salesAccountCode": {
+            "type": "string",
+            "description": "Replacement sales account code."
+          },
+          "purchaseAccountCode": {
+            "type": "string",
+            "description": "Replacement purchase account code."
+          }
+        },
+        "required": [
+          "itemId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "item": {
+            "type": "object"
+          }
+        }
+      }
+    },
     "healthcheck": {
       "kind": "action",
+      "sideEffect": "read",
       "timeoutMs": 5000,
       "maxInputBytes": 4096,
       "maxResponseBytes": 65536,
@@ -66,6 +1056,9 @@
   "models": [
     "invoice",
     "contact",
-    "bank_transaction"
+    "bank_transaction",
+    "account",
+    "payment",
+    "item"
   ]
 }

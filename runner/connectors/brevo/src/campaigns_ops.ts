@@ -55,6 +55,42 @@ export function validateGetEmailCampaignInput(input: unknown): GetEmailCampaignI
   return { campaignId: requireNumber(input.campaignId, "campaignId") };
 }
 
+export type UpdateEmailCampaignInput = {
+  campaignId: number;
+  name?: string;
+  subject?: string;
+  htmlContent?: string;
+  htmlUrl?: string;
+  scheduledAt?: string;
+};
+export function validateUpdateEmailCampaignInput(input: unknown): UpdateEmailCampaignInput {
+  if (!isRecord(input)) throw new Error("input must be an object");
+  return {
+    campaignId: requireNumber(input.campaignId, "campaignId"),
+    name: typeof input.name === "string" ? input.name : undefined,
+    subject: typeof input.subject === "string" ? input.subject : undefined,
+    htmlContent: typeof input.htmlContent === "string" ? input.htmlContent : undefined,
+    htmlUrl: typeof input.htmlUrl === "string" ? input.htmlUrl : undefined,
+    scheduledAt: typeof input.scheduledAt === "string" ? input.scheduledAt : undefined,
+  };
+}
+
+export type DeleteEmailCampaignInput = { campaignId: number };
+export function validateDeleteEmailCampaignInput(input: unknown): DeleteEmailCampaignInput {
+  if (!isRecord(input)) throw new Error("input must be an object");
+  return { campaignId: requireNumber(input.campaignId, "campaignId") };
+}
+
+export type SendTestEmailCampaignInput = { campaignId: number; emailTo: string[] };
+export function validateSendTestEmailCampaignInput(input: unknown): SendTestEmailCampaignInput {
+  if (!isRecord(input)) throw new Error("input must be an object");
+  const emailTo = Array.isArray(input.emailTo)
+    ? (input.emailTo as unknown[]).filter((e): e is string => typeof e === "string" && e.length > 0)
+    : [];
+  if (emailTo.length === 0) throw new Error("emailTo must be a non-empty array of strings");
+  return { campaignId: requireNumber(input.campaignId, "campaignId"), emailTo };
+}
+
 // ─── Client ───────────────────────────────────────────────────────────────────
 
 export function createCampaignsOpsClient(options: { apiKey: string; fetch?: typeof fetch }) {
@@ -112,6 +148,57 @@ export function createCampaignsOpsClient(options: { apiKey: string; fetch?: type
       if (rl.limited) return { ok: false as const, error: { code: "CONNECTOR_RATE_LIMITED" as const, message: "Brevo rate limit exceeded.", retryAfterSeconds: rl.retryAfterSeconds } };
       if (result.status === 404) return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR" as const, message: "Campaign not found." } };
       return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR" as const, message: brevoErrorDetail(result.body, "Brevo rejected the get campaign request.") } };
+    },
+
+    async updateCampaign(input: unknown) {
+      const payload = validateUpdateEmailCampaignInput(input);
+      const client = createBrevoClient({ apiKey: options.apiKey, fetch: options.fetch, operation: "emailCampaigns.update" });
+      const body: Record<string, unknown> = {};
+      if (payload.name !== undefined) body.name = payload.name;
+      if (payload.subject !== undefined) body.subject = payload.subject;
+      if (payload.htmlContent !== undefined) body.htmlContent = payload.htmlContent;
+      if (payload.htmlUrl !== undefined) body.htmlUrl = payload.htmlUrl;
+      if (payload.scheduledAt !== undefined) body.scheduledAt = payload.scheduledAt;
+      const result = await client.fetchJSON(`/emailCampaigns/${payload.campaignId}`, {
+        method: "PUT",
+        body: JSON.stringify(body),
+      });
+      if (result.status === 204 || result.status === 200) {
+        return { ok: true as const, updated: true };
+      }
+      const rl = parseBrevoRateLimit(result.status, result.headers);
+      if (rl.limited) return { ok: false as const, error: { code: "CONNECTOR_RATE_LIMITED" as const, message: "Brevo rate limit exceeded.", retryAfterSeconds: rl.retryAfterSeconds } };
+      if (result.status === 404) return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR" as const, message: "Campaign not found." } };
+      return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR" as const, message: brevoErrorDetail(result.body, "Brevo rejected the update campaign request.") } };
+    },
+
+    async deleteCampaign(input: unknown) {
+      const payload = validateDeleteEmailCampaignInput(input);
+      const client = createBrevoClient({ apiKey: options.apiKey, fetch: options.fetch, operation: "emailCampaigns.delete" });
+      const result = await client.fetchJSON(`/emailCampaigns/${payload.campaignId}`, { method: "DELETE" });
+      if (result.status === 204 || result.status === 200) {
+        return { ok: true as const, deleted: true };
+      }
+      const rl = parseBrevoRateLimit(result.status, result.headers);
+      if (rl.limited) return { ok: false as const, error: { code: "CONNECTOR_RATE_LIMITED" as const, message: "Brevo rate limit exceeded.", retryAfterSeconds: rl.retryAfterSeconds } };
+      if (result.status === 404) return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR" as const, message: "Campaign not found." } };
+      return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR" as const, message: brevoErrorDetail(result.body, "Brevo rejected the delete campaign request.") } };
+    },
+
+    async sendTestCampaign(input: unknown) {
+      const payload = validateSendTestEmailCampaignInput(input);
+      const client = createBrevoClient({ apiKey: options.apiKey, fetch: options.fetch, operation: "emailCampaigns.sendTest" });
+      const result = await client.fetchJSON(`/emailCampaigns/${payload.campaignId}/sendTest`, {
+        method: "POST",
+        body: JSON.stringify({ emailTo: payload.emailTo }),
+      });
+      if (result.status === 204 || result.status === 200) {
+        return { ok: true as const, sent: true };
+      }
+      const rl = parseBrevoRateLimit(result.status, result.headers);
+      if (rl.limited) return { ok: false as const, error: { code: "CONNECTOR_RATE_LIMITED" as const, message: "Brevo rate limit exceeded.", retryAfterSeconds: rl.retryAfterSeconds } };
+      if (result.status === 404) return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR" as const, message: "Campaign not found." } };
+      return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR" as const, message: brevoErrorDetail(result.body, "Brevo rejected the send test campaign request.") } };
     },
   };
 }

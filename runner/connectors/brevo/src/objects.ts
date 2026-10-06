@@ -66,3 +66,61 @@ export function parseCampaignsResponse(response: unknown): { campaigns: Normaliz
   if (!Array.isArray(campaigns)) return { campaigns: [] };
   return { campaigns: campaigns.filter(isRecord).map(normalizeCampaign) };
 }
+
+export type NormalizedFolder = {
+  id: string; provider: "brevo"; providerFolderId: string;
+  name: string; uniqueSubscribers: number; totalSubscribers: number;
+  modelVersion: "2026-05-16"; raw: Record<string, unknown>;
+};
+export function normalizeFolder(f: Record<string, unknown>): NormalizedFolder {
+  return {
+    id: `brv-folder:${String(f.id ?? "")}`, provider: "brevo", providerFolderId: String(f.id ?? ""),
+    name: prop(f, "name"), uniqueSubscribers: propNum(f, "uniqueSubscribers"),
+    totalSubscribers: propNum(f, "totalSubscribers"), modelVersion: "2026-05-16", raw: f,
+  };
+}
+export function parseFoldersResponse(response: unknown): { folders: NormalizedFolder[] } {
+  if (!isRecord(response)) return { folders: [] };
+  const folders = response.folders;
+  if (!Array.isArray(folders)) return { folders: [] };
+  return { folders: folders.filter(isRecord).map(normalizeFolder) };
+}
+
+export type NormalizedTemplate = {
+  id: string; provider: "brevo"; providerTemplateId: string;
+  name: string; subject: string; isActive: boolean; createdAt: string;
+  modelVersion: "2026-05-16"; raw: Record<string, unknown>;
+};
+export function normalizeTemplate(t: Record<string, unknown>): NormalizedTemplate {
+  return {
+    id: `brv-template:${String(t.id ?? "")}`, provider: "brevo", providerTemplateId: String(t.id ?? ""),
+    name: prop(t, "name"), subject: prop(t, "subject"),
+    isActive: t.isActive === true, createdAt: prop(t, "createdAt"),
+    modelVersion: "2026-05-16", raw: t,
+  };
+}
+export function parseTemplatesResponse(response: unknown): { templates: NormalizedTemplate[]; count: number } {
+  if (!isRecord(response)) return { templates: [], count: 0 };
+  const templates = response.templates;
+  if (!Array.isArray(templates)) return { templates: [], count: typeof response.count === "number" ? response.count : 0 };
+  return { templates: templates.filter(isRecord).map(normalizeTemplate), count: typeof response.count === "number" ? response.count : 0 };
+}
+
+export type NormalizedSender = {
+  id: string; provider: "brevo"; providerSenderId: string;
+  name: string; email: string; active: boolean;
+  modelVersion: "2026-05-16"; raw: Record<string, unknown>;
+};
+export function normalizeSender(s: Record<string, unknown>): NormalizedSender {
+  return {
+    id: `brv-sender:${String(s.id ?? "")}`, provider: "brevo", providerSenderId: String(s.id ?? ""),
+    name: prop(s, "name"), email: prop(s, "email"), active: s.active === true,
+    modelVersion: "2026-05-16", raw: s,
+  };
+}
+export function parseSendersResponse(response: unknown): { senders: NormalizedSender[] } {
+  if (!isRecord(response)) return { senders: [] };
+  const senders = response.senders;
+  if (!Array.isArray(senders)) return { senders: [] };
+  return { senders: senders.filter(isRecord).map(normalizeSender) };
+}

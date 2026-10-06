@@ -5,7 +5,7 @@ describe("brevo connector manifest", () => {
   test("declares key, runtime, auth, network, operations, and models", () => {
     expect(manifest.key).toBe("brevo");
     expect(manifest.name).toBe("Brevo");
-    expect(manifest.version).toBe("0.1.0");
+    expect(manifest.version).toBe("0.2.0");
     expect(manifest.runtime).toBe("bun");
   });
 
@@ -45,6 +45,12 @@ describe("brevo connector manifest", () => {
     expect(manifest.operations["emailCampaigns.create"].kind).toBe("action");
     expect(manifest.operations["emailCampaigns.send"].kind).toBe("action");
     expect(manifest.operations["emailCampaigns.get"].kind).toBe("action");
+    expect(manifest.operations["lists.update"].kind).toBe("action");
+    expect(manifest.operations["lists.delete"].kind).toBe("action");
+    expect(manifest.operations["folders.create"].kind).toBe("action");
+    expect(manifest.operations["emailCampaigns.sendTest"].kind).toBe("action");
+    expect(manifest.operations["smtp.templates.list"].kind).toBe("action");
+    expect(manifest.operations["senders.list"].kind).toBe("action");
     expect(manifest.operations["healthcheck"].kind).toBe("action");
   });
 
@@ -55,6 +61,10 @@ describe("brevo connector manifest", () => {
       "lists.create", "lists.get",
       "contacts.addToList", "contacts.removeFromList",
       "emailCampaigns.create", "emailCampaigns.send", "emailCampaigns.get",
+      "lists.update", "lists.delete", "lists.getContacts",
+      "folders.list", "folders.create",
+      "emailCampaigns.update", "emailCampaigns.delete", "emailCampaigns.sendTest",
+      "smtp.templates.list", "smtp.templates.get", "senders.list",
     ];
     for (const opKey of newOps) {
       const op = manifest.operations[opKey as keyof typeof manifest.operations] as Record<string, unknown>;
@@ -79,10 +89,12 @@ describe("brevo connector manifest", () => {
     expect(healthcheck.maxResponseBytes).toBe(65536);
   });
 
-  test("models include contact, list, and campaign", () => {
+  test("models include contact, list, campaign, folder, template, and sender", () => {
     expect(manifest.models).toContain("contact");
     expect(manifest.models).toContain("list");
     expect(manifest.models).toContain("campaign");
-    expect(manifest.models).toHaveLength(3);
+    expect(manifest.models).toContain("folder");
+    expect(manifest.models).toContain("template");
+    expect(manifest.models).toContain("sender");
   });
 });
