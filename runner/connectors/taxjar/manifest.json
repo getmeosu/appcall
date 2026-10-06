@@ -1,7 +1,17 @@
 {
+  "key": "taxjar",
+  "name": "TaxJar",
+  "version": "0.2.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "accounting"
+  ],
   "auth": {
+    "type": "api_key",
     "scopes": [],
     "setup": {
+      "mode": "api_key",
       "fields": [
         {
           "key": "apiKey",
@@ -9,137 +19,157 @@
           "required": true,
           "secret": true
         }
-      ],
-      "mode": "api_key"
-    },
-    "type": "api_key"
-  },
-  "categories": [
-    "accounting"
-  ],
-  "evidence": {
-    "fixture": {
-      "status": "supplied"
-    },
-    "live": {
-      "status": "unverified"
+      ]
     }
   },
+  "network": {
+    "allowedHosts": [
+      "api.taxjar.com"
+    ]
+  },
+  "models": [
+    "category",
+    "nexus",
+    "customer",
+    "order",
+    "refund",
+    "address"
+  ],
   "http": {
+    "baseUrl": "https://api.taxjar.com/v2",
     "auth": {
       "field": "apiKey",
       "in": "header",
       "name": "Authorization",
       "value": "Bearer {{apiKey}}"
     },
-    "baseUrl": "https://api.taxjar.com/v2",
+    "headers": {
+      "Accept": "application/json",
+      "x-api-version": "2022-01-24"
+    },
     "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after",
       "defaultRetryAfterSeconds": 30,
       "messagePaths": [
         "detail",
         "error",
         "message"
-      ],
-      "rateLimitStatuses": [
-        429
-      ],
-      "retryAfterHeader": "retry-after"
-    },
-    "headers": {
-      "Accept": "application/json",
-      "x-api-version": "2022-01-24"
+      ]
     }
   },
-  "key": "taxjar",
-  "models": [
-    "category",
-    "nexus",
-    "customer",
-    "order"
-  ],
-  "name": "TaxJar",
-  "network": {
-    "allowedHosts": [
-      "api.taxjar.com"
-    ]
-  },
   "operations": {
-    "customers.get": {
-      "description": "Retrieve one TaxJar customer by identifier.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "customerId": {
-            "minLength": 1,
-            "type": "string"
-          }
-        },
-        "required": [
-          "customerId"
-        ],
-        "type": "object"
-      },
+    "healthcheck": {
       "kind": "action",
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "timeoutMs": 5000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "title": "Healthcheck",
+      "description": "Validate the TaxJar API token by listing product tax categories.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
       "outputSchema": {
-        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "required": [
-          "data"
-        ],
-        "type": "object"
+        "additionalProperties": false
       },
       "request": {
         "method": "GET",
-        "path": "/customers/{{customerId}}",
+        "path": "/categories",
         "success": [
           200
         ]
-      },
-      "responseFormat": "json",
+      }
+    },
+    "nexus.regions.list": {
+      "kind": "action",
       "sideEffect": "read",
       "timeoutMs": 15000,
-      "title": "Get customer",
-      "validationMode": "strict-generated"
-    },
-    "customers.list": {
-      "description": "List TaxJar customer identifiers with optional page and per_page.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "page": {
-            "minimum": 1,
-            "type": "integer"
-          },
-          "per_page": {
-            "maximum": 100,
-            "minimum": 1,
-            "type": "integer"
-          }
-        },
-        "type": "object"
-      },
-      "kind": "action",
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "title": "List nexus regions",
+      "description": "List TaxJar nexus regions for the account.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
       "outputSchema": {
-        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/nexus/regions",
+        "success": [
+          200
+        ]
+      }
+    },
+    "customers.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "title": "List customers",
+      "description": "List TaxJar customer identifiers with optional page and per_page.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "per_page": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
         "required": [
           "data"
         ],
-        "type": "object"
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
       },
       "request": {
         "method": "GET",
@@ -151,120 +181,92 @@
         "success": [
           200
         ]
-      },
-      "responseFormat": "json",
+      }
+    },
+    "customers.get": {
+      "kind": "action",
       "sideEffect": "read",
       "timeoutMs": 15000,
-      "title": "List customers",
-      "validationMode": "strict-generated"
-    },
-    "healthcheck": {
-      "description": "Validate the TaxJar API token by listing product tax categories.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {},
-        "type": "object"
-      },
-      "kind": "action",
-      "maxInputBytes": 4096,
-      "maxResponseBytes": 65536,
-      "outputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "type": "object"
-      },
-      "request": {
-        "method": "GET",
-        "path": "/categories",
-        "success": [
-          200
-        ]
-      },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 5000,
-      "title": "Healthcheck",
-      "validationMode": "strict-generated"
-    },
-    "nexus.regions.list": {
-      "description": "List TaxJar nexus regions for the account.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {},
-        "type": "object"
-      },
-      "kind": "action",
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "title": "Get customer",
+      "description": "Retrieve one TaxJar customer by identifier.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "customerId"
+        ],
+        "properties": {
+          "customerId": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      },
       "outputSchema": {
-        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "required": [
-          "data"
-        ],
-        "type": "object"
+        "additionalProperties": false
       },
       "request": {
         "method": "GET",
-        "path": "/nexus/regions",
+        "path": "/customers/{{customerId}}",
         "success": [
           200
         ]
-      },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "title": "List nexus regions",
-      "validationMode": "strict-generated"
+      }
     },
     "orders.list": {
-      "description": "List TaxJar order transaction identifiers within a date range.",
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
       "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "title": "List order transactions",
+      "description": "List TaxJar order transaction identifiers within a date range.",
       "inputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "fromTransactionDate": {
-            "minLength": 10,
-            "type": "string"
-          },
-          "toTransactionDate": {
-            "minLength": 10,
-            "type": "string"
-          }
-        },
+        "type": "object",
         "required": [
           "fromTransactionDate",
           "toTransactionDate"
         ],
-        "type": "object"
+        "properties": {
+          "fromTransactionDate": {
+            "type": "string",
+            "minLength": 10
+          },
+          "toTransactionDate": {
+            "type": "string",
+            "minLength": 10
+          }
+        },
+        "additionalProperties": false
       },
-      "kind": "action",
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
       "outputSchema": {
-        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "required": [
-          "data"
-        ],
-        "type": "object"
+        "additionalProperties": false
       },
       "request": {
         "method": "GET",
@@ -276,21 +278,1101 @@
         "success": [
           200
         ]
+      }
+    },
+    "customers.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create customer",
+      "description": "Create a TaxJar exempt customer.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "customer_id": {
+            "type": "string",
+            "description": "Customer identifier.",
+            "minLength": 1
+          },
+          "exemption_type": {
+            "type": "string",
+            "enum": [
+              "wholesale",
+              "government",
+              "other",
+              "non_exempt"
+            ],
+            "description": "Exemption type."
+          },
+          "name": {
+            "type": "string",
+            "description": "Customer name.",
+            "minLength": 1
+          },
+          "exempt_regions": {
+            "type": "array",
+            "description": "Exempt regions.",
+            "items": {
+              "type": "object"
+            }
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "customer_id",
+          "exemption_type",
+          "name"
+        ]
       },
-      "responseFormat": "json",
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/customers",
+        "success": [
+          200,
+          201
+        ],
+        "body": {
+          "customer_id": "{{customer_id}}",
+          "exemption_type": "{{exemption_type}}",
+          "name": "{{name}}",
+          "exempt_regions": "{{exempt_regions}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "customers.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Update customer",
+      "description": "Update a TaxJar customer by identifier.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "customerId": {
+            "type": "string",
+            "description": "TaxJar customer identifier.",
+            "minLength": 1
+          },
+          "exemption_type": {
+            "type": "string",
+            "enum": [
+              "wholesale",
+              "government",
+              "other",
+              "non_exempt"
+            ],
+            "description": "Exemption type."
+          },
+          "name": {
+            "type": "string",
+            "description": "Customer name.",
+            "minLength": 1
+          },
+          "exempt_regions": {
+            "type": "array",
+            "description": "Exempt regions.",
+            "items": {
+              "type": "object"
+            }
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "customerId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/customers/{{customerId}}",
+        "success": [
+          200
+        ],
+        "body": {
+          "exemption_type": "{{exemption_type}}",
+          "name": "{{name}}",
+          "exempt_regions": "{{exempt_regions}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "customers.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Delete customer",
+      "description": "Delete a TaxJar customer by identifier.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "customerId": {
+            "type": "string",
+            "description": "TaxJar customer identifier.",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "customerId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/customers/{{customerId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "orders.get": {
+      "kind": "action",
       "sideEffect": "read",
       "timeoutMs": 15000,
-      "title": "List order transactions",
-      "validationMode": "strict-generated"
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get order transaction",
+      "description": "Retrieve one TaxJar order transaction by identifier.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "transactionId": {
+            "type": "string",
+            "description": "Transaction identifier.",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "transactionId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/transactions/orders/{{transactionId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "orders.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create order transaction",
+      "description": "Create a TaxJar order transaction for reporting.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "transaction_id": {
+            "type": "string",
+            "description": "Unique order transaction ID.",
+            "minLength": 1
+          },
+          "transaction_date": {
+            "type": "string",
+            "description": "Transaction date.",
+            "minLength": 1
+          },
+          "to_country": {
+            "type": "string",
+            "description": "Destination country.",
+            "minLength": 1
+          },
+          "to_zip": {
+            "type": "string",
+            "description": "Destination postal code.",
+            "minLength": 1
+          },
+          "to_state": {
+            "type": "string",
+            "description": "Destination state.",
+            "minLength": 1
+          },
+          "to_city": {
+            "type": "string",
+            "description": "Destination city."
+          },
+          "to_street": {
+            "type": "string",
+            "description": "Destination street."
+          },
+          "amount": {
+            "type": "number",
+            "description": "Total amount excluding tax."
+          },
+          "shipping": {
+            "type": "number",
+            "description": "Shipping amount."
+          },
+          "sales_tax": {
+            "type": "number",
+            "description": "Sales tax collected."
+          },
+          "from_country": {
+            "type": "string",
+            "description": "Origin country."
+          },
+          "from_zip": {
+            "type": "string",
+            "description": "Origin postal code."
+          },
+          "from_state": {
+            "type": "string",
+            "description": "Origin state."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "transaction_id",
+          "transaction_date",
+          "to_country",
+          "to_zip",
+          "to_state",
+          "amount",
+          "shipping",
+          "sales_tax"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/transactions/orders",
+        "success": [
+          200,
+          201
+        ],
+        "body": {
+          "transaction_id": "{{transaction_id}}",
+          "transaction_date": "{{transaction_date}}",
+          "to_country": "{{to_country}}",
+          "to_zip": "{{to_zip}}",
+          "to_state": "{{to_state}}",
+          "to_city": "{{to_city}}",
+          "to_street": "{{to_street}}",
+          "amount": "{{amount}}",
+          "shipping": "{{shipping}}",
+          "sales_tax": "{{sales_tax}}",
+          "from_country": "{{from_country}}",
+          "from_zip": "{{from_zip}}",
+          "from_state": "{{from_state}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "orders.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Update order transaction",
+      "description": "Update a TaxJar order transaction by identifier.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "transactionId": {
+            "type": "string",
+            "description": "Transaction identifier.",
+            "minLength": 1
+          },
+          "transaction_date": {
+            "type": "string",
+            "description": "Transaction date.",
+            "minLength": 1
+          },
+          "to_country": {
+            "type": "string",
+            "description": "Destination country.",
+            "minLength": 1
+          },
+          "to_zip": {
+            "type": "string",
+            "description": "Destination postal code.",
+            "minLength": 1
+          },
+          "to_state": {
+            "type": "string",
+            "description": "Destination state.",
+            "minLength": 1
+          },
+          "to_city": {
+            "type": "string",
+            "description": "Destination city."
+          },
+          "to_street": {
+            "type": "string",
+            "description": "Destination street."
+          },
+          "amount": {
+            "type": "number",
+            "description": "Total amount excluding tax."
+          },
+          "shipping": {
+            "type": "number",
+            "description": "Shipping amount."
+          },
+          "sales_tax": {
+            "type": "number",
+            "description": "Sales tax collected."
+          },
+          "from_country": {
+            "type": "string",
+            "description": "Origin country."
+          },
+          "from_zip": {
+            "type": "string",
+            "description": "Origin postal code."
+          },
+          "from_state": {
+            "type": "string",
+            "description": "Origin state."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "transactionId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/transactions/orders/{{transactionId}}",
+        "success": [
+          200
+        ],
+        "body": {
+          "transaction_date": "{{transaction_date}}",
+          "to_country": "{{to_country}}",
+          "to_zip": "{{to_zip}}",
+          "to_state": "{{to_state}}",
+          "to_city": "{{to_city}}",
+          "to_street": "{{to_street}}",
+          "amount": "{{amount}}",
+          "shipping": "{{shipping}}",
+          "sales_tax": "{{sales_tax}}",
+          "from_country": "{{from_country}}",
+          "from_zip": "{{from_zip}}",
+          "from_state": "{{from_state}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "orders.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Delete order transaction",
+      "description": "Delete a TaxJar order transaction by identifier.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "transactionId": {
+            "type": "string",
+            "description": "Transaction identifier.",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "transactionId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/transactions/orders/{{transactionId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "refunds.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List refund transactions",
+      "description": "List TaxJar refund transaction identifiers within a date range.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "fromTransactionDate": {
+            "type": "string",
+            "description": "Start date YYYY-MM-DD.",
+            "minLength": 1
+          },
+          "toTransactionDate": {
+            "type": "string",
+            "description": "End date YYYY-MM-DD.",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "fromTransactionDate",
+          "toTransactionDate"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/transactions/refunds",
+        "success": [
+          200
+        ],
+        "query": {
+          "from_transaction_date": "{{fromTransactionDate}}",
+          "to_transaction_date": "{{toTransactionDate}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "refunds.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get refund transaction",
+      "description": "Retrieve one TaxJar refund transaction by identifier.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "transactionId": {
+            "type": "string",
+            "description": "Transaction identifier.",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "transactionId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/transactions/refunds/{{transactionId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "refunds.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create refund transaction",
+      "description": "Create a TaxJar refund transaction for reporting.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "transaction_id": {
+            "type": "string",
+            "description": "Unique order transaction ID.",
+            "minLength": 1
+          },
+          "transaction_date": {
+            "type": "string",
+            "description": "Transaction date.",
+            "minLength": 1
+          },
+          "to_country": {
+            "type": "string",
+            "description": "Destination country.",
+            "minLength": 1
+          },
+          "to_zip": {
+            "type": "string",
+            "description": "Destination postal code.",
+            "minLength": 1
+          },
+          "to_state": {
+            "type": "string",
+            "description": "Destination state.",
+            "minLength": 1
+          },
+          "to_city": {
+            "type": "string",
+            "description": "Destination city."
+          },
+          "to_street": {
+            "type": "string",
+            "description": "Destination street."
+          },
+          "amount": {
+            "type": "number",
+            "description": "Total amount excluding tax."
+          },
+          "shipping": {
+            "type": "number",
+            "description": "Shipping amount."
+          },
+          "sales_tax": {
+            "type": "number",
+            "description": "Sales tax collected."
+          },
+          "from_country": {
+            "type": "string",
+            "description": "Origin country."
+          },
+          "from_zip": {
+            "type": "string",
+            "description": "Origin postal code."
+          },
+          "from_state": {
+            "type": "string",
+            "description": "Origin state."
+          },
+          "transaction_reference_id": {
+            "type": "string",
+            "description": "Original order transaction ID.",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "transaction_id",
+          "transaction_date",
+          "to_country",
+          "to_zip",
+          "to_state",
+          "amount",
+          "shipping",
+          "sales_tax",
+          "transaction_reference_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/transactions/refunds",
+        "success": [
+          200,
+          201
+        ],
+        "body": {
+          "transaction_id": "{{transaction_id}}",
+          "transaction_date": "{{transaction_date}}",
+          "to_country": "{{to_country}}",
+          "to_zip": "{{to_zip}}",
+          "to_state": "{{to_state}}",
+          "to_city": "{{to_city}}",
+          "to_street": "{{to_street}}",
+          "amount": "{{amount}}",
+          "shipping": "{{shipping}}",
+          "sales_tax": "{{sales_tax}}",
+          "from_country": "{{from_country}}",
+          "from_zip": "{{from_zip}}",
+          "from_state": "{{from_state}}",
+          "transaction_reference_id": "{{transaction_reference_id}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "refunds.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Update refund transaction",
+      "description": "Update a TaxJar refund transaction by identifier.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "transactionId": {
+            "type": "string",
+            "description": "Transaction identifier.",
+            "minLength": 1
+          },
+          "transaction_date": {
+            "type": "string",
+            "description": "Transaction date.",
+            "minLength": 1
+          },
+          "to_country": {
+            "type": "string",
+            "description": "Destination country.",
+            "minLength": 1
+          },
+          "to_zip": {
+            "type": "string",
+            "description": "Destination postal code.",
+            "minLength": 1
+          },
+          "to_state": {
+            "type": "string",
+            "description": "Destination state.",
+            "minLength": 1
+          },
+          "to_city": {
+            "type": "string",
+            "description": "Destination city."
+          },
+          "to_street": {
+            "type": "string",
+            "description": "Destination street."
+          },
+          "amount": {
+            "type": "number",
+            "description": "Total amount excluding tax."
+          },
+          "shipping": {
+            "type": "number",
+            "description": "Shipping amount."
+          },
+          "sales_tax": {
+            "type": "number",
+            "description": "Sales tax collected."
+          },
+          "from_country": {
+            "type": "string",
+            "description": "Origin country."
+          },
+          "from_zip": {
+            "type": "string",
+            "description": "Origin postal code."
+          },
+          "from_state": {
+            "type": "string",
+            "description": "Origin state."
+          },
+          "transaction_reference_id": {
+            "type": "string",
+            "description": "Original order transaction ID.",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "transactionId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/transactions/refunds/{{transactionId}}",
+        "success": [
+          200
+        ],
+        "body": {
+          "transaction_date": "{{transaction_date}}",
+          "to_country": "{{to_country}}",
+          "to_zip": "{{to_zip}}",
+          "to_state": "{{to_state}}",
+          "to_city": "{{to_city}}",
+          "to_street": "{{to_street}}",
+          "amount": "{{amount}}",
+          "shipping": "{{shipping}}",
+          "sales_tax": "{{sales_tax}}",
+          "from_country": "{{from_country}}",
+          "from_zip": "{{from_zip}}",
+          "from_state": "{{from_state}}",
+          "transaction_reference_id": "{{transaction_reference_id}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "refunds.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Delete refund transaction",
+      "description": "Delete a TaxJar refund transaction by identifier.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "transactionId": {
+            "type": "string",
+            "description": "Transaction identifier.",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "transactionId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/transactions/refunds/{{transactionId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "addresses.validate": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Validate address",
+      "description": "Validate a US address with TaxJar.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "country": {
+            "type": "string",
+            "description": "Country code.",
+            "minLength": 1
+          },
+          "state": {
+            "type": "string",
+            "description": "State code.",
+            "minLength": 1
+          },
+          "zip": {
+            "type": "string",
+            "description": "Postal code.",
+            "minLength": 1
+          },
+          "city": {
+            "type": "string",
+            "description": "City."
+          },
+          "street": {
+            "type": "string",
+            "description": "Street address."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "country",
+          "state",
+          "zip"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/addresses/validate",
+        "success": [
+          200
+        ],
+        "body": {
+          "country": "{{country}}",
+          "state": "{{state}}",
+          "zip": "{{zip}}",
+          "city": "{{city}}",
+          "street": "{{street}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "validations.vat": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Validate VAT number",
+      "description": "Validate a VAT identification number with TaxJar.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "vat": {
+            "type": "string",
+            "description": "VAT identification number.",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "vat"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/validation",
+        "success": [
+          200
+        ],
+        "query": {
+          "vat": "{{vat}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "summary.rates.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List summarized rates",
+      "description": "List TaxJar summarized rates for nexus regions.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/summary_rates",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
     }
   },
   "provenance": {
     "source": {
-      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
-      "url": "https://github.com/oomol-lab/open-connector"
+      "url": "https://github.com/oomol-lab/open-connector",
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"
     }
   },
-  "runtime": "bun",
-  "version": "0.1.0",
-  "visibility": "public"
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
+    }
+  }
 }
