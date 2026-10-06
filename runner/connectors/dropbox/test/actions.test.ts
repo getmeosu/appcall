@@ -23,13 +23,19 @@ for (const c of cases) describe(c.op, () => {
     let calls = 0;
     const result = await actions[c.op]!({...c.input, accessToken:"fixture-token", fetch:async(url:unknown, init?:RequestInit)=>{
       calls++;
-      expect(String(url)).toBe(manifest.http.baseUrl+c.path);
+      const request = manifest.operations[c.op].request;
+      const base = typeof request.baseUrl === "string" ? request.baseUrl.replace(/\/$/, "") : manifest.http.baseUrl;
+      expect(String(url)).toBe(base+c.path);
       expect(init?.method).toBe(c.method);
       const headers = new Headers(init?.headers);
       expect(headers.get("Authorization")).toBe("Bearer fixture-token");
-      expect(headers.get("Content-Type")).toBe(new Headers(manifest.operations[c.op].request.headers).get("content-type"));
-      expect(init?.body == null ? null : JSON.parse(String(init.body))).toEqual(c.body);
-      return new Response(c.response === null ? null : JSON.stringify(c.response), {status:c.status});
+      const declaredType = request.headers?.["Content-Type"];
+      expect(headers.get("Content-Type")).toBe(typeof declaredType === "string" ? declaredType : null);
+      if (request.bodyEncoding === "raw") expect(init?.body == null ? null : String(init.body)).toBe(c.body);
+      else expect(init?.body == null ? null : JSON.parse(String(init.body))).toEqual(c.body);
+      if (c.arg !== undefined) expect(headers.get("Dropbox-API-Arg")).toBe(JSON.stringify(c.arg));
+      const payload = c.response === null ? null : request.responseFormat === "text" || manifest.operations[c.op].responseFormat === "text" ? String(c.response) : JSON.stringify(c.response);
+      return new Response(payload, {status:c.status});
     }});
     expect(calls).toBe(1);
     expect(result).toMatchObject(c.output);

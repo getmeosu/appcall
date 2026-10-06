@@ -111686,7 +111686,7 @@
   },
   {
     "key": "dropbox",
-    "digest": "5682e4c14376132b8a9782eab60ae6d447253cb3fa441a1563440719a4261b76",
+    "digest": "21fbd594e66de5bc76b695ca6c0c6aa7bbc25b1a1dbe05cc2888b2018a53329d",
     "public": true,
     "egress": true,
     "operations": [
@@ -112919,6 +112919,67 @@
         }
       },
       {
+        "key": "files.alpha.upload",
+        "kind": "action",
+        "timeoutMs": 120000,
+        "maxInputBytes": 26214400,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "path": {
+              "type": "string",
+              "description": "Destination path beginning with /, including the file name.",
+              "minLength": 1
+            },
+            "content": {
+              "type": "string",
+              "description": "File bytes as a string. Dropbox accepts at most 150 MiB on this route; the runner budget caps the action input at 25 MiB."
+            },
+            "mode": {
+              "type": "string",
+              "description": "Write mode: add, overwrite, or update."
+            },
+            "autorename": {
+              "type": "boolean",
+              "description": "Ask Dropbox to rename the file when mode conflicts."
+            },
+            "mute": {
+              "type": "boolean",
+              "description": "Suppress the client notification for this write."
+            },
+            "client_modified": {
+              "type": "string",
+              "description": "Client modified time in ISO 8601, such as 2015-05-12T15:50:38Z."
+            },
+            "strict_conflict": {
+              "type": "boolean",
+              "description": "Report a conflict instead of autorenaming when mode is update."
+            }
+          },
+          "required": [
+            "path",
+            "content"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "description": "Official Dropbox JSON response. Null when the route result is Void."
+            }
+          }
+        }
+      },
+      {
         "key": "files.copy",
         "kind": "action",
         "timeoutMs": 10000,
@@ -113516,6 +113577,121 @@
         }
       },
       {
+        "key": "files.download",
+        "kind": "action",
+        "timeoutMs": 120000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 52428800,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "path": {
+              "type": "string",
+              "description": "File or folder path beginning with /, or an id: reference.",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "path"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "string",
+              "description": "Raw content-download body. Result metadata is returned in the Dropbox-API-Result header."
+            }
+          }
+        }
+      },
+      {
+        "key": "files.download_zip",
+        "kind": "action",
+        "timeoutMs": 120000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 52428800,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "path": {
+              "type": "string",
+              "description": "File or folder path beginning with /, or an id: reference.",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "path"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "string",
+              "description": "Raw content-download body. Result metadata is returned in the Dropbox-API-Result header."
+            }
+          }
+        }
+      },
+      {
+        "key": "files.export",
+        "kind": "action",
+        "timeoutMs": 120000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 52428800,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "path": {
+              "type": "string",
+              "description": "File or folder path beginning with /, or an id: reference.",
+              "minLength": 1
+            },
+            "export_format": {
+              "type": "string",
+              "description": "Export format such as html, markdown, or plain_text. Omitted lets Dropbox choose."
+            }
+          },
+          "required": [
+            "path"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "string",
+              "description": "Raw content-download body. Result metadata is returned in the Dropbox-API-Result header."
+            }
+          }
+        }
+      },
+      {
         "key": "files.getMetadata",
         "kind": "action",
         "timeoutMs": 10000,
@@ -113628,6 +113804,43 @@
         }
       },
       {
+        "key": "files.get_preview",
+        "kind": "action",
+        "timeoutMs": 120000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 52428800,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "path": {
+              "type": "string",
+              "description": "File or folder path beginning with /, or an id: reference.",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "path"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "string",
+              "description": "Raw content-download body. Result metadata is returned in the Dropbox-API-Result header."
+            }
+          }
+        }
+      },
+      {
         "key": "files.get_temporary_upload_link",
         "kind": "action",
         "timeoutMs": 10000,
@@ -113663,6 +113876,142 @@
           "properties": {
             "data": {
               "description": "Official Dropbox JSON response. Null when the route result is Void."
+            }
+          }
+        }
+      },
+      {
+        "key": "files.get_thumbnail",
+        "kind": "action",
+        "timeoutMs": 120000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 52428800,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "path": {
+              "type": "string",
+              "description": "File or folder path beginning with /, or an id: reference.",
+              "minLength": 1
+            },
+            "format": {
+              "type": "string",
+              "description": "Thumbnail image format, jpeg or png."
+            },
+            "size": {
+              "type": "string",
+              "description": "Thumbnail size such as w64h64, w128h128, w640h480, or w1024h768."
+            },
+            "mode": {
+              "type": "string",
+              "description": "Resize mode: strict, bestfit, or fitone_bestfit."
+            }
+          },
+          "required": [
+            "path"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "string",
+              "description": "Raw content-download body. Result metadata is returned in the Dropbox-API-Result header."
+            }
+          }
+        }
+      },
+      {
+        "key": "files.get_thumbnail_batch",
+        "kind": "action",
+        "timeoutMs": 10000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "entries": {
+              "type": "array",
+              "description": "ThumbnailArg entries, each with a path and optional format, size, and mode.",
+              "items": {
+                "type": "object"
+              }
+            }
+          },
+          "required": [
+            "entries"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "description": "Official Dropbox JSON response. Null when the route result is Void."
+            }
+          }
+        }
+      },
+      {
+        "key": "files.get_thumbnail_v2",
+        "kind": "action",
+        "timeoutMs": 120000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 52428800,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "path": {
+              "type": "string",
+              "description": "File or folder path beginning with /, or an id: reference.",
+              "minLength": 1
+            },
+            "format": {
+              "type": "string",
+              "description": "Thumbnail image format, jpeg or png."
+            },
+            "size": {
+              "type": "string",
+              "description": "Thumbnail size such as w64h64, w128h128, w640h480, or w1024h768."
+            },
+            "mode": {
+              "type": "string",
+              "description": "Resize mode: strict, bestfit, or fitone_bestfit."
+            }
+          },
+          "required": [
+            "path"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "string",
+              "description": "Raw content-download body. Result metadata is returned in the Dropbox-API-Result header."
             }
           }
         }
@@ -114682,6 +115031,198 @@
         }
       },
       {
+        "key": "files.upload",
+        "kind": "action",
+        "timeoutMs": 120000,
+        "maxInputBytes": 26214400,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "path": {
+              "type": "string",
+              "description": "Destination path beginning with /, including the file name.",
+              "minLength": 1
+            },
+            "content": {
+              "type": "string",
+              "description": "File bytes as a string. Dropbox accepts at most 150 MiB on this route; the runner budget caps the action input at 25 MiB."
+            },
+            "mode": {
+              "type": "string",
+              "description": "Write mode: add, overwrite, or update."
+            },
+            "autorename": {
+              "type": "boolean",
+              "description": "Ask Dropbox to rename the file when mode conflicts."
+            },
+            "mute": {
+              "type": "boolean",
+              "description": "Suppress the client notification for this write."
+            },
+            "client_modified": {
+              "type": "string",
+              "description": "Client modified time in ISO 8601, such as 2015-05-12T15:50:38Z."
+            },
+            "strict_conflict": {
+              "type": "boolean",
+              "description": "Report a conflict instead of autorenaming when mode is update."
+            }
+          },
+          "required": [
+            "path",
+            "content"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "description": "Official Dropbox JSON response. Null when the route result is Void."
+            }
+          }
+        }
+      },
+      {
+        "key": "files.upload_session.append",
+        "kind": "action",
+        "timeoutMs": 120000,
+        "maxInputBytes": 26214400,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "content": {
+              "type": "string",
+              "description": "Bytes to append. A single request must stay within the runner input budget."
+            },
+            "cursor": {
+              "type": "object",
+              "description": "Upload session cursor with session_id and byte offset."
+            },
+            "close": {
+              "type": "boolean",
+              "description": "Close the session after appending these bytes."
+            }
+          },
+          "required": [
+            "content",
+            "cursor"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "description": "Official Dropbox JSON response. Null when the route result is Void."
+            }
+          }
+        }
+      },
+      {
+        "key": "files.upload_session.append_batch",
+        "kind": "action",
+        "timeoutMs": 120000,
+        "maxInputBytes": 26214400,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "content": {
+              "type": "string",
+              "description": "Concatenated bytes for every entry, in entries order."
+            },
+            "entries": {
+              "type": "array",
+              "description": "UploadSessionAppendArg entries. Each length must match its slice of content.",
+              "items": {
+                "type": "object"
+              }
+            }
+          },
+          "required": [
+            "content",
+            "entries"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "description": "Official Dropbox JSON response. Null when the route result is Void."
+            }
+          }
+        }
+      },
+      {
+        "key": "files.upload_session.finish",
+        "kind": "action",
+        "timeoutMs": 120000,
+        "maxInputBytes": 26214400,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "cursor": {
+              "type": "object",
+              "description": "Upload session cursor with session_id and the current byte offset."
+            },
+            "commit": {
+              "type": "object",
+              "description": "CommitInfo with path and optional mode, autorename, client_modified, mute, and property groups."
+            },
+            "content": {
+              "type": "string",
+              "description": "Optional final bytes appended before the session is committed."
+            }
+          },
+          "required": [
+            "cursor",
+            "commit"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "description": "Official Dropbox JSON response. Null when the route result is Void."
+            }
+          }
+        }
+      },
+      {
         "key": "files.upload_session.finish_batch",
         "kind": "action",
         "timeoutMs": 10000,
@@ -114780,6 +115321,46 @@
           "required": [
             "entries"
           ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "description": "Official Dropbox JSON response. Null when the route result is Void."
+            }
+          }
+        }
+      },
+      {
+        "key": "files.upload_session.start",
+        "kind": "action",
+        "timeoutMs": 120000,
+        "maxInputBytes": 26214400,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "content": {
+              "type": "string",
+              "description": "Optional leading file bytes. Omit to open an empty session."
+            },
+            "close": {
+              "type": "boolean",
+              "description": "Close the session after this request so no further bytes can be appended."
+            },
+            "session_type": {
+              "type": "string",
+              "description": "sequential or concurrent. Omitted uses Dropbox's sequential default."
+            }
+          }
         },
         "outputSchema": {
           "type": "object",
@@ -115009,6 +115590,60 @@
         }
       },
       {
+        "key": "openid.configuration",
+        "kind": "action",
+        "timeoutMs": 10000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {}
+        },
+        "outputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "description": "Official Dropbox JSON response. Null when the route result is Void."
+            }
+          }
+        }
+      },
+      {
+        "key": "openid.jwks",
+        "kind": "action",
+        "timeoutMs": 10000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {}
+        },
+        "outputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "description": "Official Dropbox JSON response. Null when the route result is Void."
+            }
+          }
+        }
+      },
+      {
         "key": "openid.userinfo",
         "kind": "action",
         "timeoutMs": 10000,
@@ -115055,6 +115690,51 @@
           },
           "required": [
             "doc_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "description": "Official Dropbox JSON response. Null when the route result is Void."
+            }
+          }
+        }
+      },
+      {
+        "key": "paper.docs.create",
+        "kind": "action",
+        "timeoutMs": 120000,
+        "maxInputBytes": 26214400,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "import_format": {
+              "type": "string",
+              "description": "Import format: plain_text, markdown, or html.",
+              "minLength": 1
+            },
+            "path": {
+              "type": "string",
+              "description": "Parent folder path. Omitted creates the document in the user's Paper folder."
+            },
+            "content": {
+              "type": "string",
+              "description": "Document body in the chosen import format."
+            }
+          },
+          "required": [
+            "import_format",
+            "content"
           ]
         },
         "outputSchema": {
@@ -115402,6 +116082,64 @@
           "required": [
             "doc_id",
             "sharing_policy"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "description": "Official Dropbox JSON response. Null when the route result is Void."
+            }
+          }
+        }
+      },
+      {
+        "key": "paper.docs.update",
+        "kind": "action",
+        "timeoutMs": 120000,
+        "maxInputBytes": 26214400,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "doc_id": {
+              "type": "string",
+              "description": "Paper document id.",
+              "minLength": 1
+            },
+            "doc_update_policy": {
+              "type": "string",
+              "description": "append, prepend, overwrite_all, or update.",
+              "minLength": 1
+            },
+            "revision": {
+              "type": "integer",
+              "description": "Current document revision. Required by Dropbox for update."
+            },
+            "import_format": {
+              "type": "string",
+              "description": "Import format: plain_text, markdown, or html.",
+              "minLength": 1
+            },
+            "content": {
+              "type": "string",
+              "description": "Replacement or appended document body."
+            }
+          },
+          "required": [
+            "doc_id",
+            "doc_update_policy",
+            "revision",
+            "import_format",
+            "content"
           ]
         },
         "outputSchema": {
@@ -116676,6 +117414,51 @@
           "properties": {
             "data": {
               "description": "Official Dropbox JSON response. Null when the route result is Void."
+            }
+          }
+        }
+      },
+      {
+        "key": "sharing.get_shared_link_file",
+        "kind": "action",
+        "timeoutMs": 120000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 52428800,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "url": {
+              "type": "string",
+              "description": "Shared link URL.",
+              "minLength": 1
+            },
+            "path": {
+              "type": "string",
+              "description": "Path relative to the shared link when the link points at a folder."
+            },
+            "link_password": {
+              "type": "string",
+              "description": "Password for a password-protected shared link."
+            }
+          },
+          "required": [
+            "url"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "string",
+              "description": "Raw content-download body. Result metadata is returned in the Dropbox-API-Result header."
             }
           }
         }
