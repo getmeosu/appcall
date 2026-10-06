@@ -1,7 +1,17 @@
 {
+  "key": "lodgify",
+  "name": "Lodgify",
+  "version": "0.2.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "scheduling"
+  ],
   "auth": {
+    "type": "api_key",
     "scopes": [],
     "setup": {
+      "mode": "api_key",
       "fields": [
         {
           "key": "apiKey",
@@ -9,146 +19,278 @@
           "required": true,
           "secret": true
         }
-      ],
-      "mode": "api_key"
-    },
-    "type": "api_key"
-  },
-  "categories": [
-    "scheduling"
-  ],
-  "evidence": {
-    "fixture": {
-      "status": "supplied"
-    },
-    "live": {
-      "status": "unverified"
+      ]
     }
   },
+  "network": {
+    "allowedHosts": [
+      "api.lodgify.com"
+    ]
+  },
+  "models": [
+    "property",
+    "room",
+    "booking",
+    "availability",
+    "rate",
+    "webhook"
+  ],
   "http": {
+    "baseUrl": "https://api.lodgify.com",
     "auth": {
       "field": "apiKey",
       "in": "header",
       "name": "X-ApiKey",
       "value": "{{apiKey}}"
     },
-    "baseUrl": "https://api.lodgify.com",
+    "headers": {
+      "Accept": "application/json"
+    },
     "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after",
       "defaultRetryAfterSeconds": 30,
       "messagePaths": [
         "message",
         "error",
         "title",
         "detail"
-      ],
-      "rateLimitStatuses": [
-        429
-      ],
-      "retryAfterHeader": "retry-after"
-    },
-    "headers": {
-      "Accept": "application/json"
+      ]
     }
   },
-  "key": "lodgify",
-  "models": [
-    "property",
-    "room",
-    "booking"
-  ],
-  "name": "Lodgify",
-  "network": {
-    "allowedHosts": [
-      "api.lodgify.com"
-    ]
-  },
   "operations": {
-    "bookings.get": {
-      "description": "Get one Lodgify booking by identifier.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "bookingId": {
-            "minimum": 1,
-            "type": "integer"
-          }
-        },
-        "required": [
-          "bookingId"
-        ],
-        "type": "object"
-      },
+    "healthcheck": {
+      "timeoutMs": 5000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
       "kind": "action",
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "Healthcheck",
+      "description": "Validate the Lodgify API key with GET /v2/properties?page=1&size=1.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
       "outputSchema": {
-        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "required": [
-          "data"
-        ],
-        "type": "object"
+        "additionalProperties": false
       },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
       "request": {
         "method": "GET",
-        "path": "/v2/reservations/bookings/{{bookingId}}",
+        "path": "/v2/properties",
+        "query": {
+          "page": 1,
+          "size": 1,
+          "includeCount": true
+        },
         "success": [
           200
         ]
-      },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "title": "Get booking",
-      "validationMode": "strict-generated"
+      }
     },
-    "bookings.list": {
-      "description": "List Lodgify bookings with optional pagination and stay filter.",
-      "enforceOutputSchema": true,
+    "properties.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List properties",
+      "description": "List Lodgify properties with optional pagination and total count.",
       "inputSchema": {
-        "additionalProperties": false,
+        "type": "object",
         "properties": {
           "page": {
-            "minimum": 1,
-            "type": "integer"
+            "type": "integer",
+            "minimum": 1
           },
           "size": {
-            "maximum": 50,
+            "type": "integer",
             "minimum": 1,
-            "type": "integer"
+            "maximum": 50
+          },
+          "includeCount": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/v2/properties",
+        "query": {
+          "page": "{{page}}",
+          "size": "{{size}}",
+          "includeCount": "{{includeCount}}"
+        },
+        "success": [
+          200
+        ]
+      }
+    },
+    "properties.get": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Get property",
+      "description": "Get one Lodgify property by identifier.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "propertyId"
+        ],
+        "properties": {
+          "propertyId": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/v2/properties/{{propertyId}}",
+        "success": [
+          200
+        ]
+      }
+    },
+    "rooms.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List property rooms",
+      "description": "List room types configured for a Lodgify property.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "propertyId"
+        ],
+        "properties": {
+          "propertyId": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/v2/properties/{{propertyId}}/rooms",
+        "success": [
+          200
+        ]
+      }
+    },
+    "bookings.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List bookings",
+      "description": "List Lodgify bookings with optional pagination and stay filter.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "size": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 50
           },
           "stayFilter": {
+            "type": "string",
             "enum": [
               "Upcoming",
               "Current",
               "Historic",
               "All"
-            ],
-            "type": "string"
+            ]
           }
         },
-        "type": "object"
+        "additionalProperties": false
       },
-      "kind": "action",
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
       "outputSchema": {
-        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "required": [
-          "data"
-        ],
-        "type": "object"
+        "additionalProperties": false
       },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
       "request": {
         "method": "GET",
         "path": "/v2/reservations/bookings",
@@ -160,204 +302,848 @@
         "success": [
           200
         ]
-      },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "title": "List bookings",
-      "validationMode": "strict-generated"
+      }
     },
-    "healthcheck": {
-      "description": "Validate the Lodgify API key with GET /v2/properties?page=1&size=1.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {},
-        "type": "object"
-      },
+    "bookings.get": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
       "kind": "action",
-      "maxInputBytes": 4096,
-      "maxResponseBytes": 65536,
+      "sideEffect": "read",
+      "title": "Get booking",
+      "description": "Get one Lodgify booking by identifier.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "bookingId"
+        ],
+        "properties": {
+          "bookingId": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": false
+      },
       "outputSchema": {
-        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "required": [
-          "data"
-        ],
-        "type": "object"
+        "additionalProperties": false
       },
-      "request": {
-        "method": "GET",
-        "path": "/v2/properties",
-        "query": {
-          "includeCount": true,
-          "page": 1,
-          "size": 1
-        },
-        "success": [
-          200
-        ]
-      },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 5000,
-      "title": "Healthcheck",
-      "validationMode": "strict-generated"
-    },
-    "properties.get": {
-      "description": "Get one Lodgify property by identifier.",
       "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "propertyId": {
-            "minimum": 1,
-            "type": "integer"
-          }
-        },
-        "required": [
-          "propertyId"
-        ],
-        "type": "object"
-      },
-      "kind": "action",
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "outputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "type": "object"
-      },
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
       "request": {
         "method": "GET",
-        "path": "/v2/properties/{{propertyId}}",
+        "path": "/v2/reservations/bookings/{{bookingId}}",
         "success": [
           200
         ]
-      },
-      "responseFormat": "json",
-      "sideEffect": "read",
+      }
+    },
+    "properties.deleted.list": {
       "timeoutMs": 15000,
-      "title": "Get property",
-      "validationMode": "strict-generated"
-    },
-    "properties.list": {
-      "description": "List Lodgify properties with optional pagination and total count.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "includeCount": {
-            "type": "boolean"
-          },
-          "page": {
-            "minimum": 1,
-            "type": "integer"
-          },
-          "size": {
-            "maximum": 50,
-            "minimum": 1,
-            "type": "integer"
-          }
-        },
-        "type": "object"
-      },
-      "kind": "action",
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
-      "outputSchema": {
-        "additionalProperties": false,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List deleted properties",
+      "description": "List Lodgify properties deleted since an optional date.",
+      "inputSchema": {
+        "type": "object",
         "properties": {
-          "data": {
-            "type": "object"
+          "deletedSince": {
+            "type": "string",
+            "description": "Include properties deleted since this datetime."
           }
         },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
         "required": [
           "data"
         ],
-        "type": "object"
-      },
-      "request": {
-        "method": "GET",
-        "path": "/v2/properties",
-        "query": {
-          "includeCount": "{{includeCount}}",
-          "page": "{{page}}",
-          "size": "{{size}}"
-        },
-        "success": [
-          200
-        ]
-      },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "title": "List properties",
-      "validationMode": "strict-generated"
-    },
-    "rooms.list": {
-      "description": "List room types configured for a Lodgify property.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "propertyId": {
-            "minimum": 1,
-            "type": "integer"
-          }
-        },
-        "required": [
-          "propertyId"
-        ],
-        "type": "object"
-      },
-      "kind": "action",
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "outputSchema": {
-        "additionalProperties": false,
         "properties": {
           "data": {
             "type": "array"
           }
         },
-        "required": [
-          "data"
-        ],
-        "type": "object"
+        "additionalProperties": false
       },
       "request": {
         "method": "GET",
-        "path": "/v2/properties/{{propertyId}}/rooms",
+        "path": "/v2/deletedproperties",
+        "success": [
+          200
+        ],
+        "query": {
+          "deletedSince": "{{deletedSince}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "bookings.delete": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "destructive",
+      "title": "Delete booking",
+      "description": "Move a Lodgify booking to the trash.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "bookingId": {
+            "type": "integer",
+            "description": "Booking ID.",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "bookingId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "deleted",
+          "bookingId"
+        ],
+        "properties": {
+          "deleted": {
+            "type": "boolean"
+          },
+          "bookingId": {
+            "type": "integer"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/v1/reservation/booking/{{bookingId}}",
+        "success": [
+          200,
+          204
+        ],
+        "result": {
+          "deleted": true,
+          "bookingId": "{{input.bookingId}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "bookings.checkin": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Check in booking",
+      "description": "Set the check-in time for a Lodgify booking.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "bookingId": {
+            "type": "integer",
+            "description": "Booking ID.",
+            "minimum": 1
+          },
+          "time": {
+            "type": "string",
+            "description": "Check-in time in HH:mm:ss in the property timezone.",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "bookingId",
+          "time"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "ok",
+          "bookingId"
+        ],
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          },
+          "bookingId": {
+            "type": "integer"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/v2/reservations/bookings/{{bookingId}}/checkin",
+        "success": [
+          200,
+          204
+        ],
+        "body": {
+          "time": "{{time}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "result": {
+          "ok": true,
+          "bookingId": "{{input.bookingId}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "bookings.checkout": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Check out booking",
+      "description": "Set the check-out time for a Lodgify booking.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "bookingId": {
+            "type": "integer",
+            "description": "Booking ID.",
+            "minimum": 1
+          },
+          "time": {
+            "type": "string",
+            "description": "Check-out time in HH:mm:ss in the property timezone.",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "bookingId",
+          "time"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "ok",
+          "bookingId"
+        ],
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          },
+          "bookingId": {
+            "type": "integer"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/v2/reservations/bookings/{{bookingId}}/checkout",
+        "success": [
+          200,
+          204
+        ],
+        "body": {
+          "time": "{{time}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "result": {
+          "ok": true,
+          "bookingId": "{{input.bookingId}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "bookings.book": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Mark booking booked",
+      "description": "Change a Lodgify booking status to Booked and update availability.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "bookingId": {
+            "type": "integer",
+            "description": "Booking ID.",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "bookingId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "ok",
+          "bookingId"
+        ],
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          },
+          "bookingId": {
+            "type": "integer"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/v1/reservation/booking/{{bookingId}}/book",
+        "success": [
+          200,
+          204
+        ],
+        "result": {
+          "ok": true,
+          "bookingId": "{{input.bookingId}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "bookings.decline": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Decline booking",
+      "description": "Change a Lodgify booking status to Declined.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "bookingId": {
+            "type": "integer",
+            "description": "Booking ID.",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "bookingId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "ok",
+          "bookingId"
+        ],
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          },
+          "bookingId": {
+            "type": "integer"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/v1/reservation/booking/{{bookingId}}/decline",
+        "success": [
+          200,
+          204
+        ],
+        "result": {
+          "ok": true,
+          "bookingId": "{{input.bookingId}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "availability.property.get": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Get property availability",
+      "description": "Get Lodgify availability calendar data for a property over a date range.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "propertyId": {
+            "type": "integer",
+            "description": "Property ID.",
+            "minimum": 1
+          },
+          "start": {
+            "type": "string",
+            "description": "Calendar start datetime."
+          },
+          "end": {
+            "type": "string",
+            "description": "Calendar end datetime."
+          },
+          "includeDetails": {
+            "type": "boolean",
+            "description": "Include detailed booking status."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "propertyId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/availability/{{propertyId}}",
+        "success": [
+          200
+        ],
+        "query": {
+          "start": "{{start}}",
+          "end": "{{end}}",
+          "includeDetails": "{{includeDetails}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "availability.room.get": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Get room availability",
+      "description": "Get Lodgify availability calendar data for a room type over a date range.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "propertyId": {
+            "type": "integer",
+            "description": "Property ID.",
+            "minimum": 1
+          },
+          "roomTypeId": {
+            "type": "integer",
+            "description": "Room type ID.",
+            "minimum": 1
+          },
+          "start": {
+            "type": "string",
+            "description": "Calendar start datetime."
+          },
+          "end": {
+            "type": "string",
+            "description": "Calendar end datetime."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "propertyId",
+          "roomTypeId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "array",
+              "object"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/availability/{{propertyId}}/{{roomTypeId}}",
+        "success": [
+          200
+        ],
+        "query": {
+          "start": "{{start}}",
+          "end": "{{end}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "availability.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List availability",
+      "description": "Get Lodgify availability calendar data for all properties over a date range.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "start": {
+            "type": "string",
+            "description": "Calendar start datetime."
+          },
+          "end": {
+            "type": "string",
+            "description": "Calendar end datetime."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/availability",
+        "success": [
+          200
+        ],
+        "query": {
+          "start": "{{start}}",
+          "end": "{{end}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "rates.calendar.get": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Get rates calendar",
+      "description": "Get Lodgify nightly rates for a property room type over a date range.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "houseId": {
+            "type": "integer",
+            "description": "Property/house ID.",
+            "minimum": 1
+          },
+          "roomTypeId": {
+            "type": "integer",
+            "description": "Room type ID.",
+            "minimum": 1
+          },
+          "startDate": {
+            "type": "string",
+            "description": "Inclusive start date (yyyy-MM-dd).",
+            "minLength": 1
+          },
+          "endDate": {
+            "type": "string",
+            "description": "Inclusive end date (yyyy-MM-dd).",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "houseId",
+          "roomTypeId",
+          "startDate",
+          "endDate"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/rates/calendar",
+        "success": [
+          200
+        ],
+        "query": {
+          "houseId": "{{houseId}}",
+          "roomTypeId": "{{roomTypeId}}",
+          "startDate": "{{startDate}}",
+          "endDate": "{{endDate}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "rates.settings.get": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Get rate settings",
+      "description": "Get Lodgify rate settings for a property.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "houseId": {
+            "type": "integer",
+            "description": "Property/house ID.",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "houseId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/rates/settings",
+        "success": [
+          200
+        ],
+        "query": {
+          "houseId": "{{houseId}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "webhooks.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List webhooks",
+      "description": "List Lodgify webhook subscriptions.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/webhooks/v1/list",
         "success": [
           200
         ]
       },
-      "responseFormat": "json",
-      "sideEffect": "read",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "webhooks.subscribe": {
       "timeoutMs": 15000,
-      "title": "List property rooms",
-      "validationMode": "strict-generated"
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Subscribe webhook",
+      "description": "Subscribe a unique target URL to a Lodgify webhook event.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "target_url": {
+            "type": "string",
+            "description": "Callback URL. Must be unique.",
+            "minLength": 1
+          },
+          "event": {
+            "type": "string",
+            "description": "Webhook event type.",
+            "enum": [
+              "rate_change",
+              "availability_change",
+              "booking_new_any_status",
+              "booking_new_status_booked",
+              "booking_change",
+              "booking_status_change_booked",
+              "booking_status_change_tentative",
+              "booking_status_change_open",
+              "booking_status_change_declined",
+              "guest_message_received"
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "target_url",
+          "event"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/webhooks/v1/subscribe",
+        "success": [
+          200,
+          201
+        ],
+        "body": {
+          "target_url": "{{target_url}}",
+          "event": "{{event}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "messaging.thread.get": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Get message thread",
+      "description": "Get a Lodgify guest messaging thread by GUID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "threadGuid": {
+            "type": "string",
+            "description": "Thread UUID.",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "threadGuid"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/messaging/{{threadGuid}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
     }
   },
   "provenance": {
     "source": {
-      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
-      "url": "https://github.com/oomol-lab/open-connector"
+      "url": "https://github.com/oomol-lab/open-connector",
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"
     }
   },
-  "runtime": "bun",
-  "version": "0.1.0",
-  "visibility": "public"
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
+    }
+  }
 }
