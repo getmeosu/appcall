@@ -28595,57 +28595,65 @@
     "public": true
   },
   {
-    "digest": "287fbea74c91c63d0f3c0da7e46d263b6ea5c86573256c9ecd8a65ae73854a0f",
-    "egress": true,
     "key": "attio",
+    "digest": "418e856bfca59b125fd8407a813c31e590da171106d9e77ebbe4bdfcd5258ec0",
+    "public": true,
+    "egress": true,
     "operations": [
       {
+        "key": "attributes.list",
+        "kind": "action",
+        "timeoutMs": 10000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
         "destructive": false,
+        "tool": true,
         "inputSchema": {
-          "additionalProperties": false,
+          "type": "object",
           "properties": {
-            "identifier": {
-              "minLength": 1,
-              "type": "string"
-            },
-            "limit": {
-              "maximum": 100,
-              "minimum": 1,
-              "type": "integer"
-            },
-            "offset": {
-              "maximum": 100000,
-              "minimum": 0,
-              "type": "integer"
-            },
-            "showArchived": {
-              "type": "boolean"
-            },
             "target": {
+              "type": "string",
               "enum": [
                 "objects",
                 "lists"
-              ],
-              "type": "string"
+              ]
+            },
+            "identifier": {
+              "type": "string",
+              "minLength": 1
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            },
+            "offset": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 100000
+            },
+            "showArchived": {
+              "type": "boolean"
             }
           },
           "required": [
             "target",
             "identifier"
           ],
-          "type": "object"
+          "additionalProperties": false
         },
-        "key": "attributes.list",
-        "kind": "action",
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
         "outputSchema": {
+          "type": "object",
+          "required": [
+            "attributes"
+          ],
           "properties": {
             "attributes": {
+              "type": "array",
               "items": {
                 "type": "object"
-              },
-              "type": "array"
+              }
             },
             "pagination": {
               "type": [
@@ -28653,212 +28661,838 @@
                 "null"
               ]
             }
-          },
-          "required": [
-            "attributes"
-          ],
-          "type": "object"
-        },
-        "read": true,
-        "timeoutMs": 10000,
-        "tool": true
+          }
+        }
       },
       {
+        "key": "comments.create",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
         "destructive": false,
+        "tool": true,
         "inputSchema": {
+          "type": "object",
+          "properties": {
+            "content": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Plaintext comment body."
+            },
+            "format": {
+              "type": "string",
+              "enum": [
+                "plaintext"
+              ],
+              "description": "Comment format. Currently plaintext."
+            },
+            "author": {
+              "type": "object",
+              "description": "Author actor with type workspace-member and id."
+            },
+            "threadId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Existing thread UUID."
+            },
+            "record": {
+              "type": "object",
+              "description": "Record reference with object and record_id."
+            },
+            "entry": {
+              "type": "object",
+              "description": "List entry reference with list and entry_id."
+            }
+          },
           "additionalProperties": false,
-          "properties": {},
-          "type": "object"
+          "required": [
+            "content",
+            "author"
+          ]
         },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "comment"
+          ],
+          "properties": {
+            "comment": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      {
         "key": "healthcheck",
         "kind": "action",
+        "timeoutMs": 5000,
         "maxInputBytes": 4096,
         "maxResponseBytes": 65536,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        },
         "outputSchema": {
+          "type": "object",
+          "required": [
+            "self"
+          ],
           "properties": {
             "self": {
               "type": "object"
             }
-          },
-          "required": [
-            "self"
-          ],
-          "type": "object"
-        },
-        "read": true,
-        "timeoutMs": 5000,
-        "tool": true
+          }
+        }
       },
       {
+        "key": "lists.get",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
         "destructive": false,
+        "tool": true,
         "inputSchema": {
+          "type": "object",
+          "properties": {
+            "list": {
+              "type": "string",
+              "minLength": 1,
+              "description": "List UUID or API slug."
+            }
+          },
           "additionalProperties": false,
+          "required": [
+            "list"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "list"
+          ],
+          "properties": {
+            "list": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      {
+        "key": "lists.list",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "lists"
+          ],
+          "properties": {
+            "lists": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            }
+          }
+        }
+      },
+      {
+        "key": "notes.create",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "parentObject": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Parent object slug, e.g. people."
+            },
+            "parentRecordId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Parent record UUID."
+            },
+            "title": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Note title."
+            },
+            "content": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Note body."
+            },
+            "format": {
+              "type": "string",
+              "enum": [
+                "plaintext",
+                "markdown"
+              ],
+              "description": "Note body format."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "parentObject",
+            "parentRecordId",
+            "title",
+            "content"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "note"
+          ],
+          "properties": {
+            "note": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      {
+        "key": "notes.get",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "noteId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Note UUID."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "noteId"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "note"
+          ],
+          "properties": {
+            "note": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      {
+        "key": "notes.list",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "parentObject": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Parent object slug."
+            },
+            "parentRecordId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Parent record UUID."
+            },
+            "limit": {
+              "type": "integer",
+              "description": "Page size.",
+              "minimum": 1,
+              "maximum": 50
+            },
+            "offset": {
+              "type": "integer",
+              "description": "Number of notes to skip.",
+              "minimum": 0
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "notes"
+          ],
+          "properties": {
+            "notes": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            },
+            "pagination": {
+              "type": [
+                "object",
+                "null"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "key": "objects.get",
+        "kind": "action",
+        "timeoutMs": 10000,
+        "maxInputBytes": 4096,
+        "maxResponseBytes": 1048576,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
           "properties": {
             "object": {
-              "minLength": 1,
-              "type": "string"
+              "type": "string",
+              "minLength": 1
             }
           },
           "required": [
             "object"
           ],
-          "type": "object"
+          "additionalProperties": false
         },
-        "key": "objects.get",
-        "kind": "action",
-        "maxInputBytes": 4096,
-        "maxResponseBytes": 1048576,
         "outputSchema": {
+          "type": "object",
+          "required": [
+            "object"
+          ],
           "properties": {
             "object": {
               "type": "object"
             }
-          },
-          "required": [
-            "object"
-          ],
-          "type": "object"
-        },
-        "read": true,
-        "timeoutMs": 10000,
-        "tool": true
+          }
+        }
       },
       {
-        "destructive": false,
-        "inputSchema": {
-          "additionalProperties": false,
-          "properties": {},
-          "type": "object"
-        },
         "key": "objects.list",
         "kind": "action",
+        "timeoutMs": 10000,
         "maxInputBytes": 4096,
         "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        },
         "outputSchema": {
-          "properties": {
-            "objects": {
-              "items": {
-                "type": "object"
-              },
-              "type": "array"
-            }
-          },
+          "type": "object",
           "required": [
             "objects"
           ],
-          "type": "object"
-        },
-        "read": true,
-        "timeoutMs": 10000,
-        "tool": true
+          "properties": {
+            "objects": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            }
+          }
+        }
       },
       {
+        "key": "records.assert",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
         "destructive": false,
+        "tool": true,
         "inputSchema": {
-          "additionalProperties": false,
+          "type": "object",
           "properties": {
             "object": {
+              "type": "string",
               "minLength": 1,
-              "type": "string"
+              "description": "Object ID or API slug, e.g. people."
+            },
+            "matchingAttribute": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Unique attribute slug used to match an existing record."
+            },
+            "values": {
+              "type": "object",
+              "description": "Attribute values keyed by slug."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "object",
+            "matchingAttribute",
+            "values"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "record"
+          ],
+          "properties": {
+            "record": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      {
+        "key": "records.create",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "object": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Object ID or API slug, e.g. people."
+            },
+            "values": {
+              "type": "object",
+              "description": "Attribute values keyed by slug."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "object",
+            "values"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "record"
+          ],
+          "properties": {
+            "record": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      {
+        "key": "records.delete",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 65536,
+        "read": false,
+        "destructive": true,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "object": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Object ID or API slug, e.g. people."
             },
             "recordId": {
+              "type": "string",
               "minLength": 1,
-              "type": "string"
+              "description": "Record UUID."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "object",
+            "recordId"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "record"
+          ],
+          "properties": {
+            "record": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      {
+        "key": "records.get",
+        "kind": "action",
+        "timeoutMs": 10000,
+        "maxInputBytes": 8192,
+        "maxResponseBytes": 1048576,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "object": {
+              "type": "string",
+              "minLength": 1
+            },
+            "recordId": {
+              "type": "string",
+              "minLength": 1
             }
           },
           "required": [
             "object",
             "recordId"
           ],
-          "type": "object"
+          "additionalProperties": false
         },
-        "key": "records.get",
-        "kind": "action",
-        "maxInputBytes": 8192,
-        "maxResponseBytes": 1048576,
         "outputSchema": {
+          "type": "object",
+          "required": [
+            "record"
+          ],
           "properties": {
             "record": {
               "type": "object"
             }
-          },
-          "required": [
-            "record"
-          ],
-          "type": "object"
-        },
-        "read": true,
-        "timeoutMs": 10000,
-        "tool": true
+          }
+        }
       },
       {
+        "key": "records.list",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
         "destructive": false,
+        "tool": true,
         "inputSchema": {
-          "additionalProperties": false,
+          "type": "object",
           "properties": {
+            "object": {
+              "type": "string",
+              "minLength": 1
+            },
             "filter": {
               "type": "object"
             },
             "filterViewId": {
-              "minLength": 1,
-              "type": "string"
-            },
-            "limit": {
-              "maximum": 100,
-              "minimum": 1,
-              "type": "integer"
-            },
-            "object": {
-              "minLength": 1,
-              "type": "string"
-            },
-            "offset": {
-              "maximum": 100000,
-              "minimum": 0,
-              "type": "integer"
+              "type": "string",
+              "minLength": 1
             },
             "sorts": {
+              "type": "array",
               "items": {
                 "type": "object"
-              },
-              "type": "array"
+              }
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            },
+            "offset": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 100000
             }
           },
           "required": [
             "object"
           ],
-          "type": "object"
+          "additionalProperties": false
         },
-        "key": "records.list",
-        "kind": "action",
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
         "outputSchema": {
+          "type": "object",
+          "required": [
+            "records"
+          ],
           "properties": {
+            "records": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            },
             "pagination": {
               "type": [
                 "object",
                 "null"
               ]
+            }
+          }
+        }
+      },
+      {
+        "key": "records.update",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "object": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Object ID or API slug, e.g. people."
             },
-            "records": {
+            "recordId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Record UUID."
+            },
+            "values": {
+              "type": "object",
+              "description": "Attribute values keyed by slug."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "object",
+            "recordId",
+            "values"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "record"
+          ],
+          "properties": {
+            "record": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      {
+        "key": "tasks.create",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "content": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Task plaintext content."
+            },
+            "deadlineAt": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Optional ISO-8601 deadline."
+            },
+            "isCompleted": {
+              "type": "boolean",
+              "description": "Whether the task is already complete."
+            },
+            "linkedRecords": {
+              "type": "array",
               "items": {
                 "type": "object"
               },
-              "type": "array"
+              "description": "Linked records with target_object_id and target_record_id."
+            },
+            "assignees": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              },
+              "description": "Assignees with referenced_actor_type and referenced_actor_id."
             }
           },
+          "additionalProperties": false,
           "required": [
-            "records"
-          ],
-          "type": "object"
+            "content"
+          ]
         },
-        "read": true,
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "task"
+          ],
+          "properties": {
+            "task": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      {
+        "key": "tasks.get",
+        "kind": "action",
         "timeoutMs": 15000,
-        "tool": true
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "taskId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Task UUID."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "taskId"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "task"
+          ],
+          "properties": {
+            "task": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      {
+        "key": "tasks.list",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "linkedObject": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Object slug to filter linked records."
+            },
+            "linkedRecordId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Linked record UUID."
+            },
+            "limit": {
+              "type": "integer",
+              "description": "Page size.",
+              "minimum": 1,
+              "maximum": 500
+            },
+            "offset": {
+              "type": "integer",
+              "description": "Number of tasks to skip.",
+              "minimum": 0
+            },
+            "sort": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Sort order, e.g. created_at:desc."
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "tasks"
+          ],
+          "properties": {
+            "tasks": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            },
+            "pagination": {
+              "type": [
+                "object",
+                "null"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "key": "workspace_members.list",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "members"
+          ],
+          "properties": {
+            "members": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            }
+          }
+        }
       }
-    ],
-    "public": true
+    ]
   },
   {
     "digest": "1e283600f63e23d29673efbc656d68509003c49f80c94bce9c802d67af9629df",
@@ -85893,31 +86527,131 @@
     "public": true
   },
   {
-    "digest": "2cdabce0ad0bf2cf2598cd94fd68d036121d47816454fa4b480887eebe640656",
-    "egress": true,
     "key": "coda",
+    "digest": "a5d85b60b91bce24f82ba28a12e41b512a1a1ce4fb6832c217f1c8f04c4fafb6",
+    "public": true,
+    "egress": true,
     "operations": [
       {
+        "key": "automations.trigger",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
         "destructive": false,
+        "tool": true,
         "inputSchema": {
-          "additionalProperties": false,
+          "type": "object",
           "properties": {
             "docId": {
+              "type": "string",
               "minLength": 1,
-              "type": "string"
+              "description": "Coda doc ID."
             },
-            "limit": {
-              "maximum": 100,
-              "minimum": 1,
-              "type": "integer"
-            },
-            "pageToken": {
+            "ruleId": {
+              "type": "string",
               "minLength": 1,
-              "type": "string"
+              "description": "Automation rule ID."
+            },
+            "payload": {
+              "type": "object",
+              "description": "Optional JSON payload delivered to the automation."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "docId",
+            "ruleId"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "mutation"
+          ],
+          "properties": {
+            "mutation": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      {
+        "key": "columns.get",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "docId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Coda doc ID."
             },
             "tableIdOrName": {
+              "type": "string",
               "minLength": 1,
-              "type": "string"
+              "description": "Table ID or name."
+            },
+            "columnIdOrName": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Column ID or name."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "docId",
+            "tableIdOrName",
+            "columnIdOrName"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "column"
+          ],
+          "properties": {
+            "column": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      {
+        "key": "columns.list",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "docId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "tableIdOrName": {
+              "type": "string",
+              "minLength": 1
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            },
+            "pageToken": {
+              "type": "string",
+              "minLength": 1
             },
             "visibleOnly": {
               "type": "boolean"
@@ -85927,80 +86661,193 @@
             "docId",
             "tableIdOrName"
           ],
-          "type": "object"
+          "additionalProperties": false
         },
-        "key": "columns.list",
-        "kind": "action",
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
         "outputSchema": {
+          "type": "object",
+          "required": [
+            "items"
+          ],
           "properties": {
             "items": {
+              "type": "array",
               "items": {
                 "type": "object"
-              },
-              "type": "array"
-            },
-            "nextPageLink": {
-              "type": [
-                "string",
-                "null"
-              ]
+              }
             },
             "nextPageToken": {
               "type": [
                 "string",
                 "null"
               ]
+            },
+            "nextPageLink": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "key": "controls.list",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "docId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Coda doc ID."
+            },
+            "limit": {
+              "type": "integer",
+              "description": "Page size.",
+              "minimum": 1,
+              "maximum": 100
+            },
+            "pageToken": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Opaque pagination token."
+            },
+            "sortBy": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Sort field."
             }
           },
+          "additionalProperties": false,
+          "required": [
+            "docId"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
           "required": [
             "items"
           ],
-          "type": "object"
-        },
-        "read": true,
-        "timeoutMs": 15000,
-        "tool": true
+          "properties": {
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            },
+            "nextPageToken": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "nextPageLink": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        }
       },
       {
+        "key": "docs.create",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
         "destructive": false,
+        "tool": true,
         "inputSchema": {
-          "additionalProperties": false,
+          "type": "object",
+          "properties": {
+            "title": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Title for the new doc."
+            },
+            "folderId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Folder ID to create the doc in."
+            },
+            "timezone": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Timezone for the new doc."
+            },
+            "sourceDoc": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Optional doc ID to copy."
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "doc"
+          ],
+          "properties": {
+            "doc": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      {
+        "key": "docs.get",
+        "kind": "action",
+        "timeoutMs": 10000,
+        "maxInputBytes": 4096,
+        "maxResponseBytes": 1048576,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
           "properties": {
             "docId": {
-              "minLength": 1,
-              "type": "string"
+              "type": "string",
+              "minLength": 1
             }
           },
           "required": [
             "docId"
           ],
-          "type": "object"
+          "additionalProperties": false
         },
-        "key": "docs.get",
-        "kind": "action",
-        "maxInputBytes": 4096,
-        "maxResponseBytes": 1048576,
         "outputSchema": {
+          "type": "object",
+          "required": [
+            "doc"
+          ],
           "properties": {
             "doc": {
               "type": "object"
             }
-          },
-          "required": [
-            "doc"
-          ],
-          "type": "object"
-        },
-        "read": true,
-        "timeoutMs": 10000,
-        "tool": true
+          }
+        }
       },
       {
+        "key": "docs.list",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
         "destructive": false,
+        "tool": true,
         "inputSchema": {
-          "additionalProperties": false,
+          "type": "object",
           "properties": {
             "isOwner": {
               "type": "boolean"
@@ -86008,160 +86855,524 @@
             "isPublished": {
               "type": "boolean"
             },
-            "limit": {
-              "maximum": 100,
-              "minimum": 1,
-              "type": "integer"
-            },
-            "pageToken": {
-              "minLength": 1,
-              "type": "string"
-            },
             "query": {
               "type": "string"
             },
             "workspaceId": {
-              "minLength": 1,
-              "type": "string"
+              "type": "string",
+              "minLength": 1
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            },
+            "pageToken": {
+              "type": "string",
+              "minLength": 1
             }
           },
-          "type": "object"
+          "additionalProperties": false
         },
-        "key": "docs.list",
-        "kind": "action",
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
         "outputSchema": {
+          "type": "object",
+          "required": [
+            "items"
+          ],
           "properties": {
             "items": {
+              "type": "array",
               "items": {
                 "type": "object"
-              },
-              "type": "array"
-            },
-            "nextPageLink": {
-              "type": [
-                "string",
-                "null"
-              ]
+              }
             },
             "nextPageToken": {
               "type": [
                 "string",
                 "null"
               ]
+            },
+            "nextPageLink": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "key": "formulas.list",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "docId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Coda doc ID."
+            },
+            "limit": {
+              "type": "integer",
+              "description": "Page size.",
+              "minimum": 1,
+              "maximum": 100
+            },
+            "pageToken": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Opaque pagination token."
+            },
+            "sortBy": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Sort field."
             }
           },
+          "additionalProperties": false,
+          "required": [
+            "docId"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
           "required": [
             "items"
           ],
-          "type": "object"
-        },
-        "read": true,
-        "timeoutMs": 15000,
-        "tool": true
+          "properties": {
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            },
+            "nextPageToken": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "nextPageLink": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        }
       },
       {
-        "destructive": false,
-        "inputSchema": {
-          "additionalProperties": false,
-          "properties": {},
-          "type": "object"
-        },
         "key": "healthcheck",
         "kind": "action",
+        "timeoutMs": 5000,
         "maxInputBytes": 4096,
         "maxResponseBytes": 65536,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        },
         "outputSchema": {
+          "type": "object",
+          "required": [
+            "user"
+          ],
           "properties": {
             "user": {
               "type": "object"
             }
-          },
-          "required": [
-            "user"
-          ],
-          "type": "object"
-        },
-        "read": true,
-        "timeoutMs": 5000,
-        "tool": true
+          }
+        }
       },
       {
+        "key": "mutations.get",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
         "destructive": false,
+        "tool": true,
         "inputSchema": {
+          "type": "object",
+          "properties": {
+            "requestId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Mutation request ID returned by a 202 write."
+            }
+          },
           "additionalProperties": false,
+          "required": [
+            "requestId"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "mutation"
+          ],
+          "properties": {
+            "mutation": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      {
+        "key": "pages.create",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
           "properties": {
             "docId": {
+              "type": "string",
               "minLength": 1,
-              "type": "string"
+              "description": "Coda doc ID."
+            },
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Page name."
+            },
+            "subtitle": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Page subtitle."
+            },
+            "iconName": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Icon name."
+            },
+            "imageUrl": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Cover image URL."
+            },
+            "parentPageId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Parent page ID for a subpage."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "docId"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "page"
+          ],
+          "properties": {
+            "page": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      {
+        "key": "pages.get",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "docId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Coda doc ID."
+            },
+            "pageIdOrName": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Page ID or name."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "docId",
+            "pageIdOrName"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "page"
+          ],
+          "properties": {
+            "page": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      {
+        "key": "pages.list",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "docId": {
+              "type": "string",
+              "minLength": 1
             },
             "limit": {
-              "maximum": 100,
+              "type": "integer",
               "minimum": 1,
-              "type": "integer"
+              "maximum": 100
             },
             "pageToken": {
-              "minLength": 1,
-              "type": "string"
+              "type": "string",
+              "minLength": 1
             }
           },
           "required": [
             "docId"
           ],
-          "type": "object"
+          "additionalProperties": false
         },
-        "key": "pages.list",
-        "kind": "action",
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
         "outputSchema": {
+          "type": "object",
+          "required": [
+            "items"
+          ],
           "properties": {
             "items": {
+              "type": "array",
               "items": {
                 "type": "object"
-              },
-              "type": "array"
-            },
-            "nextPageLink": {
-              "type": [
-                "string",
-                "null"
-              ]
+              }
             },
             "nextPageToken": {
               "type": [
                 "string",
                 "null"
               ]
+            },
+            "nextPageLink": {
+              "type": [
+                "string",
+                "null"
+              ]
             }
-          },
-          "required": [
-            "items"
-          ],
-          "type": "object"
-        },
-        "read": true,
-        "timeoutMs": 15000,
-        "tool": true
+          }
+        }
       },
       {
-        "destructive": false,
+        "key": "rows.delete",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": true,
+        "tool": true,
         "inputSchema": {
-          "additionalProperties": false,
+          "type": "object",
           "properties": {
             "docId": {
+              "type": "string",
               "minLength": 1,
-              "type": "string"
+              "description": "Coda doc ID."
             },
-            "limit": {
-              "maximum": 100,
-              "minimum": 1,
-              "type": "integer"
-            },
-            "pageToken": {
+            "tableIdOrName": {
+              "type": "string",
               "minLength": 1,
-              "type": "string"
+              "description": "Table ID or name."
+            },
+            "rowIdOrName": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Row ID or name."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "docId",
+            "tableIdOrName",
+            "rowIdOrName"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "mutation"
+          ],
+          "properties": {
+            "mutation": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      {
+        "key": "rows.get",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "docId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Coda doc ID."
+            },
+            "tableIdOrName": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Table ID or name."
+            },
+            "rowIdOrName": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Row ID or name."
+            },
+            "useColumnNames": {
+              "type": "boolean",
+              "description": "Return cell keys as column names."
+            },
+            "valueFormat": {
+              "type": "string",
+              "enum": [
+                "simple",
+                "simpleWithArrays",
+                "rich"
+              ],
+              "description": "Cell value format."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "docId",
+            "tableIdOrName",
+            "rowIdOrName"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "row"
+          ],
+          "properties": {
+            "row": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      {
+        "key": "rows.insert",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "docId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Coda doc ID."
+            },
+            "tableIdOrName": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Table ID or name."
+            },
+            "rows": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              },
+              "description": "Row objects with cells."
+            },
+            "keyColumns": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Optional upsert key columns."
+            },
+            "disableParsing": {
+              "type": "boolean",
+              "description": "Disable cell parsing."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "docId",
+            "tableIdOrName",
+            "rows"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "mutation"
+          ],
+          "properties": {
+            "mutation": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      {
+        "key": "rows.list",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "docId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "tableIdOrName": {
+              "type": "string",
+              "minLength": 1
             },
             "query": {
               "type": "string"
@@ -86169,51 +87380,56 @@
             "sortBy": {
               "type": "string"
             },
-            "syncToken": {
-              "minLength": 1,
-              "type": "string"
-            },
-            "tableIdOrName": {
-              "minLength": 1,
-              "type": "string"
-            },
             "useColumnNames": {
               "type": "boolean"
             },
             "valueFormat": {
+              "type": "string",
               "enum": [
                 "simple",
                 "simpleWithArrays",
                 "rich"
-              ],
-              "type": "string"
+              ]
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            },
+            "pageToken": {
+              "type": "string",
+              "minLength": 1
+            },
+            "syncToken": {
+              "type": "string",
+              "minLength": 1
             }
           },
           "required": [
             "docId",
             "tableIdOrName"
           ],
-          "type": "object"
+          "additionalProperties": false
         },
-        "key": "rows.list",
-        "kind": "action",
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
         "outputSchema": {
+          "type": "object",
+          "required": [
+            "items"
+          ],
           "properties": {
             "items": {
+              "type": "array",
               "items": {
                 "type": "object"
-              },
-              "type": "array"
+              }
             },
-            "nextPageLink": {
+            "nextPageToken": {
               "type": [
                 "string",
                 "null"
               ]
             },
-            "nextPageToken": {
+            "nextPageLink": {
               "type": [
                 "string",
                 "null"
@@ -86225,33 +87441,126 @@
                 "null"
               ]
             }
-          },
-          "required": [
-            "items"
-          ],
-          "type": "object"
-        },
-        "read": true,
-        "timeoutMs": 15000,
-        "tool": true
+          }
+        }
       },
       {
+        "key": "rows.update",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
         "destructive": false,
+        "tool": true,
         "inputSchema": {
-          "additionalProperties": false,
+          "type": "object",
           "properties": {
             "docId": {
+              "type": "string",
               "minLength": 1,
-              "type": "string"
+              "description": "Coda doc ID."
+            },
+            "tableIdOrName": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Table ID or name."
+            },
+            "rowIdOrName": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Row ID or name."
+            },
+            "row": {
+              "type": "object",
+              "description": "Row payload with cells."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "docId",
+            "tableIdOrName",
+            "rowIdOrName",
+            "row"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "mutation"
+          ],
+          "properties": {
+            "mutation": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      {
+        "key": "tables.get",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "docId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Coda doc ID."
+            },
+            "tableIdOrName": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Table ID or name."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "docId",
+            "tableIdOrName"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "table"
+          ],
+          "properties": {
+            "table": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      {
+        "key": "tables.list",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "docId": {
+              "type": "string",
+              "minLength": 1
             },
             "limit": {
-              "maximum": 100,
+              "type": "integer",
               "minimum": 1,
-              "type": "integer"
+              "maximum": 100
             },
             "pageToken": {
-              "minLength": 1,
-              "type": "string"
+              "type": "string",
+              "minLength": 1
             },
             "sortBy": {
               "type": "string"
@@ -86260,44 +87569,36 @@
           "required": [
             "docId"
           ],
-          "type": "object"
+          "additionalProperties": false
         },
-        "key": "tables.list",
-        "kind": "action",
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
         "outputSchema": {
+          "type": "object",
+          "required": [
+            "items"
+          ],
           "properties": {
             "items": {
+              "type": "array",
               "items": {
                 "type": "object"
-              },
-              "type": "array"
-            },
-            "nextPageLink": {
-              "type": [
-                "string",
-                "null"
-              ]
+              }
             },
             "nextPageToken": {
               "type": [
                 "string",
                 "null"
               ]
+            },
+            "nextPageLink": {
+              "type": [
+                "string",
+                "null"
+              ]
             }
-          },
-          "required": [
-            "items"
-          ],
-          "type": "object"
-        },
-        "read": true,
-        "timeoutMs": 15000,
-        "tool": true
+          }
+        }
       }
-    ],
-    "public": true
+    ]
   },
   {
     "digest": "13259e4ffe9290271949fd00874a48496cd0df78614b5784c6ee00c918308c99",
@@ -88927,225 +90228,545 @@
     "public": true
   },
   {
-    "digest": "48cc3663e51634e71f46f4f56883a7b6f6ce20eedba9712cdb888aa54d233d53",
-    "egress": true,
     "key": "contentful",
+    "digest": "f1642d91c7208875dd102254f62acd5a45f4e5936520a0b7555fbaadc86a4378",
+    "public": true,
+    "egress": true,
     "operations": [
       {
+        "key": "assets.create",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
         "destructive": false,
+        "tool": true,
         "inputSchema": {
-          "additionalProperties": false,
+          "type": "object",
           "properties": {
-            "environmentId": {
-              "minLength": 1,
-              "type": "string"
-            },
-            "limit": {
-              "maximum": 1000,
-              "minimum": 1,
-              "type": "integer"
-            },
-            "skip": {
-              "minimum": 0,
-              "type": "integer"
-            },
             "spaceId": {
+              "type": "string",
               "minLength": 1,
-              "type": "string"
+              "description": "Contentful space ID."
+            },
+            "environmentId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Environment ID, typically master."
+            },
+            "fields": {
+              "type": "object",
+              "description": "Localized asset fields including title and file."
             }
           },
+          "additionalProperties": false,
+          "required": [
+            "spaceId",
+            "environmentId",
+            "fields"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": [
+                "object",
+                "array"
+              ]
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "assets.get",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "spaceId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Contentful space ID."
+            },
+            "environmentId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Environment ID, typically master."
+            },
+            "assetId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Asset ID."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "spaceId",
+            "environmentId",
+            "assetId"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": [
+                "object",
+                "array"
+              ]
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "assets.list",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "spaceId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Contentful space ID."
+            },
+            "environmentId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Environment ID, typically master."
+            },
+            "limit": {
+              "type": "integer",
+              "description": "Page size.",
+              "minimum": 1,
+              "maximum": 1000
+            },
+            "skip": {
+              "type": "integer",
+              "description": "Number of assets to skip.",
+              "minimum": 0
+            }
+          },
+          "additionalProperties": false,
           "required": [
             "spaceId",
             "environmentId"
-          ],
-          "type": "object"
+          ]
         },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": [
+                "object",
+                "array"
+              ]
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "assets.publish",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "spaceId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Contentful space ID."
+            },
+            "environmentId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Environment ID, typically master."
+            },
+            "assetId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Asset ID."
+            },
+            "version": {
+              "type": "integer",
+              "description": "Current entity version for X-Contentful-Version.",
+              "minimum": 0
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "spaceId",
+            "environmentId",
+            "assetId",
+            "version"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": [
+                "object",
+                "array"
+              ]
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "content_types.get",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "spaceId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Contentful space ID."
+            },
+            "environmentId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Environment ID, typically master."
+            },
+            "contentTypeId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Content type ID."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "spaceId",
+            "environmentId",
+            "contentTypeId"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": [
+                "object",
+                "array"
+              ]
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
         "key": "content_types.list",
         "kind": "action",
+        "timeoutMs": 15000,
         "maxInputBytes": 65536,
         "maxResponseBytes": 5242880,
-        "outputSchema": {
-          "additionalProperties": false,
-          "properties": {
-            "data": {
-              "type": [
-                "object",
-                "array"
-              ]
-            }
-          },
-          "required": [
-            "data"
-          ],
-          "type": "object"
-        },
         "read": true,
-        "timeoutMs": 15000,
-        "tool": true
-      },
-      {
         "destructive": false,
+        "tool": true,
         "inputSchema": {
-          "additionalProperties": false,
+          "type": "object",
           "properties": {
-            "contentType": {
-              "minLength": 1,
-              "type": "string"
+            "spaceId": {
+              "type": "string",
+              "minLength": 1
             },
             "environmentId": {
-              "minLength": 1,
-              "type": "string"
+              "type": "string",
+              "minLength": 1
             },
             "limit": {
-              "maximum": 1000,
+              "type": "integer",
               "minimum": 1,
-              "type": "integer"
-            },
-            "order": {
-              "minLength": 1,
-              "type": "string"
+              "maximum": 1000
             },
             "skip": {
-              "minimum": 0,
-              "type": "integer"
-            },
-            "spaceId": {
-              "minLength": 1,
-              "type": "string"
+              "type": "integer",
+              "minimum": 0
             }
           },
+          "additionalProperties": false,
           "required": [
             "spaceId",
             "environmentId"
-          ],
-          "type": "object"
+          ]
         },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": [
+                "object",
+                "array"
+              ]
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "entries.archive",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "spaceId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Contentful space ID."
+            },
+            "environmentId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Environment ID, typically master."
+            },
+            "entryId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Entry ID."
+            },
+            "version": {
+              "type": "integer",
+              "description": "Current entity version for X-Contentful-Version.",
+              "minimum": 0
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "spaceId",
+            "environmentId",
+            "entryId",
+            "version"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": [
+                "object",
+                "array"
+              ]
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "entries.create",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "spaceId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Contentful space ID."
+            },
+            "environmentId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Environment ID, typically master."
+            },
+            "contentTypeId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Content type ID sent as X-Contentful-Content-Type."
+            },
+            "fields": {
+              "type": "object",
+              "description": "Localized entry fields, e.g. {title: {en-US: 'Hello'}}."
+            },
+            "metadata": {
+              "type": "object",
+              "description": "Optional entry metadata including tags."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "spaceId",
+            "environmentId",
+            "contentTypeId",
+            "fields"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": [
+                "object",
+                "array"
+              ]
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "entries.get",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "spaceId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Contentful space ID."
+            },
+            "environmentId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Environment ID, typically master."
+            },
+            "entryId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Entry ID."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "spaceId",
+            "environmentId",
+            "entryId"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": [
+                "object",
+                "array"
+              ]
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
         "key": "entries.list",
         "kind": "action",
+        "timeoutMs": 15000,
         "maxInputBytes": 65536,
         "maxResponseBytes": 5242880,
-        "outputSchema": {
-          "additionalProperties": false,
-          "properties": {
-            "data": {
-              "type": [
-                "object",
-                "array"
-              ]
-            }
-          },
-          "required": [
-            "data"
-          ],
-          "type": "object"
-        },
         "read": true,
-        "timeoutMs": 15000,
-        "tool": true
-      },
-      {
         "destructive": false,
+        "tool": true,
         "inputSchema": {
-          "additionalProperties": false,
+          "type": "object",
           "properties": {
+            "spaceId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "environmentId": {
+              "type": "string",
+              "minLength": 1
+            },
             "limit": {
-              "maximum": 1000,
+              "type": "integer",
               "minimum": 1,
-              "type": "integer"
+              "maximum": 1000
             },
             "skip": {
-              "minimum": 0,
-              "type": "integer"
-            },
-            "spaceId": {
-              "minLength": 1,
-              "type": "string"
-            }
-          },
-          "required": [
-            "spaceId"
-          ],
-          "type": "object"
-        },
-        "key": "environments.list",
-        "kind": "action",
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "outputSchema": {
-          "additionalProperties": false,
-          "properties": {
-            "data": {
-              "type": [
-                "object",
-                "array"
-              ]
-            }
-          },
-          "required": [
-            "data"
-          ],
-          "type": "object"
-        },
-        "read": true,
-        "timeoutMs": 15000,
-        "tool": true
-      },
-      {
-        "destructive": false,
-        "inputSchema": {
-          "properties": {},
-          "type": "object"
-        },
-        "key": "healthcheck",
-        "kind": "action",
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "outputSchema": {
-          "additionalProperties": false,
-          "properties": {
-            "data": {
-              "type": [
-                "object",
-                "array"
-              ]
-            }
-          },
-          "required": [
-            "data"
-          ],
-          "type": "object"
-        },
-        "read": true,
-        "timeoutMs": 15000,
-        "tool": true
-      },
-      {
-        "destructive": false,
-        "inputSchema": {
-          "additionalProperties": false,
-          "properties": {
-            "limit": {
-              "maximum": 1000,
-              "minimum": 1,
-              "type": "integer"
+              "type": "integer",
+              "minimum": 0
             },
             "order": {
-              "minLength": 1,
-              "type": "string"
+              "type": "string",
+              "minLength": 1
             },
-            "skip": {
-              "minimum": 0,
-              "type": "integer"
+            "contentType": {
+              "type": "string",
+              "minLength": 1
             }
           },
-          "type": "object"
-        },
-        "key": "spaces.list",
-        "kind": "action",
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "outputSchema": {
           "additionalProperties": false,
+          "required": [
+            "spaceId",
+            "environmentId"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
           "properties": {
             "data": {
               "type": [
@@ -89154,17 +90775,542 @@
               ]
             }
           },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "entries.publish",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "spaceId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Contentful space ID."
+            },
+            "environmentId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Environment ID, typically master."
+            },
+            "entryId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Entry ID."
+            },
+            "version": {
+              "type": "integer",
+              "description": "Current entity version for X-Contentful-Version.",
+              "minimum": 0
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "spaceId",
+            "environmentId",
+            "entryId",
+            "version"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
           "required": [
             "data"
           ],
-          "type": "object"
-        },
-        "read": true,
+          "properties": {
+            "data": {
+              "type": [
+                "object",
+                "array"
+              ]
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "entries.unpublish",
+        "kind": "action",
         "timeoutMs": 15000,
-        "tool": true
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "spaceId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Contentful space ID."
+            },
+            "environmentId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Environment ID, typically master."
+            },
+            "entryId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Entry ID."
+            },
+            "version": {
+              "type": "integer",
+              "description": "Current entity version for X-Contentful-Version.",
+              "minimum": 0
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "spaceId",
+            "environmentId",
+            "entryId",
+            "version"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": [
+                "object",
+                "array"
+              ]
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "entries.update",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "spaceId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Contentful space ID."
+            },
+            "environmentId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Environment ID, typically master."
+            },
+            "entryId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Entry ID."
+            },
+            "version": {
+              "type": "integer",
+              "description": "Current entity version for X-Contentful-Version.",
+              "minimum": 0
+            },
+            "contentTypeId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Content type ID sent as X-Contentful-Content-Type."
+            },
+            "fields": {
+              "type": "object",
+              "description": "Localized entry fields."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "spaceId",
+            "environmentId",
+            "entryId",
+            "version",
+            "contentTypeId",
+            "fields"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": [
+                "object",
+                "array"
+              ]
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "environments.get",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "spaceId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Contentful space ID."
+            },
+            "environmentId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Environment ID, typically master."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "spaceId",
+            "environmentId"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": [
+                "object",
+                "array"
+              ]
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "environments.list",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "spaceId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000
+            },
+            "skip": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "spaceId"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": [
+                "object",
+                "array"
+              ]
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "healthcheck",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {}
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": [
+                "object",
+                "array"
+              ]
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "locales.list",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "spaceId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Contentful space ID."
+            },
+            "environmentId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Environment ID, typically master."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "spaceId",
+            "environmentId"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": [
+                "object",
+                "array"
+              ]
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "spaces.get",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "spaceId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Contentful space ID."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "spaceId"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": [
+                "object",
+                "array"
+              ]
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "spaces.list",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000
+            },
+            "skip": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "order": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": [
+                "object",
+                "array"
+              ]
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "tags.list",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "spaceId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Contentful space ID."
+            },
+            "environmentId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Environment ID, typically master."
+            },
+            "limit": {
+              "type": "integer",
+              "description": "Page size.",
+              "minimum": 1,
+              "maximum": 1000
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "spaceId",
+            "environmentId"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": [
+                "object",
+                "array"
+              ]
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "webhooks.list",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "spaceId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Contentful space ID."
+            },
+            "limit": {
+              "type": "integer",
+              "description": "Page size.",
+              "minimum": 1,
+              "maximum": 100
+            },
+            "skip": {
+              "type": "integer",
+              "description": "Number of webhook definitions to skip.",
+              "minimum": 0
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "spaceId"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": [
+                "object",
+                "array"
+              ]
+            }
+          },
+          "additionalProperties": false
+        }
       }
-    ],
-    "public": true
+    ]
   },
   {
     "digest": "4336f8ec148abb92a0d3408ad71a8e9ab1dc46c6b2b948ee55029adc66f2fe68",
