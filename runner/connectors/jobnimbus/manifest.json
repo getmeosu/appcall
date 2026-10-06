@@ -1,1 +1,1367 @@
-{"auth":{"scopes":[],"setup":{"fields":[{"key":"apiKey","label":"JobNimbus API key","required":true,"secret":true}],"mode":"api_key"},"type":"api_key"},"categories":["crm"],"evidence":{"fixture":{"status":"supplied"},"live":{"status":"unverified"}},"http":{"auth":{"field":"apiKey","in":"header","name":"Authorization","value":"Bearer {{apiKey}}"},"baseUrl":"https://app.jobnimbus.com/api1","errors":{"defaultRetryAfterSeconds":30,"messagePaths":["message","error","errorMessage","detail"],"rateLimitStatuses":[429],"retryAfterHeader":"retry-after"},"headers":{"Accept":"application/json"}},"key":"jobnimbus","models":["contact","job"],"name":"JobNimbus","network":{"allowedHosts":["app.jobnimbus.com"]},"operations":{"contacts.get":{"description":"Retrieve one JobNimbus contact by identifier.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{"contactId":{"minLength":1,"type":"string"}},"required":["contactId"],"type":"object"},"kind":"action","maxInputBytes":65536,"maxResponseBytes":5242880,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/contacts/{{contactId}}","success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":15000,"title":"Get contact","validationMode":"strict-generated"},"contacts.list":{"description":"List JobNimbus contacts with optional size and from pagination.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{"from":{"minimum":0,"type":"integer"},"size":{"maximum":1000,"minimum":1,"type":"integer"}},"type":"object"},"kind":"action","maxInputBytes":65536,"maxResponseBytes":5242880,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/contacts","query":{"from":"{{from}}","size":"{{size}}"},"success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":15000,"title":"List contacts","validationMode":"strict-generated"},"healthcheck":{"description":"Validate the JobNimbus API key with a one-contact list probe.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{},"type":"object"},"kind":"action","maxInputBytes":4096,"maxResponseBytes":65536,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/contacts","query":{"size":1},"success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":5000,"title":"Healthcheck","validationMode":"strict-generated"},"jobs.get":{"description":"Retrieve one JobNimbus job by identifier.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{"jobId":{"minLength":1,"type":"string"}},"required":["jobId"],"type":"object"},"kind":"action","maxInputBytes":65536,"maxResponseBytes":5242880,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/jobs/{{jobId}}","success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":15000,"title":"Get job","validationMode":"strict-generated"},"jobs.list":{"description":"List JobNimbus jobs with optional size and from pagination.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{"from":{"minimum":0,"type":"integer"},"size":{"maximum":1000,"minimum":1,"type":"integer"}},"type":"object"},"kind":"action","maxInputBytes":65536,"maxResponseBytes":5242880,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/jobs","query":{"from":"{{from}}","size":"{{size}}"},"success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":15000,"title":"List jobs","validationMode":"strict-generated"}},"provenance":{"source":{"revision":"33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a","url":"https://github.com/oomol-lab/open-connector"}},"runtime":"bun","version":"0.1.0","visibility":"public"}
+{
+  "key": "jobnimbus",
+  "name": "JobNimbus",
+  "version": "0.2.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "crm"
+  ],
+  "auth": {
+    "type": "api_key",
+    "scopes": [],
+    "setup": {
+      "mode": "api_key",
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "JobNimbus API key",
+          "required": true,
+          "secret": true
+        }
+      ]
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "app.jobnimbus.com"
+    ]
+  },
+  "models": [
+    "contact",
+    "job",
+    "task",
+    "activity",
+    "file",
+    "invoice",
+    "estimate",
+    "product",
+    "workOrder"
+  ],
+  "http": {
+    "baseUrl": "https://app.jobnimbus.com/api1",
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "Authorization",
+      "value": "Bearer {{apiKey}}"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after",
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "message",
+        "error",
+        "errorMessage",
+        "detail"
+      ]
+    },
+    "headers": {
+      "Accept": "application/json"
+    }
+  },
+  "operations": {
+    "healthcheck": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 5000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "title": "Healthcheck",
+      "description": "Validate the JobNimbus API key with a one-contact list probe.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/contacts",
+        "query": {
+          "size": 1
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "contacts.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List contacts",
+      "description": "List JobNimbus contacts with optional size and from pagination.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "size": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000
+          },
+          "from": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/contacts",
+        "query": {
+          "size": "{{size}}",
+          "from": "{{from}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "contacts.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get contact",
+      "description": "Retrieve one JobNimbus contact by identifier.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "contactId"
+        ],
+        "properties": {
+          "contactId": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/contacts/{{contactId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "jobs.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List jobs",
+      "description": "List JobNimbus jobs with optional size and from pagination.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "size": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000
+          },
+          "from": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/jobs",
+        "query": {
+          "size": "{{size}}",
+          "from": "{{from}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "jobs.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get job",
+      "description": "Retrieve one JobNimbus job by identifier.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "jobId"
+        ],
+        "properties": {
+          "jobId": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/jobs/{{jobId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "contacts.create": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Create contact",
+      "description": "Create a JobNimbus contact.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "firstName": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Contact first name."
+          },
+          "lastName": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Contact last name."
+          },
+          "email": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Contact email address."
+          },
+          "displayName": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Display name."
+          },
+          "company": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Company name."
+          },
+          "mobilePhone": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Mobile phone number."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "firstName"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/contacts",
+        "success": [
+          200,
+          201
+        ],
+        "body": {
+          "first_name": "{{firstName}}",
+          "last_name": "{{lastName}}",
+          "email": "{{email}}",
+          "display_name": "{{displayName}}",
+          "company": "{{company}}",
+          "mobile_phone": "{{mobilePhone}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "contacts.update": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Update contact",
+      "description": "Update a JobNimbus contact via PUT /contacts/{contactId}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "contactId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Contact identifier."
+          },
+          "firstName": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Contact first name."
+          },
+          "lastName": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Contact last name."
+          },
+          "email": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Contact email address."
+          },
+          "displayName": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Display name."
+          },
+          "company": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Company name."
+          },
+          "mobilePhone": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Mobile phone number."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "contactId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/contacts/{{contactId}}",
+        "success": [
+          200,
+          201
+        ],
+        "body": {
+          "first_name": "{{firstName}}",
+          "last_name": "{{lastName}}",
+          "email": "{{email}}",
+          "display_name": "{{displayName}}",
+          "company": "{{company}}",
+          "mobile_phone": "{{mobilePhone}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "jobs.create": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Create job",
+      "description": "Create a JobNimbus job.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Job name."
+          },
+          "statusName": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Status name."
+          },
+          "recordTypeName": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Record type name."
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Job description."
+          },
+          "addressLine1": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Street address."
+          },
+          "city": {
+            "type": "string",
+            "minLength": 1,
+            "description": "City."
+          },
+          "zip": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Postal code."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/jobs",
+        "success": [
+          200,
+          201
+        ],
+        "body": {
+          "name": "{{name}}",
+          "status_name": "{{statusName}}",
+          "record_type_name": "{{recordTypeName}}",
+          "description": "{{description}}",
+          "address_line1": "{{addressLine1}}",
+          "city": "{{city}}",
+          "zip": "{{zip}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "jobs.update": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Update job",
+      "description": "Update a JobNimbus job via PUT /jobs/{jobId}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "jobId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Job identifier."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Job name."
+          },
+          "statusName": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Status name."
+          },
+          "recordTypeName": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Record type name."
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Job description."
+          },
+          "addressLine1": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Street address."
+          },
+          "city": {
+            "type": "string",
+            "minLength": 1,
+            "description": "City."
+          },
+          "zip": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Postal code."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "jobId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/jobs/{{jobId}}",
+        "success": [
+          200,
+          201
+        ],
+        "body": {
+          "name": "{{name}}",
+          "status_name": "{{statusName}}",
+          "record_type_name": "{{recordTypeName}}",
+          "description": "{{description}}",
+          "address_line1": "{{addressLine1}}",
+          "city": "{{city}}",
+          "zip": "{{zip}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "tasks.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List tasks",
+      "description": "List JobNimbus tasks with optional size and from pagination.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "size": {
+            "type": "integer",
+            "description": "Page size.",
+            "minimum": 1,
+            "maximum": 1000
+          },
+          "from": {
+            "type": "integer",
+            "description": "Zero-based offset.",
+            "minimum": 0
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/tasks",
+        "success": [
+          200
+        ],
+        "query": {
+          "size": "{{size}}",
+          "from": "{{from}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "tasks.get": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Get task",
+      "description": "Retrieve one JobNimbus task by identifier.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "taskId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Record identifier."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "taskId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/tasks/{{taskId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "tasks.create": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Create task",
+      "description": "Create a JobNimbus task.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Task title."
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Task description."
+          },
+          "recordTypeName": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Record type name."
+          },
+          "isCompleted": {
+            "type": "boolean",
+            "description": "Whether the task is completed."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "title"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/tasks",
+        "success": [
+          200,
+          201
+        ],
+        "body": {
+          "title": "{{title}}",
+          "description": "{{description}}",
+          "record_type_name": "{{recordTypeName}}",
+          "is_completed": "{{isCompleted}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "tasks.update": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Update task",
+      "description": "Update a JobNimbus task via PUT /tasks/{taskId}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "taskId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Task identifier."
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Task title."
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Task description."
+          },
+          "recordTypeName": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Record type name."
+          },
+          "isCompleted": {
+            "type": "boolean",
+            "description": "Whether the task is completed."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "taskId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/tasks/{{taskId}}",
+        "success": [
+          200,
+          201
+        ],
+        "body": {
+          "title": "{{title}}",
+          "description": "{{description}}",
+          "record_type_name": "{{recordTypeName}}",
+          "is_completed": "{{isCompleted}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "activities.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List activities",
+      "description": "List JobNimbus activities with optional size and from pagination.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "size": {
+            "type": "integer",
+            "description": "Page size.",
+            "minimum": 1,
+            "maximum": 1000
+          },
+          "from": {
+            "type": "integer",
+            "description": "Zero-based offset.",
+            "minimum": 0
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/activities",
+        "success": [
+          200
+        ],
+        "query": {
+          "size": "{{size}}",
+          "from": "{{from}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "activities.get": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Get activity",
+      "description": "Retrieve one JobNimbus activity by identifier.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "activityId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Record identifier."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "activityId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/activities/{{activityId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "activities.create": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Create activity",
+      "description": "Create a JobNimbus activity note.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "note": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Activity note body."
+          },
+          "recordTypeName": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Record type name."
+          },
+          "primaryId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Related record identifier."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "note"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/activities",
+        "success": [
+          200,
+          201
+        ],
+        "body": {
+          "note": "{{note}}",
+          "record_type_name": "{{recordTypeName}}",
+          "primary": {
+            "id": "{{primaryId}}"
+          }
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "files.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List files",
+      "description": "List JobNimbus files with optional size and from pagination.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "size": {
+            "type": "integer",
+            "description": "Page size.",
+            "minimum": 1,
+            "maximum": 1000
+          },
+          "from": {
+            "type": "integer",
+            "description": "Zero-based offset.",
+            "minimum": 0
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/files",
+        "success": [
+          200
+        ],
+        "query": {
+          "size": "{{size}}",
+          "from": "{{from}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "files.get": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Get file",
+      "description": "Retrieve one JobNimbus file by identifier.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "fileId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Record identifier."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "fileId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/files/{{fileId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "invoices.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List invoices",
+      "description": "List JobNimbus invoices with optional size and from pagination.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "size": {
+            "type": "integer",
+            "description": "Page size.",
+            "minimum": 1,
+            "maximum": 1000
+          },
+          "from": {
+            "type": "integer",
+            "description": "Zero-based offset.",
+            "minimum": 0
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/invoices",
+        "success": [
+          200
+        ],
+        "query": {
+          "size": "{{size}}",
+          "from": "{{from}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "estimates.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List estimates",
+      "description": "List JobNimbus estimates with optional size and from pagination.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "size": {
+            "type": "integer",
+            "description": "Page size.",
+            "minimum": 1,
+            "maximum": 1000
+          },
+          "from": {
+            "type": "integer",
+            "description": "Zero-based offset.",
+            "minimum": 0
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/estimates",
+        "success": [
+          200
+        ],
+        "query": {
+          "size": "{{size}}",
+          "from": "{{from}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "products.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List products",
+      "description": "List JobNimbus products with optional size and from pagination.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "size": {
+            "type": "integer",
+            "description": "Page size.",
+            "minimum": 1,
+            "maximum": 1000
+          },
+          "from": {
+            "type": "integer",
+            "description": "Zero-based offset.",
+            "minimum": 0
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/products",
+        "success": [
+          200
+        ],
+        "query": {
+          "size": "{{size}}",
+          "from": "{{from}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "workorders.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List work orders",
+      "description": "List JobNimbus work orders with optional size and from pagination.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "size": {
+            "type": "integer",
+            "description": "Page size.",
+            "minimum": 1,
+            "maximum": 1000
+          },
+          "from": {
+            "type": "integer",
+            "description": "Zero-based offset.",
+            "minimum": 0
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/workorders",
+        "success": [
+          200
+        ],
+        "query": {
+          "size": "{{size}}",
+          "from": "{{from}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    }
+  },
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
+    }
+  },
+  "provenance": {
+    "source": {
+      "url": "https://github.com/oomol-lab/open-connector",
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"
+    }
+  }
+}
