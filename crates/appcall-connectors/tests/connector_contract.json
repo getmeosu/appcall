@@ -358647,7 +358647,7 @@
   },
   {
     "key": "sendgrid",
-    "digest": "e8eec64d5a435ca0e21149cf48aa448d04c783392b8b3aef027799d295cd3fb9",
+    "digest": "cedbce365fff73705e5f04e745cceeee69b9ec7cc0287964384b8ebde09cd6ec",
     "public": true,
     "egress": true,
     "operations": [
@@ -361848,6 +361848,52 @@
         }
       },
       {
+        "key": "contactdb.recipients.search.list",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "field_name": {
+              "type": "string",
+              "description": "Recipient field to match exactly. Use a reserved field such as email or a custom field name. Date fields use a unix timestamp at day granularity.",
+              "minLength": 1
+            },
+            "field_value": {
+              "type": "string",
+              "description": "Exact value to match for field_name.",
+              "minLength": 1
+            },
+            "on-behalf-of": {
+              "type": "string",
+              "description": "Parent API key acting for a subuser username or a customer account (account-id <id>). Omit it to call as the authenticated account."
+            }
+          },
+          "required": [
+            "field_name",
+            "field_value"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      {
         "key": "contactdb.recipients.update",
         "kind": "action",
         "timeoutMs": 15000,
@@ -364275,6 +364321,209 @@
             "messageId": {
               "type": "string",
               "description": "X-Message-Id header returned by SendGrid."
+            }
+          }
+        }
+      },
+      {
+        "key": "mail.send.v3",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 5242880,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "personalizations": {
+              "type": "array",
+              "minItems": 1,
+              "description": "Per-recipient envelopes. Each object may set to, cc, bcc, subject, headers, substitutions, custom_args, send_at, and dynamic_template_data.",
+              "items": {
+                "type": "object"
+              }
+            },
+            "from": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "email"
+              ],
+              "description": "Verified sender address for the message.",
+              "properties": {
+                "email": {
+                  "type": "string",
+                  "description": "From email address.",
+                  "minLength": 1
+                },
+                "name": {
+                  "type": "string",
+                  "description": "From display name."
+                }
+              }
+            },
+            "reply_to": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "email"
+              ],
+              "description": "Reply-to address for the message.",
+              "properties": {
+                "email": {
+                  "type": "string",
+                  "description": "Reply-to email address.",
+                  "minLength": 1
+                },
+                "name": {
+                  "type": "string",
+                  "description": "Reply-to display name."
+                }
+              }
+            },
+            "reply_to_list": {
+              "type": "array",
+              "description": "Multiple reply-to addresses. Do not combine with reply_to.",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "email"
+                ],
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "description": "Reply-to email address.",
+                    "minLength": 1
+                  },
+                  "name": {
+                    "type": "string",
+                    "description": "Reply-to display name."
+                  }
+                }
+              }
+            },
+            "subject": {
+              "type": "string",
+              "description": "Global subject. A personalization subject overrides it."
+            },
+            "content": {
+              "type": "array",
+              "description": "Mime bodies, such as text/plain and text/html. Omit when template_id supplies the content.",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "type",
+                  "value"
+                ],
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "description": "Mime type, for example text/plain or text/html.",
+                    "minLength": 1
+                  },
+                  "value": {
+                    "type": "string",
+                    "description": "Body content for this mime type.",
+                    "minLength": 1
+                  }
+                }
+              }
+            },
+            "attachments": {
+              "type": "array",
+              "description": "Files to attach. Each item includes base64 content and a filename.",
+              "items": {
+                "type": "object"
+              }
+            },
+            "template_id": {
+              "type": "string",
+              "description": "Dynamic or legacy template id. Dynamic ids start with d-."
+            },
+            "headers": {
+              "type": "object",
+              "description": "Extra MIME headers. SendGrid-reserved headers cannot be overridden.",
+              "additionalProperties": {
+                "type": "string"
+              }
+            },
+            "categories": {
+              "type": "array",
+              "description": "Category names used to group this send in statistics.",
+              "items": {
+                "type": "string"
+              }
+            },
+            "custom_args": {
+              "type": "object",
+              "description": "String arguments stored with the send and returned on event webhooks.",
+              "additionalProperties": {
+                "type": "string"
+              }
+            },
+            "send_at": {
+              "type": "integer",
+              "description": "Unix timestamp to schedule delivery, at most 72 hours ahead."
+            },
+            "batch_id": {
+              "type": "string",
+              "description": "Batch id used to pause or cancel a scheduled send."
+            },
+            "asm": {
+              "type": "object",
+              "description": "Unsubscribe group to apply to this send.",
+              "properties": {
+                "group_id": {
+                  "type": "integer",
+                  "description": "Suppression group id."
+                },
+                "groups_to_display": {
+                  "type": "array",
+                  "items": {
+                    "type": "integer"
+                  },
+                  "description": "Groups to show on the unsubscribe preferences page."
+                }
+              }
+            },
+            "ip_pool_name": {
+              "type": "string",
+              "description": "Dedicated IP pool to send from."
+            },
+            "mail_settings": {
+              "type": "object",
+              "description": "Per-message mail settings such as sandbox_mode, footer, and bypass filters."
+            },
+            "tracking_settings": {
+              "type": "object",
+              "description": "Per-message click, open, subscription, and Google Analytics tracking."
+            }
+          },
+          "required": [
+            "personalizations",
+            "from"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object",
+              "properties": {
+                "message_id": {
+                  "type": "string",
+                  "description": "Value of the X-Message-Id response header."
+                }
+              }
             }
           }
         }
@@ -367666,6 +367915,48 @@
         }
       },
       {
+        "key": "partners.accounts.by_id.sso.create",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "accountID": {
+              "type": "string",
+              "description": "Customer account id from GET /v3/partners/accounts.",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "accountID"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object",
+              "properties": {
+                "redirect_url": {
+                  "type": "string",
+                  "description": "One-time SSO Location URL."
+                }
+              }
+            }
+          }
+        }
+      },
+      {
         "key": "partners.accounts.by_id.state.list",
         "kind": "action",
         "timeoutMs": 15000,
@@ -367953,6 +368244,114 @@
           "properties": {
             "data": {
               "type": "object"
+            }
+          }
+        }
+      },
+      {
+        "key": "scopes.requests.by_id.approve.update",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "request_id": {
+              "type": "string",
+              "description": "Id of the teammate access request.",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "request_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      {
+        "key": "scopes.requests.by_id.delete",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "request_id": {
+              "type": "string",
+              "description": "Id of the teammate access request.",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "request_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {}
+          }
+        }
+      },
+      {
+        "key": "scopes.requests.list",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "limit": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Page size."
+            },
+            "offset": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Number of records to skip."
+            }
+          }
+        },
+        "outputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "array"
             }
           }
         }
@@ -370404,6 +370803,10 @@
             "offset": {
               "type": "number",
               "description": "Number of records to skip for pagination."
+            },
+            "email": {
+              "type": "string",
+              "description": "Return only the suppression record for this email address."
             }
           },
           "required": []
@@ -370683,6 +371086,10 @@
             "offset": {
               "type": "number",
               "description": "Number of records to skip for pagination."
+            },
+            "email": {
+              "type": "string",
+              "description": "Return only the suppression record for this email address."
             }
           },
           "required": []
@@ -370866,6 +371273,10 @@
             "offset": {
               "type": "number",
               "description": "Number of records to skip for pagination."
+            },
+            "email": {
+              "type": "string",
+              "description": "Return only the suppression record for this email address."
             }
           },
           "required": []
@@ -371046,6 +371457,10 @@
             "offset": {
               "type": "number",
               "description": "Number of records to skip for pagination."
+            },
+            "email": {
+              "type": "string",
+              "description": "Return only the suppression record for this email address."
             }
           },
           "required": []
@@ -372425,6 +372840,56 @@
           "properties": {
             "data": {
               "type": "object"
+            }
+          }
+        }
+      },
+      {
+        "key": "user.account.list",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "on-behalf-of": {
+              "type": "string",
+              "description": "Parent API key acting for a subuser username or a customer account (account-id <id>). Omit it to call as the authenticated account."
+            }
+          }
+        },
+        "outputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object",
+              "required": [
+                "type",
+                "reputation"
+              ],
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "free",
+                    "paid"
+                  ],
+                  "description": "Account type."
+                },
+                "reputation": {
+                  "type": "number",
+                  "description": "Sender reputation."
+                }
+              }
             }
           }
         }
