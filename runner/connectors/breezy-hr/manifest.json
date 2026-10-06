@@ -1,7 +1,7 @@
 {
   "key": "breezy-hr",
   "name": "Breezy HR",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "runtime": "bun",
   "visibility": "public",
   "categories": [
@@ -29,7 +29,10 @@
   },
   "models": [
     "user",
-    "company"
+    "company",
+    "position",
+    "candidate",
+    "pipeline"
   ],
   "http": {
     "baseUrl": "https://api.breezy.hr/v3",
@@ -156,6 +159,757 @@
       "request": {
         "method": "GET",
         "path": "/companies",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "companies.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "title": "Get company",
+      "description": "Retrieve one Breezy HR company by ID.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "companyId"
+        ],
+        "properties": {
+          "companyId": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/company/{{companyId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "departments.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "title": "List departments",
+      "description": "List department definitions for a Breezy HR company.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "companyId"
+        ],
+        "properties": {
+          "companyId": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/company/{{companyId}}/departments",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "positions.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List positions",
+      "description": "List positions for a Breezy HR company, optionally filtered by lifecycle state.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "companyId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "published",
+              "draft",
+              "archived",
+              "closed",
+              "pending"
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "companyId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/company/{{companyId}}/positions",
+        "success": [
+          200
+        ],
+        "query": {
+          "state": "{{state}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "positions.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "title": "Get position",
+      "description": "Retrieve one Breezy HR position by company and position ID.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "companyId",
+          "positionId"
+        ],
+        "properties": {
+          "companyId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "positionId": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/company/{{companyId}}/position/{{positionId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "positions.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Create position",
+      "description": "Create a Breezy HR position. name, type, description, and location country are required.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "companyId",
+          "name",
+          "type",
+          "description",
+          "country"
+        ],
+        "properties": {
+          "companyId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "type": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1
+          },
+          "country": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/company/{{companyId}}/positions",
+        "success": [
+          200,
+          201
+        ],
+        "body": {
+          "name": "{{name}}",
+          "type": "{{type}}",
+          "description": "{{description}}",
+          "location": {
+            "country": "{{country}}"
+          }
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "positions.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Update position",
+      "description": "Partially update a Breezy HR position.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "companyId",
+          "positionId"
+        ],
+        "properties": {
+          "companyId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "positionId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/company/{{companyId}}/position/{{positionId}}",
+        "success": [
+          200,
+          201
+        ],
+        "body": {
+          "name": "{{name}}",
+          "description": "{{description}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "candidates.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List candidates",
+      "description": "List candidates on a Breezy HR position, optionally filtered by stage.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "companyId",
+          "positionId"
+        ],
+        "properties": {
+          "companyId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "positionId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "stageId": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/company/{{companyId}}/position/{{positionId}}/candidates",
+        "success": [
+          200
+        ],
+        "query": {
+          "stage_id": "{{stageId}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "candidates.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "title": "Get candidate",
+      "description": "Retrieve one Breezy HR candidate on a position.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "companyId",
+          "positionId",
+          "candidateId"
+        ],
+        "properties": {
+          "companyId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "positionId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "candidateId": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/company/{{companyId}}/position/{{positionId}}/candidate/{{candidateId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "candidates.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Create candidate",
+      "description": "Add a candidate to a Breezy HR position.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "companyId",
+          "positionId",
+          "name"
+        ],
+        "properties": {
+          "companyId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "positionId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "emailAddress": {
+            "type": "string",
+            "minLength": 3
+          },
+          "phoneNumber": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/company/{{companyId}}/position/{{positionId}}/candidates",
+        "success": [
+          200,
+          201
+        ],
+        "body": {
+          "name": "{{name}}",
+          "email_address": "{{emailAddress}}",
+          "phone_number": "{{phoneNumber}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "candidates.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Update candidate",
+      "description": "Partially update a Breezy HR candidate on a position.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "companyId",
+          "positionId",
+          "candidateId"
+        ],
+        "properties": {
+          "companyId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "positionId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "candidateId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "emailAddress": {
+            "type": "string",
+            "minLength": 3
+          },
+          "phoneNumber": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/company/{{companyId}}/position/{{positionId}}/candidate/{{candidateId}}",
+        "success": [
+          200,
+          201
+        ],
+        "body": {
+          "name": "{{name}}",
+          "email_address": "{{emailAddress}}",
+          "phone_number": "{{phoneNumber}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "candidates.search": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Search candidates by email",
+      "description": "Find company-wide Breezy HR candidates whose email matches exactly.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "companyId",
+          "emailAddress"
+        ],
+        "properties": {
+          "companyId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "emailAddress": {
+            "type": "string",
+            "minLength": 3
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/company/{{companyId}}/candidates/search",
+        "success": [
+          200
+        ],
+        "query": {
+          "email_address": "{{emailAddress}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "pipelines.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "title": "List pipelines",
+      "description": "List hiring pipelines for a Breezy HR company.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "companyId"
+        ],
+        "properties": {
+          "companyId": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/company/{{companyId}}/pipelines",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "team.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "title": "List position team",
+      "description": "List team members assigned to a Breezy HR position.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "companyId",
+          "positionId"
+        ],
+        "properties": {
+          "companyId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "positionId": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/company/{{companyId}}/position/{{positionId}}/team",
         "success": [
           200
         ]
