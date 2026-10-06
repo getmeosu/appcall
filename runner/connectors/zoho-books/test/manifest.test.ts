@@ -40,11 +40,59 @@ describe("Zoho Books manifest", () => {
       expect(op.title).toBeTruthy();
       expect(op.description).toBeTruthy();
     }
-    expect(ops.length).toBeGreaterThan(20);
-    expect(manifest.operations["invoices.list"].kind).toBe("sync");
-    expect(manifest.operations["contacts.list"].kind).toBe("sync");
-    expect(manifest.operations["payments.list"].kind).toBe("sync");
-    expect(manifest.operations["invoices.list"].request).toBeUndefined();
+    expect(ops).toHaveLength(942);
+    expect(manifest.operations["journals.delete-documents"].request.path).toBe(
+      "/journals/{{journal_id}}/documents/{{document_id}}",
+    );
+    expect(manifest.operations["reporting-tags.list-all"].request.path).toBe(
+      "/reportingtags/{{tag_id}}/options/all",
+    );
+    expect(manifest.operations["reporting-tags.create-active-2"].request.path).toBe(
+      "/reportingtags/{{tag_id}}/option/{{option_id}}/active",
+    );
+    expect(manifest.operations["reporting-tags.create-inactive-2"].request.path).toBe(
+      "/reportingtags/{{tag_id}}/option/{{option_id}}/inactive",
+    );
+    const handwritten = new Set([
+      "contacts.get",
+      "contacts.create",
+      "contacts.update",
+      "contacts.delete",
+      "invoices.get",
+      "invoices.create",
+      "invoices.update",
+      "invoices.email",
+      "invoices.void",
+      "bills.list",
+      "bills.get",
+      "bills.create",
+      "items.list",
+      "items.get",
+      "items.create",
+      "organizations.get",
+      "healthcheck",
+    ]);
+    const syncs = new Set(["invoices.list", "contacts.list", "payments.list"]);
+    for (const key of ops) {
+      const op = manifest.operations[key as keyof typeof manifest.operations] as {
+        kind?: string;
+        request?: { method?: string; path?: string };
+      };
+      if (syncs.has(key)) {
+        expect(op.kind).toBe("sync");
+        expect(op.request).toBeUndefined();
+        continue;
+      }
+      if (handwritten.has(key)) {
+        expect(op.request).toBeUndefined();
+        continue;
+      }
+      expect(op.kind).toBe("action");
+      expect(typeof op.request?.method).toBe("string");
+      expect(op.request?.method?.length).toBeGreaterThan(0);
+      expect(typeof op.request?.path).toBe("string");
+      expect(op.request?.path?.length).toBeGreaterThan(0);
+    }
   });
   it("declares models", () => {
     expect(manifest.models).toContain("invoice");
