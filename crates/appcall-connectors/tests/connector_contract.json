@@ -271068,7 +271068,7 @@
   },
   {
     "key": "mailchimp",
-    "digest": "a1f41bf881a4b12ecace3e4fe38fa349d284de6e2e8a9e1d1f6faac1d4276711",
+    "digest": "32538595e9d275dd2bc400402002fcdfeb56c07656a5b26493de43f2d606ed29",
     "public": true,
     "egress": true,
     "operations": [
@@ -283582,6 +283582,46 @@
         }
       },
       {
+        "key": "lists.members.archive",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 1048576,
+        "maxResponseBytes": 1048576,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "list_id": {
+              "type": "string",
+              "description": "The unique ID for the list (audience)."
+            },
+            "subscriber_hash": {
+              "type": "string",
+              "description": "The MD5 hash of the lowercase email address. This endpoint also accepts the email address or contact_id."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "list_id",
+            "subscriber_hash"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "null"
+            }
+          }
+        }
+      },
+      {
         "key": "lists.members.delete",
         "kind": "action",
         "timeoutMs": 15000,
@@ -283720,6 +283760,75 @@
             "updated": {
               "type": "boolean",
               "description": "True when the tags were successfully applied."
+            }
+          }
+        }
+      },
+      {
+        "key": "lists.members.tags.update",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 1048576,
+        "maxResponseBytes": 1048576,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "list_id": {
+              "type": "string",
+              "description": "The unique ID for the list (audience)."
+            },
+            "subscriber_hash": {
+              "type": "string",
+              "description": "The MD5 hash of the lowercase email address, or the email address, or the contact_id."
+            },
+            "tags": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "active",
+                      "inactive"
+                    ]
+                  }
+                },
+                "required": [
+                  "name",
+                  "status"
+                ],
+                "additionalProperties": false
+              },
+              "description": "Tag objects. status active adds the tag; inactive removes it."
+            },
+            "is_syncing": {
+              "type": "boolean",
+              "description": "When true, tag-based automations do not fire for this request."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "list_id",
+            "subscriber_hash",
+            "tags"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "null"
             }
           }
         }
@@ -287746,6 +287855,18 @@
       },
       {
         "key": "webhook.cleaned",
+        "kind": "webhook",
+        "timeoutMs": 30000,
+        "maxInputBytes": 1048576,
+        "maxResponseBytes": 1048576,
+        "read": true,
+        "destructive": false,
+        "tool": false,
+        "inputSchema": null,
+        "outputSchema": null
+      },
+      {
+        "key": "webhook.profile_update",
         "kind": "webhook",
         "timeoutMs": 30000,
         "maxInputBytes": 1048576,
