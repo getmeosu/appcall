@@ -1,6 +1,6 @@
 # Formbricks
 
-Read-only **Formbricks Cloud Management API v2** recipe at `https://app.formbricks.com/api/v2`. This is the managed cloud edition documented by Formbricks as Formbricks Cloud, not a caller-supplied self-hosted host.
+**Formbricks Cloud Management API v2** recipe at `https://app.formbricks.com/api/v2`. This is the managed cloud edition documented by Formbricks as Formbricks Cloud, not a caller-supplied self-hosted host.
 
 ## Setup
 
@@ -10,10 +10,14 @@ Create a management API key in Formbricks Cloud (Settings → Organization → A
 
 - `healthcheck`: `GET /me` with empty input (pinned credential probe).
 - `me.get`: `GET /me`.
-- `contact-attribute-keys.list`: `GET /management/contact-attribute-keys` with optional `limit` (1–250), `skip`, `sortBy`, `order`, and `workspaceId`.
-- `contact-attribute-keys.get`: `GET /management/contact-attribute-keys/{contactAttributeKeyId}`.
+- `contact-attribute-keys.list|get|create`
+- `surveys.list|get|create|update|delete`
+- `responses.list|get|create|update|delete`
+- `contacts.list|get|create`
+- `webhooks.list|get|create`
+- EventOnly: `webhook.responseCreated`, `webhook.responseUpdated`, `webhook.responseFinished`.
 
-Successful responses are raw provider JSON under AppCall `data`. Contact and attribute-key writes are omitted.
+Successful HTTP responses are raw provider JSON under AppCall `data`. Deletes map empty 204 bodies to `{deleted, id}`.
 
 ## Adaptations
 

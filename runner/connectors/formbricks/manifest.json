@@ -1,7 +1,17 @@
 {
+  "key": "formbricks",
+  "name": "Formbricks",
+  "version": "0.2.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "forms"
+  ],
   "auth": {
+    "type": "api_key",
     "scopes": [],
     "setup": {
+      "mode": "api_key",
       "fields": [
         {
           "key": "apiKey",
@@ -9,88 +19,222 @@
           "required": true,
           "secret": true
         }
-      ],
-      "mode": "api_key"
-    },
-    "type": "api_key"
-  },
-  "categories": [
-    "forms"
-  ],
-  "evidence": {
-    "fixture": {
-      "status": "supplied"
-    },
-    "live": {
-      "status": "unverified"
+      ]
     }
   },
+  "network": {
+    "allowedHosts": [
+      "app.formbricks.com"
+    ]
+  },
+  "models": [
+    "organization",
+    "contact-attribute-key",
+    "survey",
+    "response",
+    "contact",
+    "webhook"
+  ],
   "http": {
+    "baseUrl": "https://app.formbricks.com/api/v2",
     "auth": {
       "field": "apiKey",
       "in": "header",
       "name": "x-api-key",
       "value": "{{apiKey}}"
     },
-    "baseUrl": "https://app.formbricks.com/api/v2",
     "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after",
       "defaultRetryAfterSeconds": 30,
       "messagePaths": [
         "error",
         "message",
         "errorMessage"
-      ],
-      "rateLimitStatuses": [
-        429
-      ],
-      "retryAfterHeader": "retry-after"
+      ]
     },
     "headers": {
       "Accept": "application/json"
     }
   },
-  "key": "formbricks",
-  "models": [
-    "organization",
-    "contact-attribute-key"
-  ],
-  "name": "Formbricks",
-  "network": {
-    "allowedHosts": [
-      "app.formbricks.com"
-    ]
-  },
   "operations": {
-    "contact-attribute-keys.get": {
-      "description": "Retrieve one Formbricks contact attribute key by ID.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "contactAttributeKeyId": {
-            "minLength": 1,
-            "type": "string"
-          }
-        },
-        "required": [
-          "contactAttributeKeyId"
-        ],
-        "type": "object"
-      },
+    "healthcheck": {
+      "timeoutMs": 5000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
       "kind": "action",
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "Healthcheck",
+      "description": "Validate the Formbricks API key by retrieving current key context.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
       "outputSchema": {
-        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/me",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "me.get": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Get current API key context",
+      "description": "Get the Formbricks organization and workspace context for the current API key.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
         "required": [
           "data"
         ],
-        "type": "object"
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/me",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "contact-attribute-keys.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List contact attribute keys",
+      "description": "List Formbricks contact attribute keys with optional pagination, sort, and workspace filter.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 250
+          },
+          "skip": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "sortBy": {
+            "type": "string",
+            "enum": [
+              "createdAt",
+              "updatedAt"
+            ]
+          },
+          "order": {
+            "type": "string",
+            "enum": [
+              "asc",
+              "desc"
+            ]
+          },
+          "workspaceId": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/management/contact-attribute-keys",
+        "query": {
+          "limit": "{{limit}}",
+          "skip": "{{skip}}",
+          "sortBy": "{{sortBy}}",
+          "order": "{{order}}",
+          "workspaceId": "{{workspaceId}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "contact-attribute-keys.get": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Get contact attribute key",
+      "description": "Retrieve one Formbricks contact attribute key by ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "contactAttributeKeyId": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "contactAttributeKeyId"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
       },
       "request": {
         "method": "GET",
@@ -99,163 +243,1127 @@
           200
         ]
       },
-      "responseFormat": "json",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "contact-attribute-keys.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create contact attribute key",
+      "description": "Create a Formbricks contact attribute key in a workspace.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Attribute key slug."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Display name."
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "default",
+              "custom"
+            ],
+            "description": "Attribute key type."
+          },
+          "description": {
+            "type": "string",
+            "description": "Optional description."
+          },
+          "workspaceId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Workspace id."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "key",
+          "name",
+          "type",
+          "workspaceId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/management/contact-attribute-keys",
+        "success": [
+          201,
+          200
+        ],
+        "body": {
+          "key": "{{key}}",
+          "name": "{{name}}",
+          "type": "{{type}}",
+          "description": "{{description}}",
+          "workspaceId": "{{workspaceId}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "surveys.list": {
+      "kind": "action",
       "sideEffect": "read",
       "timeoutMs": 15000,
-      "title": "Get contact attribute key",
-      "validationMode": "strict-generated"
-    },
-    "contact-attribute-keys.list": {
-      "description": "List Formbricks contact attribute keys with optional pagination, sort, and workspace filter.",
-      "enforceOutputSchema": true,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List surveys",
+      "description": "List Formbricks surveys with optional pagination and workspace filter.",
       "inputSchema": {
-        "additionalProperties": false,
+        "type": "object",
         "properties": {
           "limit": {
-            "maximum": 250,
+            "type": "integer",
             "minimum": 1,
-            "type": "integer"
-          },
-          "order": {
-            "enum": [
-              "asc",
-              "desc"
-            ],
-            "type": "string"
+            "maximum": 250,
+            "description": "Page size."
           },
           "skip": {
+            "type": "integer",
             "minimum": 0,
-            "type": "integer"
+            "description": "Items to skip."
           },
           "sortBy": {
+            "type": "string",
             "enum": [
               "createdAt",
               "updatedAt"
             ],
-            "type": "string"
+            "description": "Sort field."
+          },
+          "order": {
+            "type": "string",
+            "enum": [
+              "asc",
+              "desc"
+            ],
+            "description": "Sort order."
           },
           "workspaceId": {
+            "type": "string",
             "minLength": 1,
-            "type": "string"
+            "description": "Workspace id."
           }
         },
-        "type": "object"
+        "additionalProperties": false
       },
-      "kind": "action",
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
       "outputSchema": {
-        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "required": [
-          "data"
-        ],
-        "type": "object"
+        "additionalProperties": false
       },
       "request": {
         "method": "GET",
-        "path": "/management/contact-attribute-keys",
+        "path": "/management/surveys",
+        "success": [
+          200
+        ],
         "query": {
           "limit": "{{limit}}",
-          "order": "{{order}}",
           "skip": "{{skip}}",
           "sortBy": "{{sortBy}}",
+          "order": "{{order}}",
           "workspaceId": "{{workspaceId}}"
-        },
-        "success": [
-          200
-        ]
+        }
       },
-      "responseFormat": "json",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "surveys.get": {
+      "kind": "action",
       "sideEffect": "read",
       "timeoutMs": 15000,
-      "title": "List contact attribute keys",
-      "validationMode": "strict-generated"
-    },
-    "healthcheck": {
-      "description": "Validate the Formbricks API key by retrieving current key context.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {},
-        "type": "object"
-      },
-      "kind": "action",
-      "maxInputBytes": 4096,
-      "maxResponseBytes": 65536,
-      "outputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "type": "object"
-      },
-      "request": {
-        "method": "GET",
-        "path": "/me",
-        "success": [
-          200
-        ]
-      },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 5000,
-      "title": "Healthcheck",
-      "validationMode": "strict-generated"
-    },
-    "me.get": {
-      "description": "Get the Formbricks organization and workspace context for the current API key.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {},
-        "type": "object"
-      },
-      "kind": "action",
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
-      "outputSchema": {
+      "title": "Get survey",
+      "description": "Retrieve one Formbricks survey by id.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "surveyId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Survey id."
+          }
+        },
         "additionalProperties": false,
+        "required": [
+          "surveyId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "required": [
-          "data"
-        ],
-        "type": "object"
+        "additionalProperties": false
       },
       "request": {
         "method": "GET",
-        "path": "/me",
+        "path": "/management/surveys/{{surveyId}}",
         "success": [
           200
         ]
       },
-      "responseFormat": "json",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "surveys.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create survey",
+      "description": "Create a Formbricks survey in a workspace.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Survey name."
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "link",
+              "app",
+              "website"
+            ],
+            "description": "Survey type."
+          },
+          "workspaceId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Workspace id."
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "draft",
+              "inProgress",
+              "paused",
+              "completed"
+            ],
+            "description": "Initial status."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "type",
+          "workspaceId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/management/surveys",
+        "success": [
+          201,
+          200
+        ],
+        "body": {
+          "name": "{{name}}",
+          "type": "{{type}}",
+          "workspaceId": "{{workspaceId}}",
+          "status": "{{status}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "surveys.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Update survey",
+      "description": "Update an existing Formbricks survey.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "surveyId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Survey id."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Survey name."
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "draft",
+              "inProgress",
+              "paused",
+              "completed"
+            ],
+            "description": "Survey status."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "surveyId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/management/surveys/{{surveyId}}",
+        "success": [
+          200,
+          201
+        ],
+        "body": {
+          "name": "{{name}}",
+          "status": "{{status}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "surveys.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Delete survey",
+      "description": "Delete a Formbricks survey by id.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "surveyId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Survey id."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "surveyId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "deleted",
+          "surveyId"
+        ],
+        "properties": {
+          "deleted": {
+            "type": "boolean"
+          },
+          "surveyId": {
+            "type": "string"
+          }
+        }
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/management/surveys/{{surveyId}}",
+        "success": [
+          204,
+          200
+        ],
+        "result": {
+          "deleted": true,
+          "surveyId": "{{input.surveyId}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "responses.list": {
+      "kind": "action",
       "sideEffect": "read",
       "timeoutMs": 15000,
-      "title": "Get current API key context",
-      "validationMode": "strict-generated"
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List responses",
+      "description": "List Formbricks survey responses with optional pagination and survey filter.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 250,
+            "description": "Page size."
+          },
+          "skip": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Items to skip."
+          },
+          "sortBy": {
+            "type": "string",
+            "enum": [
+              "createdAt",
+              "updatedAt"
+            ],
+            "description": "Sort field."
+          },
+          "order": {
+            "type": "string",
+            "enum": [
+              "asc",
+              "desc"
+            ],
+            "description": "Sort order."
+          },
+          "workspaceId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Workspace id."
+          },
+          "surveyId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by survey id."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/management/responses",
+        "success": [
+          200
+        ],
+        "query": {
+          "limit": "{{limit}}",
+          "skip": "{{skip}}",
+          "sortBy": "{{sortBy}}",
+          "order": "{{order}}",
+          "surveyId": "{{surveyId}}",
+          "workspaceId": "{{workspaceId}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "responses.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get response",
+      "description": "Retrieve one Formbricks survey response by id.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "responseId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Response id."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "responseId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/management/responses/{{responseId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "responses.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create response",
+      "description": "Create a Formbricks survey response.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "surveyId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Survey id."
+          },
+          "finished": {
+            "type": "boolean",
+            "description": "Whether the response is complete."
+          },
+          "data": {
+            "type": "object",
+            "description": "Answer payload keyed by question id."
+          },
+          "language": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Response language."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "surveyId",
+          "finished",
+          "data"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/management/responses",
+        "success": [
+          201,
+          200
+        ],
+        "body": {
+          "surveyId": "{{surveyId}}",
+          "finished": "{{finished}}",
+          "data": "{{data}}",
+          "language": "{{language}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "responses.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Update response",
+      "description": "Update an existing Formbricks survey response.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "responseId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Response id."
+          },
+          "finished": {
+            "type": "boolean",
+            "description": "Whether the response is complete."
+          },
+          "data": {
+            "type": "object",
+            "description": "Answer payload keyed by question id."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "responseId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/management/responses/{{responseId}}",
+        "success": [
+          200,
+          201
+        ],
+        "body": {
+          "finished": "{{finished}}",
+          "data": "{{data}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "responses.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Delete response",
+      "description": "Delete a Formbricks survey response by id.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "responseId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Response id."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "responseId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "deleted",
+          "responseId"
+        ],
+        "properties": {
+          "deleted": {
+            "type": "boolean"
+          },
+          "responseId": {
+            "type": "string"
+          }
+        }
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/management/responses/{{responseId}}",
+        "success": [
+          204,
+          200
+        ],
+        "result": {
+          "deleted": true,
+          "responseId": "{{input.responseId}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "contacts.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List contacts",
+      "description": "List Formbricks contacts with optional pagination and workspace filter.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 250,
+            "description": "Page size."
+          },
+          "skip": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Items to skip."
+          },
+          "sortBy": {
+            "type": "string",
+            "enum": [
+              "createdAt",
+              "updatedAt"
+            ],
+            "description": "Sort field."
+          },
+          "order": {
+            "type": "string",
+            "enum": [
+              "asc",
+              "desc"
+            ],
+            "description": "Sort order."
+          },
+          "workspaceId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Workspace id."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/management/contacts",
+        "success": [
+          200
+        ],
+        "query": {
+          "limit": "{{limit}}",
+          "skip": "{{skip}}",
+          "sortBy": "{{sortBy}}",
+          "order": "{{order}}",
+          "workspaceId": "{{workspaceId}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "contacts.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get contact",
+      "description": "Retrieve one Formbricks contact by id.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "contactId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Contact id."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "contactId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/management/contacts/{{contactId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "contacts.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create contact",
+      "description": "Create a Formbricks contact with attributes.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "workspaceId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Workspace id."
+          },
+          "attributes": {
+            "type": "object",
+            "description": "Contact attribute map."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "workspaceId",
+          "attributes"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/management/contacts",
+        "success": [
+          201,
+          200
+        ],
+        "body": {
+          "workspaceId": "{{workspaceId}}",
+          "attributes": "{{attributes}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "webhooks.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List webhooks",
+      "description": "List Formbricks webhook subscriptions.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 250,
+            "description": "Page size."
+          },
+          "skip": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Items to skip."
+          },
+          "sortBy": {
+            "type": "string",
+            "enum": [
+              "createdAt",
+              "updatedAt"
+            ],
+            "description": "Sort field."
+          },
+          "order": {
+            "type": "string",
+            "enum": [
+              "asc",
+              "desc"
+            ],
+            "description": "Sort order."
+          },
+          "workspaceId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Workspace id."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/management/webhooks",
+        "success": [
+          200
+        ],
+        "query": {
+          "limit": "{{limit}}",
+          "skip": "{{skip}}",
+          "sortBy": "{{sortBy}}",
+          "order": "{{order}}",
+          "workspaceId": "{{workspaceId}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "webhooks.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get webhook",
+      "description": "Retrieve one Formbricks webhook by id.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "webhookId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Webhook id."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "webhookId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/management/webhooks/{{webhookId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "webhooks.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create webhook",
+      "description": "Create a Formbricks webhook subscription.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Webhook display name."
+          },
+          "url": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Delivery URL."
+          },
+          "workspaceId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Workspace id."
+          },
+          "triggers": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string",
+              "enum": [
+                "responseCreated",
+                "responseUpdated",
+                "responseFinished"
+              ]
+            },
+            "description": "Event triggers."
+          },
+          "surveyIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Optional survey filter."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "url",
+          "workspaceId",
+          "triggers"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/management/webhooks",
+        "success": [
+          201,
+          200
+        ],
+        "body": {
+          "name": "{{name}}",
+          "url": "{{url}}",
+          "workspaceId": "{{workspaceId}}",
+          "triggers": "{{triggers}}",
+          "surveyIds": "{{surveyIds}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
     }
   },
   "provenance": {
     "source": {
-      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
-      "url": "https://github.com/oomol-lab/open-connector"
+      "url": "https://github.com/oomol-lab/open-connector",
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"
     }
   },
-  "runtime": "bun",
-  "version": "0.1.0",
-  "visibility": "public"
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
+    }
+  }
 }
