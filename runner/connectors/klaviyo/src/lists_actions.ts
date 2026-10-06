@@ -1,4 +1,4 @@
-import { createKlaviyoClient, parseKlaviyoRateLimit, prop, isRecord } from "./http";
+import { createKlaviyoClient, firstString, parseKlaviyoRateLimit, prop, queryPath, isRecord } from "./http";
 import { normalizeList, type NormalizedList } from "./objects";
 
 // ─── lists.create ─────────────────────────────────────────────────────────────
@@ -14,11 +14,12 @@ export async function createListFromClient(
   options: { apiKey: string; fetch?: typeof fetch },
   input: unknown
 ): Promise<{ ok: true; list: NormalizedList } | { ok: false; error: { code: string; message: string; retryAfterSeconds?: number } }> {
-  const payload = validateCreateListInput(input);
+  const rawData = isRecord(input) && isRecord(input.data) ? input.data : undefined;
+  const payload = rawData ? { name: "" } : validateCreateListInput(input);
   const client = createKlaviyoClient({ apiKey: options.apiKey, fetch: options.fetch, operation: "lists.create" });
   const result = await client.fetchJSON("/lists", {
     method: "POST",
-    body: JSON.stringify({ data: { type: "list", attributes: { name: payload.name } } }),
+    body: JSON.stringify(rawData ? { data: rawData } : { data: { type: "list", attributes: { name: payload.name } } }),
   });
   if (result.status === 201 || result.status === 200) {
     const body = result.body as Record<string, unknown>;
@@ -36,7 +37,7 @@ export type GetListInput = { listId: string };
 
 export function validateGetListInput(input: unknown): GetListInput {
   if (!isRecord(input)) throw new Error("input must be an object");
-  return { listId: requireString(input.listId, "listId") };
+  return { listId: firstString(input, ["listId", "id"], "listId") };
 }
 
 export async function getListFromClient(
@@ -45,7 +46,7 @@ export async function getListFromClient(
 ): Promise<{ ok: true; list: NormalizedList } | { ok: false; error: { code: string; message: string; retryAfterSeconds?: number } }> {
   const payload = validateGetListInput(input);
   const client = createKlaviyoClient({ apiKey: options.apiKey, fetch: options.fetch, operation: "lists.get" });
-  const result = await client.fetchJSON(`/lists/${payload.listId}`);
+  const result = await client.fetchJSON(queryPath(`/lists/${payload.listId}`, input));
   if (result.status === 200) {
     const body = result.body as Record<string, unknown>;
     const data = isRecord(body.data) ? body.data : { id: payload.listId, attributes: {} };

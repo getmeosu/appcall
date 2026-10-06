@@ -1,4 +1,4 @@
-import { createKlaviyoClient, parseKlaviyoRateLimit, isRecord } from "./http";
+import { createKlaviyoClient, firstString, parseKlaviyoRateLimit, queryPath, isRecord } from "./http";
 import { normalizeMetric, parseMetricsResponse } from "./objects";
 import type { NormalizedMetric } from "./objects";
 
@@ -11,7 +11,7 @@ export function validateListMetricsInput(input: unknown): Record<string, never> 
 
 export function validateGetMetricInput(input: unknown): GetMetricInput {
   if (!isRecord(input)) throw new Error("input must be an object");
-  return { metricId: requireString(input.metricId, "metricId") };
+  return { metricId: firstString(input, ["metricId", "id"], "metricId") };
 }
 
 export async function listMetricsFromClient(
@@ -20,7 +20,7 @@ export async function listMetricsFromClient(
 ): Promise<{ ok: true; metrics: NormalizedMetric[] } | { ok: false; error: { code: string; message: string; retryAfterSeconds?: number } }> {
   validateListMetricsInput(input);
   const client = createKlaviyoClient({ apiKey: options.apiKey, fetch: options.fetch, operation: "metrics.list" });
-  const result = await client.fetchJSON("/metrics");
+  const result = await client.fetchJSON(queryPath("/metrics", input));
   if (result.status === 200) return { ok: true, metrics: parseMetricsResponse(result.body).metrics };
   const rl = parseKlaviyoRateLimit(result.status, result.headers);
   if (rl.limited) return { ok: false, error: { code: "CONNECTOR_RATE_LIMITED", message: "Klaviyo rate limit exceeded.", retryAfterSeconds: rl.retryAfterSeconds } };
@@ -33,7 +33,7 @@ export async function getMetricFromClient(
 ): Promise<{ ok: true; metric: NormalizedMetric } | { ok: false; error: { code: string; message: string; retryAfterSeconds?: number } }> {
   const payload = validateGetMetricInput(input);
   const client = createKlaviyoClient({ apiKey: options.apiKey, fetch: options.fetch, operation: "metrics.get" });
-  const result = await client.fetchJSON(`/metrics/${payload.metricId}`);
+  const result = await client.fetchJSON(queryPath(`/metrics/${payload.metricId}`, input));
   if (result.status === 200) {
     const body = result.body as Record<string, unknown>;
     const data = isRecord(body.data) ? body.data : { id: payload.metricId, attributes: {} };

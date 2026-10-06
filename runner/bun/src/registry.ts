@@ -829,6 +829,24 @@ import {
 } from "../../connectors/klaviyo/src/actions";
 import { healthcheck as klaviyoHealthcheck } from "../../connectors/klaviyo/src/healthcheck";
 import { executeContactsListSync as listKlaviyoContacts, executeCampaignsListSync as listKlaviyoCampaigns, executeListsListSync as listKlaviyoLists } from "../../connectors/klaviyo/src/sync";
+import {
+  createClientEvent as kvCreateClientEvent,
+  bulkCreateClientEvents as kvBulkCreateClientEvents,
+  createClientProfile as kvCreateClientProfile,
+  createClientPushToken as kvCreateClientPushToken,
+  unregisterClientPushToken as kvUnregisterClientPushToken,
+  createClientSubscription as kvCreateClientSubscription,
+  createClientBackInStock as kvCreateClientBackInStock,
+  uploadImageFromFile as kvUploadImageFromFile,
+  createTagRelationships as kvCreateTagRelationships,
+  deleteTagRelationships as kvDeleteTagRelationships,
+  getEventRelationships as kvGetEventRelationships,
+  getSegmentRelationships as kvGetSegmentRelationships,
+  getTagRelationships as kvGetTagRelationships,
+  getProfileRelationships as kvGetProfileRelationships,
+  unsubscribeProfilesBulk as kvUnsubscribeProfilesBulk,
+  unsuppressProfilesBulk as kvUnsuppressProfilesBulk,
+} from "../../connectors/klaviyo/src/parity_actions";
 import shopifyManifest from "../../connectors/shopify/manifest.json";
 import { healthcheck as shopifyHealthcheck } from "../../connectors/shopify/src/healthcheck";
 import { executeProductsListSync as listShopifyProducts, executeOrdersListSync as listShopifyOrders, executeCustomersListSync as listShopifyCustomers } from "../../connectors/shopify/src/sync";
@@ -2458,6 +2476,22 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
       "templates.get": kvGetTemplate,
       "flows.list": kvListFlows,
       "profiles.subscribe": kvSubscribeProfiles,
+      "client.events.create": kvCreateClientEvent,
+      "client.events.bulkCreate": kvBulkCreateClientEvents,
+      "client.profiles.create": kvCreateClientProfile,
+      "client.pushTokens.create": kvCreateClientPushToken,
+      "client.pushTokens.unregister": kvUnregisterClientPushToken,
+      "client.subscriptions.create": kvCreateClientSubscription,
+      "client.backInStock.create": kvCreateClientBackInStock,
+      "images.uploadFromFile": kvUploadImageFromFile,
+      "tags.relationships.create": kvCreateTagRelationships,
+      "tags.relationships.delete": kvDeleteTagRelationships,
+      "events.relationships.get": kvGetEventRelationships,
+      "segments.relationships.get": kvGetSegmentRelationships,
+      "tags.relationships.get": kvGetTagRelationships,
+      "profiles.relationships.get": kvGetProfileRelationships,
+      "profiles.unsubscribeBulk": kvUnsubscribeProfilesBulk,
+      "profiles.unsuppressBulk": kvUnsuppressProfilesBulk,
     },
     typeform: {
       "forms.list.action": tfListForms,
