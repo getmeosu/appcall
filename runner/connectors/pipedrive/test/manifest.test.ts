@@ -34,7 +34,7 @@ describe("pipedrive manifest", () => {
   it("declares the connector identity the control plane keys on", () => {
     expect(manifest.key).toBe("pipedrive");
     expect(manifest.name).toBe("Pipedrive");
-    expect(manifest.version).toBe("0.3.0");
+    expect(manifest.version).toBe("0.4.0");
     expect(manifest.runtime).toBe("bun");
     expect(manifest.visibility).toBe("public");
     expect(manifest.categories).toEqual(["crm"]);
