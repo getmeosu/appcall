@@ -347,6 +347,53 @@ describe("time tracking", () => {
   });
 });
 
+describe("custom fields", () => {
+  it("posts the custom field value and optional value options", async () => {
+    const { calls, fetchFn } = mock({ id: "fixture", ok: true });
+    const result = await actions["custom-fields.create"]!({
+      apiKey: "pk_x",
+      task_id: "9hz",
+      field_id: "fld",
+      value: { add: ["u1"], rem: ["u2"] },
+      value_options: { currency_type: "USD" },
+      fetch: fetchFn,
+    }) as Record<string, unknown>;
+    expect(calls[0]!.url).toBe("https://api.clickup.com/api/v2/task/9hz/field/fld");
+    expect(calls[0]!.init?.method).toBe("POST");
+    expect(calls[0]!.init?.body).toBe(JSON.stringify({
+      value: { add: ["u1"], rem: ["u2"] },
+      value_options: { currency_type: "USD" },
+    }));
+    expect(result.data).toEqual({ id: "fixture", ok: true });
+  });
+
+  it("omits value options when they are not set", async () => {
+    const { calls, fetchFn } = mock({ id: "fixture", ok: true });
+    await actions["custom-fields.create"]!({
+      apiKey: "pk_x",
+      task_id: "9hz",
+      field_id: "fld",
+      value: "launch",
+      fetch: fetchFn,
+    });
+    expect(calls[0]!.init?.body).toBe(JSON.stringify({ value: "launch" }));
+  });
+
+  it("rejects a set-custom-field call that has no value", async () => {
+    const { fetchFn } = mock({ id: "fixture", ok: true });
+    await expect(actions["custom-fields.create"]!({
+      apiKey: "pk_x",
+      task_id: "9hz",
+      field_id: "fld",
+      fetch: fetchFn,
+    })).rejects.toMatchObject({
+      ok: false,
+      code: "INVALID_ACTION_INPUT",
+      message: "value is required",
+    });
+  });
+});
+
 describe("error mapping", () => {
   it("surfaces ClickUp's err field rather than a generic upstream message", async () => {
     const { fetchFn } = mock(unauthorizedFixture, 401);

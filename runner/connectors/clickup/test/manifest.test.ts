@@ -7,7 +7,7 @@ describe("clickup manifest", () => {
   it("declares the connector identity the control plane keys on", () => {
     expect(manifest.key).toBe("clickup");
     expect(manifest.runtime).toBe("bun");
-    expect(manifest.version).toBe("0.3.0");
+    expect(manifest.version).toBe("0.4.0");
     expect(manifest.categories).toEqual(["productivity"]);
     expect(manifest.models.length).toBeGreaterThan(0);
     expect(manifest.models).toContain("member");
@@ -52,6 +52,47 @@ describe("clickup manifest", () => {
       expect(operation.request).toBeUndefined();
       expect(operation.timeoutMs as number).toBeGreaterThan(0);
     }
+  });
+
+  it("covers the Composio ClickUp triggers as read-only webhooks", () => {
+    const triggers = [
+      "webhook.folderCreated",
+      "webhook.folderDeleted",
+      "webhook.folderUpdated",
+      "webhook.listCreated",
+      "webhook.listDeleted",
+      "webhook.listUpdated",
+      "webhook.spaceCreated",
+      "webhook.spaceDeleted",
+      "webhook.spaceUpdated",
+      "webhook.taskAssigneeUpdated",
+      "webhook.taskCommentPosted",
+      "webhook.taskCommentUpdated",
+      "webhook.taskCreated",
+      "webhook.taskDeleted",
+      "webhook.taskDueDateUpdated",
+      "webhook.taskPriorityUpdated",
+      "webhook.taskStatusUpdated",
+      "webhook.taskTagUpdated",
+      "webhook.taskTimeEstimateUpdated",
+      "webhook.taskTimeTrackedUpdated",
+      "webhook.taskUpdated",
+    ];
+    for (const key of triggers) {
+      const operation = operations[key]!;
+      expect(operation.kind, key).toBe("webhook");
+      expect(operation.sideEffect, key).toBe("read");
+      expect(operation.request, key).toBeUndefined();
+      expect(String(operation.description ?? "").length, key).toBeGreaterThan(0);
+    }
+  });
+
+  it("exchanges an OAuth code for an access token", () => {
+    const operation = operations["oauth.get-access-token"]!;
+    expect(operation.kind).toBe("action");
+    expect(operation.sideEffect).toBe("write");
+    expect((operation.request as Record<string, unknown>).method).toBe("POST");
+    expect((operation.request as Record<string, unknown>).path).toBe("/v2/oauth/token");
   });
 
   it("lists workspace members by team id", () => {
