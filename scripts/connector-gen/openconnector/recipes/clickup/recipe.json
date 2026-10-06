@@ -297,7 +297,8 @@
       "webhook.goalDeleted",
       "webhook.keyResultCreated",
       "webhook.keyResultUpdated",
-      "webhook.keyResultDeleted"
+      "webhook.keyResultDeleted",
+      "oauth.get-access-token"
     ],
     "upstreamSha": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
     "marketFocus": "international",
@@ -1056,7 +1057,8 @@
       "responseContract": "appcall-provider-json-v1",
       "adaptations": [
         "Maps to pinned open-connector action set_custom_field_value for the same HTTP endpoint.",
-        "Personal API token is sent as Authorization without a Bearer prefix."
+        "Personal API token is sent as Authorization without a Bearer prefix.",
+        "value is required and value_options is optional; both are sent as JSON on POST /v2/task/{task_id}/field/{field_id}."
       ]
     },
     "custom-fields.delete": {
@@ -3504,12 +3506,28 @@
       "adaptations": [
         "Inbound ClickUp webhook event keyResultDeleted is named in the official webhooks guide and is absent from the pinned open-connector action list."
       ]
+    },
+    "oauth.get-access-token": {
+      "upstreamActionId": "get_access_token",
+      "sourceRefs": [
+        "api-base",
+        "auth-header"
+      ],
+      "documentationUrls": [
+        "https://developer.clickup.com/docs/authentication"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Maps Composio CLICKUP_GET_ACCESS_TOKEN onto POST /api/v2/oauth/token.",
+        "client_id, client_secret, and code are required query parameters, matching ClickUp's OAuth token exchange.",
+        "Multipart task attachment upload is omitted because the declarative runner only encodes JSON or urlencoded form bodies."
+      ]
     }
   },
   "manifest": {
     "key": "clickup",
     "name": "ClickUp",
-    "version": "0.3.0",
+    "version": "0.4.0",
     "runtime": "bun",
     "visibility": "public",
     "categories": [
@@ -3937,6 +3955,10 @@
             }
           }
         },
+        "sample": {
+          "folderId": "457",
+          "name": "Q4 Launch"
+        },
         "request": {
           "method": "POST",
           "path": "/v2/folder/{{folderId}}/list",
@@ -4048,6 +4070,10 @@
               "type": "boolean"
             }
           }
+        },
+        "sample": {
+          "listId": "901300000000",
+          "includeClosed": false
         },
         "request": {
           "method": "GET",
@@ -4357,6 +4383,11 @@
             }
           }
         },
+        "sample": {
+          "listId": "901300000000",
+          "name": "Write the launch post",
+          "priority": 3
+        },
         "request": {
           "method": "POST",
           "path": "/v2/list/{{listId}}/task",
@@ -4625,6 +4656,11 @@
             }
           }
         },
+        "sample": {
+          "taskId": "9hz",
+          "commentText": "Shipped, moving to review.",
+          "notifyAll": false
+        },
         "request": {
           "method": "POST",
           "path": "/v2/task/{{taskId}}/comment",
@@ -4783,21 +4819,27 @@
         "sideEffect": "read",
         "timeoutMs": 30000,
         "maxInputBytes": 1048576,
-        "maxResponseBytes": 5242880
+        "maxResponseBytes": 5242880,
+        "title": "Task Created",
+        "description": "Inbound ClickUp webhook for the taskCreated event (Composio trigger CLICKUP_TASK_CREATED). Receiving the event does not call the ClickUp API."
       },
       "webhook.taskUpdated": {
         "kind": "webhook",
         "sideEffect": "read",
         "timeoutMs": 30000,
         "maxInputBytes": 1048576,
-        "maxResponseBytes": 5242880
+        "maxResponseBytes": 5242880,
+        "title": "Task Updated",
+        "description": "Inbound ClickUp webhook for the taskUpdated event (Composio trigger CLICKUP_TASK_UPDATED). Receiving the event does not call the ClickUp API."
       },
       "webhook.taskCommentPosted": {
         "kind": "webhook",
         "sideEffect": "read",
         "timeoutMs": 30000,
         "maxInputBytes": 1048576,
-        "maxResponseBytes": 5242880
+        "maxResponseBytes": 5242880,
+        "title": "Task Comment Posted",
+        "description": "Inbound ClickUp webhook for the taskCommentPosted event (Composio trigger CLICKUP_TASK_COMMENT_POSTED). Receiving the event does not call the ClickUp API."
       },
       "time-entries.current": {
         "kind": "action",
@@ -6158,11 +6200,28 @@
             "team_id": {
               "type": "number",
               "description": "When the `custom_task_ids` parameter is set to `true`, the Workspace ID must be provided using the `team_id` parameter. \\ For example: `custom_task_ids=true&team_id=123`."
+            },
+            "value": {
+              "description": "Custom Field value. Text, email, phone, URL, and dropdown option IDs are strings. Numbers, currency, and ratings are numbers. Checkboxes are booleans. Labels are arrays of option IDs. Users, tasks, locations, and manual progress are objects. Dates are Unix timestamps in milliseconds.",
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "array",
+                "object",
+                "null"
+              ]
+            },
+            "value_options": {
+              "type": "object",
+              "additionalProperties": true,
+              "description": "Optional field settings. Date fields use {\"time\": true}. Currency fields use {\"currency_type\": \"USD\"}."
             }
           },
           "required": [
             "task_id",
-            "field_id"
+            "field_id",
+            "value"
           ]
         },
         "outputSchema": {
@@ -6220,7 +6279,11 @@
           ],
           "success": [
             200
-          ]
+          ],
+          "body": {
+            "value": "{{value}}",
+            "value_options": "{{value_options}}"
+          }
         },
         "enforceOutputSchema": true,
         "responseFormat": "json",
@@ -17266,175 +17329,284 @@
         "sideEffect": "read",
         "timeoutMs": 30000,
         "maxInputBytes": 1048576,
-        "maxResponseBytes": 5242880
+        "maxResponseBytes": 5242880,
+        "title": "Task Deleted",
+        "description": "Inbound ClickUp webhook for the taskDeleted event (Composio trigger CLICKUP_TASK_DELETED). Receiving the event does not call the ClickUp API."
       },
       "webhook.taskPriorityUpdated": {
         "kind": "webhook",
         "sideEffect": "read",
         "timeoutMs": 30000,
         "maxInputBytes": 1048576,
-        "maxResponseBytes": 5242880
+        "maxResponseBytes": 5242880,
+        "title": "Task Priority Updated",
+        "description": "Inbound ClickUp webhook for the taskPriorityUpdated event (Composio trigger CLICKUP_TASK_PRIORITY_UPDATED). Receiving the event does not call the ClickUp API."
       },
       "webhook.taskStatusUpdated": {
         "kind": "webhook",
         "sideEffect": "read",
         "timeoutMs": 30000,
         "maxInputBytes": 1048576,
-        "maxResponseBytes": 5242880
+        "maxResponseBytes": 5242880,
+        "title": "Task Status Updated",
+        "description": "Inbound ClickUp webhook for the taskStatusUpdated event (Composio trigger CLICKUP_TASK_STATUS_UPDATED). Receiving the event does not call the ClickUp API."
       },
       "webhook.taskAssigneeUpdated": {
         "kind": "webhook",
         "sideEffect": "read",
         "timeoutMs": 30000,
         "maxInputBytes": 1048576,
-        "maxResponseBytes": 5242880
+        "maxResponseBytes": 5242880,
+        "title": "Task Assignee Updated",
+        "description": "Inbound ClickUp webhook for the taskAssigneeUpdated event (Composio trigger CLICKUP_TASK_ASSIGNEE_UPDATED). Receiving the event does not call the ClickUp API."
       },
       "webhook.taskDueDateUpdated": {
         "kind": "webhook",
         "sideEffect": "read",
         "timeoutMs": 30000,
         "maxInputBytes": 1048576,
-        "maxResponseBytes": 5242880
+        "maxResponseBytes": 5242880,
+        "title": "Task Due Date Updated",
+        "description": "Inbound ClickUp webhook for the taskDueDateUpdated event (Composio trigger CLICKUP_TASK_DUE_DATE_UPDATED). Receiving the event does not call the ClickUp API."
       },
       "webhook.taskTagUpdated": {
         "kind": "webhook",
         "sideEffect": "read",
         "timeoutMs": 30000,
         "maxInputBytes": 1048576,
-        "maxResponseBytes": 5242880
+        "maxResponseBytes": 5242880,
+        "title": "Task Tag Updated",
+        "description": "Inbound ClickUp webhook for the taskTagUpdated event (Composio trigger CLICKUP_TASK_TAG_UPDATED). Receiving the event does not call the ClickUp API."
       },
       "webhook.taskMoved": {
         "kind": "webhook",
         "sideEffect": "read",
         "timeoutMs": 30000,
         "maxInputBytes": 1048576,
-        "maxResponseBytes": 5242880
+        "maxResponseBytes": 5242880,
+        "title": "Task Moved",
+        "description": "Inbound ClickUp webhook for the official taskMoved event. ClickUp delivers this event on workspace webhooks; it is not one of the 21 Composio trigger slugs. Receiving the event does not call the ClickUp API."
       },
       "webhook.taskCommentUpdated": {
         "kind": "webhook",
         "sideEffect": "read",
         "timeoutMs": 30000,
         "maxInputBytes": 1048576,
-        "maxResponseBytes": 5242880
+        "maxResponseBytes": 5242880,
+        "title": "Task Comment Updated",
+        "description": "Inbound ClickUp webhook for the taskCommentUpdated event (Composio trigger CLICKUP_TASK_COMMENT_UPDATED). Receiving the event does not call the ClickUp API."
       },
       "webhook.taskTimeEstimateUpdated": {
         "kind": "webhook",
         "sideEffect": "read",
         "timeoutMs": 30000,
         "maxInputBytes": 1048576,
-        "maxResponseBytes": 5242880
+        "maxResponseBytes": 5242880,
+        "title": "Task Time Estimate Updated",
+        "description": "Inbound ClickUp webhook for the taskTimeEstimateUpdated event (Composio trigger CLICKUP_TASK_TIME_ESTIMATE_UPDATED). Receiving the event does not call the ClickUp API."
       },
       "webhook.taskTimeTrackedUpdated": {
         "kind": "webhook",
         "sideEffect": "read",
         "timeoutMs": 30000,
         "maxInputBytes": 1048576,
-        "maxResponseBytes": 5242880
+        "maxResponseBytes": 5242880,
+        "title": "Task Time Tracked Updated",
+        "description": "Inbound ClickUp webhook for the taskTimeTrackedUpdated event (Composio trigger CLICKUP_TASK_TIME_TRACKED_UPDATED). Receiving the event does not call the ClickUp API."
       },
       "webhook.listCreated": {
         "kind": "webhook",
         "sideEffect": "read",
         "timeoutMs": 30000,
         "maxInputBytes": 1048576,
-        "maxResponseBytes": 5242880
+        "maxResponseBytes": 5242880,
+        "title": "List Created",
+        "description": "Inbound ClickUp webhook for the listCreated event (Composio trigger CLICKUP_LIST_CREATED). Receiving the event does not call the ClickUp API."
       },
       "webhook.listUpdated": {
         "kind": "webhook",
         "sideEffect": "read",
         "timeoutMs": 30000,
         "maxInputBytes": 1048576,
-        "maxResponseBytes": 5242880
+        "maxResponseBytes": 5242880,
+        "title": "List Updated",
+        "description": "Inbound ClickUp webhook for the listUpdated event (Composio trigger CLICKUP_LIST_UPDATED). Receiving the event does not call the ClickUp API."
       },
       "webhook.listDeleted": {
         "kind": "webhook",
         "sideEffect": "read",
         "timeoutMs": 30000,
         "maxInputBytes": 1048576,
-        "maxResponseBytes": 5242880
+        "maxResponseBytes": 5242880,
+        "title": "List Deleted",
+        "description": "Inbound ClickUp webhook for the listDeleted event (Composio trigger CLICKUP_LIST_DELETED). Receiving the event does not call the ClickUp API."
       },
       "webhook.folderCreated": {
         "kind": "webhook",
         "sideEffect": "read",
         "timeoutMs": 30000,
         "maxInputBytes": 1048576,
-        "maxResponseBytes": 5242880
+        "maxResponseBytes": 5242880,
+        "title": "Folder Created",
+        "description": "Inbound ClickUp webhook for the folderCreated event (Composio trigger CLICKUP_FOLDER_CREATED). Receiving the event does not call the ClickUp API."
       },
       "webhook.folderUpdated": {
         "kind": "webhook",
         "sideEffect": "read",
         "timeoutMs": 30000,
         "maxInputBytes": 1048576,
-        "maxResponseBytes": 5242880
+        "maxResponseBytes": 5242880,
+        "title": "Folder Updated",
+        "description": "Inbound ClickUp webhook for the folderUpdated event (Composio trigger CLICKUP_FOLDER_UPDATED). Receiving the event does not call the ClickUp API."
       },
       "webhook.folderDeleted": {
         "kind": "webhook",
         "sideEffect": "read",
         "timeoutMs": 30000,
         "maxInputBytes": 1048576,
-        "maxResponseBytes": 5242880
+        "maxResponseBytes": 5242880,
+        "title": "Folder Deleted",
+        "description": "Inbound ClickUp webhook for the folderDeleted event (Composio trigger CLICKUP_FOLDER_DELETED). Receiving the event does not call the ClickUp API."
       },
       "webhook.spaceCreated": {
         "kind": "webhook",
         "sideEffect": "read",
         "timeoutMs": 30000,
         "maxInputBytes": 1048576,
-        "maxResponseBytes": 5242880
+        "maxResponseBytes": 5242880,
+        "title": "Space Created",
+        "description": "Inbound ClickUp webhook for the spaceCreated event (Composio trigger CLICKUP_SPACE_CREATED). Receiving the event does not call the ClickUp API."
       },
       "webhook.spaceUpdated": {
         "kind": "webhook",
         "sideEffect": "read",
         "timeoutMs": 30000,
         "maxInputBytes": 1048576,
-        "maxResponseBytes": 5242880
+        "maxResponseBytes": 5242880,
+        "title": "Space Updated",
+        "description": "Inbound ClickUp webhook for the spaceUpdated event (Composio trigger CLICKUP_SPACE_UPDATED). Receiving the event does not call the ClickUp API."
       },
       "webhook.spaceDeleted": {
         "kind": "webhook",
         "sideEffect": "read",
         "timeoutMs": 30000,
         "maxInputBytes": 1048576,
-        "maxResponseBytes": 5242880
+        "maxResponseBytes": 5242880,
+        "title": "Space Deleted",
+        "description": "Inbound ClickUp webhook for the spaceDeleted event (Composio trigger CLICKUP_SPACE_DELETED). Receiving the event does not call the ClickUp API."
       },
       "webhook.goalCreated": {
         "kind": "webhook",
         "sideEffect": "read",
         "timeoutMs": 30000,
         "maxInputBytes": 1048576,
-        "maxResponseBytes": 5242880
+        "maxResponseBytes": 5242880,
+        "title": "Goal Created",
+        "description": "Inbound ClickUp webhook for the official goalCreated event. ClickUp delivers this event on workspace webhooks; it is not one of the 21 Composio trigger slugs. Receiving the event does not call the ClickUp API."
       },
       "webhook.goalUpdated": {
         "kind": "webhook",
         "sideEffect": "read",
         "timeoutMs": 30000,
         "maxInputBytes": 1048576,
-        "maxResponseBytes": 5242880
+        "maxResponseBytes": 5242880,
+        "title": "Goal Updated",
+        "description": "Inbound ClickUp webhook for the official goalUpdated event. ClickUp delivers this event on workspace webhooks; it is not one of the 21 Composio trigger slugs. Receiving the event does not call the ClickUp API."
       },
       "webhook.goalDeleted": {
         "kind": "webhook",
         "sideEffect": "read",
         "timeoutMs": 30000,
         "maxInputBytes": 1048576,
-        "maxResponseBytes": 5242880
+        "maxResponseBytes": 5242880,
+        "title": "Goal Deleted",
+        "description": "Inbound ClickUp webhook for the official goalDeleted event. ClickUp delivers this event on workspace webhooks; it is not one of the 21 Composio trigger slugs. Receiving the event does not call the ClickUp API."
       },
       "webhook.keyResultCreated": {
         "kind": "webhook",
         "sideEffect": "read",
         "timeoutMs": 30000,
         "maxInputBytes": 1048576,
-        "maxResponseBytes": 5242880
+        "maxResponseBytes": 5242880,
+        "title": "Key Result Created",
+        "description": "Inbound ClickUp webhook for the official keyResultCreated event. ClickUp delivers this event on workspace webhooks; it is not one of the 21 Composio trigger slugs. Receiving the event does not call the ClickUp API."
       },
       "webhook.keyResultUpdated": {
         "kind": "webhook",
         "sideEffect": "read",
         "timeoutMs": 30000,
         "maxInputBytes": 1048576,
-        "maxResponseBytes": 5242880
+        "maxResponseBytes": 5242880,
+        "title": "Key Result Updated",
+        "description": "Inbound ClickUp webhook for the official keyResultUpdated event. ClickUp delivers this event on workspace webhooks; it is not one of the 21 Composio trigger slugs. Receiving the event does not call the ClickUp API."
       },
       "webhook.keyResultDeleted": {
         "kind": "webhook",
         "sideEffect": "read",
         "timeoutMs": 30000,
         "maxInputBytes": 1048576,
-        "maxResponseBytes": 5242880
+        "maxResponseBytes": 5242880,
+        "title": "Key Result Deleted",
+        "description": "Inbound ClickUp webhook for the official keyResultDeleted event. ClickUp delivers this event on workspace webhooks; it is not one of the 21 Composio trigger slugs. Receiving the event does not call the ClickUp API."
+      },
+      "oauth.get-access-token": {
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 8192,
+        "maxResponseBytes": 65536,
+        "sideEffect": "write",
+        "title": "Get Access Token",
+        "description": "Exchange a ClickUp OAuth 2.0 authorization code for an access token. Sends client_id, client_secret, and code as query parameters on POST /api/v2/oauth/token.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "client_id": {
+              "type": "string",
+              "description": "Client ID of the registered ClickUp OAuth app."
+            },
+            "client_secret": {
+              "type": "string",
+              "description": "Client secret of the registered ClickUp OAuth app."
+            },
+            "code": {
+              "type": "string",
+              "description": "Authorization code from the ClickUp consent redirect."
+            }
+          },
+          "required": [
+            "client_id",
+            "client_secret",
+            "code"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "description": "Raw ClickUp JSON response, including access_token."
+            }
+          }
+        },
+        "request": {
+          "method": "POST",
+          "path": "/v2/oauth/token",
+          "query": {
+            "client_id": "{{client_id}}",
+            "client_secret": "{{client_secret}}",
+            "code": "{{code}}"
+          },
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "responseFormat": "json",
+        "validationMode": "strict-generated"
       }
     },
     "evidence": {
