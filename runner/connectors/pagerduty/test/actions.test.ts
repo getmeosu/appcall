@@ -261,8 +261,80 @@ describe("schedules, on-calls, policies, and log entries", () => {
   });
 });
 
+describe("composio tools outside the REST OpenAPI dump", () => {
+  it("runs a response play against the incident", async () => {
+    const { calls, fetchFn } = mock({ response_play: { id: "PLAY123" } });
+    await actions["response-plays.run"]!({
+      apiKey: "token",
+      id: "PLAY123",
+      fromEmail: "ada@example.com",
+      incidentId: "PT4KHLK",
+      fetch: fetchFn,
+    });
+    expect(calls[0]!.init?.method).toBe("POST");
+    expect(calls[0]!.url).toBe("https://api.pagerduty.com/response_plays/PLAY123/run");
+    expect(header(calls, "From")).toBe("ada@example.com");
+    expect(JSON.parse(String(calls[0]!.init?.body))).toEqual({
+      incident: { id: "PT4KHLK", type: "incident_reference" },
+    });
+  });
+
+  it("reads SCIM users with the SCIM accept header", async () => {
+    const { calls, fetchFn } = mock({ Resources: [], totalResults: 0 });
+    await actions["scim.list-users"]!({ apiKey: "token", count: 10, startIndex: 1, fetch: fetchFn });
+    const url = new URL(calls[0]!.url);
+    expect(url.origin).toBe("https://api.pagerduty.com");
+    expect(url.pathname).toBe("/scim/v2/Users");
+    expect(url.searchParams.get("count")).toBe("10");
+    expect(url.searchParams.get("startIndex")).toBe("1");
+    expect(header(calls, "Accept")).toBe("application/scim+json");
+  });
+
+  it("lists Jira Cloud account mappings", async () => {
+    const { calls, fetchFn } = mock({ accounts_mappings: [] });
+    await actions["jira-cloud.list-account-mappings"]!({ apiKey: "token", limit: 25, fetch: fetchFn });
+    const url = new URL(calls[0]!.url);
+    expect(url.pathname).toBe("/integration-jira-cloud/accounts_mappings");
+    expect(url.searchParams.get("limit")).toBe("25");
+  });
+
+  it("enqueues a change event on the Events API", async () => {
+    const { calls, fetchFn } = mock({ status: "success" }, 202);
+    await actions["change-events.enqueue"]!({
+      apiKey: "token",
+      routingKey: "rk",
+      payload: { summary: "deploy", source: "ci" },
+      fetch: fetchFn,
+    });
+    expect(calls[0]!.url).toBe("https://events.pagerduty.com/v2/change/enqueue");
+    expect(calls[0]!.init?.method).toBe("POST");
+    expect(JSON.parse(String(calls[0]!.init?.body))).toEqual({
+      routing_key: "rk",
+      payload: { summary: "deploy", source: "ci" },
+    });
+  });
+
+  it("posts JSON-RPC to the PagerDuty MCP server", async () => {
+    const { calls, fetchFn } = mock({ jsonrpc: "2.0", id: 1, result: {} });
+    await actions["mcp.send"]!({
+      apiKey: "token",
+      jsonrpc: "2.0",
+      id: 1,
+      method: "tools/list",
+      fetch: fetchFn,
+    });
+    expect(calls[0]!.url).toBe("https://mcp.pagerduty.com/mcp");
+    expect(header(calls, "Accept")).toBe("application/json, text/event-stream");
+    expect(JSON.parse(String(calls[0]!.init?.body))).toEqual({ jsonrpc: "2.0", id: 1, method: "tools/list" });
+  });
+});
+
 describe("outbound boundary", () => {
-  it("only allows api.pagerduty.com", () => {
-    expect(manifest.network.allowedHosts).toEqual(["api.pagerduty.com"]);
+  it("allows the REST, Events, and MCP hosts", () => {
+    expect(manifest.network.allowedHosts).toEqual([
+      "api.pagerduty.com",
+      "events.pagerduty.com",
+      "mcp.pagerduty.com",
+    ]);
   });
 });

@@ -26,7 +26,7 @@ describe("pagerduty manifest", () => {
   it("declares the connector identity the control plane keys on", () => {
     expect(manifest.key).toBe("pagerduty");
     expect(manifest.runtime).toBe("bun");
-    expect(manifest.version).toBe("0.4.0");
+    expect(manifest.version).toBe("0.5.0");
     expect(manifest.categories).toEqual(["dev-tools"]);
     expect(manifest.models.length).toBeGreaterThan(0);
   });
@@ -84,12 +84,13 @@ describe("pagerduty manifest", () => {
   });
 
   it("keeps every request inside the declared outbound host", () => {
+    const hosts = new Set(["api.pagerduty.com", "events.pagerduty.com", "mcp.pagerduty.com"]);
     for (const operation of Object.values(operations)) {
       const request = operation.request as Record<string, unknown>;
       const baseUrl = String(request.baseUrl ?? manifest.http.baseUrl);
-      expect(new URL(baseUrl).hostname).toBe("api.pagerduty.com");
+      expect(hosts.has(new URL(baseUrl).hostname), String(request.path ?? baseUrl)).toBe(true);
     }
-    expect(manifest.network.allowedHosts).toEqual(["api.pagerduty.com"]);
+    expect(manifest.network.allowedHosts).toEqual([...hosts]);
   });
 
   it("only interpolates path placeholders the operation's schema requires", () => {
