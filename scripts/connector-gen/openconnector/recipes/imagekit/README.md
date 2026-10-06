@@ -1,15 +1,17 @@
 # ImageKit
 
-Read-only international **ImageKit Digital Asset Management API** recipe. Reveal the private API key under Developer options > API keys. Store it as `apiKey`. The runner sends HTTP Basic authentication with the private key as username and an empty password to `https://api.imagekit.io`, plus `Accept: application/json`.
+International **ImageKit Digital Asset Management API** recipe (v0.2.0). Reveal the private API key under Developer options > API keys. Store it as `apiKey`. The runner sends HTTP Basic authentication with the private key as username and an empty password to `https://api.imagekit.io`, plus `Accept: application/json`.
 
 ## Operations
 
-- `healthcheck`: `GET /v1/files?limit=1` with empty input (cheap authenticated file list; pinned credential validator).
-- `assets.list`: `GET /v1/files` with optional `path`, `searchQuery`, `fileType` (`all`|`image`|`non-image`), `sort`, `limit` (1–1000), and `skip` (≥0).
-- `files.get`: `GET /v1/files/{fileId}/details`; `fileId` is a required non-empty string.
-- `files.metadata.get`: `GET /v1/files/{fileId}/metadata`; `fileId` is a required non-empty string.
+- `healthcheck`: `GET /v1/files?limit=1`.
+- Files: `assets.list`, `files.get`, `files.metadata.get`, `files.update`, `files.delete`, `files.copy`, `files.move`, `files.rename`, `files.bulk.delete`, `files.tags.add`.
+- Folders: `folders.create|delete|copy|move|rename`.
+- Cache: `cache.purge`, `cache.purge.get`.
+- `metadata.from_url`, `custom_metadata_fields.list`, `usage.get`.
+- EventOnly webhooks: `webhook.video_transformation_ready`, `webhook.upload_complete`.
 
-Successful responses are raw provider JSON under AppCall `data`. Delete, cache purge, and remote-URL metadata are omitted.
+Successful responses are raw provider JSON under AppCall `data`.
 
 ## Adaptations
 
