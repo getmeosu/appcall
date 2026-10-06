@@ -1,9 +1,9 @@
 {
   "key": "dropbox",
   "name": "Dropbox",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "runtime": "bun",
-  "description": "Dropbox JSON metadata operations using a manually supplied OAuth2 access token.",
+  "description": "Dropbox JSON metadata operations plus content upload and download, using a manually supplied OAuth2 access token.",
   "categories": [
     "productivity"
   ],
@@ -54,7 +54,9 @@
   },
   "network": {
     "allowedHosts": [
-      "api.dropboxapi.com"
+      "api.dropboxapi.com",
+      "content.dropboxapi.com",
+      "www.dropbox.com"
     ]
   },
   "http": {
@@ -14578,6 +14580,1102 @@
         "body": {
           "account_ids": "{{account_ids}}"
         }
+      }
+    },
+    "files.upload": {
+      "kind": "action",
+      "timeoutMs": 120000,
+      "maxInputBytes": 26214400,
+      "maxResponseBytes": 5242880,
+      "title": "Upload a file",
+      "description": "Upload a file up to 150 MiB with POST https://content.dropboxapi.com/2/files/upload. Arguments travel in the Dropbox-API-Arg header and the file bytes are the raw body. Requires files.content.write.",
+      "sideEffect": "write",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "Destination path beginning with /, including the file name.",
+            "minLength": 1
+          },
+          "content": {
+            "type": "string",
+            "description": "File bytes as a string. Dropbox accepts at most 150 MiB on this route; the runner budget caps the action input at 25 MiB."
+          },
+          "mode": {
+            "type": "string",
+            "description": "Write mode: add, overwrite, or update."
+          },
+          "autorename": {
+            "type": "boolean",
+            "description": "Ask Dropbox to rename the file when mode conflicts."
+          },
+          "mute": {
+            "type": "boolean",
+            "description": "Suppress the client notification for this write."
+          },
+          "client_modified": {
+            "type": "string",
+            "description": "Client modified time in ISO 8601, such as 2015-05-12T15:50:38Z."
+          },
+          "strict_conflict": {
+            "type": "boolean",
+            "description": "Report a conflict instead of autorenaming when mode is update."
+          }
+        },
+        "required": [
+          "path",
+          "content"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "description": "Official Dropbox JSON response. Null when the route result is Void."
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated",
+      "request": {
+        "method": "POST",
+        "baseUrl": "https://content.dropboxapi.com/2",
+        "path": "/files/upload",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/octet-stream",
+          "Dropbox-API-Arg": {
+            "path": "{{path}}",
+            "mode": "{{mode}}",
+            "autorename": "{{autorename}}",
+            "mute": "{{mute}}",
+            "client_modified": "{{client_modified}}",
+            "strict_conflict": "{{strict_conflict}}"
+          }
+        },
+        "body": "{{content}}",
+        "bodyEncoding": "raw"
+      }
+    },
+    "files.alpha.upload": {
+      "kind": "action",
+      "timeoutMs": 120000,
+      "maxInputBytes": 26214400,
+      "maxResponseBytes": 5242880,
+      "title": "Alpha upload a file",
+      "description": "Upload a file with the unstable alpha route POST https://content.dropboxapi.com/2/files/alpha/upload. Arguments travel in Dropbox-API-Arg and the file bytes are the raw body. Requires files.content.write.",
+      "sideEffect": "write",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "Destination path beginning with /, including the file name.",
+            "minLength": 1
+          },
+          "content": {
+            "type": "string",
+            "description": "File bytes as a string. Dropbox accepts at most 150 MiB on this route; the runner budget caps the action input at 25 MiB."
+          },
+          "mode": {
+            "type": "string",
+            "description": "Write mode: add, overwrite, or update."
+          },
+          "autorename": {
+            "type": "boolean",
+            "description": "Ask Dropbox to rename the file when mode conflicts."
+          },
+          "mute": {
+            "type": "boolean",
+            "description": "Suppress the client notification for this write."
+          },
+          "client_modified": {
+            "type": "string",
+            "description": "Client modified time in ISO 8601, such as 2015-05-12T15:50:38Z."
+          },
+          "strict_conflict": {
+            "type": "boolean",
+            "description": "Report a conflict instead of autorenaming when mode is update."
+          }
+        },
+        "required": [
+          "path",
+          "content"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "description": "Official Dropbox JSON response. Null when the route result is Void."
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated",
+      "request": {
+        "method": "POST",
+        "baseUrl": "https://content.dropboxapi.com/2",
+        "path": "/files/alpha/upload",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/octet-stream",
+          "Dropbox-API-Arg": {
+            "path": "{{path}}",
+            "mode": "{{mode}}",
+            "autorename": "{{autorename}}",
+            "mute": "{{mute}}",
+            "client_modified": "{{client_modified}}",
+            "strict_conflict": "{{strict_conflict}}"
+          }
+        },
+        "body": "{{content}}",
+        "bodyEncoding": "raw"
+      }
+    },
+    "files.upload_session.start": {
+      "kind": "action",
+      "timeoutMs": 120000,
+      "maxInputBytes": 26214400,
+      "maxResponseBytes": 5242880,
+      "title": "Start an upload session",
+      "description": "Start an upload session with POST https://content.dropboxapi.com/2/files/upload_session/start. Optional file bytes are the raw body and close/session_type travel in Dropbox-API-Arg. Requires files.content.write.",
+      "sideEffect": "write",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "content": {
+            "type": "string",
+            "description": "Optional leading file bytes. Omit to open an empty session."
+          },
+          "close": {
+            "type": "boolean",
+            "description": "Close the session after this request so no further bytes can be appended."
+          },
+          "session_type": {
+            "type": "string",
+            "description": "sequential or concurrent. Omitted uses Dropbox's sequential default."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "description": "Official Dropbox JSON response. Null when the route result is Void."
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated",
+      "request": {
+        "method": "POST",
+        "baseUrl": "https://content.dropboxapi.com/2",
+        "path": "/files/upload_session/start",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/octet-stream",
+          "Dropbox-API-Arg": {
+            "close": "{{close}}",
+            "session_type": "{{session_type}}"
+          }
+        },
+        "body": "{{content}}",
+        "bodyEncoding": "raw"
+      }
+    },
+    "files.upload_session.append": {
+      "kind": "action",
+      "timeoutMs": 120000,
+      "maxInputBytes": 26214400,
+      "maxResponseBytes": 5242880,
+      "title": "Append to an upload session",
+      "description": "Append bytes to an upload session with POST https://content.dropboxapi.com/2/files/upload_session/append_v2. The cursor travels in Dropbox-API-Arg and the bytes are the raw body. Requires files.content.write.",
+      "sideEffect": "write",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "content": {
+            "type": "string",
+            "description": "Bytes to append. A single request must stay within the runner input budget."
+          },
+          "cursor": {
+            "type": "object",
+            "description": "Upload session cursor with session_id and byte offset."
+          },
+          "close": {
+            "type": "boolean",
+            "description": "Close the session after appending these bytes."
+          }
+        },
+        "required": [
+          "content",
+          "cursor"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "description": "Official Dropbox JSON response. Null when the route result is Void."
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated",
+      "request": {
+        "method": "POST",
+        "baseUrl": "https://content.dropboxapi.com/2",
+        "path": "/files/upload_session/append_v2",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/octet-stream",
+          "Dropbox-API-Arg": {
+            "cursor": "{{cursor}}",
+            "close": "{{close}}"
+          }
+        },
+        "body": "{{content}}",
+        "bodyEncoding": "raw",
+        "result": {
+          "data": null
+        }
+      }
+    },
+    "files.upload_session.append_batch": {
+      "kind": "action",
+      "timeoutMs": 120000,
+      "maxInputBytes": 26214400,
+      "maxResponseBytes": 5242880,
+      "title": "Append to multiple upload sessions",
+      "description": "Append concatenated bytes to several upload sessions with POST https://content.dropboxapi.com/2/files/upload_session/append_batch. entries travels in Dropbox-API-Arg and the concatenated bytes are the raw body. Requires files.content.write.",
+      "sideEffect": "write",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "content": {
+            "type": "string",
+            "description": "Concatenated bytes for every entry, in entries order."
+          },
+          "entries": {
+            "type": "array",
+            "description": "UploadSessionAppendArg entries. Each length must match its slice of content.",
+            "items": {
+              "type": "object"
+            }
+          }
+        },
+        "required": [
+          "content",
+          "entries"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "description": "Official Dropbox JSON response. Null when the route result is Void."
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated",
+      "request": {
+        "method": "POST",
+        "baseUrl": "https://content.dropboxapi.com/2",
+        "path": "/files/upload_session/append_batch",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/octet-stream",
+          "Dropbox-API-Arg": {
+            "entries": "{{entries}}"
+          }
+        },
+        "body": "{{content}}",
+        "bodyEncoding": "raw"
+      }
+    },
+    "files.upload_session.finish": {
+      "kind": "action",
+      "timeoutMs": 120000,
+      "maxInputBytes": 26214400,
+      "maxResponseBytes": 5242880,
+      "title": "Finish an upload session",
+      "description": "Commit an upload session with POST https://content.dropboxapi.com/2/files/upload_session/finish. cursor and commit travel in Dropbox-API-Arg. Optional remaining bytes are the raw body. Requires files.content.write.",
+      "sideEffect": "write",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "cursor": {
+            "type": "object",
+            "description": "Upload session cursor with session_id and the current byte offset."
+          },
+          "commit": {
+            "type": "object",
+            "description": "CommitInfo with path and optional mode, autorename, client_modified, mute, and property groups."
+          },
+          "content": {
+            "type": "string",
+            "description": "Optional final bytes appended before the session is committed."
+          }
+        },
+        "required": [
+          "cursor",
+          "commit"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "description": "Official Dropbox JSON response. Null when the route result is Void."
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated",
+      "request": {
+        "method": "POST",
+        "baseUrl": "https://content.dropboxapi.com/2",
+        "path": "/files/upload_session/finish",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/octet-stream",
+          "Dropbox-API-Arg": {
+            "cursor": "{{cursor}}",
+            "commit": "{{commit}}"
+          }
+        },
+        "body": "{{content}}",
+        "bodyEncoding": "raw"
+      }
+    },
+    "files.download": {
+      "kind": "action",
+      "timeoutMs": 120000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 52428800,
+      "title": "Download a file",
+      "description": "Download file bytes with POST https://content.dropboxapi.com/2/files/download. The path travels in Dropbox-API-Arg and the response body is the file. Requires files.content.read.",
+      "sideEffect": "read",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "File or folder path beginning with /, or an id: reference.",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "path"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "string",
+            "description": "Raw content-download body. Result metadata is returned in the Dropbox-API-Result header."
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "text",
+      "validationMode": "strict-generated",
+      "request": {
+        "method": "POST",
+        "baseUrl": "https://content.dropboxapi.com/2",
+        "path": "/files/download",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Dropbox-API-Arg": {
+            "path": "{{path}}"
+          }
+        }
+      }
+    },
+    "files.download_zip": {
+      "kind": "action",
+      "timeoutMs": 120000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 52428800,
+      "title": "Download a folder as a zip",
+      "description": "Download a folder as a zip with POST https://content.dropboxapi.com/2/files/download_zip. The path travels in Dropbox-API-Arg. Requires files.content.read.",
+      "sideEffect": "read",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "File or folder path beginning with /, or an id: reference.",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "path"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "string",
+            "description": "Raw content-download body. Result metadata is returned in the Dropbox-API-Result header."
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "text",
+      "validationMode": "strict-generated",
+      "request": {
+        "method": "POST",
+        "baseUrl": "https://content.dropboxapi.com/2",
+        "path": "/files/download_zip",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Dropbox-API-Arg": {
+            "path": "{{path}}"
+          }
+        }
+      }
+    },
+    "files.export": {
+      "kind": "action",
+      "timeoutMs": 120000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 52428800,
+      "title": "Export a Dropbox file",
+      "description": "Export a Dropbox Paper or other exportable file with POST https://content.dropboxapi.com/2/files/export. path and optional export_format travel in Dropbox-API-Arg. Requires files.content.read.",
+      "sideEffect": "read",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "File or folder path beginning with /, or an id: reference.",
+            "minLength": 1
+          },
+          "export_format": {
+            "type": "string",
+            "description": "Export format such as html, markdown, or plain_text. Omitted lets Dropbox choose."
+          }
+        },
+        "required": [
+          "path"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "string",
+            "description": "Raw content-download body. Result metadata is returned in the Dropbox-API-Result header."
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "text",
+      "validationMode": "strict-generated",
+      "request": {
+        "method": "POST",
+        "baseUrl": "https://content.dropboxapi.com/2",
+        "path": "/files/export",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Dropbox-API-Arg": {
+            "path": "{{path}}",
+            "export_format": "{{export_format}}"
+          }
+        }
+      }
+    },
+    "files.get_preview": {
+      "kind": "action",
+      "timeoutMs": 120000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 52428800,
+      "title": "Get a file preview",
+      "description": "Download a preview with POST https://content.dropboxapi.com/2/files/get_preview. The path travels in Dropbox-API-Arg. Requires files.content.read.",
+      "sideEffect": "read",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "File or folder path beginning with /, or an id: reference.",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "path"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "string",
+            "description": "Raw content-download body. Result metadata is returned in the Dropbox-API-Result header."
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "text",
+      "validationMode": "strict-generated",
+      "request": {
+        "method": "POST",
+        "baseUrl": "https://content.dropboxapi.com/2",
+        "path": "/files/get_preview",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Dropbox-API-Arg": {
+            "path": "{{path}}"
+          }
+        }
+      }
+    },
+    "files.get_thumbnail": {
+      "kind": "action",
+      "timeoutMs": 120000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 52428800,
+      "title": "Get a thumbnail",
+      "description": "Download a thumbnail with POST https://content.dropboxapi.com/2/files/get_thumbnail. Arguments travel in Dropbox-API-Arg. Requires files.content.read.",
+      "sideEffect": "read",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "File or folder path beginning with /, or an id: reference.",
+            "minLength": 1
+          },
+          "format": {
+            "type": "string",
+            "description": "Thumbnail image format, jpeg or png."
+          },
+          "size": {
+            "type": "string",
+            "description": "Thumbnail size such as w64h64, w128h128, w640h480, or w1024h768."
+          },
+          "mode": {
+            "type": "string",
+            "description": "Resize mode: strict, bestfit, or fitone_bestfit."
+          }
+        },
+        "required": [
+          "path"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "string",
+            "description": "Raw content-download body. Result metadata is returned in the Dropbox-API-Result header."
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "text",
+      "validationMode": "strict-generated",
+      "request": {
+        "method": "POST",
+        "baseUrl": "https://content.dropboxapi.com/2",
+        "path": "/files/get_thumbnail",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Dropbox-API-Arg": {
+            "path": "{{path}}",
+            "format": "{{format}}",
+            "size": "{{size}}",
+            "mode": "{{mode}}"
+          }
+        }
+      }
+    },
+    "files.get_thumbnail_v2": {
+      "kind": "action",
+      "timeoutMs": 120000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 52428800,
+      "title": "Get a thumbnail v2",
+      "description": "Download a thumbnail with POST https://content.dropboxapi.com/2/files/get_thumbnail_v2. Arguments travel in Dropbox-API-Arg. Requires files.content.read.",
+      "sideEffect": "read",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "File or folder path beginning with /, or an id: reference.",
+            "minLength": 1
+          },
+          "format": {
+            "type": "string",
+            "description": "Thumbnail image format, jpeg or png."
+          },
+          "size": {
+            "type": "string",
+            "description": "Thumbnail size such as w64h64, w128h128, w640h480, or w1024h768."
+          },
+          "mode": {
+            "type": "string",
+            "description": "Resize mode: strict, bestfit, or fitone_bestfit."
+          }
+        },
+        "required": [
+          "path"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "string",
+            "description": "Raw content-download body. Result metadata is returned in the Dropbox-API-Result header."
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "text",
+      "validationMode": "strict-generated",
+      "request": {
+        "method": "POST",
+        "baseUrl": "https://content.dropboxapi.com/2",
+        "path": "/files/get_thumbnail_v2",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Dropbox-API-Arg": {
+            "path": "{{path}}",
+            "format": "{{format}}",
+            "size": "{{size}}",
+            "mode": "{{mode}}"
+          }
+        }
+      }
+    },
+    "files.get_thumbnail_batch": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get a batch of thumbnails",
+      "description": "Get thumbnails for many files with POST https://api.dropboxapi.com/2/files/get_thumbnail_batch. Requires files.content.read.",
+      "sideEffect": "read",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "entries": {
+            "type": "array",
+            "description": "ThumbnailArg entries, each with a path and optional format, size, and mode.",
+            "items": {
+              "type": "object"
+            }
+          }
+        },
+        "required": [
+          "entries"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "description": "Official Dropbox JSON response. Null when the route result is Void."
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated",
+      "request": {
+        "method": "POST",
+        "path": "/files/get_thumbnail_batch",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "entries": "{{entries}}"
+        }
+      }
+    },
+    "sharing.get_shared_link_file": {
+      "kind": "action",
+      "timeoutMs": 120000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 52428800,
+      "title": "Download a shared-link file",
+      "description": "Download a file from a shared link with POST https://content.dropboxapi.com/2/sharing/get_shared_link_file. url, optional path, and optional link_password travel in Dropbox-API-Arg. Requires sharing.read.",
+      "sideEffect": "read",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "Shared link URL.",
+            "minLength": 1
+          },
+          "path": {
+            "type": "string",
+            "description": "Path relative to the shared link when the link points at a folder."
+          },
+          "link_password": {
+            "type": "string",
+            "description": "Password for a password-protected shared link."
+          }
+        },
+        "required": [
+          "url"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "string",
+            "description": "Raw content-download body. Result metadata is returned in the Dropbox-API-Result header."
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "text",
+      "validationMode": "strict-generated",
+      "request": {
+        "method": "POST",
+        "baseUrl": "https://content.dropboxapi.com/2",
+        "path": "/sharing/get_shared_link_file",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Dropbox-API-Arg": {
+            "url": "{{url}}",
+            "path": "{{path}}",
+            "link_password": "{{link_password}}"
+          }
+        }
+      }
+    },
+    "paper.docs.create": {
+      "kind": "action",
+      "timeoutMs": 120000,
+      "maxInputBytes": 26214400,
+      "maxResponseBytes": 5242880,
+      "title": "Create a Paper document",
+      "description": "Create a Paper document with POST https://content.dropboxapi.com/2/paper/docs/create. import_format and optional path travel in Dropbox-API-Arg and the document body is the raw request body. Requires files.content.write.",
+      "sideEffect": "write",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "import_format": {
+            "type": "string",
+            "description": "Import format: plain_text, markdown, or html.",
+            "minLength": 1
+          },
+          "path": {
+            "type": "string",
+            "description": "Parent folder path. Omitted creates the document in the user's Paper folder."
+          },
+          "content": {
+            "type": "string",
+            "description": "Document body in the chosen import format."
+          }
+        },
+        "required": [
+          "import_format",
+          "content"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "description": "Official Dropbox JSON response. Null when the route result is Void."
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated",
+      "request": {
+        "method": "POST",
+        "baseUrl": "https://content.dropboxapi.com/2",
+        "path": "/paper/docs/create",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/octet-stream",
+          "Dropbox-API-Arg": {
+            "import_format": "{{import_format}}",
+            "path": "{{path}}"
+          }
+        },
+        "body": "{{content}}",
+        "bodyEncoding": "raw"
+      }
+    },
+    "paper.docs.update": {
+      "kind": "action",
+      "timeoutMs": 120000,
+      "maxInputBytes": 26214400,
+      "maxResponseBytes": 5242880,
+      "title": "Update a Paper document",
+      "description": "Update a Paper document with POST https://content.dropboxapi.com/2/paper/docs/update. The document identity and policy travel in Dropbox-API-Arg and the new body is the raw request body. Requires files.content.write.",
+      "sideEffect": "write",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "doc_id": {
+            "type": "string",
+            "description": "Paper document id.",
+            "minLength": 1
+          },
+          "doc_update_policy": {
+            "type": "string",
+            "description": "append, prepend, overwrite_all, or update.",
+            "minLength": 1
+          },
+          "revision": {
+            "type": "integer",
+            "description": "Current document revision. Required by Dropbox for update."
+          },
+          "import_format": {
+            "type": "string",
+            "description": "Import format: plain_text, markdown, or html.",
+            "minLength": 1
+          },
+          "content": {
+            "type": "string",
+            "description": "Replacement or appended document body."
+          }
+        },
+        "required": [
+          "doc_id",
+          "doc_update_policy",
+          "revision",
+          "import_format",
+          "content"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "description": "Official Dropbox JSON response. Null when the route result is Void."
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated",
+      "request": {
+        "method": "POST",
+        "baseUrl": "https://content.dropboxapi.com/2",
+        "path": "/paper/docs/update",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/octet-stream",
+          "Dropbox-API-Arg": {
+            "doc_id": "{{doc_id}}",
+            "doc_update_policy": "{{doc_update_policy}}",
+            "revision": "{{revision}}",
+            "import_format": "{{import_format}}"
+          }
+        },
+        "body": "{{content}}",
+        "bodyEncoding": "raw"
+      }
+    },
+    "openid.configuration": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Read the Dropbox OpenID configuration",
+      "description": "Read the OpenID provider configuration with GET https://www.dropbox.com/.well-known/openid-configuration.",
+      "sideEffect": "read",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "description": "Official Dropbox JSON response. Null when the route result is Void."
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated",
+      "request": {
+        "method": "GET",
+        "baseUrl": "https://www.dropbox.com",
+        "path": "/.well-known/openid-configuration",
+        "success": [
+          200
+        ]
+      }
+    },
+    "openid.jwks": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Read the Dropbox OpenID signing keys",
+      "description": "Read the OpenID signing keys with GET https://www.dropbox.com/.well-known/jwks.",
+      "sideEffect": "read",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "description": "Official Dropbox JSON response. Null when the route result is Void."
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated",
+      "request": {
+        "method": "GET",
+        "baseUrl": "https://www.dropbox.com",
+        "path": "/.well-known/jwks",
+        "success": [
+          200
+        ]
       }
     }
   },

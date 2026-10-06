@@ -28,17 +28,19 @@ it("declares OAuth2 with manually collected credentials and bounded action schem
   for(const [key,op] of Object.entries(manifest.operations) as [string,any][]) {
     expect(op.inputSchema.type).toBe("object");expect(op.outputSchema.type).toBe("object");
     expect(op.kind).toBe("action");expect(op.timeoutMs).toBeGreaterThan(0);
-    expect(op.maxResponseBytes).toBeLessThanOrEqual(5242880);
+    const responseHost = typeof op.request?.baseUrl === "string" ? new URL(op.request.baseUrl).hostname : new URL(manifest.http.baseUrl).hostname;
+    expect(op.maxResponseBytes).toBeLessThanOrEqual(responseHost === "content.dropboxapi.com" && op.responseFormat === "text" ? 52428800 : 5242880);
     expect(op.sideEffect).toBe(LEGACY.has(key) ? (/create|move|delete|copy|restore|saveUrl|createSharedLink|revoke|shareFolder/.test(key)?"write":"read") : classifiedSideEffect(key));
     if (!LEGACY.has(key)) {
       expect(op.validationMode).toBe("strict-generated");
       expect(op.enforceOutputSchema).toBe(true);
-      expect(op.responseFormat).toBe("json");
+      expect(op.responseFormat).toBe(responseHost === "content.dropboxapi.com" && op.sideEffect === "read" ? "text" : "json");
       expect(op.outputSchema.additionalProperties).toBe(false);
       expect(op.outputSchema.required).toEqual(["data"]);
     }
   }
-  expect(manifest.network?.allowedHosts).toEqual([new URL(manifest.http.baseUrl).hostname]);
+  expect(manifest.network?.allowedHosts).toEqual(["api.dropboxapi.com", "content.dropboxapi.com", "www.dropbox.com"]);
+  expect(manifest.network?.allowedHosts).toContain(new URL(manifest.http.baseUrl).hostname);
 });
 
 it("requires the fields guaranteed by each mapped response", () => {
