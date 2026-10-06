@@ -1,7 +1,17 @@
 {
+  "key": "amara",
+  "name": "Amara",
+  "version": "0.2.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "productivity"
+  ],
   "auth": {
+    "type": "api_key",
     "scopes": [],
     "setup": {
+      "mode": "api_key",
       "fields": [
         {
           "key": "apiKey",
@@ -9,83 +19,73 @@
           "required": true,
           "secret": true
         }
-      ],
-      "mode": "api_key"
-    },
-    "type": "api_key"
-  },
-  "categories": [
-    "productivity"
-  ],
-  "evidence": {
-    "fixture": {
-      "status": "supplied"
-    },
-    "live": {
-      "status": "unverified"
+      ]
     }
   },
+  "network": {
+    "allowedHosts": [
+      "amara.org"
+    ]
+  },
+  "models": [
+    "user",
+    "language",
+    "video",
+    "team",
+    "subtitle",
+    "project",
+    "subtitle-request"
+  ],
   "http": {
+    "baseUrl": "https://amara.org/api",
     "auth": {
       "field": "apiKey",
       "in": "header",
       "name": "x-api-key",
       "value": "{{apiKey}}"
     },
-    "baseUrl": "https://amara.org/api",
+    "headers": {
+      "Accept": "application/json"
+    },
     "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after",
       "defaultRetryAfterSeconds": 30,
       "messagePaths": [
         "detail",
         "description",
         "error",
         "message"
-      ],
-      "rateLimitStatuses": [
-        429
-      ],
-      "retryAfterHeader": "retry-after"
-    },
-    "headers": {
-      "Accept": "application/json"
+      ]
     }
-  },
-  "key": "amara",
-  "models": [
-    "user",
-    "language",
-    "video",
-    "team"
-  ],
-  "name": "Amara",
-  "network": {
-    "allowedHosts": [
-      "amara.org"
-    ]
   },
   "operations": {
     "healthcheck": {
-      "description": "Validate the Amara API key with GET /users/me/.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {},
-        "type": "object"
-      },
       "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 5000,
       "maxInputBytes": 4096,
       "maxResponseBytes": 65536,
+      "title": "Healthcheck",
+      "description": "Validate the Amara API key with GET /users/me/.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
       "outputSchema": {
-        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "required": [
-          "data"
-        ],
-        "type": "object"
+        "additionalProperties": false
       },
       "request": {
         "method": "GET",
@@ -94,34 +94,34 @@
           200
         ]
       },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 5000,
-      "title": "Healthcheck",
-      "validationMode": "strict-generated"
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
     },
     "languages.list": {
-      "description": "List languages supported by the Amara API.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {},
-        "type": "object"
-      },
       "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
+      "title": "List languages",
+      "description": "List languages supported by the Amara API.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
       "outputSchema": {
-        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "required": [
-          "data"
-        ],
-        "type": "object"
+        "additionalProperties": false
       },
       "request": {
         "method": "GET",
@@ -130,91 +130,97 @@
           200
         ]
       },
-      "responseFormat": "json",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "videos.list": {
+      "kind": "action",
       "sideEffect": "read",
       "timeoutMs": 15000,
-      "title": "List languages",
-      "validationMode": "strict-generated"
-    },
-    "teams.list": {
-      "description": "List Amara teams accessible to the current API key.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "limit": {
-            "minimum": 1,
-            "type": "integer"
-          },
-          "offset": {
-            "minimum": 0,
-            "type": "integer"
-          }
-        },
-        "type": "object"
-      },
-      "kind": "action",
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
+      "title": "List videos",
+      "description": "List Amara videos with optional team filter and offset pagination.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "team": {
+            "type": "string",
+            "minLength": 1
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 50
+          }
+        },
+        "additionalProperties": false
+      },
       "outputSchema": {
-        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "required": [
-          "data"
-        ],
-        "type": "object"
+        "additionalProperties": false
       },
       "request": {
         "method": "GET",
-        "path": "/teams/",
-        "query": {
-          "limit": "{{limit}}",
-          "offset": "{{offset}}"
-        },
+        "path": "/videos/",
         "success": [
           200
-        ]
+        ],
+        "query": {
+          "team": "{{team}}",
+          "offset": "{{offset}}",
+          "limit": "{{limit}}"
+        }
       },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "title": "List teams",
-      "validationMode": "strict-generated"
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
     },
     "videos.get": {
-      "description": "Fetch a single Amara video by video id.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "videoId": {
-            "minLength": 1,
-            "type": "string"
-          }
-        },
-        "required": [
-          "videoId"
-        ],
-        "type": "object"
-      },
       "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
-      "outputSchema": {
+      "title": "Get video",
+      "description": "Fetch a single Amara video by video id.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "videoId": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
         "additionalProperties": false,
+        "required": [
+          "videoId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "required": [
-          "data"
-        ],
-        "type": "object"
+        "additionalProperties": false
       },
       "request": {
         "method": "GET",
@@ -223,75 +229,916 @@
           200
         ]
       },
-      "responseFormat": "json",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "teams.list": {
+      "kind": "action",
       "sideEffect": "read",
       "timeoutMs": 15000,
-      "title": "Get video",
-      "validationMode": "strict-generated"
-    },
-    "videos.list": {
-      "description": "List Amara videos with optional team filter and offset pagination.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "limit": {
-            "maximum": 50,
-            "minimum": 1,
-            "type": "integer"
-          },
-          "offset": {
-            "minimum": 0,
-            "type": "integer"
-          },
-          "team": {
-            "minLength": 1,
-            "type": "string"
-          }
-        },
-        "type": "object"
-      },
-      "kind": "action",
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
+      "title": "List teams",
+      "description": "List Amara teams accessible to the current API key.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "offset": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": false
+      },
       "outputSchema": {
-        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "required": [
-          "data"
-        ],
-        "type": "object"
+        "additionalProperties": false
       },
       "request": {
         "method": "GET",
-        "path": "/videos/",
+        "path": "/teams/",
+        "success": [
+          200
+        ],
         "query": {
-          "limit": "{{limit}}",
           "offset": "{{offset}}",
-          "team": "{{team}}"
+          "limit": "{{limit}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "videos.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create video",
+      "description": "Add a video to Amara via POST /videos/.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "videoUrl": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Primary video URL."
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Video title."
+          },
+          "team": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Optional team slug."
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Optional video description."
+          }
         },
+        "additionalProperties": false,
+        "required": [
+          "videoUrl"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/videos/",
+        "success": [
+          201
+        ],
+        "body": {
+          "video_url": "{{videoUrl}}",
+          "title": "{{title}}",
+          "team": "{{team}}",
+          "description": "{{description}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "videos.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Delete video",
+      "description": "Delete an Amara video via DELETE /videos/{videoId}/.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "videoId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Amara video id."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "videoId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/videos/{{videoId}}/",
+        "success": [
+          204
+        ],
+        "result": {
+          "data": {
+            "deleted": true,
+            "videoId": "{{input.videoId}}"
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "videos.languages.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List subtitle languages",
+      "description": "List subtitle languages for an Amara video.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "videoId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Amara video id."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "videoId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/videos/{{videoId}}/languages/",
         "success": [
           200
         ]
       },
-      "responseFormat": "json",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "videos.languages.get": {
+      "kind": "action",
       "sideEffect": "read",
       "timeoutMs": 15000,
-      "title": "List videos",
-      "validationMode": "strict-generated"
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get subtitle language",
+      "description": "Fetch one subtitle language for an Amara video.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "videoId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Amara video id."
+          },
+          "languageCode": {
+            "type": "string",
+            "minLength": 1,
+            "description": "BCP-47 language code."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "videoId",
+          "languageCode"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/videos/{{videoId}}/languages/{{languageCode}}/",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "videos.languages.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create subtitle language",
+      "description": "Create a subtitle language on an Amara video.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "videoId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Amara video id."
+          },
+          "languageCode": {
+            "type": "string",
+            "minLength": 1,
+            "description": "BCP-47 language code."
+          },
+          "isPrimaryAudioLanguage": {
+            "type": "boolean",
+            "description": "Whether this is the primary audio language."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "videoId",
+          "languageCode"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/videos/{{videoId}}/languages/",
+        "success": [
+          201
+        ],
+        "body": {
+          "language_code": "{{languageCode}}",
+          "is_primary_audio_language": "{{isPrimaryAudioLanguage}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "videos.subtitles.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get subtitles",
+      "description": "Fetch subtitle data for a video language, optionally in a specific format.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "videoId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Amara video id."
+          },
+          "languageCode": {
+            "type": "string",
+            "minLength": 1,
+            "description": "BCP-47 language code."
+          },
+          "subFormat": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Optional subtitle format such as vtt or srt."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "videoId",
+          "languageCode"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/videos/{{videoId}}/languages/{{languageCode}}/subtitles/",
+        "success": [
+          200
+        ],
+        "query": {
+          "sub_format": "{{subFormat}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "videos.subtitles.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Add subtitles",
+      "description": "Upload subtitle content for a video language via POST .../subtitles/.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "videoId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Amara video id."
+          },
+          "languageCode": {
+            "type": "string",
+            "minLength": 1,
+            "description": "BCP-47 language code."
+          },
+          "subtitles": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Subtitle payload."
+          },
+          "subFormat": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Subtitle format such as vtt or srt."
+          },
+          "action": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Optional editor action such as publish."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "videoId",
+          "languageCode",
+          "subtitles"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/videos/{{videoId}}/languages/{{languageCode}}/subtitles/",
+        "success": [
+          201
+        ],
+        "body": {
+          "subtitles": "{{subtitles}}",
+          "sub_format": "{{subFormat}}",
+          "action": "{{action}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "videos.subtitles.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Delete subtitles",
+      "description": "Delete all subtitle versions for a video language.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "videoId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Amara video id."
+          },
+          "languageCode": {
+            "type": "string",
+            "minLength": 1,
+            "description": "BCP-47 language code."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "videoId",
+          "languageCode"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/videos/{{videoId}}/languages/{{languageCode}}/subtitles/",
+        "success": [
+          204
+        ],
+        "result": {
+          "data": {
+            "deleted": true,
+            "videoId": "{{input.videoId}}",
+            "languageCode": "{{input.languageCode}}"
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "videos.activity.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List video activity",
+      "description": "List activity events for an Amara video.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "videoId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Amara video id."
+          },
+          "offset": {
+            "type": "integer",
+            "description": "Number of records to skip.",
+            "minimum": 0
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Page size.",
+            "minimum": 1,
+            "maximum": 50
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "videoId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/videos/{{videoId}}/activity/",
+        "success": [
+          200
+        ],
+        "query": {
+          "offset": "{{offset}}",
+          "limit": "{{limit}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "teams.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get team",
+      "description": "Fetch an Amara team by slug.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "teamSlug": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Team slug."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "teamSlug"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/teams/{{teamSlug}}/",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "teams.members.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List team members",
+      "description": "List members of an Amara team.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "teamSlug": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Team slug."
+          },
+          "offset": {
+            "type": "integer",
+            "description": "Number of records to skip.",
+            "minimum": 0
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Page size.",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "teamSlug"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/teams/{{teamSlug}}/members/",
+        "success": [
+          200
+        ],
+        "query": {
+          "offset": "{{offset}}",
+          "limit": "{{limit}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "teams.projects.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List team projects",
+      "description": "List projects in an Amara team.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "teamSlug": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Team slug."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "teamSlug"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/teams/{{teamSlug}}/projects/",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "teams.activity.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List team activity",
+      "description": "List activity events for an Amara team.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "teamSlug": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Team slug."
+          },
+          "offset": {
+            "type": "integer",
+            "description": "Number of records to skip.",
+            "minimum": 0
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Page size.",
+            "minimum": 1,
+            "maximum": 50
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "teamSlug"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/teams/{{teamSlug}}/activity/",
+        "success": [
+          200
+        ],
+        "query": {
+          "offset": "{{offset}}",
+          "limit": "{{limit}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "teams.subtitleRequests.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List subtitle requests",
+      "description": "List subtitle requests for an Amara team.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "teamSlug": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Team slug."
+          },
+          "offset": {
+            "type": "integer",
+            "description": "Number of records to skip.",
+            "minimum": 0
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Page size.",
+            "minimum": 1,
+            "maximum": 50
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "teamSlug"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/teams/{{teamSlug}}/subtitle-requests/",
+        "success": [
+          200
+        ],
+        "query": {
+          "offset": "{{offset}}",
+          "limit": "{{limit}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "users.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get user",
+      "description": "Fetch an Amara user by username.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "username": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Amara username."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "username"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/users/{{username}}/",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
     }
   },
   "provenance": {
     "source": {
-      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
-      "url": "https://github.com/oomol-lab/open-connector"
+      "url": "https://github.com/oomol-lab/open-connector",
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"
     }
   },
-  "runtime": "bun",
-  "version": "0.1.0",
-  "visibility": "public"
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
+    }
+  }
 }
