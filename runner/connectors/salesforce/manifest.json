@@ -1,7 +1,7 @@
 {
   "key": "salesforce",
   "name": "Salesforce",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "runtime": "bun",
   "categories": [
     "crm"
@@ -9399,6 +9399,2725 @@
           "Content-Type": "application/json"
         },
         "body": "{{body}}"
+      }
+    },
+    "jobs.ingest_create": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "write",
+      "title": "Create bulk ingest job",
+      "description": "Create a Bulk API 2.0 ingest job for insert, update, upsert, or delete.",
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "object": {
+            "type": "string",
+            "description": "sObject the job writes, such as Account.",
+            "minLength": 1
+          },
+          "operation": {
+            "type": "string",
+            "description": "Bulk ingest operation.",
+            "enum": [
+              "insert",
+              "delete",
+              "hardDelete",
+              "update",
+              "upsert"
+            ]
+          },
+          "externalIdFieldName": {
+            "type": "string",
+            "description": "External id field. Required for upsert.",
+            "minLength": 1
+          },
+          "contentType": {
+            "type": "string",
+            "description": "Bulk API 2.0 payload type.",
+            "enum": [
+              "CSV"
+            ]
+          },
+          "lineEnding": {
+            "type": "string",
+            "description": "CSV line ending.",
+            "enum": [
+              "LF",
+              "CRLF"
+            ]
+          }
+        },
+        "required": [
+          "object",
+          "operation"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array",
+              "null"
+            ]
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/services/data/v60.0/jobs/ingest",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "object": "{{object}}",
+          "operation": "{{operation}}",
+          "externalIdFieldName": "{{externalIdFieldName}}",
+          "contentType": "{{contentType}}",
+          "lineEnding": "{{lineEnding}}"
+        }
+      }
+    },
+    "jobs.ingest_list": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "List bulk ingest jobs",
+      "description": "List Bulk API 2.0 ingest jobs in the org.",
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "jobType": {
+            "type": "string",
+            "description": "Job type filter.",
+            "enum": [
+              "BigObjectIngest",
+              "Classic",
+              "V2Ingest"
+            ]
+          }
+        },
+        "required": []
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array",
+              "null"
+            ]
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/services/data/v60.0/jobs/ingest",
+        "success": [
+          200
+        ],
+        "query": {
+          "jobType": "{{jobType}}"
+        }
+      }
+    },
+    "jobs.ingest_get": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "Get bulk ingest job",
+      "description": "Get one Bulk API 2.0 ingest job by id.",
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "jobId": {
+            "type": "string",
+            "description": "Bulk ingest job id.",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "jobId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array",
+              "null"
+            ]
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/services/data/v60.0/jobs/ingest/{{jobId}}",
+        "success": [
+          200
+        ]
+      }
+    },
+    "jobs.ingest_state": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "write",
+      "title": "Close or abort bulk ingest job",
+      "description": "Set a Bulk API 2.0 ingest job to UploadComplete or Aborted.",
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "jobId": {
+            "type": "string",
+            "description": "Bulk ingest job id.",
+            "minLength": 1
+          },
+          "state": {
+            "type": "string",
+            "description": "UploadComplete closes the job. Aborted cancels it.",
+            "enum": [
+              "UploadComplete",
+              "Aborted"
+            ]
+          }
+        },
+        "required": [
+          "jobId",
+          "state"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array",
+              "null"
+            ]
+          }
+        }
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/services/data/v60.0/jobs/ingest/{{jobId}}",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "state": "{{state}}"
+        }
+      }
+    },
+    "jobs.ingest_delete": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "write",
+      "title": "Delete bulk ingest job",
+      "description": "Delete a Bulk API 2.0 ingest job.",
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "jobId": {
+            "type": "string",
+            "description": "Bulk ingest job id.",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "jobId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array",
+              "null"
+            ]
+          }
+        }
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/services/data/v60.0/jobs/ingest/{{jobId}}",
+        "success": [
+          204
+        ]
+      }
+    },
+    "jobs.query_create": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "write",
+      "title": "Create bulk query job",
+      "description": "Create a Bulk API 2.0 query job for a SOQL query or queryAll.",
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "operation": {
+            "type": "string",
+            "description": "query returns live rows. queryAll includes deleted and archived rows.",
+            "enum": [
+              "query",
+              "queryAll"
+            ]
+          },
+          "query": {
+            "type": "string",
+            "description": "SOQL statement. Bulk query does not allow aggregates or parent-to-child subqueries.",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "operation",
+          "query"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array",
+              "null"
+            ]
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/services/data/v60.0/jobs/query",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "operation": "{{operation}}",
+          "query": "{{query}}"
+        }
+      }
+    },
+    "jobs.query_list": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "List bulk query jobs",
+      "description": "List Bulk API 2.0 query jobs in the org.",
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {},
+        "required": []
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array",
+              "null"
+            ]
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/services/data/v60.0/jobs/query",
+        "success": [
+          200
+        ]
+      }
+    },
+    "jobs.query_get": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "Get bulk query job",
+      "description": "Get one Bulk API 2.0 query job, including its state.",
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "jobId": {
+            "type": "string",
+            "description": "Bulk query job id.",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "jobId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array",
+              "null"
+            ]
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/services/data/v60.0/jobs/query/{{jobId}}",
+        "success": [
+          200
+        ]
+      }
+    },
+    "jobs.query_abort": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "write",
+      "title": "Abort bulk query job",
+      "description": "Abort a Bulk API 2.0 query job.",
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "jobId": {
+            "type": "string",
+            "description": "Bulk query job id.",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "jobId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array",
+              "null"
+            ]
+          }
+        }
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/services/data/v60.0/jobs/query/{{jobId}}",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "state": "Aborted"
+        }
+      }
+    },
+    "jobs.query_delete": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "write",
+      "title": "Delete bulk query job",
+      "description": "Delete a Bulk API 2.0 query job.",
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "jobId": {
+            "type": "string",
+            "description": "Bulk query job id.",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "jobId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array",
+              "null"
+            ]
+          }
+        }
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/services/data/v60.0/jobs/query/{{jobId}}",
+        "success": [
+          204
+        ]
+      }
+    },
+    "reports.list": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "List reports",
+      "description": "List reports visible to the signed-in user.",
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {},
+        "required": []
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array",
+              "null"
+            ]
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/services/data/v60.0/analytics/reports",
+        "success": [
+          200
+        ]
+      }
+    },
+    "reports.describe": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "Get report metadata",
+      "description": "Describe a report, including columns, filters, and report type.",
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "reportId": {
+            "type": "string",
+            "description": "Report id.",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "reportId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array",
+              "null"
+            ]
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/services/data/v60.0/analytics/reports/{{reportId}}/describe",
+        "success": [
+          200
+        ]
+      }
+    },
+    "reports.run": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "write",
+      "title": "Run report",
+      "description": "Run a report synchronously. Omit body to run the saved report.",
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "reportId": {
+            "type": "string",
+            "description": "Report id.",
+            "minLength": 1
+          },
+          "body": {
+            "type": "object",
+            "description": "Optional reportMetadata filters."
+          }
+        },
+        "required": [
+          "reportId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array",
+              "null"
+            ]
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/services/data/v60.0/analytics/reports/{{reportId}}",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{{body}}"
+      }
+    },
+    "reports.instances_list": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "List report instances",
+      "description": "List asynchronous report instances for one report.",
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "reportId": {
+            "type": "string",
+            "description": "Report id.",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "reportId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array",
+              "null"
+            ]
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/services/data/v60.0/analytics/reports/{{reportId}}/instances",
+        "success": [
+          200
+        ]
+      }
+    },
+    "reports.run_async": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "write",
+      "title": "Run report asynchronously",
+      "description": "Start an asynchronous report run and return the report instance.",
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "reportId": {
+            "type": "string",
+            "description": "Report id.",
+            "minLength": 1
+          },
+          "body": {
+            "type": "object",
+            "description": "Optional reportMetadata filters."
+          }
+        },
+        "required": [
+          "reportId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array",
+              "null"
+            ]
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/services/data/v60.0/analytics/reports/{{reportId}}/instances",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{{body}}"
+      }
+    },
+    "reports.instance_get": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "Get report instance results",
+      "description": "Get the results of one asynchronous report instance.",
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "reportId": {
+            "type": "string",
+            "description": "Report id.",
+            "minLength": 1
+          },
+          "instanceId": {
+            "type": "string",
+            "description": "Report instance id.",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "reportId",
+          "instanceId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array",
+              "null"
+            ]
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/services/data/v60.0/analytics/reports/{{reportId}}/instances/{{instanceId}}",
+        "success": [
+          200
+        ]
+      }
+    },
+    "dashboards.list": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "List dashboards",
+      "description": "List dashboards visible to the signed-in user.",
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {},
+        "required": []
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array",
+              "null"
+            ]
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/services/data/v60.0/analytics/dashboards",
+        "success": [
+          200
+        ]
+      }
+    },
+    "dashboards.get": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "Get dashboard",
+      "description": "Get dashboard results for one dashboard id.",
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "dashboardId": {
+            "type": "string",
+            "description": "Dashboard id.",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "dashboardId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array",
+              "null"
+            ]
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/services/data/v60.0/analytics/dashboards/{{dashboardId}}",
+        "success": [
+          200
+        ]
+      }
+    },
+    "dashboards.describe": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "Get dashboard metadata",
+      "description": "Describe a dashboard, including its components and running user.",
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "dashboardId": {
+            "type": "string",
+            "description": "Dashboard id.",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "dashboardId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array",
+              "null"
+            ]
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/services/data/v60.0/analytics/dashboards/{{dashboardId}}/describe",
+        "success": [
+          200
+        ]
+      }
+    },
+    "analytics.templates_list": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "List Analytics templates",
+      "description": "List CRM Analytics app templates from the Wave templates resource.",
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {},
+        "required": []
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array",
+              "null"
+            ]
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/services/data/v60.0/wave/templates",
+        "success": [
+          200
+        ]
+      }
+    },
+    "tooling.query": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "Execute Tooling API query",
+      "description": "Run a SOQL query against the Tooling API.",
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "q": {
+            "type": "string",
+            "description": "Tooling SOQL statement.",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "q"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array",
+              "null"
+            ]
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/services/data/v60.0/tooling/query",
+        "success": [
+          200
+        ],
+        "query": {
+          "q": "{{q}}"
+        }
+      }
+    },
+    "tooling.sobjects_list": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "List Tooling sObjects",
+      "description": "List sObjects available in the Tooling API.",
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {},
+        "required": []
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array",
+              "null"
+            ]
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/services/data/v60.0/tooling/sobjects/",
+        "success": [
+          200
+        ]
+      }
+    },
+    "tooling.custom_object_create": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "write",
+      "title": "Create custom object",
+      "description": "Create a custom object through the Tooling API. Body is a CustomObject with FullName and Metadata.",
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "body": {
+            "type": "object",
+            "description": "Tooling CustomObject record."
+          }
+        },
+        "required": [
+          "body"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array",
+              "null"
+            ]
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/services/data/v60.0/tooling/sobjects/CustomObject",
+        "success": [
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{{body}}"
+      }
+    },
+    "tooling.custom_field_create": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "write",
+      "title": "Create custom field",
+      "description": "Create a custom field through the Tooling API. Body is a CustomField with FullName and Metadata.",
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "body": {
+            "type": "object",
+            "description": "Tooling CustomField record."
+          }
+        },
+        "required": [
+          "body"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array",
+              "null"
+            ]
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/services/data/v60.0/tooling/sobjects/CustomField",
+        "success": [
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{{body}}"
+      }
+    },
+    "ui.object_info": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "Get UI object info",
+      "description": "Get User Interface API object metadata, including fields and record types.",
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "objectApiName": {
+            "type": "string",
+            "description": "Object API name, such as Account.",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "objectApiName"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array",
+              "null"
+            ]
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/services/data/v60.0/ui-api/object-info/{{objectApiName}}",
+        "success": [
+          200
+        ]
+      }
+    },
+    "ui.picklist_values": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "Get picklist values",
+      "description": "Get User Interface API picklist values for every picklist on a record type.",
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "objectApiName": {
+            "type": "string",
+            "description": "Object API name.",
+            "minLength": 1
+          },
+          "recordTypeId": {
+            "type": "string",
+            "description": "Record type id.",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "objectApiName",
+          "recordTypeId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array",
+              "null"
+            ]
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/services/data/v60.0/ui-api/object-info/{{objectApiName}}/picklist-values/{{recordTypeId}}",
+        "success": [
+          200
+        ]
+      }
+    },
+    "ui.record": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "Get record UI",
+      "description": "Get User Interface API layout, object metadata, and data for one or more record ids.",
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "recordIds": {
+            "type": "string",
+            "description": "Comma-separated record ids.",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "recordIds"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array",
+              "null"
+            ]
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/services/data/v60.0/ui-api/record-ui/{{recordIds}}",
+        "success": [
+          200
+        ]
+      }
+    },
+    "ui.record_row": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "Get UI record",
+      "description": "Get one record from the User Interface API records resource.",
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "recordId": {
+            "type": "string",
+            "description": "Record id.",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "recordId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array",
+              "null"
+            ]
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/services/data/v60.0/ui-api/records/{{recordId}}",
+        "success": [
+          200
+        ]
+      }
+    },
+    "ui.lookups": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "Get lookup suggestions",
+      "description": "Search User Interface API lookup suggestions for one lookup field.",
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "objectApiName": {
+            "type": "string",
+            "description": "Object that owns the lookup.",
+            "minLength": 1
+          },
+          "fieldApiName": {
+            "type": "string",
+            "description": "Lookup or master-detail field API name.",
+            "minLength": 1
+          },
+          "q": {
+            "type": "string",
+            "description": "Search text.",
+            "minLength": 1
+          },
+          "searchType": {
+            "type": "string",
+            "description": "Lookup search type, such as Search, Recent, or TypeAhead.",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "objectApiName",
+          "fieldApiName"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array",
+              "null"
+            ]
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/services/data/v60.0/ui-api/lookups/{{objectApiName}}/{{fieldApiName}}",
+        "success": [
+          200
+        ],
+        "query": {
+          "q": "{{q}}",
+          "searchType": "{{searchType}}"
+        }
+      }
+    },
+    "ui.lookups_search": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "write",
+      "title": "Search lookup suggestions",
+      "description": "Search User Interface API lookup suggestions with a JSON body.",
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "objectApiName": {
+            "type": "string",
+            "description": "Object that owns the lookup.",
+            "minLength": 1
+          },
+          "fieldApiName": {
+            "type": "string",
+            "description": "Lookup or master-detail field API name.",
+            "minLength": 1
+          },
+          "body": {
+            "type": "object",
+            "description": "Lookup search request, including q and searchType."
+          }
+        },
+        "required": [
+          "objectApiName",
+          "fieldApiName",
+          "body"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array",
+              "null"
+            ]
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/services/data/v60.0/ui-api/lookups/{{objectApiName}}/{{fieldApiName}}",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{{body}}"
+      }
+    },
+    "ui.list_infos": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "Get list views for an object",
+      "description": "List User Interface API list views for one object.",
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "objectApiName": {
+            "type": "string",
+            "description": "Object API name.",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "objectApiName"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array",
+              "null"
+            ]
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/services/data/v60.0/ui-api/list-info/{{objectApiName}}",
+        "success": [
+          200
+        ]
+      }
+    },
+    "ui.list_info": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "Get list view metadata",
+      "description": "Get User Interface API metadata for one list view API name.",
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "objectApiName": {
+            "type": "string",
+            "description": "Object API name.",
+            "minLength": 1
+          },
+          "listViewApiName": {
+            "type": "string",
+            "description": "List view API name, or __Recent.",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "objectApiName",
+          "listViewApiName"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array",
+              "null"
+            ]
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/services/data/v60.0/ui-api/list-info/{{objectApiName}}/{{listViewApiName}}",
+        "success": [
+          200
+        ]
+      }
+    },
+    "ui.list_records": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "Get list view records",
+      "description": "Get User Interface API records for one list view.",
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "objectApiName": {
+            "type": "string",
+            "description": "Object API name.",
+            "minLength": 1
+          },
+          "listViewApiName": {
+            "type": "string",
+            "description": "List view API name, or __Recent.",
+            "minLength": 1
+          },
+          "pageSize": {
+            "type": "integer",
+            "description": "Page size.",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "objectApiName",
+          "listViewApiName"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array",
+              "null"
+            ]
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/services/data/v60.0/ui-api/list-records/{{objectApiName}}/{{listViewApiName}}",
+        "success": [
+          200
+        ],
+        "query": {
+          "pageSize": "{{pageSize}}"
+        }
+      }
+    },
+    "ui.list_records_query": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "write",
+      "title": "Query list view records",
+      "description": "Get User Interface API list view records with a search or where clause in the body.",
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "objectApiName": {
+            "type": "string",
+            "description": "Object API name.",
+            "minLength": 1
+          },
+          "listViewApiName": {
+            "type": "string",
+            "description": "List view API name.",
+            "minLength": 1
+          },
+          "body": {
+            "type": "object",
+            "description": "List records input, such as searchTerm or where."
+          }
+        },
+        "required": [
+          "objectApiName",
+          "listViewApiName",
+          "body"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array",
+              "null"
+            ]
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/services/data/v60.0/ui-api/list-records/{{objectApiName}}/{{listViewApiName}}",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{{body}}"
+      }
+    },
+    "ui.list_preferences": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "write",
+      "title": "Update list view preferences",
+      "description": "Update the signed-in user's User Interface API list view preferences.",
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "objectApiName": {
+            "type": "string",
+            "description": "Object API name.",
+            "minLength": 1
+          },
+          "listViewApiName": {
+            "type": "string",
+            "description": "List view API name.",
+            "minLength": 1
+          },
+          "body": {
+            "type": "object",
+            "description": "List preferences input, such as column widths or orderedBy."
+          }
+        },
+        "required": [
+          "objectApiName",
+          "listViewApiName",
+          "body"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array",
+              "null"
+            ]
+          }
+        }
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/services/data/v60.0/ui-api/list-preferences/{{objectApiName}}/{{listViewApiName}}",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{{body}}"
+      }
+    },
+    "ui.nav_items": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "Get navigation items",
+      "description": "Get User Interface API navigation items for the signed-in user.",
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {},
+        "required": []
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array",
+              "null"
+            ]
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/services/data/v60.0/ui-api/nav-items",
+        "success": [
+          200
+        ]
+      }
+    },
+    "ui.apps": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "Get apps",
+      "description": "List User Interface API apps available to the signed-in user.",
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {},
+        "required": []
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array",
+              "null"
+            ]
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/services/data/v60.0/ui-api/apps",
+        "success": [
+          200
+        ]
+      }
+    },
+    "ui.app_get": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "Get an app",
+      "description": "Get one User Interface API app by id.",
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "appId": {
+            "type": "string",
+            "description": "Lightning app id.",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "appId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array",
+              "null"
+            ]
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/services/data/v60.0/ui-api/apps/{{appId}}",
+        "success": [
+          200
+        ]
+      }
+    },
+    "ui.records_batch": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "write",
+      "title": "Create or update UI records",
+      "description": "Create or update a batch of records through the User Interface API, including default assignment rules when requested.",
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "body": {
+            "type": "object",
+            "description": "UI API records batch input."
+          }
+        },
+        "required": [
+          "body"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array",
+              "null"
+            ]
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/services/data/v60.0/ui-api/records/batch",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{{body}}"
+      }
+    },
+    "email.send": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "write",
+      "title": "Send email",
+      "description": "Send an email with the standard emailSimple invocable action.",
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "emailAddresses": {
+            "type": "string",
+            "description": "Comma-separated recipient addresses.",
+            "minLength": 1
+          },
+          "emailSubject": {
+            "type": "string",
+            "description": "Email subject.",
+            "minLength": 1
+          },
+          "emailBody": {
+            "type": "string",
+            "description": "Plain-text or rich email body.",
+            "minLength": 1
+          },
+          "senderType": {
+            "type": "string",
+            "description": "Sender identity.",
+            "enum": [
+              "CurrentUser",
+              "OrgWideEmailAddress",
+              "DefaultWorkflowUser"
+            ]
+          }
+        },
+        "required": [
+          "emailAddresses",
+          "emailSubject",
+          "emailBody"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array",
+              "null"
+            ]
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/services/data/v60.0/actions/standard/emailSimple",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "inputs": [
+            {
+              "emailAddresses": "{{emailAddresses}}",
+              "emailSubject": "{{emailSubject}}",
+              "emailBody": "{{emailBody}}",
+              "senderType": "{{senderType}}"
+            }
+          ]
+        }
+      }
+    },
+    "chatter.directory": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "Get Chatter resources",
+      "description": "List Chatter REST resources for the org.",
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {},
+        "required": []
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array",
+              "null"
+            ]
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/services/data/v60.0/chatter",
+        "success": [
+          200
+        ]
+      }
+    },
+    "identity.userinfo": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "Get user info",
+      "description": "Get the OpenID Connect userinfo for the signed-in Salesforce user.",
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {},
+        "required": []
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array",
+              "null"
+            ]
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/services/oauth2/userinfo",
+        "success": [
+          200
+        ]
+      }
+    },
+    "files.get": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "Get file information",
+      "description": "Get Salesforce Files metadata for one content document.",
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "fileId": {
+            "type": "string",
+            "description": "ContentDocument id.",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "fileId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array",
+              "null"
+            ]
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/services/data/v60.0/connect/files/{{fileId}}",
+        "success": [
+          200
+        ]
+      }
+    },
+    "files.shares": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "Get file shares",
+      "description": "List shares for one Salesforce Files content document.",
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "fileId": {
+            "type": "string",
+            "description": "ContentDocument id.",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "fileId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array",
+              "null"
+            ]
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/services/data/v60.0/connect/files/{{fileId}}/file-shares",
+        "success": [
+          200
+        ]
+      }
+    },
+    "files.delete": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "write",
+      "title": "Delete file",
+      "description": "Delete one Salesforce Files content document.",
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "fileId": {
+            "type": "string",
+            "description": "ContentDocument id.",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "fileId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array",
+              "null"
+            ]
+          }
+        }
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/services/data/v60.0/connect/files/{{fileId}}",
+        "success": [
+          204
+        ]
+      }
+    },
+    "campaign_members.add_contact": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "write",
+      "title": "Add contact to campaign",
+      "description": "Create a CampaignMember that links a contact to a campaign.",
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "campaignId": {
+            "type": "string",
+            "description": "Campaign id.",
+            "minLength": 1
+          },
+          "contactId": {
+            "type": "string",
+            "description": "Contact id.",
+            "minLength": 1
+          },
+          "status": {
+            "type": "string",
+            "description": "Campaign member status, such as Sent or Responded.",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "campaignId",
+          "contactId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array",
+              "null"
+            ]
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/services/data/v60.0/sobjects/CampaignMember/",
+        "success": [
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "CampaignId": "{{campaignId}}",
+          "ContactId": "{{contactId}}",
+          "Status": "{{status}}"
+        }
+      }
+    },
+    "campaign_members.add_lead": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "write",
+      "title": "Add lead to campaign",
+      "description": "Create a CampaignMember that links a lead to a campaign.",
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "campaignId": {
+            "type": "string",
+            "description": "Campaign id.",
+            "minLength": 1
+          },
+          "leadId": {
+            "type": "string",
+            "description": "Lead id.",
+            "minLength": 1
+          },
+          "status": {
+            "type": "string",
+            "description": "Campaign member status, such as Sent or Responded.",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "campaignId",
+          "leadId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array",
+              "null"
+            ]
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/services/data/v60.0/sobjects/CampaignMember/",
+        "success": [
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "CampaignId": "{{campaignId}}",
+          "LeadId": "{{leadId}}",
+          "Status": "{{status}}"
+        }
+      }
+    },
+    "opportunity_products.create": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "write",
+      "title": "Add product to opportunity",
+      "description": "Create an OpportunityLineItem for a price book entry on an opportunity.",
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "opportunityId": {
+            "type": "string",
+            "description": "Opportunity id.",
+            "minLength": 1
+          },
+          "pricebookEntryId": {
+            "type": "string",
+            "description": "PricebookEntry id.",
+            "minLength": 1
+          },
+          "quantity": {
+            "type": "number",
+            "description": "Quantity."
+          },
+          "unitPrice": {
+            "type": "number",
+            "description": "Unit price. Omit it to use the price book price."
+          }
+        },
+        "required": [
+          "opportunityId",
+          "pricebookEntryId",
+          "quantity"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array",
+              "null"
+            ]
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/services/data/v60.0/sobjects/OpportunityLineItem/",
+        "success": [
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "OpportunityId": "{{opportunityId}}",
+          "PricebookEntryId": "{{pricebookEntryId}}",
+          "Quantity": "{{quantity}}",
+          "UnitPrice": "{{unitPrice}}"
+        }
+      }
+    },
+    "tasks.create": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "write",
+      "title": "Create task",
+      "description": "Create a Task record.",
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "subject": {
+            "type": "string",
+            "description": "Task subject.",
+            "minLength": 1
+          },
+          "status": {
+            "type": "string",
+            "description": "Task status, such as Not Started.",
+            "minLength": 1
+          },
+          "whoId": {
+            "type": "string",
+            "description": "Contact or lead id.",
+            "minLength": 1
+          },
+          "whatId": {
+            "type": "string",
+            "description": "Related record id, such as an account or opportunity.",
+            "minLength": 1
+          },
+          "activityDate": {
+            "type": "string",
+            "description": "Due date in YYYY-MM-DD.",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "subject"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array",
+              "null"
+            ]
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/services/data/v60.0/sobjects/Task/",
+        "success": [
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "Subject": "{{subject}}",
+          "Status": "{{status}}",
+          "WhoId": "{{whoId}}",
+          "WhatId": "{{whatId}}",
+          "ActivityDate": "{{activityDate}}"
+        }
+      }
+    },
+    "tasks.complete": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "write",
+      "title": "Complete task",
+      "description": "Mark a Task completed.",
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Task id.",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array",
+              "null"
+            ]
+          }
+        }
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/services/data/v60.0/sobjects/Task/{{id}}/",
+        "success": [
+          204
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "Status": "Completed"
+        }
       }
     }
   },
