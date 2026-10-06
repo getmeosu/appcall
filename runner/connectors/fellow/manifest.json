@@ -1,7 +1,17 @@
 {
+  "key": "fellow",
+  "name": "Fellow",
+  "version": "0.2.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "productivity"
+  ],
   "auth": {
+    "type": "api_key",
     "scopes": [],
     "setup": {
+      "mode": "api_key",
       "fields": [
         {
           "key": "apiKey",
@@ -15,14 +25,1055 @@
           "required": true,
           "secret": false
         }
-      ],
-      "mode": "api_key"
-    },
-    "type": "api_key"
+      ]
+    }
   },
-  "categories": [
-    "productivity"
+  "network": {
+    "allowedHosts": [
+      "*.fellow.app"
+    ]
+  },
+  "models": [
+    "user",
+    "workspace",
+    "note",
+    "action-item",
+    "recording",
+    "webhook"
   ],
+  "http": {
+    "baseUrl": "https://{{subdomain}}.fellow.app",
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "X-API-KEY",
+      "value": "{{apiKey}}"
+    },
+    "headers": {
+      "Accept": "application/json"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after",
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "detail",
+        "message",
+        "error",
+        "error.message"
+      ]
+    }
+  },
+  "operations": {
+    "healthcheck": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Healthcheck",
+      "description": "Validate a Fellow API key by reading the authenticated user and workspace.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/me",
+        "success": [
+          200
+        ]
+      }
+    },
+    "notes.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List notes",
+      "description": "List Fellow meeting notes.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/notes",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {},
+        "success": [
+          200
+        ]
+      }
+    },
+    "notes.get": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Get note",
+      "description": "Get one Fellow meeting note by identifier.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "note_id"
+        ],
+        "properties": {
+          "note_id": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/note/{{note_id}}",
+        "success": [
+          200
+        ]
+      }
+    },
+    "action-items.get": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Get action item",
+      "description": "Get one Fellow action item by identifier.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "action_item_id"
+        ],
+        "properties": {
+          "action_item_id": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/action_item/{{action_item_id}}",
+        "success": [
+          200
+        ]
+      }
+    },
+    "notes.delete": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "destructive",
+      "title": "Delete note",
+      "description": "Delete a Fellow meeting note by identifier. Privileged access required.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "note_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Note identifier."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "note_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/api/v1/note/{{note_id}}",
+        "success": [
+          200,
+          204
+        ],
+        "result": {
+          "data": {}
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "notes.append-agenda": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Append note agenda",
+      "description": "Append Fellow Markdown to the end of a note agenda.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "note_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Note identifier."
+          },
+          "content_fellow_markdown": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Markdown to append."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "note_id",
+          "content_fellow_markdown"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/note/{{note_id}}/agenda/append",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "content_fellow_markdown": "{{content_fellow_markdown}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "notes.prepend-agenda": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Prepend note agenda",
+      "description": "Prepend Fellow Markdown to the start of a note agenda.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "note_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Note identifier."
+          },
+          "content_fellow_markdown": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Markdown to prepend."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "note_id",
+          "content_fellow_markdown"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/note/{{note_id}}/agenda/prepend",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "content_fellow_markdown": "{{content_fellow_markdown}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "notes.replace-agenda": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Replace note agenda",
+      "description": "Replace a Fellow note agenda and optionally rename the note.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "note_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Note identifier."
+          },
+          "content_fellow_markdown": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Replacement agenda as Fellow Markdown."
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Optional new note title."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "note_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/note/{{note_id}}/agenda",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "content_fellow_markdown": "{{content_fellow_markdown}}",
+          "title": "{{title}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "action-items.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List action items",
+      "description": "List Fellow action items with optional filters and pagination.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/action_items",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {}
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "action-items.complete": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Complete action item",
+      "description": "Mark a Fellow action item complete or incomplete.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "action_item_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Action item identifier."
+          },
+          "completed": {
+            "type": "boolean",
+            "description": "Whether the item is complete."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "action_item_id",
+          "completed"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/action_item/{{action_item_id}}/complete",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "completed": "{{completed}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "action-items.archive": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Archive action item",
+      "description": "Archive a Fellow action item by marking it as won't do.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "action_item_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Action item identifier."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "action_item_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/action_item/{{action_item_id}}/archive",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "recordings.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List recordings",
+      "description": "List Fellow meeting recordings with optional filters and pagination.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/recordings",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {}
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "recordings.get": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Get recording",
+      "description": "Retrieve one Fellow recording by identifier.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "recording_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Recording identifier."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "recording_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/recording/{{recording_id}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "recordings.delete": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "destructive",
+      "title": "Delete recording",
+      "description": "Delete a Fellow recording by identifier. Privileged access required.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "recording_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Recording identifier."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "recording_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/api/v1/recording/{{recording_id}}",
+        "success": [
+          200,
+          204
+        ],
+        "result": {
+          "data": {}
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "recordings.upload": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Upload recording",
+      "description": "Queue a Fellow recording import from a media URL.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Public media URL."
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Recording title."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "url",
+          "title"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/recordings/upload",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "url": "{{url}}",
+          "title": "{{title}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "webhooks.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List webhooks",
+      "description": "List Fellow webhook endpoints for the authenticated user.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "page_size": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 50
+          },
+          "cursor": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Pagination cursor."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/webhooks",
+        "success": [
+          200
+        ],
+        "query": {
+          "page_size": "{{page_size}}",
+          "cursor": "{{cursor}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "webhooks.get": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Get webhook",
+      "description": "Retrieve one Fellow webhook endpoint by identifier.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "webhook_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Webhook identifier."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "webhook_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/webhook/{{webhook_id}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "webhooks.create": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Create webhook",
+      "description": "Create a Fellow webhook endpoint for subscribed events.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Destination URL that receives POST events."
+          },
+          "enabled_events": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "description": "Event types to subscribe to."
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Optional webhook description."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "url",
+          "enabled_events"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/webhook",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "url": "{{url}}",
+          "enabled_events": "{{enabled_events}}",
+          "description": "{{description}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "webhooks.update": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Update webhook",
+      "description": "Partially update a Fellow webhook endpoint.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "webhook_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Webhook identifier."
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "inactive"
+            ],
+            "description": "Webhook status."
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Updated description."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "webhook_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/api/v1/webhook/{{webhook_id}}",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "status": "{{status}}",
+          "description": "{{description}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "webhooks.delete": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "destructive",
+      "title": "Delete webhook",
+      "description": "Delete a Fellow webhook endpoint by identifier.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "webhook_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Webhook identifier."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "webhook_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/api/v1/webhook/{{webhook_id}}",
+        "success": [
+          200,
+          204
+        ],
+        "result": {
+          "data": {}
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    }
+  },
+  "provenance": {
+    "source": {
+      "url": "https://github.com/oomol-lab/open-connector",
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"
+    }
+  },
   "evidence": {
     "fixture": {
       "status": "supplied"
@@ -30,218 +1081,5 @@
     "live": {
       "status": "unverified"
     }
-  },
-  "http": {
-    "auth": {
-      "field": "apiKey",
-      "in": "header",
-      "name": "X-API-KEY",
-      "value": "{{apiKey}}"
-    },
-    "baseUrl": "https://{{subdomain}}.fellow.app",
-    "errors": {
-      "defaultRetryAfterSeconds": 30,
-      "messagePaths": [
-        "detail",
-        "message",
-        "error",
-        "error.message"
-      ],
-      "rateLimitStatuses": [
-        429
-      ],
-      "retryAfterHeader": "retry-after"
-    },
-    "headers": {
-      "Accept": "application/json"
-    }
-  },
-  "key": "fellow",
-  "models": [
-    "user",
-    "workspace",
-    "note",
-    "action-item"
-  ],
-  "name": "Fellow",
-  "network": {
-    "allowedHosts": [
-      "*.fellow.app"
-    ]
-  },
-  "operations": {
-    "action-items.get": {
-      "description": "Get one Fellow action item by identifier.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "action_item_id": {
-            "minLength": 1,
-            "type": "string"
-          }
-        },
-        "required": [
-          "action_item_id"
-        ],
-        "type": "object"
-      },
-      "kind": "action",
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 1048576,
-      "outputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "type": "object"
-      },
-      "request": {
-        "method": "GET",
-        "path": "/api/v1/action_item/{{action_item_id}}",
-        "success": [
-          200
-        ]
-      },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "title": "Get action item",
-      "validationMode": "strict-generated"
-    },
-    "healthcheck": {
-      "description": "Validate a Fellow API key by reading the authenticated user and workspace.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {},
-        "type": "object"
-      },
-      "kind": "action",
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 1048576,
-      "outputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "type": "object"
-      },
-      "request": {
-        "method": "GET",
-        "path": "/api/v1/me",
-        "success": [
-          200
-        ]
-      },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "title": "Healthcheck",
-      "validationMode": "strict-generated"
-    },
-    "notes.get": {
-      "description": "Get one Fellow meeting note by identifier.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "note_id": {
-            "minLength": 1,
-            "type": "string"
-          }
-        },
-        "required": [
-          "note_id"
-        ],
-        "type": "object"
-      },
-      "kind": "action",
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 1048576,
-      "outputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "type": "object"
-      },
-      "request": {
-        "method": "GET",
-        "path": "/api/v1/note/{{note_id}}",
-        "success": [
-          200
-        ]
-      },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "title": "Get note",
-      "validationMode": "strict-generated"
-    },
-    "notes.list": {
-      "description": "List Fellow meeting notes.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {},
-        "type": "object"
-      },
-      "kind": "action",
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 1048576,
-      "outputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "type": "object"
-      },
-      "request": {
-        "body": {},
-        "headers": {
-          "Content-Type": "application/json"
-        },
-        "method": "POST",
-        "path": "/api/v1/notes",
-        "success": [
-          200
-        ]
-      },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "title": "List notes",
-      "validationMode": "strict-generated"
-    }
-  },
-  "provenance": {
-    "source": {
-      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
-      "url": "https://github.com/oomol-lab/open-connector"
-    }
-  },
-  "runtime": "bun",
-  "version": "0.1.0",
-  "visibility": "public"
+  }
 }
