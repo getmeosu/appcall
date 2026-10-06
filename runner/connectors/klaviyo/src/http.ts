@@ -40,5 +40,29 @@ export function createKlaviyoClient(options: KlaviyoClientOptions) {
 }
 export type KlaviyoClient = ReturnType<typeof createKlaviyoClient>;
 export function prop(obj: Record<string, unknown>, field: string, fallback: string = ""): string { const v = obj[field]; return typeof v === "string" ? v : fallback; }
+
+export function firstString(input: Record<string, unknown>, keys: string[], label: string): string {
+  for (const key of keys) {
+    const value = input[key];
+    if (typeof value === "string" && value.length > 0) return value;
+  }
+  throw new Error(`${label} is required`);
+}
+
+export function queryPath(path: string, input: unknown): string {
+  if (!isRecord(input)) return path;
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(input)) {
+    const allowed = key === "filter" || key === "sort" || key === "include" || key.startsWith("fields[") || key.startsWith("page[") || key.startsWith("additional-fields[");
+    if (!allowed || value == null) continue;
+    if (Array.isArray(value)) {
+      const items = value.filter((item): item is string => typeof item === "string" && item.length > 0);
+      if (items.length) params.set(key, items.join(","));
+    } else if (typeof value === "string" && value.length) params.set(key, value);
+    else if (typeof value === "number") params.set(key, String(value));
+  }
+  const query = params.toString();
+  return query ? `${path}?${query}` : path;
+}
 function isRecord(v: unknown): v is Record<string, unknown> { return typeof v === "object" && v !== null && !Array.isArray(v); }
 export { isRecord };

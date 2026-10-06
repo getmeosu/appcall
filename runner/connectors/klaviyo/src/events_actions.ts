@@ -1,4 +1,4 @@
-import { createKlaviyoClient, parseKlaviyoRateLimit, prop, isRecord } from "./http";
+import { createKlaviyoClient, firstString, parseKlaviyoRateLimit, prop, queryPath, isRecord } from "./http";
 
 // ─── events.create ────────────────────────────────────────────────────────────
 
@@ -56,7 +56,8 @@ export async function createEventFromClient(
   options: { apiKey: string; fetch?: typeof fetch },
   input: unknown
 ): Promise<{ ok: true; event: NormalizedEvent } | { ok: false; error: { code: string; message: string; retryAfterSeconds?: number } }> {
-  const payload = validateCreateEventInput(input);
+  const rawData = isRecord(input) && isRecord(input.data) ? input.data : undefined;
+  const payload = rawData ? { metricName: "", profileEmail: "" } : validateCreateEventInput(input);
   const client = createKlaviyoClient({ apiKey: options.apiKey, fetch: options.fetch, operation: "events.create" });
   const profileAttrs: Record<string, unknown> = { email: payload.profileEmail };
   if (payload.profileId) profileAttrs.id = payload.profileId;
@@ -69,7 +70,7 @@ export async function createEventFromClient(
   if (payload.time) attrs.time = payload.time;
   const result = await client.fetchJSON("/events", {
     method: "POST",
-    body: JSON.stringify({ data: { type: "event", attributes: attrs } }),
+    body: JSON.stringify(rawData ? { data: rawData } : { data: { type: "event", attributes: attrs } }),
   });
   // Klaviyo returns 202 Accepted for event tracking
   if (result.status === 202 || result.status === 201 || result.status === 200) {
@@ -88,7 +89,7 @@ export type ListEventsInput = Record<string, never>;
 
 export function validateGetEventInput(input: unknown): GetEventInput {
   if (!isRecord(input)) throw new Error("input must be an object");
-  return { eventId: requireString(input.eventId, "eventId") };
+  return { eventId: firstString(input, ["eventId", "id"], "eventId") };
 }
 
 export function validateListEventsInput(input: unknown): ListEventsInput {
@@ -102,7 +103,7 @@ export async function getEventFromClient(
 ): Promise<{ ok: true; event: NormalizedEvent } | { ok: false; error: { code: string; message: string; retryAfterSeconds?: number } }> {
   const payload = validateGetEventInput(input);
   const client = createKlaviyoClient({ apiKey: options.apiKey, fetch: options.fetch, operation: "events.get" });
-  const result = await client.fetchJSON(`/events/${payload.eventId}`);
+  const result = await client.fetchJSON(queryPath(`/events/${payload.eventId}`, input));
   if (result.status === 200) {
     const body = result.body as Record<string, unknown>;
     const data = isRecord(body.data) ? body.data : { id: payload.eventId, attributes: {} };
@@ -120,7 +121,7 @@ export async function listEventsFromClient(
 ): Promise<{ ok: true; events: NormalizedEvent[] } | { ok: false; error: { code: string; message: string; retryAfterSeconds?: number } }> {
   validateListEventsInput(input);
   const client = createKlaviyoClient({ apiKey: options.apiKey, fetch: options.fetch, operation: "events.list" });
-  const result = await client.fetchJSON("/events");
+  const result = await client.fetchJSON(queryPath("/events", input));
   if (result.status === 200) {
     const body = result.body as Record<string, unknown>;
     const data = Array.isArray(body.data) ? body.data.filter(isRecord) : [];
