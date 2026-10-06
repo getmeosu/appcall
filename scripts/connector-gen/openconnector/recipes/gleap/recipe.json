@@ -370,7 +370,12 @@
       "user.get",
       "user.list-permissions",
       "user.list-unified-inbox",
-      "user.update"
+      "user.update",
+      "help-center-articles.list",
+      "helpcenter.list-sources",
+      "helpcenter.answer",
+      "contacts.identify",
+      "events.track"
     ],
     "upstreamSha": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
     "marketFocus": "international",
@@ -4618,22 +4623,95 @@
         "OpenAPI operationId Update. Endpoint is first-party and absent from the pinned open-connector action list. PUT /users/{userId}. Returns raw Gleap JSON under data.",
         "The OpenAPI operation parameters omit this path parameter even though the path template requires it. It is a required string input."
       ]
+    },
+    "help-center-articles.list": {
+      "upstreamActionId": "GetHelpcenterArticles",
+      "sourceRefs": [
+        "request-auth",
+        "api-base"
+      ],
+      "documentationUrls": [
+        "https://docs.gleap.io/documentation/server/api-overview",
+        "https://api.gleap.io/api-docs.json"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "OpenAPI GetHelpcenterArticles. GET /helpcenter/collections/{helpcenterCollectionId}/articles. Composio names the path id helpcenterCollectionId; articles.list keeps collectionId."
+      ]
+    },
+    "helpcenter.list-sources": {
+      "upstreamActionId": "GetHelpcenterSources",
+      "sourceRefs": [
+        "request-auth",
+        "api-base"
+      ],
+      "documentationUrls": [
+        "https://docs.gleap.io/documentation/server/api-overview",
+        "https://api.gleap.io/api-docs.json"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "OpenAPI GetHelpcenterSources. GET /shared/helpcenter/sources. api-token is the help center host. Absent from the pinned open-connector action list."
+      ]
+    },
+    "helpcenter.answer": {
+      "upstreamActionId": "AnswerHelpCenterQuestion",
+      "sourceRefs": [
+        "request-auth",
+        "api-base"
+      ],
+      "documentationUrls": [
+        "https://docs.gleap.io/documentation/server/api-overview",
+        "https://api.gleap.io/api-docs.json"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "OpenAPI AnswerHelpCenterQuestion. GET /shared/helpcenter/answer?question=. api-token is the help center host. Absent from the pinned open-connector action list."
+      ]
+    },
+    "contacts.identify": {
+      "upstreamActionId": "AdminIdentify",
+      "sourceRefs": [
+        "request-auth",
+        "api-base"
+      ],
+      "documentationUrls": [
+        "https://docs.gleap.io/documentation/server/api-overview",
+        "https://api.gleap.io/api-docs.json"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Gleap admin SDK POST /admin/identify with Api-Token. Not in the v3 OpenAPI document and not in the pinned open-connector action list. Raw JSON under data."
+      ]
+    },
+    "events.track": {
+      "upstreamActionId": "AdminTrackEvents",
+      "sourceRefs": [
+        "request-auth",
+        "api-base"
+      ],
+      "documentationUrls": [
+        "https://docs.gleap.io/documentation/server/api-overview",
+        "https://api.gleap.io/api-docs.json"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Gleap admin SDK POST /admin/track with Api-Token and {events}. Not in the v3 OpenAPI document and not in the pinned open-connector action list. Raw JSON under data."
+      ]
     }
   },
   "manifest": {
     "key": "gleap",
     "name": "Gleap",
-    "version": "0.3.0",
+    "version": "0.4.0",
     "runtime": "bun",
     "visibility": "public",
     "categories": [
       "dev-tools"
     ],
     "auth": {
-      "type": "api_key",
       "scopes": [],
       "setup": {
-        "mode": "api_key",
         "fields": [
           {
             "key": "apiKey",
@@ -4647,8 +4725,10 @@
             "required": true,
             "secret": false
           }
-        ]
-      }
+        ],
+        "mode": "api_key"
+      },
+      "type": "api_key"
     },
     "network": {
       "allowedHosts": [
@@ -4665,28 +4745,28 @@
       "collection"
     ],
     "http": {
-      "baseUrl": "https://api.gleap.io/v3",
       "auth": {
         "field": "apiKey",
         "in": "header",
         "name": "Authorization",
         "value": "Bearer {{apiKey}}"
       },
-      "headers": {
-        "Accept": "application/json",
-        "Project": "{{projectId}}"
-      },
+      "baseUrl": "https://api.gleap.io/v3",
       "errors": {
-        "rateLimitStatuses": [
-          429
-        ],
-        "retryAfterHeader": "retry-after",
         "defaultRetryAfterSeconds": 30,
         "messagePaths": [
           "message",
           "error",
           "error.message"
-        ]
+        ],
+        "rateLimitStatuses": [
+          429
+        ],
+        "retryAfterHeader": "retry-after"
+      },
+      "headers": {
+        "Accept": "application/json",
+        "Project": "{{projectId}}"
       }
     },
     "operations": {
@@ -22068,12 +22148,450 @@
         "validationMode": "strict-generated",
         "responseFormat": "json",
         "enforceOutputSchema": true
+      },
+      "help-center-articles.list": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "List articles in a help center collection",
+        "description": "List articles in one help center collection. Composio GLEAP_GET_ALL_ARTICLES. Supports limit and skip. collectionId on articles.list is the same route.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "helpcenterCollectionId"
+          ],
+          "properties": {
+            "helpcenterCollectionId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Help center collection ID."
+            },
+            "limit": {
+              "type": "number",
+              "description": "Maximum number of articles to return."
+            },
+            "skip": {
+              "type": "number",
+              "description": "Number of articles to skip."
+            }
+          }
+        },
+        "outputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "array"
+            }
+          }
+        },
+        "request": {
+          "method": "GET",
+          "path": "/helpcenter/collections/{{helpcenterCollectionId}}/articles",
+          "query": {
+            "limit": "{{limit}}",
+            "skip": "{{skip}}"
+          },
+          "parameters": [
+            {
+              "wireName": "limit",
+              "inputName": "limit",
+              "in": "query",
+              "style": "form",
+              "explode": true,
+              "allowReserved": false
+            },
+            {
+              "wireName": "skip",
+              "inputName": "skip",
+              "in": "query",
+              "style": "form",
+              "explode": true,
+              "allowReserved": false
+            }
+          ],
+          "success": [
+            200
+          ]
+        },
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "enforceOutputSchema": true
+      },
+      "helpcenter.list-sources": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Get help center sources",
+        "description": "Find help center sources relevant to a search term. GET /shared/helpcenter/sources. The api-token header is the help center host (for example acme.gleap.help), not the project API key. Composio GLEAP_GET_HELP_CENTER_SOURCES.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "helpCenterHost",
+            "searchTerm"
+          ],
+          "properties": {
+            "helpCenterHost": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Help center host sent as the api-token header."
+            },
+            "searchTerm": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Search term. Required by the API."
+            },
+            "lang": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Language code. Defaults to en on the server when omitted."
+            },
+            "password": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Password for a password-protected help center."
+            },
+            "gleapId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Visitor gleap id for audience filtering."
+            },
+            "gleapHash": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Visitor gleap hash for audience filtering."
+            }
+          }
+        },
+        "outputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          }
+        },
+        "request": {
+          "method": "GET",
+          "path": "/shared/helpcenter/sources",
+          "query": {
+            "searchTerm": "{{searchTerm}}",
+            "lang": "{{lang}}"
+          },
+          "parameters": [
+            {
+              "wireName": "searchTerm",
+              "inputName": "searchTerm",
+              "in": "query",
+              "style": "form",
+              "explode": true,
+              "allowReserved": false
+            },
+            {
+              "wireName": "lang",
+              "inputName": "lang",
+              "in": "query",
+              "style": "form",
+              "explode": true,
+              "allowReserved": false
+            }
+          ],
+          "headers": {
+            "api-token": "{{helpCenterHost}}",
+            "password": "{{password}}",
+            "gleap-id": "{{gleapId}}",
+            "gleap-hash": "{{gleapHash}}"
+          },
+          "success": [
+            200
+          ]
+        },
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "enforceOutputSchema": true
+      },
+      "helpcenter.answer": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Answer a help center question",
+        "description": "Answer a question from the shared help center. GET /shared/helpcenter/answer. The api-token header is the help center host. Composio GLEAP_GET_SHARED_HELPCENTER_ANSWER.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "helpCenterHost",
+            "question"
+          ],
+          "properties": {
+            "helpCenterHost": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Help center host sent as the api-token header."
+            },
+            "question": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Question to answer from help center content."
+            },
+            "lang": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Language code."
+            },
+            "password": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Password for a password-protected help center."
+            },
+            "gleapId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Visitor gleap id for audience filtering."
+            },
+            "gleapHash": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Visitor gleap hash for audience filtering."
+            }
+          }
+        },
+        "outputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          }
+        },
+        "request": {
+          "method": "GET",
+          "path": "/shared/helpcenter/answer",
+          "query": {
+            "question": "{{question}}",
+            "lang": "{{lang}}"
+          },
+          "parameters": [
+            {
+              "wireName": "question",
+              "inputName": "question",
+              "in": "query",
+              "style": "form",
+              "explode": true,
+              "allowReserved": false
+            },
+            {
+              "wireName": "lang",
+              "inputName": "lang",
+              "in": "query",
+              "style": "form",
+              "explode": true,
+              "allowReserved": false
+            }
+          ],
+          "headers": {
+            "api-token": "{{helpCenterHost}}",
+            "password": "{{password}}",
+            "gleap-id": "{{gleapId}}",
+            "gleap-hash": "{{gleapHash}}"
+          },
+          "success": [
+            200
+          ]
+        },
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "enforceOutputSchema": true
+      },
+      "contacts.identify": {
+        "kind": "action",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Identify or update a user",
+        "description": "Identify or update a user by external user id. POST https://api.gleap.io/admin/identify with the Api-Token header, the same secret the Gleap admin SDK uses. Distinct from POST /v3/sessions. Composio GLEAP_IDENTIFY_USER.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "userId"
+          ],
+          "properties": {
+            "userId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "External user id. Creates the contact when it does not exist."
+            },
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "description": "User name."
+            },
+            "email": {
+              "type": "string",
+              "minLength": 1,
+              "description": "User email."
+            },
+            "phone": {
+              "type": "string",
+              "minLength": 1,
+              "description": "User phone."
+            },
+            "value": {
+              "type": "number",
+              "description": "Customer value."
+            },
+            "createdAt": {
+              "type": "string",
+              "minLength": 1,
+              "description": "ISO-8601 created-at timestamp."
+            },
+            "preventLastActivityUpdate": {
+              "type": "boolean",
+              "description": "When true, identifying does not refresh last activity."
+            }
+          }
+        },
+        "outputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          }
+        },
+        "request": {
+          "method": "POST",
+          "baseUrl": "https://api.gleap.io",
+          "path": "/admin/identify",
+          "headers": {
+            "Content-Type": "application/json",
+            "Api-Token": "{{apiKey}}"
+          },
+          "body": {
+            "userId": "{{userId}}",
+            "name": "{{name}}",
+            "email": "{{email}}",
+            "phone": "{{phone}}",
+            "value": "{{value}}",
+            "createdAt": "{{createdAt}}",
+            "preventLastActivityUpdate": "{{preventLastActivityUpdate}}"
+          },
+          "success": [
+            200
+          ]
+        },
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "enforceOutputSchema": true
+      },
+      "events.track": {
+        "kind": "action",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Track events",
+        "description": "Track custom user events. POST https://api.gleap.io/admin/track with {events}, the same call the Gleap admin SDK batches. Composio GLEAP_TRACK_EVENTS.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "events"
+          ],
+          "properties": {
+            "events": {
+              "type": "array",
+              "minItems": 1,
+              "description": "Events to record. Each item needs userId and name.",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "userId",
+                  "name"
+                ],
+                "properties": {
+                  "userId": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "name": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "date": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "data": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "outputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          }
+        },
+        "request": {
+          "method": "POST",
+          "baseUrl": "https://api.gleap.io",
+          "path": "/admin/track",
+          "headers": {
+            "Content-Type": "application/json",
+            "Api-Token": "{{apiKey}}"
+          },
+          "body": {
+            "events": "{{events}}"
+          },
+          "success": [
+            200
+          ]
+        },
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "enforceOutputSchema": true
       }
     },
     "provenance": {
       "source": {
-        "url": "https://github.com/oomol-lab/open-connector",
-        "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"
+        "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
+        "url": "https://github.com/oomol-lab/open-connector"
       }
     },
     "evidence": {

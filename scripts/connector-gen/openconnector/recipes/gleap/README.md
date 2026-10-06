@@ -9,3 +9,5 @@ Covered operations follow the official admin OpenAPI at `https://api.gleap.io/ap
 Official docs live at `https://docs.gleap.io/documentation/server/api-overview`. Host is `api.gleap.io`. Native category is `dev-tools`.
 
 Source attribution: oomol-lab/open-connector at `33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a` (Apache License 2.0). Fixtures are independently derived from official docs plus pinned source and do not represent live provider access. Live smoke is unverified.
+
+Composio's GLEAP toolkit is 179 tools (version 20260615_00). The v3 admin routes already in this recipe cover that set except the calls that are not JSON admin routes: `GET /sessions/export` is a CSV download, and the Conversations/S2S API uses a service-account token. This revision adds the remaining JSON tools: list collection articles by `helpcenterCollectionId`, shared help center sources and answers, `POST /admin/identify`, and `POST /admin/track`.
