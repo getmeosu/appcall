@@ -1,16 +1,18 @@
 # Beaconcha.in
 
-Read-only international **Beaconcha.in Ethereum V2 API** recipe. Create an API key at `https://beaconcha.in/user/api-key-management` and store it as `apiKey`. Requests send `Authorization: Bearer` and `Accept: application/json` to `https://beaconcha.in`. All curated operations are POST JSON.
+International **Beaconcha.in Ethereum V2 API** recipe. Create an API key at `https://beaconcha.in/user/api-key-management` and store it as `apiKey`. Requests send `Authorization: Bearer` and `Accept: application/json` to `https://beaconcha.in`. All curated operations are POST JSON.
 
 ## Operations
 
 - `healthcheck`: `POST /api/v2/ethereum/queues` with `{"chain":"mainnet"}` (cheap authenticated network-queue read; pinned credential validator).
-- `queues.get`: `POST /api/v2/ethereum/queues` with optional `chain` (`mainnet` or `hoodi`).
-- `performance.get`: `POST /api/v2/ethereum/performance-aggregate` with required `evaluationWindow` (`24h`, `7d`, `30d`, `90d`, `all_time`) as `range.evaluation_window`.
-- `validators.get`: `POST /api/v2/ethereum/validators` with required `validatorIdentifier` (index or public key).
-- `validators.list`: `POST /api/v2/ethereum/validators` with required `validatorIdentifiers` and optional `cursor` / `pageSize` (1–10).
+- `queues.get` / `queues.history`: current and historical staking queue metrics.
+- `performance.get`: network performance aggregate for a named evaluation window.
+- `state.get` / `epoch.get` / `slot.get` / `block.get` / `block.rewards`: explorer state and epoch, slot, or execution-block views.
+- `deposits.get` / `withdrawals.get`: deposits and withdrawals for a slot view.
+- `validators.get` / `validators.list` plus rewards, balances, performance, APY/ROI, proposal slots, and attestation slots.
+- `ethStore.get` / `validatorStatuses.get`: ETH.STORE benchmark and validator-status distribution.
 
-Successful responses are raw provider JSON under AppCall `data`. Writes, premium selectors (`entity`, `deposit_address`, `withdrawal`), and rewards-list are omitted.
+Successful responses are raw provider JSON under AppCall `data`. Writes, premium selectors (`entity`, `deposit_address`, `withdrawal`), and vendor webhooks are omitted.
 
 ## Adaptations
 

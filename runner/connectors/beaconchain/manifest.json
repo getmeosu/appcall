@@ -1,4 +1,12 @@
 {
+  "key": "beaconchain",
+  "name": "Beaconcha.in",
+  "version": "0.2.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "utility"
+  ],
   "auth": {
     "scopes": [],
     "setup": {
@@ -14,17 +22,22 @@
     },
     "type": "api_key"
   },
-  "categories": [
-    "utility"
-  ],
-  "evidence": {
-    "fixture": {
-      "status": "supplied"
-    },
-    "live": {
-      "status": "unverified"
-    }
+  "network": {
+    "allowedHosts": [
+      "beaconcha.in"
+    ]
   },
+  "models": [
+    "queue",
+    "performance",
+    "validator",
+    "epoch",
+    "slot",
+    "block",
+    "deposit",
+    "withdrawal",
+    "reward"
+  ],
   "http": {
     "auth": {
       "field": "apiKey",
@@ -48,18 +61,6 @@
     "headers": {
       "Accept": "application/json"
     }
-  },
-  "key": "beaconchain",
-  "models": [
-    "queue",
-    "performance",
-    "validator"
-  ],
-  "name": "Beaconcha.in",
-  "network": {
-    "allowedHosts": [
-      "beaconcha.in"
-    ]
   },
   "operations": {
     "healthcheck": {
@@ -102,6 +103,56 @@
       "sideEffect": "read",
       "timeoutMs": 5000,
       "title": "Healthcheck",
+      "validationMode": "strict-generated"
+    },
+    "queues.get": {
+      "description": "Get Beaconcha.in network staking queue metrics for mainnet or hoodi.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "chain": {
+            "enum": [
+              "mainnet",
+              "hoodi"
+            ],
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "body": {
+          "chain": "{{chain}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "method": "POST",
+        "path": "/api/v2/ethereum/queues",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get staking queues",
       "validationMode": "strict-generated"
     },
     "performance.get": {
@@ -168,56 +219,6 @@
       "sideEffect": "read",
       "timeoutMs": 15000,
       "title": "Get network performance",
-      "validationMode": "strict-generated"
-    },
-    "queues.get": {
-      "description": "Get Beaconcha.in network staking queue metrics for mainnet or hoodi.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "chain": {
-            "enum": [
-              "mainnet",
-              "hoodi"
-            ],
-            "type": "string"
-          }
-        },
-        "type": "object"
-      },
-      "kind": "action",
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "outputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "type": "object"
-      },
-      "request": {
-        "body": {
-          "chain": "{{chain}}"
-        },
-        "headers": {
-          "Content-Type": "application/json"
-        },
-        "method": "POST",
-        "path": "/api/v2/ethereum/queues",
-        "success": [
-          200
-        ]
-      },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "title": "Get staking queues",
       "validationMode": "strict-generated"
     },
     "validators.get": {
@@ -364,6 +365,1198 @@
       "timeoutMs": 15000,
       "title": "List validators",
       "validationMode": "strict-generated"
+    },
+    "state.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get explorer state",
+      "description": "Get the Beaconcha.in explorer view of Ethereum chain health, checkpoints, and data freshness.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "chain": {
+            "enum": [
+              "mainnet",
+              "hoodi"
+            ],
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "POST",
+        "path": "/api/v2/ethereum/state",
+        "success": [
+          200
+        ],
+        "body": {
+          "chain": "{{chain}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "epoch.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get epoch",
+      "description": "Get a rolled-up Beaconcha.in overview of one consensus-layer epoch by number or latest/finalized view.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "chain": {
+            "enum": [
+              "mainnet",
+              "hoodi"
+            ],
+            "type": "string"
+          },
+          "view": {
+            "enum": [
+              "latest",
+              "finalized"
+            ],
+            "type": "string"
+          },
+          "number": {
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "POST",
+        "path": "/api/v2/ethereum/epoch",
+        "success": [
+          200
+        ],
+        "body": {
+          "chain": "{{chain}}",
+          "epoch": {
+            "number": "{{number}}",
+            "view": "{{view}}"
+          }
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "slot.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get slot",
+      "description": "Get Beaconcha.in details for one consensus-layer slot by number or latest/finalized view.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "chain": {
+            "enum": [
+              "mainnet",
+              "hoodi"
+            ],
+            "type": "string"
+          },
+          "view": {
+            "enum": [
+              "latest",
+              "finalized"
+            ],
+            "type": "string"
+          },
+          "number": {
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "POST",
+        "path": "/api/v2/ethereum/slot",
+        "success": [
+          200
+        ],
+        "body": {
+          "chain": "{{chain}}",
+          "slot": {
+            "number": "{{number}}",
+            "view": "{{view}}"
+          }
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "block.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get execution block",
+      "description": "Get Beaconcha.in details for one execution-layer block by number or latest/finalized view.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "chain": {
+            "enum": [
+              "mainnet",
+              "hoodi"
+            ],
+            "type": "string"
+          },
+          "view": {
+            "enum": [
+              "latest",
+              "finalized"
+            ],
+            "type": "string"
+          },
+          "number": {
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "POST",
+        "path": "/api/v2/ethereum/block",
+        "success": [
+          200
+        ],
+        "body": {
+          "chain": "{{chain}}",
+          "block": {
+            "number": "{{number}}",
+            "view": "{{view}}"
+          }
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "block.rewards": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get block rewards",
+      "description": "Get Beaconcha.in execution-layer rewards for one block, including fees and MEV.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "chain": {
+            "enum": [
+              "mainnet",
+              "hoodi"
+            ],
+            "type": "string"
+          },
+          "view": {
+            "enum": [
+              "latest",
+              "finalized"
+            ],
+            "type": "string"
+          },
+          "number": {
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "POST",
+        "path": "/api/v2/ethereum/block/rewards",
+        "success": [
+          200
+        ],
+        "body": {
+          "chain": "{{chain}}",
+          "block": {
+            "number": "{{number}}",
+            "view": "{{view}}"
+          }
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "deposits.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get slot deposits",
+      "description": "Get Beaconcha.in validator deposits processed in a specified slot.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "chain": {
+            "enum": [
+              "mainnet",
+              "hoodi"
+            ],
+            "type": "string"
+          },
+          "view": {
+            "enum": [
+              "latest",
+              "finalized"
+            ],
+            "type": "string"
+          },
+          "number": {
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "POST",
+        "path": "/api/v2/ethereum/deposits",
+        "success": [
+          200
+        ],
+        "body": {
+          "chain": "{{chain}}",
+          "slot": {
+            "number": "{{number}}",
+            "view": "{{view}}"
+          }
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "withdrawals.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get slot withdrawals",
+      "description": "Get Beaconcha.in validator withdrawals processed in a specified slot.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "chain": {
+            "enum": [
+              "mainnet",
+              "hoodi"
+            ],
+            "type": "string"
+          },
+          "view": {
+            "enum": [
+              "latest",
+              "finalized"
+            ],
+            "type": "string"
+          },
+          "number": {
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "POST",
+        "path": "/api/v2/ethereum/withdrawals",
+        "success": [
+          200
+        ],
+        "body": {
+          "chain": "{{chain}}",
+          "slot": {
+            "number": "{{number}}",
+            "view": "{{view}}"
+          }
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "queues.history": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get queue history",
+      "description": "Get Beaconcha.in historical staking queue sizes by epoch.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "chain": {
+            "enum": [
+              "mainnet",
+              "hoodi"
+            ],
+            "type": "string"
+          },
+          "evaluationWindow": {
+            "enum": [
+              "24h",
+              "7d",
+              "30d",
+              "90d",
+              "all_time"
+            ],
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "POST",
+        "path": "/api/v2/ethereum/queues/history",
+        "success": [
+          200
+        ],
+        "body": {
+          "chain": "{{chain}}",
+          "range": {
+            "evaluation_window": "{{evaluationWindow}}"
+          }
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "validators.rewardsAggregate": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get validator rewards aggregate",
+      "description": "Get cumulative Beaconcha.in consensus and execution rewards for selected validators over an evaluation window.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "chain": {
+            "enum": [
+              "mainnet",
+              "hoodi"
+            ],
+            "type": "string"
+          },
+          "evaluationWindow": {
+            "enum": [
+              "24h",
+              "7d",
+              "30d",
+              "90d",
+              "all_time"
+            ],
+            "type": "string"
+          },
+          "validatorIdentifiers": {
+            "items": {
+              "minLength": 1,
+              "minimum": 0,
+              "type": [
+                "integer",
+                "string"
+              ]
+            },
+            "minItems": 1,
+            "type": "array"
+          }
+        },
+        "required": [
+          "validatorIdentifiers",
+          "evaluationWindow"
+        ],
+        "type": "object"
+      },
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "POST",
+        "path": "/api/v2/ethereum/validators/rewards-aggregate",
+        "success": [
+          200
+        ],
+        "body": {
+          "chain": "{{chain}}",
+          "validator": {
+            "validator_identifiers": "{{validatorIdentifiers}}"
+          },
+          "range": {
+            "evaluation_window": "{{evaluationWindow}}"
+          }
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "validators.rewardsList": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List validator rewards",
+      "description": "Get a per-epoch Beaconcha.in rewards breakdown for selected validators.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "chain": {
+            "enum": [
+              "mainnet",
+              "hoodi"
+            ],
+            "type": "string"
+          },
+          "validatorIdentifiers": {
+            "items": {
+              "minLength": 1,
+              "minimum": 0,
+              "type": [
+                "integer",
+                "string"
+              ]
+            },
+            "minItems": 1,
+            "type": "array"
+          },
+          "epoch": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "pageSize": {
+            "maximum": 100,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "cursor": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "validatorIdentifiers"
+        ],
+        "type": "object"
+      },
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "POST",
+        "path": "/api/v2/ethereum/validators/rewards-list",
+        "success": [
+          200
+        ],
+        "body": {
+          "chain": "{{chain}}",
+          "epoch": "{{epoch}}",
+          "page_size": "{{pageSize}}",
+          "cursor": "{{cursor}}",
+          "validator": {
+            "validator_identifiers": "{{validatorIdentifiers}}"
+          }
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "validators.balances": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get validator balances",
+      "description": "Get Beaconcha.in balances for selected validators at a particular epoch.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "chain": {
+            "enum": [
+              "mainnet",
+              "hoodi"
+            ],
+            "type": "string"
+          },
+          "validatorIdentifiers": {
+            "items": {
+              "minLength": 1,
+              "minimum": 0,
+              "type": [
+                "integer",
+                "string"
+              ]
+            },
+            "minItems": 1,
+            "type": "array"
+          },
+          "epoch": {
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "validatorIdentifiers"
+        ],
+        "type": "object"
+      },
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "POST",
+        "path": "/api/v2/ethereum/validators/balances",
+        "success": [
+          200
+        ],
+        "body": {
+          "chain": "{{chain}}",
+          "epoch": "{{epoch}}",
+          "validator": {
+            "validator_identifiers": "{{validatorIdentifiers}}"
+          }
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "validators.performanceAggregate": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get validator performance aggregate",
+      "description": "Get aggregated Beaconcha.in BeaconScore performance for selected validators over an evaluation window.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "chain": {
+            "enum": [
+              "mainnet",
+              "hoodi"
+            ],
+            "type": "string"
+          },
+          "evaluationWindow": {
+            "enum": [
+              "24h",
+              "7d",
+              "30d",
+              "90d",
+              "all_time"
+            ],
+            "type": "string"
+          },
+          "validatorIdentifiers": {
+            "items": {
+              "minLength": 1,
+              "minimum": 0,
+              "type": [
+                "integer",
+                "string"
+              ]
+            },
+            "minItems": 1,
+            "type": "array"
+          }
+        },
+        "required": [
+          "validatorIdentifiers",
+          "evaluationWindow"
+        ],
+        "type": "object"
+      },
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "POST",
+        "path": "/api/v2/ethereum/validators/performance-aggregate",
+        "success": [
+          200
+        ],
+        "body": {
+          "chain": "{{chain}}",
+          "validator": {
+            "validator_identifiers": "{{validatorIdentifiers}}"
+          },
+          "range": {
+            "evaluation_window": "{{evaluationWindow}}"
+          }
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "validators.apyRoi": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get validator APY and ROI",
+      "description": "Get Beaconcha.in annual percentage yield and return on investment for selected validators.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "chain": {
+            "enum": [
+              "mainnet",
+              "hoodi"
+            ],
+            "type": "string"
+          },
+          "evaluationWindow": {
+            "enum": [
+              "24h",
+              "7d",
+              "30d",
+              "90d",
+              "all_time"
+            ],
+            "type": "string"
+          },
+          "validatorIdentifiers": {
+            "items": {
+              "minLength": 1,
+              "minimum": 0,
+              "type": [
+                "integer",
+                "string"
+              ]
+            },
+            "minItems": 1,
+            "type": "array"
+          }
+        },
+        "required": [
+          "validatorIdentifiers",
+          "evaluationWindow"
+        ],
+        "type": "object"
+      },
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "POST",
+        "path": "/api/v2/ethereum/validators/apy-roi",
+        "success": [
+          200
+        ],
+        "body": {
+          "chain": "{{chain}}",
+          "validator": {
+            "validator_identifiers": "{{validatorIdentifiers}}"
+          },
+          "range": {
+            "evaluation_window": "{{evaluationWindow}}"
+          }
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "validators.proposalSlots": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List proposal slots",
+      "description": "List Beaconcha.in slots where selected validators were assigned a block proposal duty.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "chain": {
+            "enum": [
+              "mainnet",
+              "hoodi"
+            ],
+            "type": "string"
+          },
+          "validatorIdentifiers": {
+            "items": {
+              "minLength": 1,
+              "minimum": 0,
+              "type": [
+                "integer",
+                "string"
+              ]
+            },
+            "minItems": 1,
+            "type": "array"
+          },
+          "cursor": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "pageSize": {
+            "maximum": 100,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "evaluationWindow": {
+            "enum": [
+              "24h",
+              "7d",
+              "30d",
+              "90d",
+              "all_time"
+            ],
+            "type": "string"
+          },
+          "epoch": {
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "validatorIdentifiers"
+        ],
+        "type": "object"
+      },
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "POST",
+        "path": "/api/v2/ethereum/validators/proposal-slots",
+        "success": [
+          200
+        ],
+        "body": {
+          "chain": "{{chain}}",
+          "cursor": "{{cursor}}",
+          "page_size": "{{pageSize}}",
+          "validator": {
+            "validator_identifiers": "{{validatorIdentifiers}}"
+          }
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "validators.attestationSlots": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List attestation slots",
+      "description": "List Beaconcha.in slots where selected validators were assigned attestation duties.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "chain": {
+            "enum": [
+              "mainnet",
+              "hoodi"
+            ],
+            "type": "string"
+          },
+          "validatorIdentifiers": {
+            "items": {
+              "minLength": 1,
+              "minimum": 0,
+              "type": [
+                "integer",
+                "string"
+              ]
+            },
+            "minItems": 1,
+            "type": "array"
+          },
+          "cursor": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "pageSize": {
+            "maximum": 100,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "evaluationWindow": {
+            "enum": [
+              "24h",
+              "7d",
+              "30d",
+              "90d",
+              "all_time"
+            ],
+            "type": "string"
+          },
+          "epoch": {
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "validatorIdentifiers"
+        ],
+        "type": "object"
+      },
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "POST",
+        "path": "/api/v2/ethereum/validators/attestation-slots",
+        "success": [
+          200
+        ],
+        "body": {
+          "chain": "{{chain}}",
+          "cursor": "{{cursor}}",
+          "page_size": "{{pageSize}}",
+          "validator": {
+            "validator_identifiers": "{{validatorIdentifiers}}"
+          }
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "ethStore.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get ETH.STORE",
+      "description": "Get Beaconcha.in ETH.STORE staking-benchmark returns over each 24-hour beaconchain day.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "chain": {
+            "enum": [
+              "mainnet",
+              "hoodi"
+            ],
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "POST",
+        "path": "/api/v2/ethereum/eth-store",
+        "success": [
+          200
+        ],
+        "body": {
+          "chain": "{{chain}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "validatorStatuses.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get validator status distribution",
+      "description": "Get Beaconcha.in validator state distribution for the network or a validator filter.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "chain": {
+            "enum": [
+              "mainnet",
+              "hoodi"
+            ],
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "POST",
+        "path": "/api/v2/ethereum/state/validator-statuses",
+        "success": [
+          200
+        ],
+        "body": {
+          "chain": "{{chain}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
     }
   },
   "provenance": {
@@ -372,7 +1565,12 @@
       "url": "https://github.com/oomol-lab/open-connector"
     }
   },
-  "runtime": "bun",
-  "version": "0.1.0",
-  "visibility": "public"
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
+    }
+  }
 }
