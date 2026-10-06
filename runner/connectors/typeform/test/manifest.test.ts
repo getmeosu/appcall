@@ -4,7 +4,7 @@ import manifest from "../manifest.json";
 describe("typeform manifest", () => {
   it("has correct key and version", () => {
     expect(manifest.key).toBe("typeform");
-    expect(manifest.version).toBe("0.1.0");
+    expect(manifest.version).toBe("0.2.0");
     expect(manifest.runtime).toBe("bun");
   });
 
@@ -33,6 +33,20 @@ describe("typeform manifest", () => {
     expect(ops).toContain("responses.delete");
     expect(ops).toContain("webhooks.create");
     expect(ops).toContain("webhooks.list");
+    expect(ops).toContain("users.me");
+    expect(ops).toContain("workspaces.list");
+    expect(ops).toContain("workspaces.get");
+    expect(ops).toContain("workspaces.create");
+    expect(ops).toContain("workspaces.update");
+    expect(ops).toContain("themes.list");
+    expect(ops).toContain("themes.get");
+    expect(ops).toContain("images.list");
+    expect(ops).toContain("webhooks.get");
+    expect(ops).toContain("webhooks.delete");
+    expect(ops).toContain("forms.messages.get");
+    expect(ops).toContain("forms.patch");
+    expect(ops).not.toContain("webhook.form_response");
+    expect(ops).not.toContain("webhook.form_response_partial");
   });
 
   it("operations use flat kind field", () => {
@@ -49,7 +63,11 @@ describe("typeform manifest", () => {
   });
 
   it("all action operations have required fields", () => {
-    const actionOps = ["forms.list.action", "forms.get", "forms.create", "forms.update", "forms.delete", "responses.list.action", "responses.delete", "webhooks.create", "webhooks.list"];
+    const actionOps = Object.entries(manifest.operations as Record<string, Record<string, unknown>>)
+      .filter(([, operation]) => operation.kind === "action")
+      .map(([key]) => key);
+    expect(actionOps.length).toBeGreaterThanOrEqual(16);
+    expect(actionOps.length).toBeLessThanOrEqual(24);
     for (const op of actionOps) {
       const operation = manifest.operations[op as keyof typeof manifest.operations] as Record<string, unknown>;
       expect(operation.kind).toBe("action");
@@ -66,9 +84,21 @@ describe("typeform manifest", () => {
     }
   });
 
+  it("omits unsupported EventOnly typeform webhook placeholders", () => {
+    const operations = manifest.operations as Record<string, Record<string, unknown>>;
+    for (const key of ["webhook.form_response", "webhook.form_response_partial"]) {
+      expect(operations[key]).toBeUndefined();
+    }
+    expect(Object.values(operations).filter((operation) => operation.kind === "webhook")).toEqual([]);
+  });
+
   it("has correct models", () => {
     expect(manifest.models).toContain("form");
     expect(manifest.models).toContain("response");
     expect(manifest.models).toContain("webhook");
+    expect(manifest.models).toContain("workspace");
+    expect(manifest.models).toContain("theme");
+    expect(manifest.models).toContain("image");
+    expect(manifest.models).toContain("user");
   });
 });

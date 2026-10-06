@@ -50,6 +50,8 @@ export function normalizeWebhook(w: TypeFormWebhook): NormalizedWebhook {
 
 export type WebhooksCreateInput = { formId: string; tag: string; url: string; enabled?: boolean; verifySsl?: boolean; secret?: string };
 export type WebhooksListInput = { formId: string };
+export type WebhooksGetInput = { formId: string; tag: string };
+export type WebhooksDeleteInput = { formId: string; tag: string };
 
 export function validateWebhooksCreateInput(input: unknown): WebhooksCreateInput {
   if (!isRecord(input)) throw new Error("webhooks.create input must be an object");
@@ -66,6 +68,22 @@ export function validateWebhooksCreateInput(input: unknown): WebhooksCreateInput
 export function validateWebhooksListInput(input: unknown): WebhooksListInput {
   if (!isRecord(input)) throw new Error("webhooks.list input must be an object");
   return { formId: requireString(input.formId, "formId") };
+}
+
+export function validateWebhooksGetInput(input: unknown): WebhooksGetInput {
+  if (!isRecord(input)) throw new Error("webhooks.get input must be an object");
+  return {
+    formId: requireString(input.formId, "formId"),
+    tag: requireString(input.tag, "tag"),
+  };
+}
+
+export function validateWebhooksDeleteInput(input: unknown): WebhooksDeleteInput {
+  if (!isRecord(input)) throw new Error("webhooks.delete input must be an object");
+  return {
+    formId: requireString(input.formId, "formId"),
+    tag: requireString(input.tag, "tag"),
+  };
 }
 
 // ─── Client Factory ───────────────────────────────────────────────────────────
@@ -117,6 +135,38 @@ export function createWebhooksClient(options: { accessToken: string; fetch?: typ
         return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Form not found." } };
       }
       return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Typeform rejected the webhooks list request." } };
+    },
+
+    async get(input: unknown) {
+      const payload = validateWebhooksGetInput(input);
+      const response = await client.fetchJSON(`/forms/${payload.formId}/webhooks/${payload.tag}`);
+      const rateLimit = parseTypeFormRateLimit(response.status, response.headers);
+      if (rateLimit.limited) {
+        return { ok: false as const, error: { code: "CONNECTOR_RATE_LIMITED", message: "Typeform rate limit exceeded.", retryAfterSeconds: rateLimit.retryAfterSeconds } };
+      }
+      if (response.status === 200) {
+        return { ok: true as const, webhook: normalizeWebhook(response.body as TypeFormWebhook) };
+      }
+      if (response.status === 404) {
+        return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Webhook not found." } };
+      }
+      return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Typeform rejected the webhook get request." } };
+    },
+
+    async delete(input: unknown) {
+      const payload = validateWebhooksDeleteInput(input);
+      const response = await client.fetchJSON(`/forms/${payload.formId}/webhooks/${payload.tag}`, { method: "DELETE" });
+      const rateLimit = parseTypeFormRateLimit(response.status, response.headers);
+      if (rateLimit.limited) {
+        return { ok: false as const, error: { code: "CONNECTOR_RATE_LIMITED", message: "Typeform rate limit exceeded.", retryAfterSeconds: rateLimit.retryAfterSeconds } };
+      }
+      if (response.status === 204 || response.status === 200) {
+        return { ok: true as const, deleted: true, formId: payload.formId, tag: payload.tag };
+      }
+      if (response.status === 404) {
+        return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Webhook not found." } };
+      }
+      return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Typeform rejected the webhook delete request." } };
     },
   };
 }

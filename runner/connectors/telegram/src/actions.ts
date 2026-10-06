@@ -23,6 +23,30 @@ import {
   validateSendChatActionInput,
 } from "./chats";
 import { getMe } from "./bot";
+import {
+  sendTelegramLocation,
+  validateSendLocationInput,
+  sendTelegramPoll,
+  validateSendPollInput,
+  unpinTelegramMessage,
+  validateUnpinMessageInput,
+  copyTelegramMessage,
+  validateCopyMessageInput,
+  getTelegramChatMember,
+  validateGetChatMemberInput,
+  getTelegramChatAdministrators,
+  validateGetChatAdministratorsInput,
+  exportTelegramChatInviteLink,
+  validateExportInviteLinkInput,
+  leaveTelegramChat,
+  validateLeaveChatInput,
+  getTelegramUpdates,
+  validateGetUpdatesInput,
+  setTelegramCommands,
+  validateSetCommandsInput,
+  answerTelegramCallbackQuery,
+  validateAnswerCallbackQueryInput,
+} from "./depth";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -243,3 +267,82 @@ export function getMeAction(input: unknown): Record<string, unknown> | Promise<R
     validated: {},
   };
 }
+
+function wrapTelegramAction<T>(
+  action: string,
+  validate: (input: unknown) => T,
+  execute: (input: Record<string, unknown> & { botToken: string }) => Promise<Record<string, unknown>>,
+) {
+  return (input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> => {
+    if (isRecord(input) && typeof input.botToken === "string") {
+      return execute(input as Record<string, unknown> & { botToken: string }).then((result) => ({
+        connector: "telegram",
+        action,
+        source: "connector",
+        ...result,
+      }));
+    }
+    return {
+      connector: "telegram",
+      action,
+      source: "connector",
+      validated: validate(input),
+    };
+  };
+}
+
+export const sendLocation = wrapTelegramAction(
+  "messages.sendLocation",
+  validateSendLocationInput,
+  (input) => sendTelegramLocation({ ...input, operation: "messages.sendLocation" }),
+);
+export const sendPoll = wrapTelegramAction(
+  "messages.sendPoll",
+  validateSendPollInput,
+  (input) => sendTelegramPoll({ ...input, operation: "messages.sendPoll" }),
+);
+export const unpinMessage = wrapTelegramAction(
+  "messages.unpin",
+  validateUnpinMessageInput,
+  (input) => unpinTelegramMessage({ ...input, operation: "messages.unpin" }),
+);
+export const copyMessage = wrapTelegramAction(
+  "messages.copy",
+  validateCopyMessageInput,
+  (input) => copyTelegramMessage({ ...input, operation: "messages.copy" }),
+);
+export const getChatMember = wrapTelegramAction(
+  "chats.getMember",
+  validateGetChatMemberInput,
+  (input) => getTelegramChatMember({ ...input, operation: "chats.getMember" }),
+);
+export const getChatAdministrators = wrapTelegramAction(
+  "chats.getAdministrators",
+  validateGetChatAdministratorsInput,
+  (input) => getTelegramChatAdministrators({ ...input, operation: "chats.getAdministrators" }),
+);
+export const exportChatInviteLink = wrapTelegramAction(
+  "chats.exportInviteLink",
+  validateExportInviteLinkInput,
+  (input) => exportTelegramChatInviteLink({ ...input, operation: "chats.exportInviteLink" }),
+);
+export const leaveChat = wrapTelegramAction(
+  "chats.leave",
+  validateLeaveChatInput,
+  (input) => leaveTelegramChat({ ...input, operation: "chats.leave" }),
+);
+export const getUpdates = wrapTelegramAction(
+  "bot.getUpdates",
+  validateGetUpdatesInput,
+  (input) => getTelegramUpdates({ ...input, operation: "bot.getUpdates" }),
+);
+export const setCommands = wrapTelegramAction(
+  "bot.setCommands",
+  validateSetCommandsInput,
+  (input) => setTelegramCommands({ ...input, operation: "bot.setCommands" }),
+);
+export const answerCallbackQuery = wrapTelegramAction(
+  "bot.answerCallbackQuery",
+  validateAnswerCallbackQueryInput,
+  (input) => answerTelegramCallbackQuery({ ...input, operation: "bot.answerCallbackQuery" }),
+);

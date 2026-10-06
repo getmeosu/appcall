@@ -1,9 +1,11 @@
 {
   "key": "typeform",
   "name": "Typeform",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "runtime": "bun",
-  "categories": ["forms"],
+  "categories": [
+    "forms"
+  ],
   "auth": {
     "type": "oauth2",
     "scopes": [
@@ -12,7 +14,12 @@
       "responses:read",
       "responses:write",
       "webhooks:read",
-      "webhooks:write"
+      "webhooks:write",
+      "workspaces:read",
+      "workspaces:write",
+      "themes:read",
+      "images:read",
+      "accounts:read"
     ],
     "setup": {
       "mode": "oauth2",
@@ -86,7 +93,9 @@
             "description": "Search query to filter forms by title."
           }
         },
-        "required": ["accessToken"]
+        "required": [
+          "accessToken"
+        ]
       },
       "outputSchema": {
         "type": "object",
@@ -121,7 +130,10 @@
             "description": "The unique identifier of the Typeform form."
           }
         },
-        "required": ["accessToken", "formId"]
+        "required": [
+          "accessToken",
+          "formId"
+        ]
       },
       "outputSchema": {
         "type": "object",
@@ -168,7 +180,10 @@
             "description": "Array of thank-you screen objects."
           }
         },
-        "required": ["accessToken", "title"]
+        "required": [
+          "accessToken",
+          "title"
+        ]
       },
       "outputSchema": {
         "type": "object",
@@ -243,7 +258,11 @@
             "description": "Workspace reference for the replacement form."
           }
         },
-        "required": ["accessToken", "formId", "title"]
+        "required": [
+          "accessToken",
+          "formId",
+          "title"
+        ]
       },
       "outputSchema": {
         "type": "object",
@@ -274,7 +293,10 @@
             "description": "The unique identifier of the form to delete."
           }
         },
-        "required": ["accessToken", "formId"]
+        "required": [
+          "accessToken",
+          "formId"
+        ]
       },
       "outputSchema": {
         "type": "object",
@@ -329,7 +351,10 @@
             "description": "Token to retrieve the previous page of responses (cursor)."
           }
         },
-        "required": ["accessToken", "formId"]
+        "required": [
+          "accessToken",
+          "formId"
+        ]
       },
       "outputSchema": {
         "type": "object",
@@ -365,11 +390,17 @@
           },
           "includedTokens": {
             "type": "array",
-            "items": { "type": "string" },
+            "items": {
+              "type": "string"
+            },
             "description": "Array of response token IDs to delete."
           }
         },
-        "required": ["accessToken", "formId", "includedTokens"]
+        "required": [
+          "accessToken",
+          "formId",
+          "includedTokens"
+        ]
       },
       "outputSchema": {
         "type": "object",
@@ -424,7 +455,12 @@
             "description": "Secret for signing webhook payloads."
           }
         },
-        "required": ["accessToken", "formId", "tag", "url"]
+        "required": [
+          "accessToken",
+          "formId",
+          "tag",
+          "url"
+        ]
       },
       "outputSchema": {
         "type": "object",
@@ -455,7 +491,10 @@
             "description": "The unique identifier of the form whose webhooks to list."
           }
         },
-        "required": ["accessToken", "formId"]
+        "required": [
+          "accessToken",
+          "formId"
+        ]
       },
       "outputSchema": {
         "type": "object",
@@ -466,11 +505,470 @@
           }
         }
       }
+    },
+    "users.me": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "title": "Get About Me",
+      "description": "Retrieve the authenticated Typeform account owner profile.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "accessToken": {
+            "type": "string",
+            "description": "Typeform OAuth2 Bearer access token."
+          }
+        },
+        "required": [
+          "accessToken"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "user": {
+            "type": "object",
+            "description": "Normalized Typeform account owner."
+          }
+        }
+      }
+    },
+    "workspaces.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "List Workspaces",
+      "description": "Retrieve a paginated list of Typeform workspaces the account can access.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "accessToken": {
+            "type": "string",
+            "description": "Typeform OAuth2 Bearer access token."
+          },
+          "page": {
+            "type": "number",
+            "description": "Page number to retrieve (1-based)."
+          },
+          "pageSize": {
+            "type": "number",
+            "description": "Number of workspaces per page (max 200)."
+          },
+          "search": {
+            "type": "string",
+            "description": "Search query to filter workspaces by name."
+          }
+        },
+        "required": [
+          "accessToken"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "workspaces": {
+            "type": "array",
+            "description": "Array of normalized workspace objects."
+          },
+          "totalItems": {
+            "type": "number",
+            "description": "Total number of matching workspaces."
+          }
+        }
+      }
+    },
+    "workspaces.get": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "title": "Get Workspace",
+      "description": "Retrieve a Typeform workspace by ID, including name, sharing, and form count.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "accessToken": {
+            "type": "string",
+            "description": "Typeform OAuth2 Bearer access token."
+          },
+          "workspaceId": {
+            "type": "string",
+            "description": "Unique identifier of the Typeform workspace."
+          }
+        },
+        "required": [
+          "accessToken",
+          "workspaceId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "workspace": {
+            "type": "object",
+            "description": "Normalized workspace object."
+          }
+        }
+      }
+    },
+    "workspaces.create": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Create Workspace",
+      "description": "Create a new Typeform workspace with the given name.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "accessToken": {
+            "type": "string",
+            "description": "Typeform OAuth2 Bearer access token."
+          },
+          "name": {
+            "type": "string",
+            "description": "Name of the new workspace."
+          }
+        },
+        "required": [
+          "accessToken",
+          "name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "workspace": {
+            "type": "object",
+            "description": "The newly created workspace."
+          }
+        }
+      }
+    },
+    "workspaces.update": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Update Workspace",
+      "description": "Rename an existing Typeform workspace.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "accessToken": {
+            "type": "string",
+            "description": "Typeform OAuth2 Bearer access token."
+          },
+          "workspaceId": {
+            "type": "string",
+            "description": "Unique identifier of the Typeform workspace."
+          },
+          "name": {
+            "type": "string",
+            "description": "New name for the workspace."
+          }
+        },
+        "required": [
+          "accessToken",
+          "workspaceId",
+          "name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "workspace": {
+            "type": "object",
+            "description": "The updated workspace."
+          }
+        }
+      }
+    },
+    "themes.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "List Themes",
+      "description": "Retrieve a paginated list of Typeform themes available to the account.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "accessToken": {
+            "type": "string",
+            "description": "Typeform OAuth2 Bearer access token."
+          },
+          "page": {
+            "type": "number",
+            "description": "Page number to retrieve (1-based)."
+          },
+          "pageSize": {
+            "type": "number",
+            "description": "Number of themes per page (max 200)."
+          }
+        },
+        "required": [
+          "accessToken"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "themes": {
+            "type": "array",
+            "description": "Array of normalized theme objects."
+          },
+          "totalItems": {
+            "type": "number",
+            "description": "Total number of themes."
+          }
+        }
+      }
+    },
+    "themes.get": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "title": "Get Theme",
+      "description": "Retrieve a Typeform theme by ID, including colors, fonts, and layout settings.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "accessToken": {
+            "type": "string",
+            "description": "Typeform OAuth2 Bearer access token."
+          },
+          "themeId": {
+            "type": "string",
+            "description": "Unique identifier of the theme."
+          }
+        },
+        "required": [
+          "accessToken",
+          "themeId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "theme": {
+            "type": "object",
+            "description": "Normalized theme object."
+          }
+        }
+      }
+    },
+    "images.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "title": "List Images",
+      "description": "Retrieve images in the Typeform account in reverse-chronological order.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "accessToken": {
+            "type": "string",
+            "description": "Typeform OAuth2 Bearer access token."
+          }
+        },
+        "required": [
+          "accessToken"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "images": {
+            "type": "array",
+            "description": "Array of normalized image objects."
+          }
+        }
+      }
+    },
+    "webhooks.get": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 524288,
+      "title": "Get Webhook",
+      "description": "Retrieve a single Typeform webhook by form ID and tag.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "accessToken": {
+            "type": "string",
+            "description": "Typeform OAuth2 Bearer access token."
+          },
+          "formId": {
+            "type": "string",
+            "description": "The unique identifier of the Typeform form."
+          },
+          "tag": {
+            "type": "string",
+            "description": "Unique webhook tag within the form."
+          }
+        },
+        "required": [
+          "accessToken",
+          "formId",
+          "tag"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "webhook": {
+            "type": "object",
+            "description": "Normalized webhook object."
+          }
+        }
+      }
+    },
+    "webhooks.delete": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "title": "Delete Webhook",
+      "description": "Delete a Typeform webhook identified by form ID and tag.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "accessToken": {
+            "type": "string",
+            "description": "Typeform OAuth2 Bearer access token."
+          },
+          "formId": {
+            "type": "string",
+            "description": "The unique identifier of the Typeform form."
+          },
+          "tag": {
+            "type": "string",
+            "description": "Unique webhook tag within the form."
+          }
+        },
+        "required": [
+          "accessToken",
+          "formId",
+          "tag"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "deleted": {
+            "type": "boolean",
+            "description": "Whether the webhook was deleted."
+          },
+          "formId": {
+            "type": "string",
+            "description": "Form ID the webhook belonged to."
+          },
+          "tag": {
+            "type": "string",
+            "description": "Deleted webhook tag."
+          }
+        }
+      }
+    },
+    "forms.messages.get": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "title": "Get Form Messages",
+      "description": "Retrieve custom Typeform messages such as button labels and error text for a form.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "accessToken": {
+            "type": "string",
+            "description": "Typeform OAuth2 Bearer access token."
+          },
+          "formId": {
+            "type": "string",
+            "description": "The unique identifier of the Typeform form."
+          }
+        },
+        "required": [
+          "accessToken",
+          "formId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "messages": {
+            "type": "object",
+            "description": "Custom form messages map."
+          },
+          "formId": {
+            "type": "string",
+            "description": "Form ID the messages belong to."
+          }
+        }
+      }
+    },
+    "forms.patch": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 524288,
+      "maxResponseBytes": 65536,
+      "title": "Patch Form",
+      "description": "Partially update a Typeform using JSON Patch operations without replacing the entire form.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "accessToken": {
+            "type": "string",
+            "description": "Typeform OAuth2 Bearer access token."
+          },
+          "formId": {
+            "type": "string",
+            "description": "The unique identifier of the Typeform form."
+          },
+          "operations": {
+            "type": "array",
+            "description": "JSON Patch operations (add, remove, replace) to apply to the form.",
+            "items": {
+              "type": "object"
+            }
+          }
+        },
+        "required": [
+          "accessToken",
+          "formId",
+          "operations"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "patched": {
+            "type": "boolean",
+            "description": "Whether the patch was accepted."
+          },
+          "formId": {
+            "type": "string",
+            "description": "Form ID that was patched."
+          }
+        }
+      }
     }
   },
   "models": [
     "form",
     "response",
-    "webhook"
+    "webhook",
+    "workspace",
+    "theme",
+    "image",
+    "user"
   ]
 }

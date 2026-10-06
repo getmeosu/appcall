@@ -12,7 +12,26 @@ import {
   createWebhooksClient,
   validateWebhooksCreateInput,
   validateWebhooksListInput,
+  validateWebhooksGetInput,
+  validateWebhooksDeleteInput,
 } from "./webhooks";
+import {
+  createUsersClient,
+  validateUsersMeInput,
+  createWorkspacesClient,
+  validateWorkspacesListInput,
+  validateWorkspacesGetInput,
+  validateWorkspacesCreateInput,
+  validateWorkspacesUpdateInput,
+  createThemesClient,
+  validateThemesListInput,
+  validateThemesGetInput,
+  createImagesClient,
+  validateImagesListInput,
+  createFormExtrasClient,
+  validateFormMessagesGetInput,
+  validateFormsPatchInput,
+} from "./depth";
 
 // ─── forms.list ───────────────────────────────────────────────────────────────
 
@@ -166,6 +185,109 @@ export function listWebhooks(input: unknown): Record<string, unknown> | Promise<
   }
   return { connector: "typeform", action: "webhooks.list", source: "connector", validated: validateWebhooksListInput(input) };
 }
+
+function wrapTypeformAction(
+  action: string,
+  validate: (input: unknown) => unknown,
+  execute: (input: Record<string, unknown> & { accessToken: string }) => Promise<Record<string, unknown>>,
+) {
+  return (input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> => {
+    if (isRecord(input) && typeof input.accessToken === "string") {
+      return execute(input as Record<string, unknown> & { accessToken: string });
+    }
+    return { connector: "typeform", action, source: "connector", validated: validate(input) };
+  };
+}
+
+function unwrap(
+  result: { ok: boolean; error?: { code: string; message: string; retryAfterSeconds?: number }; [key: string]: unknown },
+  action: string,
+): Record<string, unknown> {
+  if (!result.ok) {
+    throw {
+      ok: false,
+      code: result.error?.code,
+      message: result.error?.message,
+      retryAfterSeconds: result.error?.retryAfterSeconds,
+    };
+  }
+  const rest = { ...result };
+  delete rest.ok;
+  delete rest.error;
+  return { connector: "typeform", action, source: "connector", ...rest };
+}
+
+export const getUserMe = wrapTypeformAction("users.me", validateUsersMeInput, (input) =>
+  createUsersClient({ accessToken: input.accessToken, fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined })
+    .me(input)
+    .then((result) => unwrap(result, "users.me")),
+);
+
+export const listWorkspaces = wrapTypeformAction("workspaces.list", validateWorkspacesListInput, (input) =>
+  createWorkspacesClient({ accessToken: input.accessToken, fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined, operation: "workspaces.list" })
+    .list(input)
+    .then((result) => unwrap(result, "workspaces.list")),
+);
+
+export const getWorkspace = wrapTypeformAction("workspaces.get", validateWorkspacesGetInput, (input) =>
+  createWorkspacesClient({ accessToken: input.accessToken, fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined, operation: "workspaces.get" })
+    .get(input)
+    .then((result) => unwrap(result, "workspaces.get")),
+);
+
+export const createWorkspace = wrapTypeformAction("workspaces.create", validateWorkspacesCreateInput, (input) =>
+  createWorkspacesClient({ accessToken: input.accessToken, fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined, operation: "workspaces.create" })
+    .create(input)
+    .then((result) => unwrap(result, "workspaces.create")),
+);
+
+export const updateWorkspace = wrapTypeformAction("workspaces.update", validateWorkspacesUpdateInput, (input) =>
+  createWorkspacesClient({ accessToken: input.accessToken, fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined, operation: "workspaces.update" })
+    .update(input)
+    .then((result) => unwrap(result, "workspaces.update")),
+);
+
+export const listThemes = wrapTypeformAction("themes.list", validateThemesListInput, (input) =>
+  createThemesClient({ accessToken: input.accessToken, fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined, operation: "themes.list" })
+    .list(input)
+    .then((result) => unwrap(result, "themes.list")),
+);
+
+export const getTheme = wrapTypeformAction("themes.get", validateThemesGetInput, (input) =>
+  createThemesClient({ accessToken: input.accessToken, fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined, operation: "themes.get" })
+    .get(input)
+    .then((result) => unwrap(result, "themes.get")),
+);
+
+export const listImages = wrapTypeformAction("images.list", validateImagesListInput, (input) =>
+  createImagesClient({ accessToken: input.accessToken, fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined, operation: "images.list" })
+    .list(input)
+    .then((result) => unwrap(result, "images.list")),
+);
+
+export const getWebhook = wrapTypeformAction("webhooks.get", validateWebhooksGetInput, (input) =>
+  createWebhooksClient({ accessToken: input.accessToken, fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined })
+    .get(input)
+    .then((result) => unwrap(result, "webhooks.get")),
+);
+
+export const deleteWebhook = wrapTypeformAction("webhooks.delete", validateWebhooksDeleteInput, (input) =>
+  createWebhooksClient({ accessToken: input.accessToken, fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined })
+    .delete(input)
+    .then((result) => unwrap(result, "webhooks.delete")),
+);
+
+export const getFormMessages = wrapTypeformAction("forms.messages.get", validateFormMessagesGetInput, (input) =>
+  createFormExtrasClient({ accessToken: input.accessToken, fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined, operation: "forms.messages.get" })
+    .getMessages(input)
+    .then((result) => unwrap(result, "forms.messages.get")),
+);
+
+export const patchForm = wrapTypeformAction("forms.patch", validateFormsPatchInput, (input) =>
+  createFormExtrasClient({ accessToken: input.accessToken, fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined, operation: "forms.patch" })
+    .patch(input)
+    .then((result) => unwrap(result, "forms.patch")),
+);
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
