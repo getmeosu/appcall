@@ -1,17 +1,1245 @@
 {
-  "key":"harvest","name":"Harvest","version":"0.1.0","runtime":"bun","visibility":"public","categories":["productivity","accounting"],
-  "auth":{"type":"api_key","scopes":[],"setup":{"mode":"api_key","fields":[{"key":"apiKey","label":"Harvest personal access token","required":true,"secret":true},{"key":"accountId","label":"Harvest account ID","required":true,"secret":false}]}},
-  "network":{"allowedHosts":["api.harvestapp.com"]},
-  "http":{"baseUrl":"https://api.harvestapp.com","auth":{"field":"apiKey","in":"header","name":"Authorization","value":"Bearer {{apiKey}}"},"headers":{"Accept":"application/json","Harvest-Account-Id":"{{accountId}}"},"errors":{"rateLimitStatuses":[429],"retryAfterHeader":"Retry-After","retryAfterKind":"seconds","defaultRetryAfterSeconds":60,"messagePaths":["error.message","message","errors.0.message"]}},
-  "operations":{
-    "healthcheck":{"kind":"action","timeoutMs":5000,"maxInputBytes":4096,"maxResponseBytes":65536,"sideEffect":"read","title":"Healthcheck","description":"Verify the Harvest token and account ID by returning the authenticated user.","inputSchema":{"type":"object","properties":{}},"outputSchema":{"type":"object","properties":{"status":{"type":"string"},"user":{"type":"object"}}},"enforceOutputSchema":true,"request":{"method":"GET","path":"/v2/users/me","success":[200],"echo":{"status":"ok"},"result":{"status":"ok","user":"{{response}}"}}},
-    "users.me":{"kind":"action","timeoutMs":10000,"maxInputBytes":4096,"maxResponseBytes":5242880,"sideEffect":"read","title":"Get Current User","description":"Get the authenticated Harvest user.","inputSchema":{"type":"object","properties":{}},"outputSchema":{"type":"object","properties":{"user":{"type":"object"}}},"enforceOutputSchema":true,"request":{"method":"GET","path":"/v2/users/me","success":[200],"result":{"user":"{{response}}"}}},
-    "clients.list":{"kind":"action","timeoutMs":10000,"maxInputBytes":65536,"maxResponseBytes":5242880,"sideEffect":"read","title":"List Clients","description":"List clients in the Harvest account.","inputSchema":{"type":"object","properties":{"isActive":{"type":"boolean"},"page":{"type":"integer","minimum":1},"perPage":{"type":"integer","minimum":1,"maximum":2000}}},"outputSchema":{"type":"object","properties":{"clients":{"type":"array","items":{"type":"object"}},"pagination":{"type":"object"}}},"enforceOutputSchema":true,"request":{"method":"GET","path":"/v2/clients","query":{"is_active":"{{isActive}}","page":"{{page}}","per_page":"{{perPage}}"},"success":[200],"result":{"clients":"{{response.clients}}","pagination":"{{response}}"}}},
-    "projects.list":{"kind":"action","timeoutMs":10000,"maxInputBytes":65536,"maxResponseBytes":5242880,"sideEffect":"read","title":"List Projects","description":"List projects in the Harvest account.","inputSchema":{"type":"object","properties":{"isActive":{"type":"boolean"},"clientId":{"type":"integer","minimum":1},"page":{"type":"integer","minimum":1},"perPage":{"type":"integer","minimum":1,"maximum":2000}}},"outputSchema":{"type":"object","properties":{"projects":{"type":"array","items":{"type":"object"}},"pagination":{"type":"object"}}},"enforceOutputSchema":true,"request":{"method":"GET","path":"/v2/projects","query":{"is_active":"{{isActive}}","client_id":"{{clientId}}","page":"{{page}}","per_page":"{{perPage}}"},"success":[200],"result":{"projects":"{{response.projects}}","pagination":"{{response}}"}}},
-    "tasks.list":{"kind":"action","timeoutMs":10000,"maxInputBytes":65536,"maxResponseBytes":5242880,"sideEffect":"read","title":"List Tasks","description":"List tasks in the Harvest account.","inputSchema":{"type":"object","properties":{"isActive":{"type":"boolean"},"page":{"type":"integer","minimum":1},"perPage":{"type":"integer","minimum":1,"maximum":2000}}},"outputSchema":{"type":"object","properties":{"tasks":{"type":"array","items":{"type":"object"}},"pagination":{"type":"object"}}},"enforceOutputSchema":true,"request":{"method":"GET","path":"/v2/tasks","query":{"is_active":"{{isActive}}","page":"{{page}}","per_page":"{{perPage}}"},"success":[200],"result":{"tasks":"{{response.tasks}}","pagination":"{{response}}"}}},
-    "timeEntries.list":{"kind":"action","timeoutMs":10000,"maxInputBytes":65536,"maxResponseBytes":5242880,"sideEffect":"read","title":"List Time Entries","description":"List time entries in the Harvest account.","inputSchema":{"type":"object","properties":{"userId":{"type":"integer","minimum":1},"clientId":{"type":"integer","minimum":1},"projectId":{"type":"integer","minimum":1},"from":{"type":"string","minLength":1},"to":{"type":"string","minLength":1},"page":{"type":"integer","minimum":1},"perPage":{"type":"integer","minimum":1,"maximum":2000}}},"outputSchema":{"type":"object","properties":{"timeEntries":{"type":"array","items":{"type":"object"}},"pagination":{"type":"object"}}},"enforceOutputSchema":true,"request":{"method":"GET","path":"/v2/time_entries","query":{"user_id":"{{userId}}","client_id":"{{clientId}}","project_id":"{{projectId}}","from":"{{from}}","to":"{{to}}","page":"{{page}}","per_page":"{{perPage}}"},"success":[200],"result":{"timeEntries":"{{response.time_entries}}","pagination":"{{response}}"}}}
+  "key": "harvest",
+  "name": "Harvest",
+  "version": "0.2.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "productivity",
+    "accounting"
+  ],
+  "auth": {
+    "type": "api_key",
+    "scopes": [],
+    "setup": {
+      "mode": "api_key",
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "Harvest personal access token",
+          "required": true,
+          "secret": true
+        },
+        {
+          "key": "accountId",
+          "label": "Harvest account ID",
+          "required": true,
+          "secret": false
+        }
+      ]
+    }
   },
-  "models":["user","client","project","task","timeEntry"],
-  "provenance":{"source":{"url":"https://github.com/oomol-lab/open-connector","revision":"33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"}},
-  "evidence":{"fixture":{"status":"supplied"},"live":{"status":"unverified"}}
+  "network": {
+    "allowedHosts": [
+      "api.harvestapp.com"
+    ]
+  },
+  "http": {
+    "baseUrl": "https://api.harvestapp.com",
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "Authorization",
+      "value": "Bearer {{apiKey}}"
+    },
+    "headers": {
+      "Accept": "application/json",
+      "Harvest-Account-Id": "{{accountId}}"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "Retry-After",
+      "retryAfterKind": "seconds",
+      "defaultRetryAfterSeconds": 60,
+      "messagePaths": [
+        "error.message",
+        "message",
+        "errors.0.message"
+      ]
+    }
+  },
+  "operations": {
+    "healthcheck": {
+      "kind": "action",
+      "timeoutMs": 5000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "sideEffect": "read",
+      "title": "Healthcheck",
+      "description": "Verify the Harvest token and account ID by returning the authenticated user.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string"
+          },
+          "user": {
+            "type": "object"
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "request": {
+        "method": "GET",
+        "path": "/v2/users/me",
+        "success": [
+          200
+        ],
+        "echo": {
+          "status": "ok"
+        },
+        "result": {
+          "status": "ok",
+          "user": "{{response}}"
+        }
+      }
+    },
+    "users.me": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "Get Current User",
+      "description": "Get the authenticated Harvest user.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "user": {
+            "type": "object"
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "request": {
+        "method": "GET",
+        "path": "/v2/users/me",
+        "success": [
+          200
+        ],
+        "result": {
+          "user": "{{response}}"
+        }
+      }
+    },
+    "clients.list": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "List Clients",
+      "description": "List clients in the Harvest account.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "isActive": {
+            "type": "boolean"
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "perPage": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2000
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "clients": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "pagination": {
+            "type": "object"
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "request": {
+        "method": "GET",
+        "path": "/v2/clients",
+        "query": {
+          "is_active": "{{isActive}}",
+          "page": "{{page}}",
+          "per_page": "{{perPage}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "clients": "{{response.clients}}",
+          "pagination": "{{response}}"
+        }
+      }
+    },
+    "projects.list": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "List Projects",
+      "description": "List projects in the Harvest account.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "isActive": {
+            "type": "boolean"
+          },
+          "clientId": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "perPage": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2000
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "projects": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "pagination": {
+            "type": "object"
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "request": {
+        "method": "GET",
+        "path": "/v2/projects",
+        "query": {
+          "is_active": "{{isActive}}",
+          "client_id": "{{clientId}}",
+          "page": "{{page}}",
+          "per_page": "{{perPage}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "projects": "{{response.projects}}",
+          "pagination": "{{response}}"
+        }
+      }
+    },
+    "tasks.list": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "List Tasks",
+      "description": "List tasks in the Harvest account.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "isActive": {
+            "type": "boolean"
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "perPage": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2000
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "tasks": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "pagination": {
+            "type": "object"
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "request": {
+        "method": "GET",
+        "path": "/v2/tasks",
+        "query": {
+          "is_active": "{{isActive}}",
+          "page": "{{page}}",
+          "per_page": "{{perPage}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "tasks": "{{response.tasks}}",
+          "pagination": "{{response}}"
+        }
+      }
+    },
+    "timeEntries.list": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "List Time Entries",
+      "description": "List time entries in the Harvest account.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "clientId": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "projectId": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "from": {
+            "type": "string",
+            "minLength": 1
+          },
+          "to": {
+            "type": "string",
+            "minLength": 1
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "perPage": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2000
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "timeEntries": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "pagination": {
+            "type": "object"
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "request": {
+        "method": "GET",
+        "path": "/v2/time_entries",
+        "query": {
+          "user_id": "{{userId}}",
+          "client_id": "{{clientId}}",
+          "project_id": "{{projectId}}",
+          "from": "{{from}}",
+          "to": "{{to}}",
+          "page": "{{page}}",
+          "per_page": "{{perPage}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "timeEntries": "{{response.time_entries}}",
+          "pagination": "{{response}}"
+        }
+      }
+    },
+    "clients.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get Client",
+      "description": "Retrieve a Harvest client by ID via GET /v2/clients/{clientId}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "clientId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Harvest client ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "clientId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/clients/{{clientId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "clients.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create Client",
+      "description": "Create a Harvest client via POST /v2/clients.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Client name."
+          },
+          "isActive": {
+            "type": "boolean",
+            "description": "Whether the client is active."
+          },
+          "address": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Optional billing address."
+          },
+          "currency": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Optional currency code."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v2/clients",
+        "body": {
+          "name": "{{name}}",
+          "is_active": "{{isActive}}",
+          "address": "{{address}}",
+          "currency": "{{currency}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "success": [
+          201
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "clients.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Update Client",
+      "description": "Update a Harvest client via PATCH /v2/clients/{clientId}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "clientId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Harvest client ID."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Updated client name."
+          },
+          "isActive": {
+            "type": "boolean",
+            "description": "Whether the client is active."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "clientId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/v2/clients/{{clientId}}",
+        "body": {
+          "name": "{{name}}",
+          "is_active": "{{isActive}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "projects.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get Project",
+      "description": "Retrieve a Harvest project by ID via GET /v2/projects/{projectId}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "projectId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Harvest project ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "projectId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/projects/{{projectId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "projects.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create Project",
+      "description": "Create a Harvest project via POST /v2/projects.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "clientId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Client that owns the project."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Project name."
+          },
+          "isBillable": {
+            "type": "boolean",
+            "description": "Whether the project is billable."
+          },
+          "billBy": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Invoicing method: Project, Tasks, People, or none."
+          },
+          "budgetBy": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Budget method: project, project_cost, task, task_fees, person, or none."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "clientId",
+          "name",
+          "isBillable",
+          "billBy",
+          "budgetBy"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v2/projects",
+        "body": {
+          "client_id": "{{clientId}}",
+          "name": "{{name}}",
+          "is_billable": "{{isBillable}}",
+          "bill_by": "{{billBy}}",
+          "budget_by": "{{budgetBy}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "success": [
+          201
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "tasks.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get Task",
+      "description": "Retrieve a Harvest task by ID via GET /v2/tasks/{taskId}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "taskId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Harvest task ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "taskId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/tasks/{{taskId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "tasks.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create Task",
+      "description": "Create a Harvest task via POST /v2/tasks.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Task name."
+          },
+          "billableByDefault": {
+            "type": "boolean",
+            "description": "Default billable flag for the task."
+          },
+          "defaultHourlyRate": {
+            "type": "number",
+            "description": "Optional default hourly rate."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v2/tasks",
+        "body": {
+          "name": "{{name}}",
+          "billable_by_default": "{{billableByDefault}}",
+          "default_hourly_rate": "{{defaultHourlyRate}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "success": [
+          201
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "timeEntries.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get Time Entry",
+      "description": "Retrieve a Harvest time entry by ID via GET /v2/time_entries/{timeEntryId}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "timeEntryId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Harvest time entry ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "timeEntryId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/time_entries/{{timeEntryId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "timeEntries.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create Time Entry",
+      "description": "Create a Harvest time entry via POST /v2/time_entries.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "projectId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Project ID."
+          },
+          "taskId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Task ID."
+          },
+          "spentDate": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Date the time was spent, YYYY-MM-DD."
+          },
+          "hours": {
+            "type": "number",
+            "description": "Hours to log."
+          },
+          "notes": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Optional notes."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "projectId",
+          "taskId",
+          "spentDate",
+          "hours"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v2/time_entries",
+        "body": {
+          "project_id": "{{projectId}}",
+          "task_id": "{{taskId}}",
+          "spent_date": "{{spentDate}}",
+          "hours": "{{hours}}",
+          "notes": "{{notes}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "success": [
+          201
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "timeEntries.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Update Time Entry",
+      "description": "Update a Harvest time entry via PATCH /v2/time_entries/{timeEntryId}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "timeEntryId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Harvest time entry ID."
+          },
+          "hours": {
+            "type": "number",
+            "description": "Updated hours."
+          },
+          "notes": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Updated notes."
+          },
+          "spentDate": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Updated spent date, YYYY-MM-DD."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "timeEntryId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/v2/time_entries/{{timeEntryId}}",
+        "body": {
+          "hours": "{{hours}}",
+          "notes": "{{notes}}",
+          "spent_date": "{{spentDate}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "timeEntries.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Delete Time Entry",
+      "description": "Delete a Harvest time entry via DELETE /v2/time_entries/{timeEntryId}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "timeEntryId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Harvest time entry ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "timeEntryId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/v2/time_entries/{{timeEntryId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "timeEntries.stop": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Stop Time Entry",
+      "description": "Stop a running Harvest timer via PATCH /v2/time_entries/{timeEntryId}/stop.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "timeEntryId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Harvest time entry ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "timeEntryId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/v2/time_entries/{{timeEntryId}}/stop",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "invoices.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List Invoices",
+      "description": "List Harvest invoices via GET /v2/invoices.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "clientId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Filter by client ID."
+          },
+          "state": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by invoice state, e.g. draft, open, paid."
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Page number."
+          },
+          "perPage": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2000,
+            "description": "Page size."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/invoices",
+        "query": {
+          "client_id": "{{clientId}}",
+          "state": "{{state}}",
+          "page": "{{page}}",
+          "per_page": "{{perPage}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "invoices.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get Invoice",
+      "description": "Retrieve a Harvest invoice by ID via GET /v2/invoices/{invoiceId}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "invoiceId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Harvest invoice ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "invoiceId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/invoices/{{invoiceId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    }
+  },
+  "models": [
+    "user",
+    "client",
+    "project",
+    "task",
+    "timeEntry",
+    "invoice"
+  ],
+  "provenance": {
+    "source": {
+      "url": "https://github.com/oomol-lab/open-connector",
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"
+    }
+  },
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
+    }
+  }
 }
