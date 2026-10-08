@@ -1,10 +1,10 @@
 # BidSketch
 
-Read-only international BidSketch REST API v1 recipe. Configure an API token from the workspace `/account/api_tokens` page (admin users only). The runner sends `Authorization: Token token="<token>"` and `Accept: application/json` to `https://bidsketch.com/api/v1`.
+International BidSketch REST API v1 recipe (v0.2.0). Configure an API token from the workspace `/account/api_tokens` page (admin users only). The runner sends `Authorization: Token token="<token>"` and `Accept: application/json` to `https://bidsketch.com/api/v1`.
 
-Healthcheck is documented `GET /proposals/stats.json`. Client and proposal list/get reads are included. Writes, client-scoped proposal lists, and proposal content are omitted.
+Healthcheck is documented `GET /proposals/stats.json`. Coverage includes client, proposal, fee, section, and template list/get/create/update/delete plus EventOnly webhooks for client and proposal lifecycle events.
 
-Official docs quote the token in the Authorization header; native follows that quoted `Token token=` form from the BidSketch README and pinned runtime. Native omits the upstream User-Agent. Native category is `productivity` (source Productivity/Marketing).
+Official docs quote the token in the Authorization header; native follows that quoted `Token token=` form from the BidSketch README and pinned runtime. Native omits the upstream User-Agent. Native category is `productivity`.
 
 The native key is `bidsketch`.
 
