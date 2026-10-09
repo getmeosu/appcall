@@ -1316,6 +1316,7 @@ import {
 import { createField as lapostaCreateField, createMember as lapostaCreateMember, updateMember as lapostaUpdateMember } from "../../connectors/laposta/src/actions";
 import { createConnectorHttpClient, type ConnectorHttpClient } from "./http";
 import { withDeclarativeConnectors } from "./declarative/loader";
+import { bulkCreateImages as altTextAiBulkCreateImages } from "../../connectors/alt-text-ai/src/actions";
 
 type Manifest = {
   key: string;
@@ -1463,6 +1464,9 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
   actions: {
     fake: {
       "messages.send": (input) => ({ input }),
+    },
+    "alt-text-ai": {
+      "images.bulk_create": altTextAiBulkCreateImages,
     },
     laposta: {
       "fields.create": lapostaCreateField,

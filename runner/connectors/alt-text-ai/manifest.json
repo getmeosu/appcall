@@ -233,7 +233,7 @@
       "validationMode": "strict-generated"
     },
     "images.search": {
-      "description": "Search the AltText.ai image library by URL, asset ID, or alt text content.",
+      "description": "Search the AltText.ai image library by URL, asset ID, or alt text content. Composio per_page maps to the official limit query parameter.",
       "enforceOutputSchema": true,
       "inputSchema": {
         "additionalProperties": false,
@@ -250,6 +250,12 @@
           "query": {
             "minLength": 1,
             "type": "string"
+          },
+          "per_page": {
+            "description": "Composio alias for limit (1-100).",
+            "maximum": 100,
+            "minimum": 1,
+            "type": "integer"
           }
         },
         "required": [
@@ -276,18 +282,579 @@
         "method": "GET",
         "path": "/images/search",
         "query": {
-          "limit": "{{limit}}",
-          "page": "{{page}}",
-          "q": "{{query}}"
+          "q": "{{query}}",
+          "page": "{{page}}"
         },
         "success": [
           200
+        ],
+        "parameters": [
+          {
+            "allowReserved": false,
+            "explode": true,
+            "in": "query",
+            "inputName": "limit",
+            "style": "form",
+            "wireName": "limit"
+          },
+          {
+            "allowReserved": false,
+            "explode": true,
+            "in": "query",
+            "inputName": "per_page",
+            "style": "form",
+            "wireName": "limit"
+          }
         ]
       },
       "responseFormat": "json",
       "sideEffect": "read",
       "timeoutMs": 15000,
       "title": "Search images",
+      "validationMode": "strict-generated"
+    },
+    "account.update": {
+      "description": "Update AltText.ai account settings such as name, webhook URL, and notification email via PUT /account.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "account": {
+            "additionalProperties": false,
+            "description": "Account settings to update.",
+            "properties": {
+              "name": {
+                "description": "Account display name.",
+                "minLength": 1,
+                "type": "string"
+              },
+              "notification_email": {
+                "description": "Email for transactional notifications such as low credit balance.",
+                "minLength": 1,
+                "type": "string"
+              },
+              "webhook_url": {
+                "description": "ImageEvent webhook URL.",
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "type": "object"
+          }
+        },
+        "required": [
+          "account"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "body": {
+          "account": "{{account}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "method": "PUT",
+        "path": "/account",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Update account",
+      "validationMode": "strict-generated"
+    },
+    "images.create": {
+      "description": "Add an image by public URL or base64 payload and generate alt text via POST /images. Maps ALTTEXT_AI_CREATE_IMAGE. Rate limited to 4 calls per second.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "async_mode": {
+            "description": "Queue generation in the background. Official JSON field is async. Default false.",
+            "type": "boolean"
+          },
+          "ecomm": {
+            "additionalProperties": false,
+            "description": "Ecommerce product data for product-aware alt text.",
+            "properties": {
+              "brand": {
+                "description": "Brand name.",
+                "minLength": 1,
+                "type": "string"
+              },
+              "color": {
+                "description": "Product color.",
+                "minLength": 1,
+                "type": "string"
+              },
+              "product": {
+                "description": "Product name.",
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "required": [
+              "product"
+            ],
+            "type": "object"
+          },
+          "gpt_prompt": {
+            "description": "Final-pass prompt. Must include the {{AltText}} macro and be written in English.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "image": {
+            "additionalProperties": false,
+            "description": "Image payload. Provide either url or raw.",
+            "properties": {
+              "asset_id": {
+                "description": "Optional client asset ID. Cannot contain ?&#/%<>+",
+                "minLength": 1,
+                "type": "string"
+              },
+              "metadata": {
+                "description": "Custom metadata returned on later reads and webhooks.",
+                "type": "object"
+              },
+              "raw": {
+                "description": "RFC 4648 base64-encoded image bytes when the file has no public URL.",
+                "minLength": 1,
+                "type": "string"
+              },
+              "tags": {
+                "description": "Words or phrases associated with the image.",
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "url": {
+                "description": "Publicly accessible image URL.",
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "type": "object"
+          },
+          "keyword_source": {
+            "description": "Text mined for keywords when keywords is omitted. Minimum 12 characters.",
+            "minLength": 12,
+            "type": "string"
+          },
+          "keywords": {
+            "description": "SEO keywords or phrases (max 6, English).",
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "lang": {
+            "description": "Comma-separated language codes (for example en,es,fr). Default account language.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "max_chars": {
+            "description": "Maximum generated alt text length.",
+            "maximum": 500,
+            "minimum": 80,
+            "type": "integer"
+          },
+          "model_name": {
+            "description": "Language model for generation.",
+            "enum": [
+              "describe-detailed",
+              "describe-regular",
+              "describe-factual",
+              "succinct-describe-factual",
+              "describe-terse"
+            ],
+            "type": "string"
+          },
+          "negative_keywords": {
+            "description": "Keywords to strip from generated alt text (max 6, English).",
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "overwrite": {
+            "description": "Regenerate alt text when the URL or asset ID already exists. Default false.",
+            "type": "boolean"
+          },
+          "timeout_secs": {
+            "description": "Seconds to wait for generation (5-30). Default 12.",
+            "maximum": 30,
+            "minimum": 5,
+            "type": "integer"
+          },
+          "webhook_url": {
+            "description": "Per-request webhook override. Omit to use the account default.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "image"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 22020096,
+      "maxResponseBytes": 1048576,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "body": {
+          "async": "{{async_mode}}",
+          "ecomm": "{{ecomm}}",
+          "gpt_prompt": "{{gpt_prompt}}",
+          "image": "{{image}}",
+          "keyword_source": "{{keyword_source}}",
+          "keywords": "{{keywords}}",
+          "lang": "{{lang}}",
+          "max_chars": "{{max_chars}}",
+          "model_name": "{{model_name}}",
+          "negative_keywords": "{{negative_keywords}}",
+          "overwrite": "{{overwrite}}",
+          "timeout_secs": "{{timeout_secs}}",
+          "webhook_url": "{{webhook_url}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "method": "POST",
+        "path": "/images",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 35000,
+      "title": "Create image",
+      "validationMode": "strict-generated"
+    },
+    "images.bulk_create": {
+      "description": "Upload a CSV of image URLs for bulk alt text generation via multipart POST /images/bulk_create. Maps ALTTEXT_AI_CREATE_BULK_IMAGES. Handwritten multipart handler.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "email": {
+            "description": "Optional email to receive bulk upload results.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "file": {
+            "additionalProperties": false,
+            "description": "CSV file with a url column (max 100000 rows).",
+            "properties": {
+              "content": {
+                "description": "UTF-8 CSV text or standard padded base64-encoded bytes.",
+                "minLength": 1,
+                "type": "string"
+              },
+              "mimetype": {
+                "description": "Optional MIME type. Defaults to text/csv.",
+                "minLength": 1,
+                "type": "string"
+              },
+              "name": {
+                "description": "CSV file name including extension.",
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "required": [
+              "name",
+              "content"
+            ],
+            "type": "object"
+          }
+        },
+        "required": [
+          "file"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 12582912,
+      "maxResponseBytes": 1048576,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 60000,
+      "title": "Bulk create images",
+      "validationMode": "strict-generated",
+      "request": {
+        "method": "POST",
+        "path": "/images/bulk_create",
+        "success": [
+          200
+        ]
+      }
+    },
+    "images.update": {
+      "description": "Update an image's asset ID, alt text, or metadata via PUT /images/{asset_id}. The image URL cannot be changed.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "asset_id": {
+            "description": "Current asset ID of the image to update.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "image": {
+            "additionalProperties": false,
+            "description": "Fields to update. URL cannot be changed.",
+            "properties": {
+              "alt_text": {
+                "description": "Replacement alt text.",
+                "minLength": 1,
+                "type": "string"
+              },
+              "asset_id": {
+                "description": "New unique asset ID.",
+                "minLength": 1,
+                "type": "string"
+              },
+              "metadata": {
+                "description": "Replacement custom metadata.",
+                "type": "object"
+              }
+            },
+            "type": "object"
+          },
+          "lang": {
+            "description": "Language code(s) for the updated alt text.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "overwrite": {
+            "description": "Overwrite existing alt text in the requested language(s). Default false.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "asset_id",
+          "image"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "body": {
+          "image": "{{image}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "method": "PUT",
+        "path": "/images/{{asset_id}}",
+        "query": {
+          "lang": "{{lang}}",
+          "overwrite": "{{overwrite}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Update image",
+      "validationMode": "strict-generated"
+    },
+    "images.delete": {
+      "description": "Permanently delete an image from the AltText.ai library via DELETE /images/{asset_id}.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "asset_id": {
+            "description": "Asset ID of the image to delete.",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "asset_id"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/images/{{asset_id}}",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "title": "Delete image",
+      "validationMode": "strict-generated"
+    },
+    "images.scrape": {
+      "description": "Scrape a web page or HTML document and queue its img elements for asynchronous alt text generation via POST /images/page_scrape. JavaScript is not executed.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "include_existing": {
+            "description": "Process images that already have HTML alt text. Default false.",
+            "type": "boolean"
+          },
+          "keywords": {
+            "description": "SEO keywords for each scraped image (max 6, English).",
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "lang": {
+            "description": "Comma-separated language codes for generated alt text.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "negative_keywords": {
+            "description": "Keywords to strip from generated alt text (max 6, English).",
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "page_scrape": {
+            "additionalProperties": false,
+            "description": "Page to scrape. Provide url and/or html.",
+            "properties": {
+              "html": {
+                "description": "Raw HTML document to parse when not fetching a URL.",
+                "minLength": 1,
+                "type": "string"
+              },
+              "url": {
+                "description": "Page URL to download and scrape.",
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "type": "object"
+          }
+        },
+        "required": [
+          "page_scrape"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "body": {
+          "include_existing": "{{include_existing}}",
+          "keywords": "{{keywords}}",
+          "lang": "{{lang}}",
+          "negative_keywords": "{{negative_keywords}}",
+          "page_scrape": "{{page_scrape}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "method": "POST",
+        "path": "/images/page_scrape",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 20000,
+      "title": "Scrape page images",
       "validationMode": "strict-generated"
     }
   },
@@ -298,6 +865,6 @@
     }
   },
   "runtime": "bun",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "visibility": "public"
 }
