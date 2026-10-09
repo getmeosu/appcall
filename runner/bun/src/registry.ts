@@ -1312,6 +1312,7 @@ import {
   getTeamsMeetingByJoinUrl as msGetTeamsByJoinUrl, createCalendarTeamsEvent as msCreateCalendarTeamsEvent,
 } from "../../connectors/microsoft-365/src/actions";
 
+import { parseDocument as apipieParseDocument, transcribeAudio as apipieTranscribeAudio, uploadFile as apipieUploadFile } from "../../connectors/apipie-ai/actions";
 import { createConnectorHttpClient, type ConnectorHttpClient } from "./http";
 import { withDeclarativeConnectors } from "./declarative/loader";
 
@@ -1461,6 +1462,11 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
   actions: {
     fake: {
       "messages.send": (input) => ({ input }),
+    },
+    "apipie-ai": {
+      "audio.transcribe": apipieTranscribeAudio,
+      "documents.parse": apipieParseDocument,
+      "files.upload": apipieUploadFile,
     },
     notion: {
       "credentials.validate": validateNotionCredentials,
