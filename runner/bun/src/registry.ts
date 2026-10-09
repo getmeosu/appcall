@@ -95,6 +95,18 @@ import {
   createContact as msCreateContact, listContacts as msListContacts, getContact as msGetContact, updateContact as msUpdateContact,
   getMe as msGetMe,
 } from "../../connectors/microsoft-365/src/actions";
+import {
+  listPeople as floatListPeople,
+  listProjects as floatListProjects,
+  listAllocations as floatListAllocations,
+  getProject as floatGetProject,
+  createProject as floatCreateProject,
+  updateProject as floatUpdateProject,
+  createAllocation as floatCreateAllocation,
+  updateAllocation as floatUpdateAllocation,
+  getPeopleCapacityReport as floatGetPeopleCapacityReport,
+  getProjectUtilizationReport as floatGetProjectUtilizationReport,
+} from "../../connectors/float/src/actions";
 import { healthcheck as microsoft365Healthcheck } from "../../connectors/microsoft-365/src/healthcheck";
 import { executeMessagesListSync as listOutlookMessages, executeEventsListSync as listOutlookEvents, executeCalendarsListSync as listOutlookCalendars, executeFilesListSync as listOneDriveFiles } from "../../connectors/microsoft-365/src/sync";
 import githubManifest from "../../connectors/github/manifest.json";
@@ -1463,6 +1475,18 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
   actions: {
     fake: {
       "messages.send": (input) => ({ input }),
+    },
+    float: {
+      "people.list": floatListPeople,
+      "projects.list": floatListProjects,
+      "projects.get": floatGetProject,
+      "projects.create": floatCreateProject,
+      "projects.update": floatUpdateProject,
+      "allocations.list": floatListAllocations,
+      "allocations.create": floatCreateAllocation,
+      "allocations.update": floatUpdateAllocation,
+      "reports.people.get": floatGetPeopleCapacityReport,
+      "reports.projects.get": floatGetProjectUtilizationReport,
     },
     laposta: {
       "fields.create": lapostaCreateField,
