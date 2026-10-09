@@ -1,7 +1,17 @@
 {
+  "key": "callpage",
+  "name": "CallPage",
+  "version": "0.2.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "messaging"
+  ],
   "auth": {
+    "type": "api_key",
     "scopes": [],
     "setup": {
+      "mode": "api_key",
       "fields": [
         {
           "key": "apiKey",
@@ -9,126 +19,75 @@
           "required": true,
           "secret": true
         }
-      ],
-      "mode": "api_key"
-    },
-    "type": "api_key"
-  },
-  "categories": [
-    "messaging"
-  ],
-  "evidence": {
-    "fixture": {
-      "status": "supplied"
-    },
-    "live": {
-      "status": "unverified"
+      ]
     }
   },
+  "network": {
+    "allowedHosts": [
+      "core.callpage.io"
+    ]
+  },
+  "models": [
+    "user",
+    "widget",
+    "call",
+    "manager",
+    "sms",
+    "voice"
+  ],
   "http": {
+    "baseUrl": "https://core.callpage.io",
     "auth": {
       "field": "apiKey",
       "in": "header",
       "name": "Authorization",
       "value": "{{apiKey}}"
     },
-    "baseUrl": "https://core.callpage.io",
+    "headers": {
+      "Accept": "application/json"
+    },
     "errors": {
-      "bodyErrorPaths": [
-        "hasError"
+      "rateLimitStatuses": [
+        429
       ],
+      "retryAfterHeader": "retry-after",
       "defaultRetryAfterSeconds": 30,
       "messagePaths": [
         "message"
       ],
-      "rateLimitStatuses": [
-        429
-      ],
-      "retryAfterHeader": "retry-after"
-    },
-    "headers": {
-      "Accept": "application/json"
+      "bodyErrorPaths": [
+        "hasError"
+      ]
     }
   },
-  "key": "callpage",
-  "models": [
-    "user",
-    "widget",
-    "call"
-  ],
-  "name": "CallPage",
-  "network": {
-    "allowedHosts": [
-      "core.callpage.io"
-    ]
-  },
   "operations": {
-    "calls.get": {
-      "description": "Get one CallPage call by identifier.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "callId": {
-            "minimum": 1,
-            "type": "integer"
-          }
-        },
-        "required": [
-          "callId"
-        ],
-        "type": "object"
-      },
-      "kind": "action",
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "outputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "type": "object"
-      },
-      "request": {
-        "method": "GET",
-        "path": "/api/v3/external/calls/{{callId}}",
-        "success": [
-          200
-        ]
-      },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "title": "Get call",
-      "validationMode": "strict-generated"
-    },
     "healthcheck": {
-      "description": "Validate the CallPage API token with GET /api/v1/external.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {},
-        "type": "object"
-      },
-      "kind": "action",
+      "timeoutMs": 5000,
       "maxInputBytes": 4096,
       "maxResponseBytes": 65536,
+      "kind": "action",
+      "sideEffect": "read",
       "outputSchema": {
-        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "required": [
-          "data"
-        ],
-        "type": "object"
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "title": "Healthcheck",
+      "description": "Validate the CallPage API token with GET /api/v1/external.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
       },
       "request": {
         "method": "GET",
@@ -136,92 +95,141 @@
         "success": [
           200
         ]
-      },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 5000,
-      "title": "Healthcheck",
-      "validationMode": "strict-generated"
+      }
     },
     "users.list": {
-      "description": "List CallPage users with optional offset pagination.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "limit": {
-            "minimum": 1,
-            "type": "integer"
-          },
-          "offset": {
-            "minimum": 0,
-            "type": "integer"
-          }
-        },
-        "type": "object"
-      },
-      "kind": "action",
+      "timeoutMs": 15000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
       "outputSchema": {
-        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "required": [
-          "data"
-        ],
-        "type": "object"
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "title": "List users",
+      "description": "List CallPage users with optional offset pagination.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "offset": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": false
       },
       "request": {
         "method": "GET",
         "path": "/api/v1/external/users/all",
         "query": {
-          "limit": "{{limit}}",
-          "offset": "{{offset}}"
+          "offset": "{{offset}}",
+          "limit": "{{limit}}"
         },
         "success": [
           200
         ]
-      },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "title": "List users",
-      "validationMode": "strict-generated"
+      }
     },
-    "widgets.get": {
-      "description": "Get one CallPage widget by identifier.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "widgetId": {
-            "minimum": 1,
-            "type": "integer"
-          }
-        },
-        "required": [
-          "widgetId"
-        ],
-        "type": "object"
-      },
-      "kind": "action",
+    "widgets.list": {
+      "timeoutMs": 15000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
       "outputSchema": {
-        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "title": "List widgets",
+      "description": "List CallPage widgets with optional offset pagination.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "offset": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/external/widgets/all",
+        "query": {
+          "offset": "{{offset}}",
+          "limit": "{{limit}}"
+        },
+        "success": [
+          200
+        ]
+      }
+    },
+    "widgets.get": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "outputSchema": {
+        "type": "object",
         "required": [
           "data"
         ],
-        "type": "object"
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "title": "Get widget",
+      "description": "Get one CallPage widget by identifier.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "widgetId": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "widgetId"
+        ],
+        "additionalProperties": false
       },
       "request": {
         "method": "GET",
@@ -232,70 +240,944 @@
         "success": [
           200
         ]
-      },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "title": "Get widget",
-      "validationMode": "strict-generated"
+      }
     },
-    "widgets.list": {
-      "description": "List CallPage widgets with optional offset pagination.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "limit": {
-            "minimum": 1,
-            "type": "integer"
-          },
-          "offset": {
-            "minimum": 0,
-            "type": "integer"
-          }
-        },
-        "type": "object"
-      },
-      "kind": "action",
+    "calls.get": {
+      "timeoutMs": 15000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
       "outputSchema": {
-        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "title": "Get call",
+      "description": "Get one CallPage call by identifier.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "callId": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
         "required": [
-          "data"
+          "callId"
         ],
-        "type": "object"
+        "additionalProperties": false
       },
       "request": {
         "method": "GET",
-        "path": "/api/v1/external/widgets/all",
-        "query": {
-          "limit": "{{limit}}",
-          "offset": "{{offset}}"
-        },
+        "path": "/api/v3/external/calls/{{callId}}",
         "success": [
           200
         ]
-      },
-      "responseFormat": "json",
+      }
+    },
+    "users.get": {
+      "kind": "action",
       "sideEffect": "read",
       "timeoutMs": 15000,
-      "title": "List widgets",
-      "validationMode": "strict-generated"
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get user",
+      "description": "Get one CallPage user by identifier.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "integer",
+            "description": "User identifier.",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "userId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/external/users/get",
+        "success": [
+          200
+        ],
+        "query": {
+          "id": "{{userId}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "users.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create user",
+      "description": "Create a CallPage user (admin or manager).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "User display name.",
+            "minLength": 1
+          },
+          "tel": {
+            "type": "string",
+            "description": "Phone number in E.164 format.",
+            "minLength": 1
+          },
+          "email": {
+            "type": "string",
+            "description": "Optional email address."
+          },
+          "role": {
+            "type": "string",
+            "description": "User role.",
+            "enum": [
+              "admin",
+              "manager"
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "tel"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/external/users/create",
+        "success": [
+          200,
+          201
+        ],
+        "body": {
+          "name": "{{name}}",
+          "tel": "{{tel}}",
+          "email": "{{email}}",
+          "role": "{{role}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "users.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Update user",
+      "description": "Update a CallPage user's name, phone, email, or role.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "integer",
+            "description": "User identifier.",
+            "minimum": 1
+          },
+          "name": {
+            "type": "string",
+            "description": "User display name."
+          },
+          "tel": {
+            "type": "string",
+            "description": "Phone number in E.164 format."
+          },
+          "email": {
+            "type": "string",
+            "description": "Email address."
+          },
+          "role": {
+            "type": "string",
+            "description": "User role.",
+            "enum": [
+              "admin",
+              "manager"
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "userId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/external/users/update",
+        "success": [
+          200
+        ],
+        "body": {
+          "id": "{{userId}}",
+          "name": "{{name}}",
+          "tel": "{{tel}}",
+          "email": "{{email}}",
+          "role": "{{role}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "users.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Delete user",
+      "description": "Delete a CallPage user by identifier.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "integer",
+            "description": "User identifier.",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "userId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/external/users/delete",
+        "success": [
+          200
+        ],
+        "body": {
+          "id": "{{userId}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "widgets.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create widget",
+      "description": "Create a CallPage widget for a website URL.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "Website URL where the widget is installed.",
+            "minLength": 1
+          },
+          "description": {
+            "type": "string",
+            "description": "Widget description."
+          },
+          "locale_code": {
+            "type": "string",
+            "description": "Widget language code."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "url"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/external/widgets/create",
+        "success": [
+          200,
+          201
+        ],
+        "body": {
+          "url": "{{url}}",
+          "description": "{{description}}",
+          "locale_code": "{{locale_code}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "widgets.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Update widget",
+      "description": "Update a CallPage widget URL, description, locale, or enabled flag.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "widgetId": {
+            "type": "integer",
+            "description": "Widget identifier.",
+            "minimum": 1
+          },
+          "url": {
+            "type": "string",
+            "description": "Website URL where the widget is installed.",
+            "minLength": 1
+          },
+          "description": {
+            "type": "string",
+            "description": "Widget description."
+          },
+          "locale_code": {
+            "type": "string",
+            "description": "Widget language code."
+          },
+          "enabled": {
+            "type": "integer",
+            "description": "1 to enable, 0 to disable."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "widgetId",
+          "url"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/external/widgets/update",
+        "success": [
+          200
+        ],
+        "body": {
+          "id": "{{widgetId}}",
+          "url": "{{url}}",
+          "description": "{{description}}",
+          "locale_code": "{{locale_code}}",
+          "enabled": "{{enabled}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "widgets.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Delete widget",
+      "description": "Delete a CallPage widget by identifier.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "widgetId": {
+            "type": "integer",
+            "description": "Widget identifier.",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "widgetId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/external/widgets/delete",
+        "success": [
+          200
+        ],
+        "body": {
+          "id": "{{widgetId}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "widgets.call": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Start widget call",
+      "description": "Start or schedule a CallPage widget call to available managers.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "widgetId": {
+            "type": "integer",
+            "description": "Widget identifier.",
+            "minimum": 1
+          },
+          "tel": {
+            "type": "string",
+            "description": "Visitor phone number in E.164 format.",
+            "minLength": 1
+          },
+          "department_id": {
+            "type": "integer",
+            "description": "Optional department identifier.",
+            "minimum": 1
+          },
+          "manager_id": {
+            "type": "integer",
+            "description": "Optional manager identifier.",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "widgetId",
+          "tel"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/external/widgets/call",
+        "success": [
+          200,
+          201
+        ],
+        "body": {
+          "id": "{{widgetId}}",
+          "tel": "{{tel}}",
+          "department_id": "{{department_id}}",
+          "manager_id": "{{manager_id}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "widgets.addUsers": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Add widget users",
+      "description": "Assign CallPage users to a widget.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "widgetId": {
+            "type": "integer",
+            "description": "Widget identifier.",
+            "minimum": 1
+          },
+          "userIds": {
+            "type": "array",
+            "description": "User identifiers to assign.",
+            "items": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "minItems": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "widgetId",
+          "userIds"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/external/widgets/add-users",
+        "success": [
+          200
+        ],
+        "body": {
+          "id": "{{widgetId}}",
+          "user_id": "{{userIds}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "calls.history": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List call history",
+      "description": "List CallPage call history with optional limit and offset.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "description": "Maximum number of calls to return.",
+            "minimum": 1
+          },
+          "offset": {
+            "type": "integer",
+            "description": "Number of calls to skip.",
+            "minimum": 0
+          },
+          "phone_number": {
+            "type": "string",
+            "description": "Filter by E.164 phone number."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v3/external/calls/history",
+        "success": [
+          200
+        ],
+        "query": {
+          "limit": "{{limit}}",
+          "offset": "{{offset}}",
+          "phone_number": "{{phone_number}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "calls.updateField": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Update call field",
+      "description": "Set a custom field value on a CallPage call.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "callId": {
+            "type": "integer",
+            "description": "Call identifier.",
+            "minimum": 1
+          },
+          "fieldId": {
+            "type": "integer",
+            "description": "Field identifier.",
+            "minimum": 1
+          },
+          "value": {
+            "type": "string",
+            "description": "New field value."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "callId",
+          "fieldId",
+          "value"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/api/v1/external/calls/{{callId}}/fields/{{fieldId}}",
+        "success": [
+          200
+        ],
+        "body": {
+          "value": "{{value}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "managers.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List managers",
+      "description": "List CallPage managers with optional offset pagination.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "description": "Maximum number of managers to return.",
+            "minimum": 1
+          },
+          "offset": {
+            "type": "integer",
+            "description": "Number of managers to skip.",
+            "minimum": 0
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/external/managers/all",
+        "success": [
+          200
+        ],
+        "query": {
+          "limit": "{{limit}}",
+          "offset": "{{offset}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "managers.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get manager",
+      "description": "Get one CallPage manager by identifier.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "managerId": {
+            "type": "integer",
+            "description": "Manager identifier.",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "managerId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/external/managers/get",
+        "success": [
+          200
+        ],
+        "query": {
+          "id": "{{managerId}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "sms.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List SMS templates",
+      "description": "List CallPage SMS templates for a widget.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "widgetId": {
+            "type": "integer",
+            "description": "Widget identifier.",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "widgetId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/external/sms/all",
+        "success": [
+          200
+        ],
+        "query": {
+          "widget_id": "{{widgetId}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "voice.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List voice messages",
+      "description": "List CallPage voice messages for a widget.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "widgetId": {
+            "type": "integer",
+            "description": "Widget identifier.",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "widgetId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/external/voice/all",
+        "success": [
+          200
+        ],
+        "query": {
+          "widget_id": "{{widgetId}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
     }
   },
   "provenance": {
     "source": {
-      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
-      "url": "https://github.com/oomol-lab/open-connector"
+      "url": "https://github.com/oomol-lab/open-connector",
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"
     }
   },
-  "runtime": "bun",
-  "version": "0.1.0",
-  "visibility": "public"
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
+    }
+  }
 }
