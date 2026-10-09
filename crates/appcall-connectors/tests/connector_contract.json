@@ -184917,127 +184917,258 @@
     ]
   },
   {
-    "digest": "61d52a3e613fb016d9ae7a7d5a8c62c9f24c4ef562c07dcf72918140488c4777",
-    "egress": true,
     "key": "folk",
+    "digest": "ee5743c3c05e74ab0cd9ccaabaee144ae1d7d997c204362fb0b58686af614f41",
+    "public": true,
+    "egress": true,
     "operations": [
       {
+        "key": "companies.create",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
+        "read": false,
         "destructive": false,
+        "tool": true,
         "inputSchema": {
-          "additionalProperties": false,
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Unique company name."
+            },
+            "description": {
+              "type": "string",
+              "description": "Short description of the company."
+            },
+            "industry": {
+              "type": "string",
+              "description": "Industry sector."
+            },
+            "employeeRange": {
+              "type": "string",
+              "enum": [
+                "1-10",
+                "11-50",
+                "51-200",
+                "201-500",
+                "501-1000",
+                "1001-5000",
+                "5001-10000",
+                "10000+"
+              ],
+              "description": "Employee count range."
+            },
+            "fundingRaised": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Funding raised in USD (number or numeric string)."
+            },
+            "foundationYear": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Foundation year in YYYY format (string or number)."
+            },
+            "lastFundingDate": {
+              "type": "string",
+              "description": "Last funding date in YYYY-MM-DD format."
+            },
+            "groups": {
+              "type": "array",
+              "description": "Groups to associate. Provide objects with Folk group IDs.",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "Folk group ID (grp_\u2026)."
+                  }
+                },
+                "required": [
+                  "id"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "addresses": {
+              "type": "array",
+              "description": "Addresses. The first is primary.",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "emails": {
+              "type": "array",
+              "description": "Email addresses. The first is primary.",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "phones": {
+              "type": "array",
+              "description": "Phone numbers. The first is primary.",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "urls": {
+              "type": "array",
+              "description": "URLs. The first is primary.",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "customFieldValues": {
+              "type": "object",
+              "description": "Custom field values grouped by group ID, then field name.",
+              "additionalProperties": {
+                "type": "object"
+              }
+            }
+          },
+          "required": [
+            "name"
+          ],
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "company"
+          ],
+          "properties": {
+            "company": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      {
+        "key": "companies.delete",
+        "kind": "action",
+        "timeoutMs": 10000,
+        "maxInputBytes": 8192,
+        "maxResponseBytes": 65536,
+        "read": false,
+        "destructive": true,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
           "properties": {
             "companyId": {
+              "type": "string",
               "minLength": 1,
-              "type": "string"
+              "description": "Folk company ID (com_\u2026)."
             }
           },
           "required": [
             "companyId"
           ],
-          "type": "object"
+          "additionalProperties": false
         },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "id"
+          ],
+          "properties": {
+            "id": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      {
         "key": "companies.get",
         "kind": "action",
+        "timeoutMs": 10000,
         "maxInputBytes": 8192,
         "maxResponseBytes": 1048576,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "companyId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Folk company ID (com_\u2026)."
+            }
+          },
+          "required": [
+            "companyId"
+          ],
+          "additionalProperties": false
+        },
         "outputSchema": {
+          "type": "object",
+          "required": [
+            "company"
+          ],
           "properties": {
             "company": {
               "type": "object"
             }
-          },
-          "required": [
-            "company"
-          ],
-          "type": "object"
-        },
-        "read": true,
-        "timeoutMs": 10000,
-        "tool": true
+          }
+        }
       },
       {
+        "key": "companies.list",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
         "destructive": false,
+        "tool": true,
         "inputSchema": {
-          "additionalProperties": false,
+          "type": "object",
           "properties": {
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Number of items to return (1-100)."
+            },
+            "cursor": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Pagination cursor from a previous pagination.nextLink."
+            },
             "combinator": {
+              "type": "string",
               "enum": [
                 "and",
                 "or"
               ],
-              "type": "string"
-            },
-            "cursor": {
-              "minLength": 1,
-              "type": "string"
+              "description": "How to combine multiple filters."
             },
             "filter": {
-              "type": "object"
-            },
-            "limit": {
-              "maximum": 100,
-              "minimum": 1,
-              "type": "integer"
+              "type": "object",
+              "description": "Folk filter object."
             }
           },
-          "type": "object"
+          "additionalProperties": false
         },
-        "key": "companies.list",
-        "kind": "action",
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
         "outputSchema": {
-          "properties": {
-            "companies": {
-              "items": {
-                "type": "object"
-              },
-              "type": "array"
-            },
-            "pagination": {
-              "type": [
-                "object",
-                "null"
-              ]
-            }
-          },
+          "type": "object",
           "required": [
             "companies"
           ],
-          "type": "object"
-        },
-        "read": true,
-        "timeoutMs": 15000,
-        "tool": true
-      },
-      {
-        "destructive": false,
-        "inputSchema": {
-          "additionalProperties": false,
           "properties": {
-            "cursor": {
-              "minLength": 1,
-              "type": "string"
-            },
-            "limit": {
-              "maximum": 100,
-              "minimum": 1,
-              "type": "integer"
-            }
-          },
-          "type": "object"
-        },
-        "key": "groups.list",
-        "kind": "action",
-        "maxInputBytes": 8192,
-        "maxResponseBytes": 5242880,
-        "outputSchema": {
-          "properties": {
-            "groups": {
+            "companies": {
+              "type": "array",
               "items": {
                 "type": "object"
-              },
-              "type": "array"
+              }
             },
             "pagination": {
               "type": [
@@ -185045,212 +185176,1126 @@
                 "null"
               ]
             }
+          }
+        }
+      },
+      {
+        "key": "companies.update",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "companyId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Folk company ID (com_\u2026)."
+            },
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Unique company name."
+            },
+            "description": {
+              "type": "string",
+              "description": "Short description of the company."
+            },
+            "industry": {
+              "type": "string",
+              "description": "Industry sector."
+            },
+            "employeeRange": {
+              "type": "string",
+              "enum": [
+                "1-10",
+                "11-50",
+                "51-200",
+                "201-500",
+                "501-1000",
+                "1001-5000",
+                "5001-10000",
+                "10000+"
+              ],
+              "description": "Employee count range."
+            },
+            "fundingRaised": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Funding raised in USD (number or numeric string)."
+            },
+            "foundationYear": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Foundation year in YYYY format (string or number)."
+            },
+            "lastFundingDate": {
+              "type": "string",
+              "description": "Last funding date in YYYY-MM-DD format."
+            },
+            "groups": {
+              "type": "array",
+              "description": "Groups to associate. Provide objects with Folk group IDs.",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "Folk group ID (grp_\u2026)."
+                  }
+                },
+                "required": [
+                  "id"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "addresses": {
+              "type": "array",
+              "description": "Addresses. The first is primary.",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "emails": {
+              "type": "array",
+              "description": "Email addresses. The first is primary.",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "phones": {
+              "type": "array",
+              "description": "Phone numbers. The first is primary.",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "urls": {
+              "type": "array",
+              "description": "URLs. The first is primary.",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "customFieldValues": {
+              "type": "object",
+              "description": "Custom field values grouped by group ID, then field name.",
+              "additionalProperties": {
+                "type": "object"
+              }
+            }
           },
+          "required": [
+            "companyId"
+          ],
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "company"
+          ],
+          "properties": {
+            "company": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      {
+        "key": "groups.customFields.list",
+        "kind": "action",
+        "timeoutMs": 10000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "groupId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Folk group ID (grp_\u2026)."
+            },
+            "entityType": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Entity type: person, company, or a custom object name."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Number of items to return (1-100)."
+            },
+            "cursor": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Pagination cursor from a previous pagination.nextLink."
+            }
+          },
+          "required": [
+            "groupId",
+            "entityType"
+          ],
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "customFields"
+          ],
+          "properties": {
+            "customFields": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            },
+            "pagination": {
+              "type": [
+                "object",
+                "null"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "key": "groups.list",
+        "kind": "action",
+        "timeoutMs": 10000,
+        "maxInputBytes": 8192,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Number of items to return (1-100)."
+            },
+            "cursor": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Pagination cursor from a previous pagination.nextLink."
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
           "required": [
             "groups"
           ],
-          "type": "object"
-        },
-        "read": true,
-        "timeoutMs": 10000,
-        "tool": true
+          "properties": {
+            "groups": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            },
+            "pagination": {
+              "type": [
+                "object",
+                "null"
+              ]
+            }
+          }
+        }
       },
       {
-        "destructive": false,
-        "inputSchema": {
-          "additionalProperties": false,
-          "properties": {},
-          "type": "object"
-        },
         "key": "healthcheck",
         "kind": "action",
+        "timeoutMs": 5000,
         "maxInputBytes": 4096,
         "maxResponseBytes": 65536,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        },
         "outputSchema": {
+          "type": "object",
+          "required": [
+            "user"
+          ],
           "properties": {
             "user": {
               "type": "object"
             }
-          },
-          "required": [
-            "user"
-          ],
-          "type": "object"
-        },
-        "read": true,
-        "timeoutMs": 5000,
-        "tool": true
+          }
+        }
       },
       {
+        "key": "notes.create",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 131072,
+        "maxResponseBytes": 1048576,
+        "read": false,
         "destructive": false,
+        "tool": true,
         "inputSchema": {
-          "additionalProperties": false,
+          "type": "object",
+          "properties": {
+            "entity": {
+              "type": "object",
+              "description": "Person, company, or deal the note is attached to.",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Folk entity ID (per_, com_, or obj_)."
+                }
+              },
+              "required": [
+                "id"
+              ],
+              "additionalProperties": false
+            },
+            "content": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Note body (plain text or markdown, 1-100000 characters)."
+            },
+            "visibility": {
+              "type": "string",
+              "enum": [
+                "public",
+                "private"
+              ],
+              "description": "public is visible to the workspace; private is visible only to the current user."
+            },
+            "parentNote": {
+              "type": "object",
+              "description": "Parent note when creating a reply.",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Parent Folk note ID (nte_\u2026)."
+                }
+              },
+              "required": [
+                "id"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "entity",
+            "content",
+            "visibility"
+          ],
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "note"
+          ],
+          "properties": {
+            "note": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      {
+        "key": "notes.delete",
+        "kind": "action",
+        "timeoutMs": 10000,
+        "maxInputBytes": 8192,
+        "maxResponseBytes": 65536,
+        "read": false,
+        "destructive": true,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "noteId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Folk note ID (nte_\u2026)."
+            }
+          },
+          "required": [
+            "noteId"
+          ],
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "id"
+          ],
+          "properties": {
+            "id": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      {
+        "key": "notes.get",
+        "kind": "action",
+        "timeoutMs": 10000,
+        "maxInputBytes": 8192,
+        "maxResponseBytes": 1048576,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "noteId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Folk note ID (nte_\u2026)."
+            }
+          },
+          "required": [
+            "noteId"
+          ],
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "note"
+          ],
+          "properties": {
+            "note": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      {
+        "key": "notes.list",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Number of items to return (1-100)."
+            },
+            "cursor": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Pagination cursor from a previous pagination.nextLink."
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "notes"
+          ],
+          "properties": {
+            "notes": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            },
+            "pagination": {
+              "type": [
+                "object",
+                "null"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "key": "notes.update",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 131072,
+        "maxResponseBytes": 1048576,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "noteId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Folk note ID (nte_\u2026)."
+            },
+            "content": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Updated note body (plain text or markdown)."
+            },
+            "visibility": {
+              "type": "string",
+              "enum": [
+                "public",
+                "private"
+              ],
+              "description": "Updated visibility."
+            }
+          },
+          "required": [
+            "noteId"
+          ],
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "note"
+          ],
+          "properties": {
+            "note": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      {
+        "key": "people.create",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "firstName": {
+              "type": "string",
+              "description": "First name of the person."
+            },
+            "lastName": {
+              "type": "string",
+              "description": "Last name of the person."
+            },
+            "fullName": {
+              "type": "string",
+              "description": "Full name of the person."
+            },
+            "description": {
+              "type": "string",
+              "description": "Short description of the person."
+            },
+            "birthday": {
+              "type": "string",
+              "description": "Birthday in YYYY-MM-DD format. Empty string or null clears it."
+            },
+            "jobTitle": {
+              "type": "string",
+              "description": "Job title of the person."
+            },
+            "groups": {
+              "type": "array",
+              "description": "Groups to associate. Provide objects with Folk group IDs.",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "Folk group ID (grp_\u2026)."
+                  }
+                },
+                "required": [
+                  "id"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "companies": {
+              "type": "array",
+              "description": "Companies to associate. Provide {id} or {name}; the first is primary.",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "Existing Folk company ID (com_\u2026)."
+                  },
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "Company name; created if the id is omitted."
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "addresses": {
+              "type": "array",
+              "description": "Addresses. The first is primary.",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "emails": {
+              "type": "array",
+              "description": "Email addresses. The first is primary.",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "phones": {
+              "type": "array",
+              "description": "Phone numbers. The first is primary.",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "urls": {
+              "type": "array",
+              "description": "URLs. The first is primary.",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "customFieldValues": {
+              "type": "object",
+              "description": "Custom field values grouped by group ID, then field name.",
+              "additionalProperties": {
+                "type": "object"
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "person"
+          ],
+          "properties": {
+            "person": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      {
+        "key": "people.delete",
+        "kind": "action",
+        "timeoutMs": 10000,
+        "maxInputBytes": 8192,
+        "maxResponseBytes": 65536,
+        "read": false,
+        "destructive": true,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
           "properties": {
             "personId": {
+              "type": "string",
               "minLength": 1,
-              "type": "string"
+              "description": "Folk person ID (per_\u2026)."
             }
           },
           "required": [
             "personId"
           ],
-          "type": "object"
+          "additionalProperties": false
         },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "id"
+          ],
+          "properties": {
+            "id": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      {
         "key": "people.get",
         "kind": "action",
+        "timeoutMs": 10000,
         "maxInputBytes": 8192,
         "maxResponseBytes": 1048576,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "personId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Folk person ID (per_\u2026)."
+            }
+          },
+          "required": [
+            "personId"
+          ],
+          "additionalProperties": false
+        },
         "outputSchema": {
+          "type": "object",
+          "required": [
+            "person"
+          ],
           "properties": {
             "person": {
               "type": "object"
             }
-          },
-          "required": [
-            "person"
-          ],
-          "type": "object"
-        },
-        "read": true,
-        "timeoutMs": 10000,
-        "tool": true
+          }
+        }
       },
       {
+        "key": "people.list",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
         "destructive": false,
+        "tool": true,
         "inputSchema": {
-          "additionalProperties": false,
+          "type": "object",
           "properties": {
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Number of items to return (1-100)."
+            },
+            "cursor": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Pagination cursor from a previous pagination.nextLink."
+            },
             "combinator": {
+              "type": "string",
               "enum": [
                 "and",
                 "or"
               ],
-              "type": "string"
-            },
-            "cursor": {
-              "minLength": 1,
-              "type": "string"
+              "description": "How to combine multiple filters."
             },
             "filter": {
-              "type": "object"
-            },
-            "limit": {
-              "maximum": 100,
-              "minimum": 1,
-              "type": "integer"
+              "type": "object",
+              "description": "Folk filter object, e.g. {\"firstName\":{\"eq\":\"Ada\"}}."
             }
           },
-          "type": "object"
+          "additionalProperties": false
         },
-        "key": "people.list",
-        "kind": "action",
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
         "outputSchema": {
+          "type": "object",
+          "required": [
+            "people"
+          ],
           "properties": {
+            "people": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            },
             "pagination": {
               "type": [
                 "object",
                 "null"
               ]
+            }
+          }
+        }
+      },
+      {
+        "key": "people.update",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "personId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Folk person ID (per_\u2026)."
             },
-            "people": {
+            "firstName": {
+              "type": "string",
+              "description": "First name of the person."
+            },
+            "lastName": {
+              "type": "string",
+              "description": "Last name of the person."
+            },
+            "fullName": {
+              "type": "string",
+              "description": "Full name of the person."
+            },
+            "description": {
+              "type": "string",
+              "description": "Short description of the person."
+            },
+            "birthday": {
+              "type": "string",
+              "description": "Birthday in YYYY-MM-DD format. Empty string or null clears it."
+            },
+            "jobTitle": {
+              "type": "string",
+              "description": "Job title of the person."
+            },
+            "groups": {
+              "type": "array",
+              "description": "Groups to associate. Provide objects with Folk group IDs.",
               "items": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "Folk group ID (grp_\u2026)."
+                  }
+                },
+                "required": [
+                  "id"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "companies": {
+              "type": "array",
+              "description": "Companies to associate. Provide {id} or {name}; the first is primary.",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "Existing Folk company ID (com_\u2026)."
+                  },
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "Company name; created if the id is omitted."
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "addresses": {
+              "type": "array",
+              "description": "Addresses. The first is primary.",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "emails": {
+              "type": "array",
+              "description": "Email addresses. The first is primary.",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "phones": {
+              "type": "array",
+              "description": "Phone numbers. The first is primary.",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "urls": {
+              "type": "array",
+              "description": "URLs. The first is primary.",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "customFieldValues": {
+              "type": "object",
+              "description": "Custom field values grouped by group ID, then field name.",
+              "additionalProperties": {
                 "type": "object"
-              },
-              "type": "array"
+              }
             }
           },
           "required": [
-            "people"
+            "personId"
           ],
-          "type": "object"
+          "additionalProperties": false
         },
-        "read": true,
-        "timeoutMs": 15000,
-        "tool": true
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "person"
+          ],
+          "properties": {
+            "person": {
+              "type": "object"
+            }
+          }
+        }
       },
       {
-        "destructive": false,
+        "key": "reminders.delete",
+        "kind": "action",
+        "timeoutMs": 10000,
+        "maxInputBytes": 8192,
+        "maxResponseBytes": 65536,
+        "read": false,
+        "destructive": true,
+        "tool": true,
         "inputSchema": {
-          "additionalProperties": false,
+          "type": "object",
+          "properties": {
+            "reminderId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Folk reminder ID (rmd_\u2026)."
+            }
+          },
+          "required": [
+            "reminderId"
+          ],
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "id"
+          ],
+          "properties": {
+            "id": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      {
+        "key": "reminders.list",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Number of items to return (1-100)."
+            },
+            "cursor": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Pagination cursor from a previous pagination.nextLink."
+            },
+            "entityId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Filter reminders linked to this person, company, or object ID."
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "reminders"
+          ],
+          "properties": {
+            "reminders": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            },
+            "pagination": {
+              "type": [
+                "object",
+                "null"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "key": "users.get",
+        "kind": "action",
+        "timeoutMs": 10000,
+        "maxInputBytes": 8192,
+        "maxResponseBytes": 1048576,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
           "properties": {
             "userId": {
+              "type": "string",
               "minLength": 1,
-              "type": "string"
+              "description": "Folk user ID (usr_\u2026)."
             }
           },
           "required": [
             "userId"
           ],
-          "type": "object"
+          "additionalProperties": false
         },
-        "key": "users.get",
-        "kind": "action",
-        "maxInputBytes": 8192,
-        "maxResponseBytes": 1048576,
         "outputSchema": {
+          "type": "object",
+          "required": [
+            "user"
+          ],
           "properties": {
             "user": {
               "type": "object"
             }
-          },
-          "required": [
-            "user"
-          ],
-          "type": "object"
-        },
-        "read": true,
-        "timeoutMs": 10000,
-        "tool": true
+          }
+        }
       },
       {
-        "destructive": false,
-        "inputSchema": {
-          "additionalProperties": false,
-          "properties": {
-            "cursor": {
-              "minLength": 1,
-              "type": "string"
-            },
-            "limit": {
-              "maximum": 100,
-              "minimum": 1,
-              "type": "integer"
-            }
-          },
-          "type": "object"
-        },
         "key": "users.list",
         "kind": "action",
+        "timeoutMs": 10000,
         "maxInputBytes": 8192,
         "maxResponseBytes": 5242880,
-        "outputSchema": {
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
           "properties": {
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Number of items to return (1-100)."
+            },
+            "cursor": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Pagination cursor from a previous pagination.nextLink."
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "users"
+          ],
+          "properties": {
+            "users": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            },
             "pagination": {
               "type": [
                 "object",
                 "null"
               ]
+            }
+          }
+        }
+      },
+      {
+        "key": "webhooks.list",
+        "kind": "action",
+        "timeoutMs": 10000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Number of items to return (1-100)."
             },
-            "users": {
-              "items": {
-                "type": "object"
-              },
-              "type": "array"
+            "cursor": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Pagination cursor from a previous pagination.nextLink."
             }
           },
-          "required": [
-            "users"
-          ],
-          "type": "object"
+          "additionalProperties": false
         },
-        "read": true,
-        "timeoutMs": 10000,
-        "tool": true
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "webhooks"
+          ],
+          "properties": {
+            "webhooks": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            },
+            "pagination": {
+              "type": [
+                "object",
+                "null"
+              ]
+            }
+          }
+        }
       }
-    ],
-    "public": true
+    ]
   },
   {
     "key": "formbricks",
@@ -418733,12 +419778,68 @@
     "public": true
   },
   {
-    "digest": "e69277844aed2f2f2a57a13ff0093820f859bc5b650fc8b79d31983b5668b7a8",
-    "egress": true,
     "key": "semantic-scholar",
+    "digest": "1deb733fa72901f8d1f4aed87cea0bfdf05ae07c750754b5f45637e29cda12ea",
+    "public": true,
+    "egress": true,
     "operations": [
       {
+        "key": "authors.batch",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
         "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "fields": {
+              "description": "Comma-separated Semantic Scholar fields to return. Nested fields use dot notation.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "ids": {
+              "description": "Semantic Scholar author IDs to retrieve, in order.",
+              "items": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "minItems": 1,
+              "type": "array"
+            }
+          },
+          "required": [
+            "ids"
+          ],
+          "type": "object"
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": [
+                "array",
+                "object"
+              ]
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        }
+      },
+      {
+        "key": "authors.get",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
         "inputSchema": {
           "additionalProperties": false,
           "properties": {
@@ -418756,10 +419857,6 @@
           ],
           "type": "object"
         },
-        "key": "authors.get",
-        "kind": "action",
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
         "outputSchema": {
           "additionalProperties": false,
           "properties": {
@@ -418771,13 +419868,17 @@
             "data"
           ],
           "type": "object"
-        },
-        "read": true,
-        "timeoutMs": 15000,
-        "tool": true
+        }
       },
       {
+        "key": "authors.papers.list",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
         "destructive": false,
+        "tool": true,
         "inputSchema": {
           "additionalProperties": false,
           "properties": {
@@ -418804,10 +419905,6 @@
           ],
           "type": "object"
         },
-        "key": "authors.papers.list",
-        "kind": "action",
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
         "outputSchema": {
           "additionalProperties": false,
           "properties": {
@@ -418819,22 +419916,231 @@
             "data"
           ],
           "type": "object"
-        },
-        "read": true,
-        "timeoutMs": 15000,
-        "tool": true
+        }
       },
       {
+        "key": "authors.search",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
         "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "fields": {
+              "description": "Comma-separated Semantic Scholar fields to return. Nested fields use dot notation.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "limit": {
+              "description": "Maximum results to return.",
+              "maximum": 1000,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "offset": {
+              "description": "Zero-based pagination offset.",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "query": {
+              "description": "Author name to search. Case-insensitive partial match; use spaces instead of hyphens.",
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "query"
+          ],
+          "type": "object"
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        }
+      },
+      {
+        "key": "datasets.diffs",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "datasetName": {
+              "description": "Dataset name such as papers, abstracts, authors, or citations.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "endReleaseId": {
+              "description": "Ending release ID (YYYY-MM-DD) or latest.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "startReleaseId": {
+              "description": "Starting release ID (YYYY-MM-DD) or latest.",
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "startReleaseId",
+            "endReleaseId",
+            "datasetName"
+          ],
+          "type": "object"
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        }
+      },
+      {
+        "key": "datasets.get",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "datasetName": {
+              "description": "Dataset name such as papers, abstracts, authors, citations, or embeddings.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "releaseId": {
+              "description": "Release ID (YYYY-MM-DD) or latest.",
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "releaseId",
+            "datasetName"
+          ],
+          "type": "object"
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        }
+      },
+      {
+        "key": "datasets.release.get",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "releaseId": {
+              "description": "Release ID (YYYY-MM-DD) or latest.",
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "releaseId"
+          ],
+          "type": "object"
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        }
+      },
+      {
+        "key": "datasets.releases.list",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {},
+          "required": [],
+          "type": "object"
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": [
+                "array",
+                "object"
+              ]
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        }
+      },
+      {
+        "key": "healthcheck",
+        "kind": "action",
+        "timeoutMs": 5000,
+        "maxInputBytes": 4096,
+        "maxResponseBytes": 65536,
+        "read": true,
+        "destructive": false,
+        "tool": true,
         "inputSchema": {
           "additionalProperties": false,
           "properties": {},
           "type": "object"
         },
-        "key": "healthcheck",
-        "kind": "action",
-        "maxInputBytes": 4096,
-        "maxResponseBytes": 65536,
         "outputSchema": {
           "additionalProperties": false,
           "properties": {
@@ -418846,13 +420152,17 @@
             "data"
           ],
           "type": "object"
-        },
-        "read": true,
-        "timeoutMs": 5000,
-        "tool": true
+        }
       },
       {
+        "key": "papers.authors.list",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
         "destructive": false,
+        "tool": true,
         "inputSchema": {
           "additionalProperties": false,
           "properties": {
@@ -418879,10 +420189,6 @@
           ],
           "type": "object"
         },
-        "key": "papers.authors.list",
-        "kind": "action",
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
         "outputSchema": {
           "additionalProperties": false,
           "properties": {
@@ -418894,13 +420200,153 @@
             "data"
           ],
           "type": "object"
-        },
-        "read": true,
-        "timeoutMs": 15000,
-        "tool": true
+        }
       },
       {
+        "key": "papers.autocomplete",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
         "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "query": {
+              "description": "Partial paper query for autocomplete. Truncated to 100 characters.",
+              "minLength": 3,
+              "type": "string"
+            }
+          },
+          "required": [
+            "query"
+          ],
+          "type": "object"
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        }
+      },
+      {
+        "key": "papers.batch",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "fields": {
+              "description": "Comma-separated Semantic Scholar fields to return. Nested fields use dot notation.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "ids": {
+              "description": "Paper IDs (Semantic Scholar, CorpusId, DOI, ARXIV, PMID, and related forms).",
+              "items": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "minItems": 1,
+              "type": "array"
+            }
+          },
+          "required": [
+            "ids"
+          ],
+          "type": "object"
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": [
+                "array",
+                "object"
+              ]
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        }
+      },
+      {
+        "key": "papers.citations.list",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "fields": {
+              "description": "Comma-separated Semantic Scholar fields to return. Nested fields use dot notation.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "limit": {
+              "description": "Maximum results to return.",
+              "maximum": 1000,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "offset": {
+              "description": "Zero-based pagination offset.",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "paperId": {
+              "description": "Semantic Scholar paper ID or external identifier (DOI:, ARXIV:, PMID:, CorpusId:, URL:).",
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "paperId"
+          ],
+          "type": "object"
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        }
+      },
+      {
+        "key": "papers.get",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
         "inputSchema": {
           "additionalProperties": false,
           "properties": {
@@ -418918,10 +420364,6 @@
           ],
           "type": "object"
         },
-        "key": "papers.get",
-        "kind": "action",
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
         "outputSchema": {
           "additionalProperties": false,
           "properties": {
@@ -418933,13 +420375,594 @@
             "data"
           ],
           "type": "object"
-        },
-        "read": true,
+        }
+      },
+      {
+        "key": "papers.recommendations",
+        "kind": "action",
         "timeoutMs": 15000,
-        "tool": true
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "fields": {
+              "description": "Comma-separated Semantic Scholar fields to return. Nested fields use dot notation.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "limit": {
+              "description": "Maximum recommendations to return.",
+              "maximum": 500,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "negativePaperIds": {
+              "description": "Paper IDs that represent negative examples.",
+              "items": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "minItems": 1,
+              "type": "array"
+            },
+            "positivePaperIds": {
+              "description": "Paper IDs that represent positive examples.",
+              "items": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "minItems": 1,
+              "type": "array"
+            }
+          },
+          "required": [
+            "positivePaperIds"
+          ],
+          "type": "object"
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        }
+      },
+      {
+        "key": "papers.recommendations.for_paper",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "fields": {
+              "description": "Comma-separated Semantic Scholar fields to return. Nested fields use dot notation.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "from": {
+              "description": "Pool of papers to recommend from.",
+              "enum": [
+                "recent",
+                "all-cs"
+              ],
+              "type": "string"
+            },
+            "limit": {
+              "description": "Maximum recommendations to return.",
+              "maximum": 500,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "paperId": {
+              "description": "Semantic Scholar paper ID or external identifier (DOI:, ARXIV:, PMID:, CorpusId:, URL:).",
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "paperId"
+          ],
+          "type": "object"
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        }
+      },
+      {
+        "key": "papers.references.list",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "fields": {
+              "description": "Comma-separated Semantic Scholar fields to return. Nested fields use dot notation.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "limit": {
+              "description": "Maximum results to return.",
+              "maximum": 1000,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "offset": {
+              "description": "Zero-based pagination offset.",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "paperId": {
+              "description": "Semantic Scholar paper ID or external identifier (DOI:, ARXIV:, PMID:, CorpusId:, URL:).",
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "paperId"
+          ],
+          "type": "object"
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        }
+      },
+      {
+        "key": "papers.search",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "fields": {
+              "description": "Comma-separated Semantic Scholar fields to return. Nested fields use dot notation.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "fieldsOfStudy": {
+              "description": "Comma-separated fields of study such as Computer Science, Medicine, or Physics.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "limit": {
+              "description": "Maximum results to return.",
+              "maximum": 100,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "minCitationCount": {
+              "description": "Minimum citation count.",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "offset": {
+              "description": "Zero-based pagination offset.",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "openAccessPdf": {
+              "description": "When true, restrict results to papers with a public PDF (sent as openAccessPdf=true).",
+              "type": "boolean"
+            },
+            "publicationDateOrYear": {
+              "description": "Publication date or year filter such as 2019, 2020-06, or 2016-03-05:2020-06-06.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "publicationTypes": {
+              "description": "Comma-separated publication types such as Review, JournalArticle, or Conference.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "query": {
+              "description": "Plain-text search query. Semantic Scholar does not support special query syntax.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "venue": {
+              "description": "Comma-separated publication venues (full names or ISO4 abbreviations).",
+              "minLength": 1,
+              "type": "string"
+            },
+            "year": {
+              "description": "Publication year or inclusive range such as 2019, 2016-2020, 2010-, or -2015.",
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "query"
+          ],
+          "type": "object"
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        }
+      },
+      {
+        "key": "papers.search.bulk",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "fields": {
+              "description": "Comma-separated Semantic Scholar fields to return. Nested fields use dot notation.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "fieldsOfStudy": {
+              "description": "Comma-separated fields of study such as Computer Science, Medicine, or Physics.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "limit": {
+              "description": "Maximum results to return.",
+              "maximum": 1000,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "minCitationCount": {
+              "description": "Minimum citation count.",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "openAccessPdf": {
+              "description": "When true, restrict results to papers with a public PDF (sent as openAccessPdf=true).",
+              "type": "boolean"
+            },
+            "publicationDateOrYear": {
+              "description": "Publication date or year filter such as 2019, 2020-06, or 2016-03-05:2020-06-06.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "publicationTypes": {
+              "description": "Comma-separated publication types such as Review, JournalArticle, or Conference.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "query": {
+              "description": "Optional text query over title and abstract. Supports +, |, -, quotes, prefix *, and ~ fuzzy match.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "sort": {
+              "description": "Sort as field:order. Fields: paperId, publicationDate, citationCount. Example: citationCount:desc.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "token": {
+              "description": "Continuation token from a previous bulk search response.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "venue": {
+              "description": "Comma-separated publication venues (full names or ISO4 abbreviations).",
+              "minLength": 1,
+              "type": "string"
+            },
+            "year": {
+              "description": "Publication year or inclusive range such as 2019, 2016-2020, 2010-, or -2015.",
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        }
+      },
+      {
+        "key": "papers.search.match",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "fields": {
+              "description": "Comma-separated Semantic Scholar fields to return. Nested fields use dot notation.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "fieldsOfStudy": {
+              "description": "Comma-separated fields of study such as Computer Science, Medicine, or Physics.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "minCitationCount": {
+              "description": "Minimum citation count.",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "openAccessPdf": {
+              "description": "When true, restrict results to papers with a public PDF (sent as openAccessPdf=true).",
+              "type": "boolean"
+            },
+            "publicationDateOrYear": {
+              "description": "Publication date or year filter such as 2019, 2020-06, or 2016-03-05:2020-06-06.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "publicationTypes": {
+              "description": "Comma-separated publication types such as Review, JournalArticle, or Conference.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "query": {
+              "description": "Plain-text search query. Semantic Scholar does not support special query syntax.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "venue": {
+              "description": "Comma-separated publication venues (full names or ISO4 abbreviations).",
+              "minLength": 1,
+              "type": "string"
+            },
+            "year": {
+              "description": "Publication year or inclusive range such as 2019, 2016-2020, 2010-, or -2015.",
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "query"
+          ],
+          "type": "object"
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        }
+      },
+      {
+        "key": "papers.search.relevance",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "fields": {
+              "description": "Comma-separated Semantic Scholar fields to return. Nested fields use dot notation.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "fieldsOfStudy": {
+              "description": "Comma-separated fields of study such as Computer Science, Medicine, or Physics.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "limit": {
+              "description": "Maximum results to return.",
+              "maximum": 100,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "minCitationCount": {
+              "description": "Minimum citation count.",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "offset": {
+              "description": "Zero-based pagination offset.",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "openAccessPdf": {
+              "description": "When true, restrict results to papers with a public PDF (sent as openAccessPdf=true).",
+              "type": "boolean"
+            },
+            "publicationDateOrYear": {
+              "description": "Publication date or year filter such as 2019, 2020-06, or 2016-03-05:2020-06-06.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "publicationTypes": {
+              "description": "Comma-separated publication types such as Review, JournalArticle, or Conference.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "query": {
+              "description": "Plain-text search query. Semantic Scholar does not support special query syntax.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "venue": {
+              "description": "Comma-separated publication venues (full names or ISO4 abbreviations).",
+              "minLength": 1,
+              "type": "string"
+            },
+            "year": {
+              "description": "Publication year or inclusive range such as 2019, 2016-2020, 2010-, or -2015.",
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "query"
+          ],
+          "type": "object"
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        }
+      },
+      {
+        "key": "snippets.search",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "authors": {
+              "description": "Comma-separated author names. AND logic; at most 10 names.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "fields": {
+              "description": "Comma-separated snippet fields such as text, snippetKind, section, snippetOffset, annotations.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "fieldsOfStudy": {
+              "description": "Comma-separated fields of study such as Computer Science, Medicine, or Physics.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "limit": {
+              "description": "Maximum results to return.",
+              "maximum": 1000,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "minCitationCount": {
+              "description": "Minimum citation count.",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "paperIds": {
+              "description": "Comma-separated paper IDs to restrict snippets to, up to about 100 IDs.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "publicationDateOrYear": {
+              "description": "Publication date or year filter such as 2019, 2020-06, or 2016-03-05:2020-06-06.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "query": {
+              "description": "Plain-text search query. Semantic Scholar does not support special query syntax.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "venue": {
+              "description": "Comma-separated publication venues (full names or ISO4 abbreviations).",
+              "minLength": 1,
+              "type": "string"
+            },
+            "year": {
+              "description": "Publication year or inclusive range such as 2019, 2016-2020, 2010-, or -2015.",
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "query"
+          ],
+          "type": "object"
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        }
       }
-    ],
-    "public": true
+    ]
   },
   {
     "digest": "f2d869bcdc24428eae395c627cac7fb5b975a287af6511f228bd81a7c5bc2f6b",
@@ -478125,12 +480148,181 @@
     ]
   },
   {
-    "digest": "8e4d758829a163064ac25c782f1877cf43893932530444d12f737445ca4459bf",
-    "egress": true,
     "key": "taxjar",
+    "digest": "3551db71c65ca031b267b5876c67abba22c45be0566f490237c1e31247b5c6d2",
+    "public": true,
+    "egress": true,
     "operations": [
       {
+        "key": "categories.list",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
         "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {},
+          "type": "object"
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        }
+      },
+      {
+        "key": "customers.create",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "city": {
+              "description": "Customer city.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "country": {
+              "description": "Customer two-letter ISO country code.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "customer_id": {
+              "description": "Unique TaxJar customer identifier.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "exempt_regions": {
+              "description": "Regions where the customer is exempt.",
+              "items": {
+                "additionalProperties": false,
+                "properties": {
+                  "country": {
+                    "description": "Two-letter ISO country code where the customer is exempt.",
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "state": {
+                    "description": "Two-letter ISO state code where the customer is exempt.",
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "exemption_type": {
+              "description": "Customer exemption type: wholesale, government, other, or non_exempt.",
+              "enum": [
+                "wholesale",
+                "government",
+                "other",
+                "non_exempt"
+              ],
+              "type": "string"
+            },
+            "name": {
+              "description": "Customer name.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "state": {
+              "description": "Customer two-letter ISO state code.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "street": {
+              "description": "Customer street address.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "zip": {
+              "description": "Customer postal code.",
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "customer_id",
+            "exemption_type",
+            "name"
+          ],
+          "type": "object"
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        }
+      },
+      {
+        "key": "customers.delete",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": true,
+        "tool": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "customerId": {
+              "description": "TaxJar customer identifier.",
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "customerId"
+          ],
+          "type": "object"
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        }
+      },
+      {
+        "key": "customers.get",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
         "inputSchema": {
           "additionalProperties": false,
           "properties": {
@@ -478144,10 +480336,6 @@
           ],
           "type": "object"
         },
-        "key": "customers.get",
-        "kind": "action",
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
         "outputSchema": {
           "additionalProperties": false,
           "properties": {
@@ -478159,13 +480347,17 @@
             "data"
           ],
           "type": "object"
-        },
-        "read": true,
-        "timeoutMs": 15000,
-        "tool": true
+        }
       },
       {
+        "key": "customers.list",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
         "destructive": false,
+        "tool": true,
         "inputSchema": {
           "additionalProperties": false,
           "properties": {
@@ -478181,10 +480373,6 @@
           },
           "type": "object"
         },
-        "key": "customers.list",
-        "kind": "action",
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
         "outputSchema": {
           "additionalProperties": false,
           "properties": {
@@ -478196,49 +480384,120 @@
             "data"
           ],
           "type": "object"
-        },
-        "read": true,
-        "timeoutMs": 15000,
-        "tool": true
+        }
       },
       {
+        "key": "customers.update",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
         "destructive": false,
+        "tool": true,
         "inputSchema": {
           "additionalProperties": false,
-          "properties": {},
+          "properties": {
+            "city": {
+              "description": "Customer city.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "country": {
+              "description": "Customer two-letter ISO country code.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "customerId": {
+              "description": "TaxJar customer identifier.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "exempt_regions": {
+              "description": "Regions where the customer is exempt.",
+              "items": {
+                "additionalProperties": false,
+                "properties": {
+                  "country": {
+                    "description": "Two-letter ISO country code where the customer is exempt.",
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "state": {
+                    "description": "Two-letter ISO state code where the customer is exempt.",
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "exemption_type": {
+              "description": "Customer exemption type: wholesale, government, other, or non_exempt.",
+              "enum": [
+                "wholesale",
+                "government",
+                "other",
+                "non_exempt"
+              ],
+              "type": "string"
+            },
+            "name": {
+              "description": "Customer name.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "state": {
+              "description": "Customer two-letter ISO state code.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "street": {
+              "description": "Customer street address.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "zip": {
+              "description": "Customer postal code.",
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "customerId",
+            "exemption_type",
+            "name"
+          ],
           "type": "object"
         },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        }
+      },
+      {
         "key": "healthcheck",
         "kind": "action",
+        "timeoutMs": 5000,
         "maxInputBytes": 4096,
         "maxResponseBytes": 65536,
-        "outputSchema": {
-          "additionalProperties": false,
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "required": [
-            "data"
-          ],
-          "type": "object"
-        },
         "read": true,
-        "timeoutMs": 5000,
-        "tool": true
-      },
-      {
         "destructive": false,
+        "tool": true,
         "inputSchema": {
           "additionalProperties": false,
           "properties": {},
           "type": "object"
         },
-        "key": "nexus.regions.list",
-        "kind": "action",
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
         "outputSchema": {
           "additionalProperties": false,
           "properties": {
@@ -478250,18 +480509,314 @@
             "data"
           ],
           "type": "object"
-        },
-        "read": true,
-        "timeoutMs": 15000,
-        "tool": true
+        }
       },
       {
+        "key": "nexus.regions.list",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
         "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {},
+          "type": "object"
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        }
+      },
+      {
+        "key": "orders.create",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "amount": {
+              "description": "Total amount including shipping, excluding sales tax.",
+              "type": "number"
+            },
+            "customer_id": {
+              "description": "TaxJar customer identifier for exemptions.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "exemption_type": {
+              "description": "Exemption type: wholesale, government, marketplace, other, or non_exempt.",
+              "enum": [
+                "wholesale",
+                "government",
+                "marketplace",
+                "other",
+                "non_exempt"
+              ],
+              "type": "string"
+            },
+            "from_city": {
+              "description": "Origin city.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "from_country": {
+              "description": "Origin two-letter ISO country code.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "from_state": {
+              "description": "Origin two-letter ISO state code.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "from_street": {
+              "description": "Origin street address.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "from_zip": {
+              "description": "Origin postal code (5-digit ZIP or ZIP+4).",
+              "minLength": 1,
+              "type": "string"
+            },
+            "line_items": {
+              "description": "Order line items.",
+              "items": {
+                "additionalProperties": false,
+                "properties": {
+                  "description": {
+                    "description": "Description of this line item.",
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "discount": {
+                    "description": "Discount amount applied to this line item.",
+                    "type": "number"
+                  },
+                  "id": {
+                    "description": "Line item identifier.",
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "product_identifier": {
+                    "description": "Product identifier, SKU, or merchant item code.",
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "product_tax_code": {
+                    "description": "TaxJar product tax category code.",
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "quantity": {
+                    "description": "Number of units for this line item.",
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "sales_tax": {
+                    "description": "Sales tax collected for this line item.",
+                    "type": "number"
+                  },
+                  "unit_price": {
+                    "description": "Price per unit for this line item.",
+                    "type": "number"
+                  }
+                },
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "provider": {
+              "description": "Source provider. Defaults to api.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "sales_tax": {
+              "description": "Sales tax collected.",
+              "type": "number"
+            },
+            "shipping": {
+              "description": "Shipping amount.",
+              "type": "number"
+            },
+            "to_city": {
+              "description": "Destination city.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "to_country": {
+              "description": "Destination two-letter ISO country code.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "to_state": {
+              "description": "Destination two-letter ISO state code.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "to_street": {
+              "description": "Destination street address.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "to_zip": {
+              "description": "Destination postal code (5-digit ZIP or ZIP+4).",
+              "minLength": 1,
+              "type": "string"
+            },
+            "transaction_date": {
+              "description": "Transaction date (YYYY-MM-DD or ISO-8601).",
+              "minLength": 1,
+              "type": "string"
+            },
+            "transaction_id": {
+              "description": "Unique order transaction identifier.",
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "transaction_id",
+            "transaction_date",
+            "to_country",
+            "to_zip",
+            "to_state",
+            "amount",
+            "shipping",
+            "sales_tax"
+          ],
+          "type": "object"
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        }
+      },
+      {
+        "key": "orders.delete",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": true,
+        "tool": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "provider": {
+              "description": "Optional source provider filter. Defaults to api.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "transactionId": {
+              "description": "TaxJar order transaction identifier.",
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "transactionId"
+          ],
+          "type": "object"
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        }
+      },
+      {
+        "key": "orders.get",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "provider": {
+              "description": "Optional source provider filter. Defaults to api.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "transactionId": {
+              "description": "TaxJar order transaction identifier.",
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "transactionId"
+          ],
+          "type": "object"
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        }
+      },
+      {
+        "key": "orders.list",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
         "inputSchema": {
           "additionalProperties": false,
           "properties": {
             "fromTransactionDate": {
               "minLength": 10,
+              "type": "string"
+            },
+            "provider": {
+              "description": "Optional source provider filter. Defaults to api.",
+              "minLength": 1,
               "type": "string"
             },
             "toTransactionDate": {
@@ -478275,10 +480830,6 @@
           ],
           "type": "object"
         },
-        "key": "orders.list",
-        "kind": "action",
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
         "outputSchema": {
           "additionalProperties": false,
           "properties": {
@@ -478290,13 +480841,970 @@
             "data"
           ],
           "type": "object"
-        },
-        "read": true,
+        }
+      },
+      {
+        "key": "orders.update",
+        "kind": "action",
         "timeoutMs": 15000,
-        "tool": true
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "amount": {
+              "description": "Total amount including shipping, excluding sales tax.",
+              "type": "number"
+            },
+            "customer_id": {
+              "description": "TaxJar customer identifier for exemptions.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "exemption_type": {
+              "description": "Exemption type: wholesale, government, marketplace, other, or non_exempt.",
+              "enum": [
+                "wholesale",
+                "government",
+                "marketplace",
+                "other",
+                "non_exempt"
+              ],
+              "type": "string"
+            },
+            "from_city": {
+              "description": "Origin city.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "from_country": {
+              "description": "Origin two-letter ISO country code.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "from_state": {
+              "description": "Origin two-letter ISO state code.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "from_street": {
+              "description": "Origin street address.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "from_zip": {
+              "description": "Origin postal code (5-digit ZIP or ZIP+4).",
+              "minLength": 1,
+              "type": "string"
+            },
+            "line_items": {
+              "description": "Order line items.",
+              "items": {
+                "additionalProperties": false,
+                "properties": {
+                  "description": {
+                    "description": "Description of this line item.",
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "discount": {
+                    "description": "Discount amount applied to this line item.",
+                    "type": "number"
+                  },
+                  "id": {
+                    "description": "Line item identifier.",
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "product_identifier": {
+                    "description": "Product identifier, SKU, or merchant item code.",
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "product_tax_code": {
+                    "description": "TaxJar product tax category code.",
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "quantity": {
+                    "description": "Number of units for this line item.",
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "sales_tax": {
+                    "description": "Sales tax collected for this line item.",
+                    "type": "number"
+                  },
+                  "unit_price": {
+                    "description": "Price per unit for this line item.",
+                    "type": "number"
+                  }
+                },
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "provider": {
+              "description": "Source provider. Defaults to api.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "sales_tax": {
+              "description": "Sales tax collected.",
+              "type": "number"
+            },
+            "shipping": {
+              "description": "Shipping amount.",
+              "type": "number"
+            },
+            "to_city": {
+              "description": "Destination city.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "to_country": {
+              "description": "Destination two-letter ISO country code.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "to_state": {
+              "description": "Destination two-letter ISO state code.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "to_street": {
+              "description": "Destination street address.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "to_zip": {
+              "description": "Destination postal code (5-digit ZIP or ZIP+4).",
+              "minLength": 1,
+              "type": "string"
+            },
+            "transactionId": {
+              "description": "TaxJar order transaction identifier.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "transaction_date": {
+              "description": "Transaction date (YYYY-MM-DD or ISO-8601).",
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "transactionId"
+          ],
+          "type": "object"
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        }
+      },
+      {
+        "key": "rates.get",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "city": {
+              "description": "City for the location.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "country": {
+              "description": "Two-letter ISO country code for the location.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "state": {
+              "description": "Two-letter ISO state code for the location.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "street": {
+              "description": "Street address for rooftop-level rates when available.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "zip": {
+              "description": "Postal code for the location (5-digit ZIP or ZIP+4).",
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "zip"
+          ],
+          "type": "object"
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        }
+      },
+      {
+        "key": "refunds.create",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "amount": {
+              "description": "Total amount including shipping, excluding sales tax.",
+              "type": "number"
+            },
+            "customer_id": {
+              "description": "TaxJar customer identifier for exemptions.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "exemption_type": {
+              "description": "Exemption type: wholesale, government, marketplace, other, or non_exempt.",
+              "enum": [
+                "wholesale",
+                "government",
+                "marketplace",
+                "other",
+                "non_exempt"
+              ],
+              "type": "string"
+            },
+            "from_city": {
+              "description": "Origin city.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "from_country": {
+              "description": "Origin two-letter ISO country code.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "from_state": {
+              "description": "Origin two-letter ISO state code.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "from_street": {
+              "description": "Origin street address.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "from_zip": {
+              "description": "Origin postal code (5-digit ZIP or ZIP+4).",
+              "minLength": 1,
+              "type": "string"
+            },
+            "line_items": {
+              "description": "Order line items.",
+              "items": {
+                "additionalProperties": false,
+                "properties": {
+                  "description": {
+                    "description": "Description of this line item.",
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "discount": {
+                    "description": "Discount amount applied to this line item.",
+                    "type": "number"
+                  },
+                  "id": {
+                    "description": "Line item identifier.",
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "product_identifier": {
+                    "description": "Product identifier, SKU, or merchant item code.",
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "product_tax_code": {
+                    "description": "TaxJar product tax category code.",
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "quantity": {
+                    "description": "Number of units for this line item.",
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "sales_tax": {
+                    "description": "Sales tax collected for this line item.",
+                    "type": "number"
+                  },
+                  "unit_price": {
+                    "description": "Price per unit for this line item.",
+                    "type": "number"
+                  }
+                },
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "provider": {
+              "description": "Source provider. Defaults to api.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "sales_tax": {
+              "description": "Sales tax collected.",
+              "type": "number"
+            },
+            "shipping": {
+              "description": "Shipping amount.",
+              "type": "number"
+            },
+            "to_city": {
+              "description": "Destination city.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "to_country": {
+              "description": "Destination two-letter ISO country code.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "to_state": {
+              "description": "Destination two-letter ISO state code.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "to_street": {
+              "description": "Destination street address.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "to_zip": {
+              "description": "Destination postal code (5-digit ZIP or ZIP+4).",
+              "minLength": 1,
+              "type": "string"
+            },
+            "transaction_date": {
+              "description": "Refund date (YYYY-MM-DD or ISO-8601).",
+              "minLength": 1,
+              "type": "string"
+            },
+            "transaction_id": {
+              "description": "Unique refund transaction identifier.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "transaction_reference_id": {
+              "description": "Original order transaction identifier.",
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "transaction_id",
+            "transaction_date",
+            "transaction_reference_id",
+            "to_country",
+            "to_zip",
+            "to_state",
+            "amount",
+            "shipping",
+            "sales_tax"
+          ],
+          "type": "object"
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        }
+      },
+      {
+        "key": "refunds.delete",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": true,
+        "tool": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "provider": {
+              "description": "Optional source provider filter. Defaults to api.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "transactionId": {
+              "description": "TaxJar refund transaction identifier.",
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "transactionId"
+          ],
+          "type": "object"
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        }
+      },
+      {
+        "key": "refunds.get",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "provider": {
+              "description": "Optional source provider filter. Defaults to api.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "transactionId": {
+              "description": "TaxJar refund transaction identifier.",
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "transactionId"
+          ],
+          "type": "object"
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        }
+      },
+      {
+        "key": "refunds.list",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "fromTransactionDate": {
+              "description": "Start transaction date in YYYY-MM-DD format.",
+              "minLength": 10,
+              "type": "string"
+            },
+            "provider": {
+              "description": "Optional source provider filter. Defaults to api.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "toTransactionDate": {
+              "description": "End transaction date in YYYY-MM-DD format.",
+              "minLength": 10,
+              "type": "string"
+            }
+          },
+          "required": [
+            "fromTransactionDate",
+            "toTransactionDate"
+          ],
+          "type": "object"
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        }
+      },
+      {
+        "key": "refunds.update",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "amount": {
+              "description": "Total amount including shipping, excluding sales tax.",
+              "type": "number"
+            },
+            "customer_id": {
+              "description": "TaxJar customer identifier for exemptions.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "exemption_type": {
+              "description": "Exemption type: wholesale, government, marketplace, other, or non_exempt.",
+              "enum": [
+                "wholesale",
+                "government",
+                "marketplace",
+                "other",
+                "non_exempt"
+              ],
+              "type": "string"
+            },
+            "from_city": {
+              "description": "Origin city.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "from_country": {
+              "description": "Origin two-letter ISO country code.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "from_state": {
+              "description": "Origin two-letter ISO state code.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "from_street": {
+              "description": "Origin street address.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "from_zip": {
+              "description": "Origin postal code (5-digit ZIP or ZIP+4).",
+              "minLength": 1,
+              "type": "string"
+            },
+            "line_items": {
+              "description": "Order line items.",
+              "items": {
+                "additionalProperties": false,
+                "properties": {
+                  "description": {
+                    "description": "Description of this line item.",
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "discount": {
+                    "description": "Discount amount applied to this line item.",
+                    "type": "number"
+                  },
+                  "id": {
+                    "description": "Line item identifier.",
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "product_identifier": {
+                    "description": "Product identifier, SKU, or merchant item code.",
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "product_tax_code": {
+                    "description": "TaxJar product tax category code.",
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "quantity": {
+                    "description": "Number of units for this line item.",
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "sales_tax": {
+                    "description": "Sales tax collected for this line item.",
+                    "type": "number"
+                  },
+                  "unit_price": {
+                    "description": "Price per unit for this line item.",
+                    "type": "number"
+                  }
+                },
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "provider": {
+              "description": "Source provider. Defaults to api.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "sales_tax": {
+              "description": "Sales tax collected.",
+              "type": "number"
+            },
+            "shipping": {
+              "description": "Shipping amount.",
+              "type": "number"
+            },
+            "to_city": {
+              "description": "Destination city.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "to_country": {
+              "description": "Destination two-letter ISO country code.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "to_state": {
+              "description": "Destination two-letter ISO state code.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "to_street": {
+              "description": "Destination street address.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "to_zip": {
+              "description": "Destination postal code (5-digit ZIP or ZIP+4).",
+              "minLength": 1,
+              "type": "string"
+            },
+            "transactionId": {
+              "description": "TaxJar refund transaction identifier.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "transaction_date": {
+              "description": "Refund date (YYYY-MM-DD or ISO-8601).",
+              "minLength": 1,
+              "type": "string"
+            },
+            "transaction_reference_id": {
+              "description": "Original order transaction identifier.",
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "transactionId",
+            "transaction_reference_id"
+          ],
+          "type": "object"
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        }
+      },
+      {
+        "key": "summary.rates.list",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {},
+          "type": "object"
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        }
+      },
+      {
+        "key": "taxes.calculate",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "amount": {
+              "description": "Total order amount excluding shipping. Required when line_items is omitted.",
+              "type": "number"
+            },
+            "customer_id": {
+              "description": "TaxJar customer identifier for exemptions.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "exemption_type": {
+              "description": "Exemption type: wholesale, government, marketplace, other, or non_exempt.",
+              "enum": [
+                "wholesale",
+                "government",
+                "marketplace",
+                "other",
+                "non_exempt"
+              ],
+              "type": "string"
+            },
+            "from_city": {
+              "description": "Origin city.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "from_country": {
+              "description": "Origin two-letter ISO country code.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "from_state": {
+              "description": "Origin two-letter ISO state code.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "from_street": {
+              "description": "Origin street address.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "from_zip": {
+              "description": "Origin postal code (5-digit ZIP or ZIP+4).",
+              "minLength": 1,
+              "type": "string"
+            },
+            "line_items": {
+              "description": "Line items in the order.",
+              "items": {
+                "additionalProperties": false,
+                "properties": {
+                  "discount": {
+                    "description": "Discount amount applied to this line item.",
+                    "type": "number"
+                  },
+                  "id": {
+                    "description": "Line item identifier.",
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "product_tax_code": {
+                    "description": "TaxJar product tax category code.",
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "quantity": {
+                    "description": "Number of units for this line item.",
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "unit_price": {
+                    "description": "Price per unit for this line item.",
+                    "type": "number"
+                  }
+                },
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "nexus_addresses": {
+              "description": "Seller nexus addresses to consider.",
+              "items": {
+                "additionalProperties": false,
+                "properties": {
+                  "city": {
+                    "description": "City for the nexus address.",
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "country": {
+                    "description": "Two-letter ISO country code for the nexus address.",
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "id": {
+                    "description": "Unique identifier for this nexus address.",
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "state": {
+                    "description": "Two-letter ISO state code for the nexus address.",
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "street": {
+                    "description": "Street address for the nexus address.",
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "zip": {
+                    "description": "Postal code for the nexus address.",
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "shipping": {
+              "description": "Total shipping amount.",
+              "type": "number"
+            },
+            "to_city": {
+              "description": "Destination city.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "to_country": {
+              "description": "Destination two-letter ISO country code.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "to_state": {
+              "description": "Destination two-letter ISO state code.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "to_street": {
+              "description": "Destination street address.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "to_zip": {
+              "description": "Destination postal code (5-digit ZIP or ZIP+4).",
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "to_country",
+            "to_zip",
+            "to_state",
+            "shipping"
+          ],
+          "type": "object"
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        }
+      },
+      {
+        "key": "validations.vat",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "vat": {
+              "description": "VAT identification number to validate.",
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "vat"
+          ],
+          "type": "object"
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        }
       }
-    ],
-    "public": true
+    ]
   },
   {
     "digest": "09b059493b02d4b9c52b3a753ccdceaa4a64e348ac653ff49c463f2a2fdc5ebe",
