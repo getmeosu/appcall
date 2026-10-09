@@ -1316,6 +1316,12 @@ import {
 import { createField as lapostaCreateField, createMember as lapostaCreateMember, updateMember as lapostaUpdateMember } from "../../connectors/laposta/src/actions";
 import { createConnectorHttpClient, type ConnectorHttpClient } from "./http";
 import { withDeclarativeConnectors } from "./declarative/loader";
+import {
+  listEmployeeRecords as hrPartnerListEmployeeRecords,
+  getRecruitmentRecord as hrPartnerGetRecruitment,
+  listLeaveData as hrPartnerListLeave,
+  searchRecruitment as hrPartnerSearchRecruitment,
+} from "../../connectors/hr-partner/src/actions";
 
 type Manifest = {
   key: string;
@@ -1463,6 +1469,12 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
   actions: {
     fake: {
       "messages.send": (input) => ({ input }),
+    },
+    "hr-partner": {
+      "recruitment.get": hrPartnerGetRecruitment,
+      "employee-records.list": hrPartnerListEmployeeRecords,
+      "leave.list": hrPartnerListLeave,
+      "recruitment.search": hrPartnerSearchRecruitment,
     },
     laposta: {
       "fields.create": lapostaCreateField,
