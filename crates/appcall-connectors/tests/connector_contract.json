@@ -160730,12 +160730,255 @@
     "public": true
   },
   {
-    "digest": "c8a6a9df4bd0c7499a959c1cd09c46b9cdb06ac3b682e9716cd1d6de9619d18c",
-    "egress": true,
     "key": "feathery",
+    "digest": "8f5cfd354bd208e4d48521f578d33354127ba2ccdfd4aaf0aaa9310b4a906b83",
+    "public": true,
+    "egress": true,
     "operations": [
       {
+        "key": "account.edit",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
         "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "email": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Email of the account to edit. Required if account_id is not provided."
+            },
+            "account_id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "UUID of the account to edit. Required if email is not provided."
+            },
+            "role": {
+              "type": "string",
+              "minLength": 1,
+              "description": "New role for the account.",
+              "enum": [
+                "admin",
+                "editor",
+                "viewer"
+              ]
+            },
+            "permission_edit_logic": {
+              "type": "boolean",
+              "description": "Allow editing custom logic rules."
+            },
+            "permission_edit_theme": {
+              "type": "boolean",
+              "description": "Allow editing form themes."
+            },
+            "permission_edit_form_results": {
+              "type": "boolean",
+              "description": "Allow editing form results."
+            },
+            "permission_invite_collaborators": {
+              "type": "boolean",
+              "description": "Allow inviting form collaborators."
+            },
+            "permission_edit_collaborator_template": {
+              "type": "boolean",
+              "description": "Allow editing collaborator settings."
+            }
+          }
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      {
+        "key": "account.get",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {}
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      {
+        "key": "documents.envelopes.list",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Document ID when type is document; user ID when type is user."
+            },
+            "type": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Lookup mode: document or user.",
+              "enum": [
+                "document",
+                "user"
+              ]
+            }
+          },
+          "required": [
+            "id",
+            "type"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "array"
+            }
+          }
+        }
+      },
+      {
+        "key": "documents.fill",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "document": {
+              "type": "string",
+              "minLength": 1,
+              "description": "UUID of the document template to fill."
+            },
+            "field_values": {
+              "type": "object",
+              "description": "Mapping of field IDs to values to populate in the document."
+            },
+            "signer_email": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Email address to route the filled document for signature."
+            },
+            "user_id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Associate an existing Feathery user with the generated document."
+            }
+          },
+          "required": [
+            "document"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      {
+        "key": "forms.delete",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": true,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "form_id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Unique identifier of the form to delete. Use List Forms to obtain it."
+            },
+            "confirm_delete": {
+              "type": "boolean",
+              "enum": [
+                true
+              ],
+              "description": "Safety confirmation. Must be true to proceed with deletion."
+            }
+          },
+          "required": [
+            "form_id",
+            "confirm_delete"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "success"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "success": {
+              "type": "boolean"
+            }
+          }
+        }
+      },
+      {
+        "key": "forms.get",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
         "inputSchema": {
           "additionalProperties": false,
           "properties": {
@@ -160749,10 +160992,6 @@
           ],
           "type": "object"
         },
-        "key": "forms.get",
-        "kind": "action",
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
         "outputSchema": {
           "additionalProperties": false,
           "properties": {
@@ -160764,22 +161003,32 @@
             "data"
           ],
           "type": "object"
-        },
-        "read": true,
-        "timeoutMs": 15000,
-        "tool": true
+        }
       },
       {
-        "destructive": false,
-        "inputSchema": {
-          "additionalProperties": false,
-          "properties": {},
-          "type": "object"
-        },
         "key": "forms.list",
         "kind": "action",
+        "timeoutMs": 15000,
         "maxInputBytes": 65536,
         "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "tags": {
+              "type": "array",
+              "description": "Only return forms that have all of these tags. Sent as a comma-separated tags query parameter.",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "minItems": 1
+            }
+          },
+          "type": "object"
+        },
         "outputSchema": {
           "additionalProperties": false,
           "properties": {
@@ -160791,22 +161040,22 @@
             "data"
           ],
           "type": "object"
-        },
-        "read": true,
-        "timeoutMs": 15000,
-        "tool": true
+        }
       },
       {
+        "key": "healthcheck",
+        "kind": "action",
+        "timeoutMs": 10000,
+        "maxInputBytes": 4096,
+        "maxResponseBytes": 65536,
+        "read": true,
         "destructive": false,
+        "tool": true,
         "inputSchema": {
           "additionalProperties": false,
           "properties": {},
           "type": "object"
         },
-        "key": "healthcheck",
-        "kind": "action",
-        "maxInputBytes": 4096,
-        "maxResponseBytes": 65536,
         "outputSchema": {
           "additionalProperties": false,
           "properties": {
@@ -160818,22 +161067,58 @@
             "data"
           ],
           "type": "object"
-        },
-        "read": true,
-        "timeoutMs": 10000,
-        "tool": true
+        }
       },
       {
+        "key": "hidden-fields.create",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
         "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "field_id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Unique identifier for the new hidden field. Must not already exist."
+            }
+          },
+          "required": [
+            "field_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      {
+        "key": "hidden-fields.list",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
         "inputSchema": {
           "additionalProperties": false,
           "properties": {},
           "type": "object"
         },
-        "key": "hidden-fields.list",
-        "kind": "action",
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
         "outputSchema": {
           "additionalProperties": false,
           "properties": {
@@ -160845,13 +161130,307 @@
             "data"
           ],
           "type": "object"
-        },
-        "read": true,
-        "timeoutMs": 15000,
-        "tool": true
+        }
       },
       {
+        "key": "logs.api-connector-errors.list",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
         "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "form_id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "ID of the form to retrieve error logs for."
+            },
+            "start_time": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Only return errors after this ISO 8601 timestamp."
+            },
+            "end_time": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Only return errors before this ISO 8601 timestamp."
+            }
+          },
+          "required": [
+            "form_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "array"
+            }
+          }
+        }
+      },
+      {
+        "key": "logs.email-issues.list",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "event_type": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Filter by event type.",
+              "enum": [
+                "Bounce",
+                "Complaint"
+              ]
+            },
+            "start_time": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Only return events at or after this ISO 8601 timestamp."
+            },
+            "end_time": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Only return events before this ISO 8601 timestamp."
+            }
+          }
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "array"
+            }
+          }
+        }
+      },
+      {
+        "key": "logs.emails.list",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "form_id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "ID of the form to list email logs for."
+            },
+            "start_time": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Only return emails sent after this time."
+            },
+            "end_time": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Only return emails sent before this time."
+            }
+          },
+          "required": [
+            "form_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "array"
+            }
+          }
+        }
+      },
+      {
+        "key": "logs.quik-requests.list",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "form_id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "ID of the form whose Quik logs to retrieve."
+            },
+            "start_time": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Only return requests made after this ISO 8601 timestamp."
+            },
+            "end_time": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Only return requests made before this ISO 8601 timestamp."
+            }
+          },
+          "required": [
+            "form_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "array"
+            }
+          }
+        }
+      },
+      {
+        "key": "users.create-or-fetch",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Your unique user ID."
+            }
+          },
+          "required": [
+            "id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      {
+        "key": "users.data.get",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "User ID to filter fields for a specific user."
+            }
+          }
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "array"
+            }
+          }
+        }
+      },
+      {
+        "key": "users.delete",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": true,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Unique identifier of the user to delete."
+            }
+          },
+          "required": [
+            "id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "success"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "success": {
+              "type": "boolean"
+            }
+          }
+        }
+      },
+      {
+        "key": "users.list",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
         "inputSchema": {
           "additionalProperties": false,
           "properties": {
@@ -160862,14 +161441,20 @@
             "created_before": {
               "minLength": 1,
               "type": "string"
+            },
+            "filter_field_id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "ID of a form or hidden field to filter users by. Use with filter_field_value."
+            },
+            "filter_field_value": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Value to match for filter_field_id."
             }
           },
           "type": "object"
         },
-        "key": "users.list",
-        "kind": "action",
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
         "outputSchema": {
           "additionalProperties": false,
           "properties": {
@@ -160881,13 +161466,87 @@
             "data"
           ],
           "type": "object"
-        },
-        "read": true,
+        }
+      },
+      {
+        "key": "users.session.get",
+        "kind": "action",
         "timeoutMs": 15000,
-        "tool": true
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "user_id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Unique user identifier to fetch session for."
+            }
+          },
+          "required": [
+            "user_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      {
+        "key": "workspaces.login-token.generate",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "workspace_id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "UUID of the workspace."
+            },
+            "account_id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "UUID of the account to authenticate. Obtain from Get Account Info."
+            }
+          },
+          "required": [
+            "workspace_id",
+            "account_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          }
+        }
       }
-    ],
-    "public": true
+    ]
   },
   {
     "digest": "93d5dc09968d2fbe844e67b554eda17fc9b6c3c4fb821bda0e1e35f80c06fcf3",
@@ -233569,84 +234228,20 @@
     "public": true
   },
   {
-    "digest": "be009da08d8f23e52d71b1fe8ae8fa3adb3dce3fcb035158fee9ad72b73957de",
-    "egress": true,
     "key": "heyreach",
+    "digest": "abf2c6462f7592f18bf3c760afcf2f84fe5804e680764d802ece28a567b83352",
+    "public": true,
+    "egress": true,
     "operations": [
       {
-        "destructive": false,
-        "inputSchema": {
-          "additionalProperties": false,
-          "properties": {
-            "limit": {
-              "maximum": 100,
-              "minimum": 1,
-              "type": "integer"
-            },
-            "offset": {
-              "minimum": 0,
-              "type": "integer"
-            }
-          },
-          "type": "object"
-        },
         "key": "accounts.list",
         "kind": "action",
+        "timeoutMs": 15000,
         "maxInputBytes": 65536,
         "maxResponseBytes": 5242880,
-        "outputSchema": {
-          "additionalProperties": false,
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "required": [
-            "data"
-          ],
-          "type": "object"
-        },
         "read": true,
-        "timeoutMs": 15000,
-        "tool": true
-      },
-      {
         "destructive": false,
-        "inputSchema": {
-          "additionalProperties": false,
-          "properties": {
-            "campaignId": {
-              "minimum": 1,
-              "type": "integer"
-            }
-          },
-          "required": [
-            "campaignId"
-          ],
-          "type": "object"
-        },
-        "key": "campaigns.get",
-        "kind": "action",
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "outputSchema": {
-          "additionalProperties": false,
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "required": [
-            "data"
-          ],
-          "type": "object"
-        },
-        "read": true,
-        "timeoutMs": 15000,
-        "tool": true
-      },
-      {
-        "destructive": false,
+        "tool": true,
         "inputSchema": {
           "additionalProperties": false,
           "properties": {
@@ -233666,10 +234261,6 @@
           },
           "type": "object"
         },
-        "key": "campaigns.list",
-        "kind": "action",
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
         "outputSchema": {
           "additionalProperties": false,
           "properties": {
@@ -233681,22 +234272,22 @@
             "data"
           ],
           "type": "object"
-        },
-        "read": true,
-        "timeoutMs": 15000,
-        "tool": true
+        }
       },
       {
+        "key": "auth.check",
+        "kind": "action",
+        "timeoutMs": 5000,
+        "maxInputBytes": 4096,
+        "maxResponseBytes": 65536,
+        "read": true,
         "destructive": false,
+        "tool": true,
         "inputSchema": {
           "additionalProperties": false,
           "properties": {},
           "type": "object"
         },
-        "key": "healthcheck",
-        "kind": "action",
-        "maxInputBytes": 4096,
-        "maxResponseBytes": 65536,
         "outputSchema": {
           "additionalProperties": false,
           "properties": {
@@ -233708,13 +234299,568 @@
             "data"
           ],
           "type": "object"
-        },
-        "read": true,
-        "timeoutMs": 5000,
-        "tool": true
+        }
       },
       {
+        "key": "campaigns.get",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
         "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "campaignId": {
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "campaignId"
+          ],
+          "type": "object"
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        }
+      },
+      {
+        "key": "campaigns.list",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "accountIds": {
+              "items": {
+                "minimum": 1,
+                "type": "integer"
+              },
+              "type": "array"
+            },
+            "keyword": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "limit": {
+              "maximum": 100,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "offset": {
+              "minimum": 0,
+              "type": "integer"
+            },
+            "statuses": {
+              "items": {
+                "enum": [
+                  "DRAFT",
+                  "IN_PROGRESS",
+                  "PAUSED",
+                  "FINISHED",
+                  "CANCELED",
+                  "FAILED",
+                  "STARTING",
+                  "SCHEDULED"
+                ],
+                "type": "string"
+              },
+              "type": "array"
+            }
+          },
+          "type": "object"
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        }
+      },
+      {
+        "key": "conversations.list",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "filters": {
+              "additionalProperties": true,
+              "properties": {
+                "campaignIds": {
+                  "items": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "type": "array"
+                },
+                "leadLinkedInId": {
+                  "type": "string"
+                },
+                "leadProfileUrl": {
+                  "type": "string"
+                },
+                "linkedInAccountIds": {
+                  "items": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "type": "array"
+                },
+                "searchString": {
+                  "type": "string"
+                },
+                "seen": {
+                  "type": "boolean"
+                },
+                "tags": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                }
+              },
+              "type": "object"
+            },
+            "limit": {
+              "maximum": 100,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "offset": {
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "filters"
+          ],
+          "type": "object"
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        }
+      },
+      {
+        "key": "healthcheck",
+        "kind": "action",
+        "timeoutMs": 5000,
+        "maxInputBytes": 4096,
+        "maxResponseBytes": 65536,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {},
+          "type": "object"
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        }
+      },
+      {
+        "key": "leads.get",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "profileUrl": {
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "profileUrl"
+          ],
+          "type": "object"
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        }
+      },
+      {
+        "key": "lists.companies.list",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "keyword": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "limit": {
+              "maximum": 100,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "listId": {
+              "minimum": 1,
+              "type": "integer"
+            },
+            "offset": {
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "listId"
+          ],
+          "type": "object"
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        }
+      },
+      {
+        "key": "lists.create",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "name": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "type": {
+              "enum": [
+                "COMPANY_LIST",
+                "USER_LIST"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "name"
+          ],
+          "type": "object"
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        }
+      },
+      {
+        "key": "lists.for_lead",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "email": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "limit": {
+              "maximum": 100,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "linkedinId": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "offset": {
+              "minimum": 0,
+              "type": "integer"
+            },
+            "profileUrl": {
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "profileUrl"
+          ],
+          "type": "object"
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        }
+      },
+      {
+        "key": "lists.leads.add",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "leads": {
+              "items": {
+                "additionalProperties": true,
+                "properties": {
+                  "about": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "companyName": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "customUserFields": {
+                    "items": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "name": {
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "value": {
+                          "minLength": 1,
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "name",
+                        "value"
+                      ],
+                      "type": "object"
+                    },
+                    "type": "array"
+                  },
+                  "emailAddress": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "firstName": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "lastName": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "location": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "position": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "profileUrl": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "summary": {
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "profileUrl"
+                ],
+                "type": "object"
+              },
+              "minItems": 1,
+              "type": "array"
+            },
+            "listId": {
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "leads",
+            "listId"
+          ],
+          "type": "object"
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        }
+      },
+      {
+        "key": "lists.leads.list",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "createdFrom": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "createdTo": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "keyword": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "leadLinkedInId": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "leadProfileUrl": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "limit": {
+              "maximum": 1000,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "listId": {
+              "minimum": 1,
+              "type": "integer"
+            },
+            "offset": {
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "listId"
+          ],
+          "type": "object"
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        }
+      },
+      {
+        "key": "lists.list",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
         "inputSchema": {
           "additionalProperties": false,
           "properties": {
@@ -233730,10 +234876,6 @@
           },
           "type": "object"
         },
-        "key": "lists.list",
-        "kind": "action",
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
         "outputSchema": {
           "additionalProperties": false,
           "properties": {
@@ -233745,13 +234887,415 @@
             "data"
           ],
           "type": "object"
-        },
-        "read": true,
+        }
+      },
+      {
+        "key": "network.list",
+        "kind": "action",
         "timeoutMs": 15000,
-        "tool": true
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "pageNumber": {
+              "minimum": 0,
+              "type": "integer"
+            },
+            "pageSize": {
+              "maximum": 100,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "senderId": {
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "pageNumber",
+            "pageSize",
+            "senderId"
+          ],
+          "type": "object"
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        }
+      },
+      {
+        "key": "stats.get",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "accountIds": {
+              "items": {
+                "minimum": 1,
+                "type": "integer"
+              },
+              "type": "array"
+            },
+            "campaignIds": {
+              "items": {
+                "minimum": 1,
+                "type": "integer"
+              },
+              "type": "array"
+            },
+            "dateFrom": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "dateTo": {
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "type": "object"
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        }
+      },
+      {
+        "key": "tags.create",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "tags": {
+              "items": {
+                "additionalProperties": false,
+                "properties": {
+                  "color": {
+                    "enum": [
+                      "Blue",
+                      "Green",
+                      "Purple",
+                      "Pink",
+                      "Red",
+                      "Cyan",
+                      "Yellow",
+                      "Orange"
+                    ],
+                    "type": "string"
+                  },
+                  "displayName": {
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "displayName",
+                  "color"
+                ],
+                "type": "object"
+              },
+              "minItems": 1,
+              "type": "array"
+            }
+          },
+          "required": [
+            "tags"
+          ],
+          "type": "object"
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "array"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        }
+      },
+      {
+        "key": "webhooks.create",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "campaignIds": {
+              "items": {
+                "minimum": 1,
+                "type": "integer"
+              },
+              "type": "array"
+            },
+            "eventType": {
+              "enum": [
+                "CONNECTION_REQUEST_SENT",
+                "CONNECTION_REQUEST_ACCEPTED",
+                "MESSAGE_SENT",
+                "MESSAGE_REPLY_RECEIVED",
+                "INMAIL_SENT",
+                "INMAIL_REPLY_RECEIVED",
+                "FOLLOW_SENT",
+                "LIKED_POST",
+                "VIEWED_PROFILE",
+                "CAMPAIGN_COMPLETED",
+                "LEAD_TAG_UPDATED",
+                "EVERY_MESSAGE_REPLY_RECEIVED"
+              ],
+              "type": "string"
+            },
+            "webhookName": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "webhookUrl": {
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "eventType",
+            "webhookName",
+            "webhookUrl"
+          ],
+          "type": "object"
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        }
+      },
+      {
+        "key": "webhooks.delete",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": true,
+        "tool": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "webhookId": {
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "webhookId"
+          ],
+          "type": "object"
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        }
+      },
+      {
+        "key": "webhooks.get",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "includeCustomHeaders": {
+              "type": "boolean"
+            },
+            "webhookId": {
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "webhookId"
+          ],
+          "type": "object"
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        }
+      },
+      {
+        "key": "webhooks.list",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "includeCustomHeaders": {
+              "type": "boolean"
+            },
+            "limit": {
+              "maximum": 100,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "offset": {
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          "type": "object"
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        }
+      },
+      {
+        "key": "webhooks.update",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "campaignIds": {
+              "items": {
+                "minimum": 1,
+                "type": "integer"
+              },
+              "type": "array"
+            },
+            "eventType": {
+              "enum": [
+                "CONNECTION_REQUEST_SENT",
+                "CONNECTION_REQUEST_ACCEPTED",
+                "MESSAGE_SENT",
+                "MESSAGE_REPLY_RECEIVED",
+                "INMAIL_SENT",
+                "INMAIL_REPLY_RECEIVED",
+                "FOLLOW_SENT",
+                "LIKED_POST",
+                "VIEWED_PROFILE",
+                "CAMPAIGN_COMPLETED",
+                "LEAD_TAG_UPDATED",
+                "EVERY_MESSAGE_REPLY_RECEIVED"
+              ],
+              "type": "string"
+            },
+            "isActive": {
+              "type": "boolean"
+            },
+            "webhookId": {
+              "minimum": 1,
+              "type": "integer"
+            },
+            "webhookName": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "webhookUrl": {
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "webhookId"
+          ],
+          "type": "object"
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        }
       }
-    ],
-    "public": true
+    ]
   },
   {
     "digest": "6bc4a467569c43871457fa27b5ab25fb173b45f63e33876b24896331e7ae32aa",
@@ -234263,38 +235807,42 @@
     "public": true
   },
   {
-    "digest": "959e78a757af07dd7e5bc51e4a419bb8cc8663196312fbdc616505dfa8c18f84",
-    "egress": true,
     "key": "hotspotsystem",
+    "digest": "4b68d2f43a730cd75f2aa491b7b9e2d119f9cc0ff81760964489ef434e545b20",
+    "public": true,
+    "egress": true,
     "operations": [
       {
-        "destructive": false,
-        "inputSchema": {
-          "additionalProperties": false,
-          "properties": {
-            "fields": {
-              "minLength": 1,
-              "type": "string"
-            },
-            "limit": {
-              "minimum": 1,
-              "type": "integer"
-            },
-            "offset": {
-              "minimum": 0,
-              "type": "integer"
-            },
-            "sort": {
-              "minLength": 1,
-              "type": "string"
-            }
-          },
-          "type": "object"
-        },
         "key": "customers.list",
         "kind": "action",
+        "timeoutMs": 15000,
         "maxInputBytes": 65536,
         "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "fields": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "limit": {
+              "minimum": 1,
+              "type": "integer"
+            },
+            "offset": {
+              "minimum": 0,
+              "type": "integer"
+            },
+            "sort": {
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "type": "object"
+        },
         "outputSchema": {
           "additionalProperties": false,
           "properties": {
@@ -234306,49 +235854,100 @@
             "data"
           ],
           "type": "object"
-        },
-        "read": true,
-        "timeoutMs": 15000,
-        "tool": true
+        }
       },
       {
+        "key": "customers.list_by_location",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
         "destructive": false,
+        "tool": true,
         "inputSchema": {
           "additionalProperties": false,
-          "properties": {},
+          "properties": {
+            "fields": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "limit": {
+              "minimum": 1,
+              "type": "integer"
+            },
+            "locationId": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "offset": {
+              "minimum": 0,
+              "type": "integer"
+            },
+            "sort": {
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "locationId"
+          ],
           "type": "object"
         },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        }
+      },
+      {
         "key": "healthcheck",
         "kind": "action",
+        "timeoutMs": 5000,
         "maxInputBytes": 4096,
         "maxResponseBytes": 65536,
-        "outputSchema": {
-          "additionalProperties": false,
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "required": [
-            "data"
-          ],
-          "type": "object"
-        },
         "read": true,
-        "timeoutMs": 5000,
-        "tool": true
-      },
-      {
         "destructive": false,
+        "tool": true,
         "inputSchema": {
           "additionalProperties": false,
           "properties": {},
           "type": "object"
         },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        }
+      },
+      {
         "key": "location-options.list",
         "kind": "action",
+        "timeoutMs": 15000,
         "maxInputBytes": 65536,
         "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {},
+          "type": "object"
+        },
         "outputSchema": {
           "additionalProperties": false,
           "properties": {
@@ -234360,57 +235959,17 @@
             "data"
           ],
           "type": "object"
-        },
-        "read": true,
-        "timeoutMs": 15000,
-        "tool": true
+        }
       },
       {
-        "destructive": false,
-        "inputSchema": {
-          "additionalProperties": false,
-          "properties": {
-            "fields": {
-              "minLength": 1,
-              "type": "string"
-            },
-            "limit": {
-              "minimum": 1,
-              "type": "integer"
-            },
-            "offset": {
-              "minimum": 0,
-              "type": "integer"
-            },
-            "sort": {
-              "minLength": 1,
-              "type": "string"
-            }
-          },
-          "type": "object"
-        },
         "key": "locations.list",
         "kind": "action",
+        "timeoutMs": 15000,
         "maxInputBytes": 65536,
         "maxResponseBytes": 5242880,
-        "outputSchema": {
-          "additionalProperties": false,
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "required": [
-            "data"
-          ],
-          "type": "object"
-        },
         "read": true,
-        "timeoutMs": 15000,
-        "tool": true
-      },
-      {
         "destructive": false,
+        "tool": true,
         "inputSchema": {
           "additionalProperties": false,
           "properties": {
@@ -234433,10 +235992,6 @@
           },
           "type": "object"
         },
-        "key": "subscribers.list",
-        "kind": "action",
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
         "outputSchema": {
           "additionalProperties": false,
           "properties": {
@@ -234448,13 +236003,649 @@
             "data"
           ],
           "type": "object"
-        },
+        }
+      },
+      {
+        "key": "ping",
+        "kind": "action",
+        "timeoutMs": 5000,
+        "maxInputBytes": 4096,
+        "maxResponseBytes": 65536,
         "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {},
+          "type": "object"
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        }
+      },
+      {
+        "key": "subscribers.list",
+        "kind": "action",
         "timeoutMs": 15000,
-        "tool": true
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "fields": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "limit": {
+              "minimum": 1,
+              "type": "integer"
+            },
+            "offset": {
+              "minimum": 0,
+              "type": "integer"
+            },
+            "sort": {
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "type": "object"
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        }
+      },
+      {
+        "key": "subscribers.list_by_location",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "fields": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "limit": {
+              "minimum": 1,
+              "type": "integer"
+            },
+            "locationId": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "offset": {
+              "minimum": 0,
+              "type": "integer"
+            },
+            "sort": {
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "locationId"
+          ],
+          "type": "object"
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        }
+      },
+      {
+        "key": "transactions.mac.list",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "fields": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "limit": {
+              "minimum": 1,
+              "type": "integer"
+            },
+            "offset": {
+              "minimum": 0,
+              "type": "integer"
+            },
+            "sort": {
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "type": "object"
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        }
+      },
+      {
+        "key": "transactions.mac.list_by_location",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "fields": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "limit": {
+              "minimum": 1,
+              "type": "integer"
+            },
+            "locationId": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "offset": {
+              "minimum": 0,
+              "type": "integer"
+            },
+            "sort": {
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "locationId"
+          ],
+          "type": "object"
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        }
+      },
+      {
+        "key": "transactions.paid.list",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "fields": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "limit": {
+              "minimum": 1,
+              "type": "integer"
+            },
+            "offset": {
+              "minimum": 0,
+              "type": "integer"
+            },
+            "sort": {
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "type": "object"
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        }
+      },
+      {
+        "key": "transactions.paid.list_by_location",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "fields": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "limit": {
+              "minimum": 1,
+              "type": "integer"
+            },
+            "locationId": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "offset": {
+              "minimum": 0,
+              "type": "integer"
+            },
+            "sort": {
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "locationId"
+          ],
+          "type": "object"
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        }
+      },
+      {
+        "key": "transactions.social.list",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "fields": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "limit": {
+              "minimum": 1,
+              "type": "integer"
+            },
+            "offset": {
+              "minimum": 0,
+              "type": "integer"
+            },
+            "sort": {
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "type": "object"
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        }
+      },
+      {
+        "key": "transactions.social.list_by_location",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "fields": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "limit": {
+              "minimum": 1,
+              "type": "integer"
+            },
+            "locationId": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "offset": {
+              "minimum": 0,
+              "type": "integer"
+            },
+            "sort": {
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "locationId"
+          ],
+          "type": "object"
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        }
+      },
+      {
+        "key": "transactions.voucher.list",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "fields": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "limit": {
+              "minimum": 1,
+              "type": "integer"
+            },
+            "offset": {
+              "minimum": 0,
+              "type": "integer"
+            },
+            "sort": {
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "type": "object"
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        }
+      },
+      {
+        "key": "transactions.voucher.list_by_location",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "fields": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "limit": {
+              "minimum": 1,
+              "type": "integer"
+            },
+            "locationId": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "offset": {
+              "minimum": 0,
+              "type": "integer"
+            },
+            "sort": {
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "locationId"
+          ],
+          "type": "object"
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        }
+      },
+      {
+        "key": "vouchers.generate",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "locationId": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "package": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "validity": {
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "locationId"
+          ],
+          "type": "object"
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        }
+      },
+      {
+        "key": "vouchers.list",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "fields": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "limit": {
+              "minimum": 1,
+              "type": "integer"
+            },
+            "offset": {
+              "minimum": 0,
+              "type": "integer"
+            },
+            "sort": {
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "type": "object"
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        }
+      },
+      {
+        "key": "vouchers.list_by_location",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "fields": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "limit": {
+              "minimum": 1,
+              "type": "integer"
+            },
+            "locationId": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "offset": {
+              "minimum": 0,
+              "type": "integer"
+            },
+            "sort": {
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "locationId"
+          ],
+          "type": "object"
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        }
       }
-    ],
-    "public": true
+    ]
   },
   {
     "digest": "62756a985948dbebc75d8f74b3525705f8350f9d16accc86a4c48231ffe2b8f5",
