@@ -74,133 +74,968 @@
   },
   "operations": {
     "addresses.au.find": {
-      "description": "Search Australian addresses with Addressfinder autocomplete.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "max": {
-            "maximum": 100,
-            "minimum": 1,
-            "type": "integer"
-          },
-          "query": {
-            "minLength": 1,
-            "type": "string"
-          }
-        },
-        "required": [
-          "query"
-        ],
-        "type": "object"
-      },
       "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
-      "outputSchema": {
+      "title": "Find Australian addresses",
+      "description": "Search Australian addresses with Addressfinder autocomplete.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Partial Australian address to autocomplete."
+          },
+          "max": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Maximum number of completions to return (1-100)."
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "GNAF",
+              "PAF",
+              "GNAF,PAF"
+            ],
+            "description": "Address dataset: GNAF, PAF, or GNAF,PAF."
+          },
+          "post_box": {
+            "type": "string",
+            "enum": [
+              "0",
+              "1"
+            ],
+            "description": "0 excludes PO Box addresses; 1 returns only PO Box addresses."
+          },
+          "canonical": {
+            "type": "string",
+            "enum": [
+              "1"
+            ],
+            "description": "Set to 1 to return canonical addresses only."
+          },
+          "state_codes": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Comma-separated AU state/territory codes: ACT, NSW, NT, QLD, SA, TAS, VIC, WA, OT."
+          },
+          "domain": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Registered domain used for Portal activity monitoring."
+          },
+          "highlight": {
+            "type": "string",
+            "enum": [
+              "1"
+            ],
+            "description": "Set to 1 to wrap matching terms in highlight spans."
+          },
+          "ascii": {
+            "type": "string",
+            "enum": [
+              "1"
+            ],
+            "description": "Set to 1 to convert macrons and accents to ASCII."
+          }
+        },
         "additionalProperties": false,
+        "required": [
+          "query"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "required": [
-          "data"
-        ],
-        "type": "object"
+        "additionalProperties": false
       },
       "request": {
         "method": "GET",
         "path": "/au/address/autocomplete",
         "query": {
+          "q": "{{query}}",
           "max": "{{max}}",
-          "q": "{{query}}"
+          "source": "{{source}}",
+          "post_box": "{{post_box}}",
+          "canonical": "{{canonical}}",
+          "state_codes": "{{state_codes}}",
+          "domain": "{{domain}}",
+          "highlight": "{{highlight}}",
+          "ascii": "{{ascii}}"
         },
         "success": [
           200
         ]
       },
-      "responseFormat": "json",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "addresses.au.metadata": {
+      "kind": "action",
       "sideEffect": "read",
       "timeoutMs": 15000,
-      "title": "Find Australian addresses",
-      "validationMode": "strict-generated"
-    },
-    "addresses.nz.find": {
-      "description": "Search New Zealand addresses with Addressfinder autocomplete.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "max": {
-            "maximum": 100,
-            "minimum": 1,
-            "type": "integer"
-          },
-          "query": {
-            "minLength": 1,
-            "type": "string"
-          }
-        },
-        "required": [
-          "query"
-        ],
-        "type": "object"
-      },
-      "kind": "action",
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
+      "title": "Get AU address metadata",
+      "description": "Retrieve full metadata for an Australian address selected from autocomplete.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique address identifier from AU autocomplete. Supply id, gnaf_id, or dpid."
+          },
+          "gnaf_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "G-NAF dataset identifier. Supply id, gnaf_id, or dpid."
+          },
+          "dpid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Australia Post delivery point identifier. Supply id, gnaf_id, or dpid."
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "GNAF",
+              "PAF",
+              "GNAF,PAF"
+            ],
+            "description": "Address dataset: GNAF, PAF, or GNAF,PAF."
+          },
+          "gps": {
+            "type": "string",
+            "enum": [
+              "1"
+            ],
+            "description": "Set to 1 to include latitude and longitude."
+          },
+          "census": {
+            "type": "integer",
+            "enum": [
+              2016,
+              2021
+            ],
+            "description": "Census year for statistical area identifiers."
+          },
+          "domain": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Registered domain used for Portal activity monitoring."
+          },
+          "ascii": {
+            "type": "string",
+            "enum": [
+              "1"
+            ],
+            "description": "Set to 1 to convert macrons and accents to ASCII."
+          }
+        },
+        "additionalProperties": false
+      },
       "outputSchema": {
-        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/au/address/metadata",
+        "query": {
+          "id": "{{id}}",
+          "gnaf_id": "{{gnaf_id}}",
+          "dpid": "{{dpid}}",
+          "source": "{{source}}",
+          "gps": "{{gps}}",
+          "census": "{{census}}",
+          "domain": "{{domain}}",
+          "ascii": "{{ascii}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "addresses.au.verify": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Verify Australian address",
+      "description": "Verify an Australian address against PAF and/or GNAF and return matched metadata.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Full Australian address to verify."
+          },
+          "gnaf": {
+            "type": "string",
+            "enum": [
+              "1"
+            ],
+            "description": "Set to 1 to query the GNAF physical-address dataset."
+          },
+          "paf": {
+            "type": "string",
+            "enum": [
+              "1"
+            ],
+            "description": "Set to 1 to query the PAF postal-address dataset."
+          },
+          "post_box": {
+            "type": "string",
+            "enum": [
+              "0"
+            ],
+            "description": "Set to 0 to exclude PO Box-type addresses."
+          },
+          "gps": {
+            "type": "string",
+            "enum": [
+              "1"
+            ],
+            "description": "Set to 1 to include latitude and longitude."
+          },
+          "extended": {
+            "type": "string",
+            "enum": [
+              "1"
+            ],
+            "description": "Set to 1 to return additional GNAF fields."
+          },
+          "census": {
+            "type": "integer",
+            "enum": [
+              2016,
+              2021
+            ],
+            "description": "Census year for statistical area identifiers."
+          },
+          "state_codes": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Comma-separated AU state/territory codes: ACT, NSW, NT, QLD, SA, TAS, VIC, WA, OT."
+          },
+          "domain": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Registered domain used for Portal activity monitoring."
+          },
+          "ascii": {
+            "type": "string",
+            "enum": [
+              "1"
+            ],
+            "description": "Set to 1 to convert macrons and accents to ASCII."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "query"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
         "required": [
           "data"
         ],
-        "type": "object"
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/au/address/v2/verification",
+        "query": {
+          "q": "{{query}}",
+          "gnaf": "{{gnaf}}",
+          "paf": "{{paf}}",
+          "post_box": "{{post_box}}",
+          "gps": "{{gps}}",
+          "extended": "{{extended}}",
+          "census": "{{census}}",
+          "state_codes": "{{state_codes}}",
+          "domain": "{{domain}}",
+          "ascii": "{{ascii}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "addresses.international.find": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Find international addresses",
+      "description": "Search addresses in a supported country with Addressfinder international autocomplete.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "country": {
+            "type": "string",
+            "enum": [
+              "au",
+              "be",
+              "ca",
+              "cz",
+              "dk",
+              "fr",
+              "de",
+              "ie",
+              "nz",
+              "nl",
+              "pt",
+              "sg",
+              "es",
+              "se",
+              "gb",
+              "us"
+            ],
+            "description": "ISO 3166 alpha-2 country code for the search."
+          },
+          "query": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Partial address to autocomplete (max 200 characters)."
+          },
+          "max": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 15,
+            "description": "Maximum number of completions to return (1-15)."
+          },
+          "domain": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Registered domain used for Portal activity monitoring."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "country",
+          "query"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/{{country}}/address/v2/autocomplete",
+        "query": {
+          "q": "{{query}}",
+          "max": "{{max}}",
+          "domain": "{{domain}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "addresses.international.metadata": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get international address metadata",
+      "description": "Retrieve full metadata for an international address selected from autocomplete.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "country": {
+            "type": "string",
+            "enum": [
+              "au",
+              "be",
+              "ca",
+              "cz",
+              "dk",
+              "fr",
+              "de",
+              "ie",
+              "nz",
+              "nl",
+              "pt",
+              "sg",
+              "es",
+              "se",
+              "gb",
+              "us"
+            ],
+            "description": "ISO 3166 alpha-2 country code for the address."
+          },
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique address identifier from international autocomplete."
+          },
+          "gps": {
+            "type": "integer",
+            "enum": [
+              0,
+              1
+            ],
+            "description": "1 includes GPS coordinates; 0 excludes them."
+          },
+          "domain": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Registered domain used for Portal activity monitoring."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "country",
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/{{country}}/address/v2/metadata",
+        "query": {
+          "id": "{{id}}",
+          "gps": "{{gps}}",
+          "domain": "{{domain}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "addresses.nz.find": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Find New Zealand addresses",
+      "description": "Search New Zealand addresses with Addressfinder autocomplete.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Partial New Zealand address to autocomplete."
+          },
+          "max": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Maximum number of completions to return (1-100)."
+          },
+          "delivered": {
+            "type": "string",
+            "enum": [
+              "0",
+              "1"
+            ],
+            "description": "0 excludes NZ Post delivered addresses; 1 returns only delivered addresses."
+          },
+          "post_box": {
+            "type": "string",
+            "enum": [
+              "0",
+              "1"
+            ],
+            "description": "0 excludes PO Box addresses; 1 returns only PO Box addresses."
+          },
+          "rural": {
+            "type": "string",
+            "enum": [
+              "0",
+              "1"
+            ],
+            "description": "0 excludes rural addresses; 1 returns only rural addresses."
+          },
+          "strict": {
+            "type": "string",
+            "enum": [
+              "0",
+              "1",
+              "2"
+            ],
+            "description": "Match strictness: 0 normal, 1 strict, 2 fuzzy."
+          },
+          "region_code": {
+            "type": "string",
+            "enum": [
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8",
+              "9",
+              "A",
+              "B",
+              "C",
+              "D",
+              "E",
+              "F",
+              "G",
+              "H"
+            ],
+            "description": "NZ regional authority code (1-9, A-H)."
+          },
+          "domain": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Registered domain used for Portal activity monitoring."
+          },
+          "highlight": {
+            "type": "string",
+            "enum": [
+              "1"
+            ],
+            "description": "Set to 1 to wrap matching terms in highlight spans."
+          },
+          "ascii": {
+            "type": "string",
+            "enum": [
+              "1"
+            ],
+            "description": "Set to 1 to convert macrons and accents to ASCII."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "query"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
       },
       "request": {
         "method": "GET",
         "path": "/nz/address/autocomplete",
         "query": {
+          "q": "{{query}}",
           "max": "{{max}}",
-          "q": "{{query}}"
+          "delivered": "{{delivered}}",
+          "post_box": "{{post_box}}",
+          "rural": "{{rural}}",
+          "strict": "{{strict}}",
+          "region_code": "{{region_code}}",
+          "domain": "{{domain}}",
+          "highlight": "{{highlight}}",
+          "ascii": "{{ascii}}"
         },
         "success": [
           200
         ]
       },
-      "responseFormat": "json",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "addresses.nz.metadata": {
+      "kind": "action",
       "sideEffect": "read",
       "timeoutMs": 15000,
-      "title": "Find New Zealand addresses",
-      "validationMode": "strict-generated"
-    },
-    "healthcheck": {
-      "description": "Validate Addressfinder credentials with unbilled NZ autocomplete q=test.",
-      "enforceOutputSchema": true,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get NZ address metadata",
+      "description": "Retrieve full metadata for a New Zealand address selected from autocomplete.",
       "inputSchema": {
-        "additionalProperties": false,
-        "properties": {},
-        "type": "object"
+        "type": "object",
+        "properties": {
+          "pxid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique address identifier from NZ autocomplete. Supply pxid or dpid."
+          },
+          "dpid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NZ Post delivery point identifier. Supply pxid or dpid."
+          },
+          "census": {
+            "type": "integer",
+            "enum": [
+              2018,
+              2023
+            ],
+            "description": "Statistics NZ census year for metadata."
+          },
+          "domain": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Registered domain used for Portal activity monitoring."
+          },
+          "ascii": {
+            "type": "string",
+            "enum": [
+              "1"
+            ],
+            "description": "Set to 1 to convert macrons and accents to ASCII."
+          }
+        },
+        "additionalProperties": false
       },
-      "kind": "action",
-      "maxInputBytes": 4096,
-      "maxResponseBytes": 65536,
       "outputSchema": {
-        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/nz/address/metadata",
+        "query": {
+          "pxid": "{{pxid}}",
+          "dpid": "{{dpid}}",
+          "census": "{{census}}",
+          "domain": "{{domain}}",
+          "ascii": "{{ascii}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "addresses.nz.reverse_geocode": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Reverse geocode NZ addresses",
+      "description": "Find the nearest New Zealand addresses for WGS84 longitude and latitude.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "x": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Longitude in WGS84."
+          },
+          "y": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Latitude in WGS84."
+          },
+          "max": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Maximum number of nearby addresses to return (1-100)."
+          },
+          "domain": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Registered domain used for Portal activity monitoring."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "x",
+          "y"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
         "required": [
           "data"
         ],
-        "type": "object"
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/nz/address/reverse_geocode",
+        "query": {
+          "x": "{{x}}",
+          "y": "{{y}}",
+          "max": "{{max}}",
+          "domain": "{{domain}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "addresses.nz.verify": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Verify New Zealand address",
+      "description": "Verify a New Zealand address against the Addressfinder database and return matched metadata.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "minLength": 1,
+            "description": "New Zealand address to verify. May contain spelling mistakes."
+          },
+          "post_box": {
+            "type": "string",
+            "enum": [
+              "0",
+              "1"
+            ],
+            "description": "0 excludes PO Box addresses; 1 returns only PO Box addresses."
+          },
+          "region_code": {
+            "type": "string",
+            "enum": [
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8",
+              "9",
+              "A",
+              "B",
+              "C",
+              "D",
+              "E",
+              "F",
+              "G",
+              "H"
+            ],
+            "description": "Restrict the match to an NZ regional authority code (1-9, A-H)."
+          },
+          "census": {
+            "type": "integer",
+            "enum": [
+              2018,
+              2023
+            ],
+            "description": "Statistics NZ census year for metadata."
+          },
+          "domain": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Registered domain used for Portal activity monitoring."
+          },
+          "ascii": {
+            "type": "string",
+            "enum": [
+              "1"
+            ],
+            "description": "Set to 1 to convert macrons and accents to ASCII."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "query"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/nz/address/verification",
+        "query": {
+          "q": "{{query}}",
+          "post_box": "{{post_box}}",
+          "region_code": "{{region_code}}",
+          "census": "{{census}}",
+          "domain": "{{domain}}",
+          "ascii": "{{ascii}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "emails.verify": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Verify email address",
+      "description": "Verify an email address including syntax, domain, and mailbox checks.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Email address to verify."
+          },
+          "domain": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Registered domain used for Portal activity monitoring."
+          },
+          "features": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Comma-separated verification methods: domain, connection, provider, format."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "email"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/email/v1/verification",
+        "query": {
+          "email": "{{email}}",
+          "domain": "{{domain}}",
+          "features": "{{features}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "healthcheck": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 5000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "title": "Healthcheck",
+      "description": "Validate Addressfinder credentials with unbilled NZ autocomplete q=test.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
       },
       "request": {
         "method": "GET",
@@ -213,11 +1048,541 @@
           200
         ]
       },
-      "responseFormat": "json",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "locations.au.find": {
+      "kind": "action",
       "sideEffect": "read",
-      "timeoutMs": 5000,
-      "title": "Healthcheck",
-      "validationMode": "strict-generated"
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Find Australian locations",
+      "description": "Search Australian streets, suburbs, and states with location autocomplete.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Partial Australian location (street, suburb, or state)."
+          },
+          "max": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Maximum number of completions to return (1-100)."
+          },
+          "location_types": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Comma-separated location types: street, locality, state."
+          },
+          "state_codes": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Comma-separated AU state/territory codes: ACT, NSW, NT, QLD, SA, TAS, VIC, WA, OT."
+          },
+          "domain": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Registered domain used for Portal activity monitoring."
+          },
+          "highlight": {
+            "type": "integer",
+            "enum": [
+              0,
+              1
+            ],
+            "description": "1 includes highlighted matching terms."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "query"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/au/location/autocomplete",
+        "query": {
+          "q": "{{query}}",
+          "max": "{{max}}",
+          "location_types": "{{location_types}}",
+          "state_codes": "{{state_codes}}",
+          "domain": "{{domain}}",
+          "highlight": "{{highlight}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "locations.au.metadata": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get AU location metadata",
+      "description": "Retrieve metadata for an Australian location selected from location autocomplete.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique location identifier from AU location autocomplete."
+          },
+          "domain": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Registered domain used for Portal activity monitoring."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/au/location/metadata",
+        "query": {
+          "id": "{{id}}",
+          "domain": "{{domain}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "locations.nz.find": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Find New Zealand locations",
+      "description": "Search New Zealand streets, suburbs, cities, and regions with location autocomplete.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Partial New Zealand location to autocomplete."
+          },
+          "max": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Maximum number of completions to return (1-100)."
+          },
+          "street": {
+            "type": "string",
+            "enum": [
+              "0",
+              "1"
+            ],
+            "description": "0 excludes streets; 1 returns only streets."
+          },
+          "suburb": {
+            "type": "string",
+            "enum": [
+              "0",
+              "1"
+            ],
+            "description": "0 excludes suburbs; 1 returns only suburbs."
+          },
+          "city": {
+            "type": "string",
+            "enum": [
+              "0",
+              "1"
+            ],
+            "description": "0 excludes cities; 1 returns only cities."
+          },
+          "region": {
+            "type": "string",
+            "enum": [
+              "0",
+              "1"
+            ],
+            "description": "0 excludes regions; 1 returns only regions."
+          },
+          "region_code": {
+            "type": "string",
+            "enum": [
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8",
+              "9",
+              "A",
+              "B",
+              "C",
+              "D",
+              "E",
+              "F",
+              "G",
+              "H"
+            ],
+            "description": "Restrict results to an NZ regional authority code (1-9, A-H)."
+          },
+          "strict": {
+            "type": "string",
+            "enum": [
+              "0",
+              "1",
+              "2"
+            ],
+            "description": "Match strictness: 0 normal, 1 strict, 2 fuzzy."
+          },
+          "domain": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Registered domain used for Portal activity monitoring."
+          },
+          "highlight": {
+            "type": "integer",
+            "enum": [
+              0,
+              1
+            ],
+            "description": "1 includes highlighted matching terms."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "query"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/nz/location/autocomplete",
+        "query": {
+          "q": "{{query}}",
+          "max": "{{max}}",
+          "street": "{{street}}",
+          "suburb": "{{suburb}}",
+          "city": "{{city}}",
+          "region": "{{region}}",
+          "region_code": "{{region_code}}",
+          "strict": "{{strict}}",
+          "domain": "{{domain}}",
+          "highlight": "{{highlight}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "locations.nz.metadata": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get NZ location metadata",
+      "description": "Retrieve metadata for a New Zealand location selected from location autocomplete.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "pxid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique location identifier from NZ location autocomplete."
+          },
+          "domain": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Registered domain used for Portal activity monitoring."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "pxid"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/nz/location/metadata",
+        "query": {
+          "pxid": "{{pxid}}",
+          "domain": "{{domain}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "phones.verify": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Verify phone number",
+      "description": "Verify a phone number with syntax, range, and network checks.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "phone_number": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Phone number to verify."
+          },
+          "default_country_code": {
+            "type": "string",
+            "minLength": 2,
+            "description": "ISO 3166 alpha-2 country used when the number has no calling code."
+          },
+          "mobile_only": {
+            "type": "boolean",
+            "description": "When true, require the number to be a mobile."
+          },
+          "timeout": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Maximum wait in seconds for network verification."
+          },
+          "allowed_country_codes": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Comma-separated ISO 3166 alpha-2 codes that the number may belong to."
+          },
+          "domain": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Registered domain used for Portal activity monitoring."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "phone_number",
+          "default_country_code"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/phone/v1/verification",
+        "query": {
+          "phone_number": "{{phone_number}}",
+          "default_country_code": "{{default_country_code}}",
+          "mobile_only": "{{mobile_only}}",
+          "timeout": "{{timeout}}",
+          "allowed_country_codes": "{{allowed_country_codes}}",
+          "domain": "{{domain}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "poi.nz.find": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Find New Zealand points of interest",
+      "description": "Search New Zealand points of interest by partial name or address.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Partial POI name or address to autocomplete."
+          },
+          "max": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Maximum number of completions to return (1-100)."
+          },
+          "domain": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Registered domain used for Portal activity monitoring."
+          },
+          "highlight": {
+            "type": "integer",
+            "enum": [
+              0,
+              1
+            ],
+            "description": "1 includes highlighted matching terms."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "query"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/nz/points_of_interest/autocomplete",
+        "query": {
+          "q": "{{query}}",
+          "max": "{{max}}",
+          "domain": "{{domain}}",
+          "highlight": "{{highlight}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "poi.nz.metadata": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get NZ point of interest metadata",
+      "description": "Retrieve metadata for a New Zealand point of interest selected from autocomplete.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique POI identifier from NZ POI autocomplete."
+          },
+          "domain": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Registered domain used for Portal activity monitoring."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/nz/points_of_interest/metadata",
+        "query": {
+          "id": "{{id}}",
+          "domain": "{{domain}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
     }
   },
   "provenance": {
@@ -227,6 +1592,6 @@
     }
   },
   "runtime": "bun",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "visibility": "public"
 }
