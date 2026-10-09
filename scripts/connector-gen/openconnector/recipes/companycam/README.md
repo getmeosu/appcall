@@ -1,25 +1,20 @@
 # CompanyCam
 
-Read-only international **CompanyCam Core API v2** recipe for the US construction photo SaaS at [companycam.com](https://companycam.com). This is the documented v2 Core API at `https://api.companycam.com/v2` with a Bearer access token. Official getting-started notes these v2 docs are the legacy Core API depreciating early 2027; the newer `developers.companycam.com` edition is out of scope.
-
-## Setup
-
-Generate an access token in the CompanyCam app at `https://app.companycam.com/access_tokens`. Store it as `apiKey`. Requests send `Authorization: Bearer <token>` and `Accept: application/json`. Partner OAuth is not used.
+International **CompanyCam Core API** recipe covering Composio COMPANYCAM HTTP tools. Origin five stay on `https://api.companycam.com/v2`. Customer and project-task ops use `request.baseUrl` `https://api.companycam.com/v3`. Store a Bearer access token as `apiKey`.
 
 ## Operations
 
-- `healthcheck`: `GET /company` with empty input (cheap authenticated account read).
-- `users.current`: `GET /users/current`.
-- `projects.list`: `GET /projects` with optional `page`, `perPage` (sent as `per_page`, 1–100), and `query`.
-- `projects.get`: `GET /projects/{projectId}`; the ID is percent-encoded as one path segment.
-- `users.list`: `GET /users` with optional page filters.
+Recipe operations equal the prepared runner (25). Origin five: `healthcheck` (`GET /company`), `users.current`, `projects.list`, `projects.get`, `users.list`.
 
-Successful responses are raw provider JSON under AppCall `data`. List endpoints return JSON arrays. Writes, photo/multipart upload, tags, and `modified_since` are omitted.
+v2 Composio tools: project create/update/search, comments, photos, tags, labels.
 
-## Adaptations
+v3 extras:
 
-Pinned source and official v2 OpenAPI agree on host, Bearer auth, and resource paths. Native `perPage` maps to query `per_page`.
+- `customers.create` / `customers.list` / `customers.update` on `/crm/customers`
+- `projects.tasks.create` / `projects.tasks.list` / `projects.tasks.update` on `/projects/{projectId}/tasks`
+
+No inbound webhook ops (Composio triggers = 0).
 
 ## License and evidence
 
-Upstream definitions are attributed to [oomol-lab/open-connector](https://github.com/oomol-lab/open-connector) (Apache-2.0) at `33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a`. Fixtures are independently derived from official docs plus pinned source and are fixture-only; live smoke is unverified.
+Upstream definitions are attributed to [oomol-lab/open-connector](https://github.com/oomol-lab/open-connector) (Apache-2.0) at `33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a`. Fixtures are independently derived; live smoke is unverified.

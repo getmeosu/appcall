@@ -108723,21 +108723,351 @@
     "public": true
   },
   {
-    "digest": "c61f8aa6a72b20395bf97c8acb7b417df1dcde3fbfdc866c544cec36a2cc62ee",
-    "egress": true,
     "key": "companycam",
+    "digest": "50524544f05ca309e0ff77cebb55dd57d681578fcd9f3b00abfb6c9aa1238837",
+    "public": true,
+    "egress": true,
     "operations": [
       {
+        "key": "comments.add",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
         "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "commentCollection",
+            "resourceId",
+            "content"
+          ],
+          "properties": {
+            "commentCollection": {
+              "type": "string",
+              "enum": [
+                "projects",
+                "photos"
+              ],
+              "description": "Comment parent collection: projects or photos."
+            },
+            "resourceId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Project ID or photo ID matching commentCollection."
+            },
+            "content": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Comment text sent as comment.content."
+            },
+            "userEmail": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Commenter email sent as X-CompanyCam-User."
+            }
+          }
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      {
+        "key": "comments.list",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "commentCollection",
+            "resourceId"
+          ],
+          "properties": {
+            "commentCollection": {
+              "type": "string",
+              "enum": [
+                "projects",
+                "photos"
+              ],
+              "description": "Comment parent collection: projects or photos."
+            },
+            "resourceId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Project ID or photo ID matching commentCollection."
+            },
+            "page": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Page number for offset pagination."
+            },
+            "perPage": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Results per page (sent as per_page, max 100)."
+            }
+          }
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "array"
+            }
+          }
+        }
+      },
+      {
+        "key": "customers.create",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "name"
+          ],
+          "properties": {
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Customer name."
+            },
+            "email": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Customer email address."
+            },
+            "notes": {
+              "type": "string",
+              "description": "Customer notes."
+            },
+            "isCompany": {
+              "type": "boolean",
+              "description": "Whether the customer represents a company (is_company)."
+            },
+            "phoneNumber": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Customer phone number (phone_number)."
+            },
+            "address": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "street_address_1",
+                "city",
+                "state"
+              ],
+              "description": "Customer address. Street, city, and state are required when supplied.",
+              "properties": {
+                "street_address_1": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Primary street address."
+                },
+                "street_address_2": {
+                  "type": "string",
+                  "description": "Second street address line."
+                },
+                "city": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "City."
+                },
+                "state": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "State or region."
+                },
+                "postal_code": {
+                  "type": "string",
+                  "description": "Postal or ZIP code."
+                },
+                "country": {
+                  "type": "string",
+                  "description": "Country code."
+                }
+              }
+            },
+            "contacts": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "Contact name."
+                  },
+                  "email": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "Contact email."
+                  },
+                  "phone_number": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "Contact phone."
+                  }
+                }
+              },
+              "description": "Initial contacts to create for the customer."
+            }
+          }
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      {
+        "key": "customers.list",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "query": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Optional text to match against customer names and contact details."
+            }
+          }
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "array"
+            }
+          }
+        }
+      },
+      {
+        "key": "customers.update",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "customerId"
+          ],
+          "properties": {
+            "customerId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "CompanyCam customer ID."
+            },
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Updated customer name."
+            },
+            "notes": {
+              "type": "string",
+              "description": "Updated customer notes."
+            },
+            "address": {
+              "type": "object",
+              "additionalProperties": false,
+              "description": "Supported customer address updates: city and/or postal code.",
+              "properties": {
+                "city": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Updated city."
+                },
+                "postal_code": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Updated postal or ZIP code."
+                }
+              }
+            }
+          }
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      {
+        "key": "healthcheck",
+        "kind": "action",
+        "timeoutMs": 5000,
+        "maxInputBytes": 4096,
+        "maxResponseBytes": 65536,
+        "read": true,
+        "destructive": false,
+        "tool": true,
         "inputSchema": {
           "additionalProperties": false,
           "properties": {},
           "type": "object"
         },
-        "key": "healthcheck",
-        "kind": "action",
-        "maxInputBytes": 4096,
-        "maxResponseBytes": 65536,
         "outputSchema": {
           "additionalProperties": false,
           "properties": {
@@ -108749,13 +109079,409 @@
             "data"
           ],
           "type": "object"
-        },
-        "read": true,
-        "timeoutMs": 5000,
-        "tool": true
+        }
       },
       {
+        "key": "photos.create",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
         "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "projectId",
+            "uri",
+            "capturedAt"
+          ],
+          "properties": {
+            "projectId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "CompanyCam project ID."
+            },
+            "uri": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Publicly reachable HTTPS image URL."
+            },
+            "capturedAt": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Unix timestamp when the photo was captured, sent as captured_at."
+            },
+            "description": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Photo description."
+            },
+            "tags": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "description": "Tag display names to attach."
+            },
+            "coordinates": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "lat",
+                "lon"
+              ],
+              "properties": {
+                "lat": {
+                  "type": "number",
+                  "description": "Latitude."
+                },
+                "lon": {
+                  "type": "number",
+                  "description": "Longitude."
+                }
+              }
+            },
+            "userEmail": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Creator email sent as X-CompanyCam-User."
+            }
+          }
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      {
+        "key": "photos.description.set",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "photoId",
+            "description"
+          ],
+          "properties": {
+            "photoId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "CompanyCam photo ID."
+            },
+            "description": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Photo description."
+            }
+          }
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      {
+        "key": "photos.get",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "photoId"
+          ],
+          "properties": {
+            "photoId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "CompanyCam photo ID."
+            }
+          }
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      {
+        "key": "photos.tags.add",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "photoId",
+            "tags"
+          ],
+          "properties": {
+            "photoId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "CompanyCam photo ID."
+            },
+            "tags": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "description": "Tag display names to attach."
+            }
+          }
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "array"
+            }
+          }
+        }
+      },
+      {
+        "key": "photos.tags.list",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "photoId"
+          ],
+          "properties": {
+            "photoId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "CompanyCam photo ID."
+            },
+            "page": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Page number for offset pagination."
+            },
+            "perPage": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Results per page (sent as per_page, max 100)."
+            }
+          }
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "array"
+            }
+          }
+        }
+      },
+      {
+        "key": "projects.create",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "name"
+          ],
+          "properties": {
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Project name."
+            },
+            "address": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "street_address_1": {
+                  "type": "string",
+                  "description": "First street address line."
+                },
+                "street_address_2": {
+                  "type": "string",
+                  "description": "Second street address line."
+                },
+                "city": {
+                  "type": "string",
+                  "description": "City."
+                },
+                "state": {
+                  "type": "string",
+                  "description": "State or region."
+                },
+                "postal_code": {
+                  "type": "string",
+                  "description": "Postal or ZIP code."
+                },
+                "country": {
+                  "type": "string",
+                  "description": "Country code."
+                }
+              }
+            },
+            "coordinates": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "lat",
+                "lon"
+              ],
+              "properties": {
+                "lat": {
+                  "type": "number",
+                  "description": "Latitude."
+                },
+                "lon": {
+                  "type": "number",
+                  "description": "Longitude."
+                }
+              }
+            },
+            "geofence": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "lat",
+                  "lon"
+                ],
+                "properties": {
+                  "lat": {
+                    "type": "number",
+                    "description": "Latitude."
+                  },
+                  "lon": {
+                    "type": "number",
+                    "description": "Longitude."
+                  }
+                }
+              },
+              "description": "Geofence coordinates."
+            },
+            "primary_contact": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "name"
+              ],
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Primary contact name."
+                },
+                "email": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Primary contact email."
+                },
+                "phone_number": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Primary contact phone."
+                }
+              }
+            },
+            "userEmail": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Creator email sent as X-CompanyCam-User."
+            }
+          }
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      {
+        "key": "projects.get",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
         "inputSchema": {
           "additionalProperties": false,
           "properties": {
@@ -108769,10 +109495,6 @@
           ],
           "type": "object"
         },
-        "key": "projects.get",
-        "kind": "action",
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
         "outputSchema": {
           "additionalProperties": false,
           "properties": {
@@ -108784,13 +109506,110 @@
             "data"
           ],
           "type": "object"
-        },
-        "read": true,
-        "timeoutMs": 15000,
-        "tool": true
+        }
       },
       {
+        "key": "projects.labels.add",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
         "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "projectId",
+            "labels"
+          ],
+          "properties": {
+            "projectId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "CompanyCam project ID."
+            },
+            "labels": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "description": "Label display names to attach."
+            }
+          }
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "array"
+            }
+          }
+        }
+      },
+      {
+        "key": "projects.labels.list",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "projectId"
+          ],
+          "properties": {
+            "projectId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "CompanyCam project ID."
+            },
+            "page": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Page number for offset pagination."
+            },
+            "perPage": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Results per page (sent as per_page, max 100)."
+            }
+          }
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "array"
+            }
+          }
+        }
+      },
+      {
+        "key": "projects.list",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
         "inputSchema": {
           "additionalProperties": false,
           "properties": {
@@ -108810,10 +109629,6 @@
           },
           "type": "object"
         },
-        "key": "projects.list",
-        "kind": "action",
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
         "outputSchema": {
           "additionalProperties": false,
           "properties": {
@@ -108825,22 +109640,467 @@
             "data"
           ],
           "type": "object"
-        },
-        "read": true,
-        "timeoutMs": 15000,
-        "tool": true
+        }
       },
       {
+        "key": "projects.photos.list",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
         "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "projectId"
+          ],
+          "properties": {
+            "projectId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "CompanyCam project ID."
+            },
+            "page": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Page number for offset pagination."
+            },
+            "perPage": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Results per page (sent as per_page, max 100)."
+            },
+            "after": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Forward cursor from X-Next-Cursor."
+            },
+            "before": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Backward cursor from X-Prev-Cursor."
+            },
+            "startDate": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Unix timestamp sent as start_date."
+            },
+            "endDate": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Unix timestamp sent as end_date."
+            },
+            "userIds": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "description": "Filter by capturer user IDs (user_ids)."
+            },
+            "groupIds": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "description": "Filter by group IDs (group_ids)."
+            },
+            "tagIds": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "description": "Filter by tag IDs (tag_ids)."
+            }
+          }
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "array"
+            }
+          }
+        }
+      },
+      {
+        "key": "projects.search",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "query"
+          ],
+          "properties": {
+            "query": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Filter by name or first address line."
+            },
+            "page": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Page number for offset pagination."
+            },
+            "perPage": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Results per page (sent as per_page, max 100)."
+            },
+            "modifiedSince": {
+              "type": "string",
+              "minLength": 1,
+              "description": "ISO-8601 timestamp sent as modified_since."
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "active",
+                "deleted"
+              ],
+              "description": "Project status filter."
+            }
+          }
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "array"
+            }
+          }
+        }
+      },
+      {
+        "key": "projects.tasks.create",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "projectId",
+            "details"
+          ],
+          "properties": {
+            "projectId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "CompanyCam project ID."
+            },
+            "details": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Task details (CompanyCam limits project tasks to 250 characters)."
+            },
+            "assigneeIds": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "description": "CompanyCam user IDs to assign (assignee_ids)."
+            }
+          }
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      {
+        "key": "projects.tasks.list",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "projectId"
+          ],
+          "properties": {
+            "projectId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "CompanyCam project ID."
+            }
+          }
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "array"
+            }
+          }
+        }
+      },
+      {
+        "key": "projects.tasks.update",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "projectId",
+            "taskId"
+          ],
+          "properties": {
+            "projectId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "CompanyCam project ID containing the task."
+            },
+            "taskId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "CompanyCam project task ID."
+            },
+            "details": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Updated task details (CompanyCam limits project tasks to 250 characters)."
+            },
+            "assigneeIds": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "description": "User IDs to add or retain. Omitted users are retained; this tool never sends assignee-removal records."
+            }
+          }
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      {
+        "key": "projects.update",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "projectId"
+          ],
+          "properties": {
+            "projectId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "CompanyCam project ID."
+            },
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Updated project name."
+            },
+            "address": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "street_address_1": {
+                  "type": "string",
+                  "description": "First street address line."
+                },
+                "street_address_2": {
+                  "type": "string",
+                  "description": "Second street address line."
+                },
+                "city": {
+                  "type": "string",
+                  "description": "City."
+                },
+                "state": {
+                  "type": "string",
+                  "description": "State or region."
+                },
+                "postal_code": {
+                  "type": "string",
+                  "description": "Postal or ZIP code."
+                },
+                "country": {
+                  "type": "string",
+                  "description": "Country code."
+                }
+              }
+            },
+            "coordinates": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "lat",
+                "lon"
+              ],
+              "properties": {
+                "lat": {
+                  "type": "number",
+                  "description": "Latitude."
+                },
+                "lon": {
+                  "type": "number",
+                  "description": "Longitude."
+                }
+              }
+            },
+            "geofence": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "lat",
+                  "lon"
+                ],
+                "properties": {
+                  "lat": {
+                    "type": "number",
+                    "description": "Latitude."
+                  },
+                  "lon": {
+                    "type": "number",
+                    "description": "Longitude."
+                  }
+                }
+              },
+              "description": "Updated geofence coordinates."
+            }
+          }
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      {
+        "key": "tags.create",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "displayValue"
+          ],
+          "properties": {
+            "displayValue": {
+              "type": "string",
+              "minLength": 1,
+              "description": "User-facing tag label sent as tag.display_value."
+            }
+          }
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      {
+        "key": "users.current",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 4096,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
         "inputSchema": {
           "additionalProperties": false,
           "properties": {},
           "type": "object"
         },
-        "key": "users.current",
-        "kind": "action",
-        "maxInputBytes": 4096,
-        "maxResponseBytes": 5242880,
         "outputSchema": {
           "additionalProperties": false,
           "properties": {
@@ -108852,13 +110112,17 @@
             "data"
           ],
           "type": "object"
-        },
-        "read": true,
-        "timeoutMs": 15000,
-        "tool": true
+        }
       },
       {
+        "key": "users.list",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
         "destructive": false,
+        "tool": true,
         "inputSchema": {
           "additionalProperties": false,
           "properties": {
@@ -108874,10 +110138,6 @@
           },
           "type": "object"
         },
-        "key": "users.list",
-        "kind": "action",
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
         "outputSchema": {
           "additionalProperties": false,
           "properties": {
@@ -108889,13 +110149,9 @@
             "data"
           ],
           "type": "object"
-        },
-        "read": true,
-        "timeoutMs": 15000,
-        "tool": true
+        }
       }
-    ],
-    "public": true
+    ]
   },
   {
     "digest": "d4edc5daf819c2459709a2c56e264bd0e06739c4475c27e8dc4c3e3c6ad58565",
@@ -270929,21 +272185,359 @@
     "public": true
   },
   {
-    "digest": "d752c7e85df244982a6430a27be00cb7ec496105218a0dc93b8705c5912bf9af",
-    "egress": true,
     "key": "laposta",
+    "digest": "223d0feca9340ce21fcf77304ced82daa6d4261615011d5aa14952da72da4e3f",
+    "public": true,
+    "egress": true,
     "operations": [
       {
+        "key": "campaigns.list",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
         "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {}
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "fields.create",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "list_id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "List ID that owns the field."
+            },
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Display name for the field."
+            },
+            "defaultvalue": {
+              "type": "string",
+              "description": "Default value when the field is absent."
+            },
+            "datatype": {
+              "type": "string",
+              "enum": [
+                "text",
+                "numeric",
+                "date",
+                "select_single",
+                "select_multiple"
+              ],
+              "description": "Field data type."
+            },
+            "datatype_display": {
+              "type": "string",
+              "enum": [
+                "select",
+                "radio"
+              ],
+              "description": "For select_single, display as select or radio."
+            },
+            "options": {
+              "type": "array",
+              "description": "Choice values. Required for select_single and select_multiple.",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": {
+              "type": "boolean",
+              "description": "Whether the field is mandatory."
+            },
+            "in_form": {
+              "type": "boolean",
+              "description": "Whether to show the field on the signup form."
+            },
+            "in_list": {
+              "type": "boolean",
+              "description": "Whether to show the field in the list overview."
+            }
+          },
+          "required": [
+            "list_id",
+            "name",
+            "datatype",
+            "required",
+            "in_form",
+            "in_list"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "fields.delete",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": true,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "list_id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "List ID containing the field."
+            },
+            "field_id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Field ID to delete."
+            }
+          },
+          "required": [
+            "list_id",
+            "field_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "fields.get",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "list_id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "List ID containing the field."
+            },
+            "field_id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Field ID to retrieve."
+            }
+          },
+          "required": [
+            "list_id",
+            "field_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "fields.list",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "list_id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "List ID whose fields to retrieve."
+            }
+          },
+          "required": [
+            "list_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "fields.update",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "list_id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "List ID containing the field."
+            },
+            "field_id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Field ID to modify."
+            },
+            "name": {
+              "type": "string",
+              "description": "Display name for the field."
+            },
+            "datatype": {
+              "type": "string",
+              "enum": [
+                "text",
+                "numeric",
+                "date",
+                "select_single",
+                "select_multiple"
+              ],
+              "description": "Field data type. Changing this removes existing values."
+            },
+            "datatype_display": {
+              "type": "string",
+              "enum": [
+                "select",
+                "radio"
+              ],
+              "description": "For select_single, display as select or radio."
+            },
+            "options_full": {
+              "type": "array",
+              "description": "Replacement options as {id, value} objects. Omit an id to delete it.",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "id": {
+                    "description": "Existing numeric id or a new non-numeric key."
+                  },
+                  "value": {
+                    "type": "string",
+                    "description": "Option label."
+                  }
+                }
+              }
+            },
+            "defaultvalue": {
+              "type": "string",
+              "description": "Default value when the field is absent."
+            },
+            "required": {
+              "type": "boolean",
+              "description": "Whether the field is mandatory."
+            },
+            "in_form": {
+              "type": "boolean",
+              "description": "Whether to show the field on the signup form."
+            },
+            "in_list": {
+              "type": "boolean",
+              "description": "Whether to show the field in the list overview."
+            }
+          },
+          "required": [
+            "list_id",
+            "field_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "healthcheck",
+        "kind": "action",
+        "timeoutMs": 5000,
+        "maxInputBytes": 4096,
+        "maxResponseBytes": 65536,
+        "read": true,
+        "destructive": false,
+        "tool": true,
         "inputSchema": {
           "additionalProperties": false,
           "properties": {},
           "type": "object"
         },
-        "key": "healthcheck",
-        "kind": "action",
-        "maxInputBytes": 4096,
-        "maxResponseBytes": 65536,
         "outputSchema": {
           "additionalProperties": false,
           "properties": {
@@ -270955,13 +272549,105 @@
             "data"
           ],
           "type": "object"
-        },
-        "read": true,
-        "timeoutMs": 5000,
-        "tool": true
+        }
       },
       {
+        "key": "lists.create",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
         "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Name of the mailing list."
+            },
+            "locked": {
+              "type": "boolean",
+              "description": "If true, application users cannot modify the list."
+            },
+            "remarks": {
+              "type": "string",
+              "description": "Optional notes about the list."
+            },
+            "subscribe_notification_email": {
+              "type": "string",
+              "description": "Email notified when someone subscribes."
+            },
+            "unsubscribe_notification_email": {
+              "type": "string",
+              "description": "Email notified when someone unsubscribes."
+            }
+          },
+          "required": [
+            "name"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "lists.delete",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": true,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "list_id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "List ID to delete."
+            }
+          },
+          "required": [
+            "list_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "lists.get",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
         "inputSchema": {
           "additionalProperties": false,
           "properties": {
@@ -270975,10 +272661,6 @@
           ],
           "type": "object"
         },
-        "key": "lists.get",
-        "kind": "action",
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
         "outputSchema": {
           "additionalProperties": false,
           "properties": {
@@ -270990,22 +272672,22 @@
             "data"
           ],
           "type": "object"
-        },
-        "read": true,
-        "timeoutMs": 15000,
-        "tool": true
+        }
       },
       {
+        "key": "lists.list",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
         "destructive": false,
+        "tool": true,
         "inputSchema": {
           "additionalProperties": false,
           "properties": {},
           "type": "object"
         },
-        "key": "lists.list",
-        "kind": "action",
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
         "outputSchema": {
           "additionalProperties": false,
           "properties": {
@@ -271017,13 +272699,240 @@
             "data"
           ],
           "type": "object"
-        },
-        "read": true,
-        "timeoutMs": 15000,
-        "tool": true
+        }
       },
       {
+        "key": "lists.members.clear",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": true,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "list_id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "List ID to clear."
+            }
+          },
+          "required": [
+            "list_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "lists.update",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
         "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "list_id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "List ID to modify."
+            },
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Name of the mailing list."
+            },
+            "locked": {
+              "type": "boolean",
+              "description": "If true, application users cannot modify the list."
+            },
+            "remarks": {
+              "type": "string",
+              "description": "Optional notes about the list."
+            },
+            "subscribe_notification_email": {
+              "type": "string",
+              "description": "Email notified when someone subscribes."
+            },
+            "unsubscribe_notification_email": {
+              "type": "string",
+              "description": "Email notified when someone unsubscribes."
+            }
+          },
+          "required": [
+            "list_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "members.create",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "list_id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "List ID to add the member to."
+            },
+            "ip": {
+              "type": "string",
+              "minLength": 1,
+              "description": "IP address from which the member signed up."
+            },
+            "email": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Member email address."
+            },
+            "source_url": {
+              "type": "string",
+              "description": "URL from which the member signed up."
+            },
+            "custom_fields": {
+              "type": "object",
+              "description": "Extra field values keyed by the field custom_name.",
+              "additionalProperties": true
+            },
+            "options": {
+              "type": "object",
+              "description": "Member creation options.",
+              "additionalProperties": false,
+              "properties": {
+                "upsert": {
+                  "type": "boolean",
+                  "description": "Update an existing active member with the same email."
+                },
+                "suppress_reactivation": {
+                  "type": "boolean",
+                  "description": "Do not reactivate an unsubscribed member during upsert."
+                },
+                "suppress_email_notification": {
+                  "type": "boolean",
+                  "description": "Do not send the API subscription notification email."
+                },
+                "ignore_doubleoptin": {
+                  "type": "boolean",
+                  "description": "Activate immediately without a double opt-in email."
+                },
+                "spam_check": {
+                  "type": "boolean",
+                  "description": "Treat the request as a public signup form and run the spam check."
+                }
+              }
+            },
+            "user_agent": {
+              "type": "string",
+              "description": "Browser User-Agent used only by the spam check."
+            }
+          },
+          "required": [
+            "list_id",
+            "ip",
+            "email"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "members.delete",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": true,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "list_id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "List ID containing the member."
+            },
+            "member_id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Member ID or email address."
+            }
+          },
+          "required": [
+            "list_id",
+            "member_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "members.get",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
         "inputSchema": {
           "additionalProperties": false,
           "properties": {
@@ -271042,10 +272951,6 @@
           ],
           "type": "object"
         },
-        "key": "members.get",
-        "kind": "action",
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
         "outputSchema": {
           "additionalProperties": false,
           "properties": {
@@ -271057,13 +272962,17 @@
             "data"
           ],
           "type": "object"
-        },
-        "read": true,
-        "timeoutMs": 15000,
-        "tool": true
+        }
       },
       {
+        "key": "members.list",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
         "destructive": false,
+        "tool": true,
         "inputSchema": {
           "additionalProperties": false,
           "properties": {
@@ -271085,10 +272994,6 @@
           ],
           "type": "object"
         },
-        "key": "members.list",
-        "kind": "action",
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
         "outputSchema": {
           "additionalProperties": false,
           "properties": {
@@ -271100,13 +273005,408 @@
             "data"
           ],
           "type": "object"
-        },
-        "read": true,
+        }
+      },
+      {
+        "key": "members.update",
+        "kind": "action",
         "timeoutMs": 15000,
-        "tool": true
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "list_id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "List ID containing the member."
+            },
+            "member_id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Member ID or email address."
+            },
+            "email": {
+              "type": "string",
+              "description": "Updated email address."
+            },
+            "state": {
+              "type": "string",
+              "enum": [
+                "active",
+                "unsubscribed"
+              ],
+              "description": "New member status."
+            },
+            "custom_fields": {
+              "type": "object",
+              "description": "Extra field values keyed by the field custom_name.",
+              "additionalProperties": true
+            }
+          },
+          "required": [
+            "list_id",
+            "member_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "reports.list",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {}
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "segments.get",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "list_id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "List ID containing the segment."
+            },
+            "segment_id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Segment ID to retrieve."
+            }
+          },
+          "required": [
+            "list_id",
+            "segment_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "segments.list",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "list_id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "List ID whose segments to retrieve."
+            }
+          },
+          "required": [
+            "list_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "webhooks.create",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "list_id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "List ID that owns the webhook."
+            },
+            "event": {
+              "type": "string",
+              "enum": [
+                "subscribed",
+                "modified",
+                "deactivated"
+              ],
+              "description": "Trigger event."
+            },
+            "url": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Endpoint URL that receives webhook POST notifications."
+            },
+            "blocked": {
+              "type": "boolean",
+              "description": "Temporarily block webhook delivery. Defaults to false when omitted."
+            }
+          },
+          "required": [
+            "list_id",
+            "event",
+            "url"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "webhooks.delete",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": true,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "list_id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "List ID containing the webhook."
+            },
+            "webhook_id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Webhook ID to delete."
+            }
+          },
+          "required": [
+            "list_id",
+            "webhook_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "webhooks.get",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "list_id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "List ID containing the webhook."
+            },
+            "webhook_id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Webhook ID to retrieve."
+            }
+          },
+          "required": [
+            "list_id",
+            "webhook_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "webhooks.list",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "list_id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "List ID whose webhooks to retrieve."
+            }
+          },
+          "required": [
+            "list_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "webhooks.update",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "list_id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "List ID containing the webhook."
+            },
+            "webhook_id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Webhook ID to modify."
+            },
+            "event": {
+              "type": "string",
+              "enum": [
+                "subscribed",
+                "modified",
+                "deactivated"
+              ],
+              "description": "Trigger event."
+            },
+            "url": {
+              "type": "string",
+              "description": "Endpoint URL that receives webhook POST notifications."
+            },
+            "blocked": {
+              "type": "boolean",
+              "description": "Temporarily block webhook delivery."
+            }
+          },
+          "required": [
+            "list_id",
+            "webhook_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        }
       }
-    ],
-    "public": true
+    ]
   },
   {
     "digest": "b9967d7b8fcc0a7d1deac24ce40503244e9f4660b39c0e47d29a35e227693d4c",
@@ -305367,16 +307667,484 @@
     "public": true
   },
   {
-    "digest": "0a8389c7eaa9e0afc6dc2e466272eee937451d3a9469c882be93489f83f1bea5",
-    "egress": true,
     "key": "nango",
+    "digest": "867d8df052a39b3c49c869c2c9cff83d9e85ad1416d7f435833b2dbba0080000",
+    "public": true,
+    "egress": true,
     "operations": [
       {
+        "key": "actions.trigger",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
         "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "action_name": {
+              "description": "Action name defined in the Nango integration.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "connection_id": {
+              "description": "Connection ID used when the connection was created.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "input": {
+              "additionalProperties": true,
+              "description": "Optional payload for the action exec function.",
+              "type": "object"
+            },
+            "provider_config_key": {
+              "description": "Integration unique key (provider config key).",
+              "minLength": 1,
+              "type": "string"
+            },
+            "x_async": {
+              "description": "If true, run the action asynchronously and return a status URL.",
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "action_name",
+            "connection_id",
+            "provider_config_key"
+          ],
+          "type": "object"
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {}
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        }
+      },
+      {
+        "key": "connect.sessions.create",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "allowed_integrations": {
+              "description": "Integration IDs the end user may interact with in Connect UI.",
+              "items": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "end_user": {
+              "additionalProperties": false,
+              "description": "Deprecated end-user object; prefer tags.",
+              "properties": {
+                "display_name": {
+                  "description": "End user display name.",
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "email": {
+                  "description": "End user email.",
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "id": {
+                  "description": "Uniquely identifies the end user.",
+                  "minLength": 1,
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id"
+              ],
+              "type": "object"
+            },
+            "integrations_config_defaults": {
+              "additionalProperties": true,
+              "description": "Default configuration keyed by integration unique name.",
+              "type": "object"
+            },
+            "organization": {
+              "additionalProperties": false,
+              "description": "Deprecated organization object; prefer tags.",
+              "properties": {
+                "display_name": {
+                  "description": "Organization display name.",
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "id": {
+                  "description": "Organization id.",
+                  "minLength": 1,
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id"
+              ],
+              "type": "object"
+            },
+            "overrides": {
+              "additionalProperties": true,
+              "description": "Per-integration overrides keyed by integration unique name.",
+              "type": "object"
+            },
+            "tags": {
+              "additionalProperties": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "description": "Connection tags as key/value strings. Keys are normalized to lowercase.",
+              "type": "object"
+            },
+            "webhook_url_override": {
+              "description": "Override environment webhook URLs for the connection this session creates.",
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "type": "object"
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        }
+      },
+      {
+        "key": "connect.sessions.reconnect",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "connection_id": {
+              "description": "Connection ID to reconnect.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "end_user": {
+              "additionalProperties": false,
+              "description": "Deprecated end-user object; prefer tags.",
+              "properties": {
+                "display_name": {
+                  "description": "End user display name.",
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "email": {
+                  "description": "End user email.",
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "id": {
+                  "description": "Uniquely identifies the end user.",
+                  "minLength": 1,
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id"
+              ],
+              "type": "object"
+            },
+            "integration_id": {
+              "description": "Integration ID (provider config key) for the connection.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "integrations_config_defaults": {
+              "additionalProperties": true,
+              "description": "Default configuration keyed by integration unique name.",
+              "type": "object"
+            },
+            "organization": {
+              "additionalProperties": false,
+              "description": "Deprecated organization object; prefer tags.",
+              "properties": {
+                "display_name": {
+                  "description": "Organization display name.",
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "id": {
+                  "description": "Organization id.",
+                  "minLength": 1,
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id"
+              ],
+              "type": "object"
+            },
+            "overrides": {
+              "additionalProperties": true,
+              "description": "Per-integration overrides keyed by integration unique name.",
+              "type": "object"
+            },
+            "tags": {
+              "additionalProperties": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "description": "Connection tags as key/value strings. Keys are normalized to lowercase.",
+              "type": "object"
+            }
+          },
+          "required": [
+            "connection_id",
+            "integration_id"
+          ],
+          "type": "object"
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        }
+      },
+      {
+        "key": "connections.create",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "connection_config": {
+              "additionalProperties": true,
+              "description": "Provider-specific connection configuration required by some OAuth APIs.",
+              "type": "object"
+            },
+            "connection_id": {
+              "description": "Connection ID. Nango generates one when omitted.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "credentials": {
+              "additionalProperties": true,
+              "description": "Credentials object. The type field selects OAuth2, API key, basic, app, or other auth.",
+              "type": "object"
+            },
+            "end_user": {
+              "additionalProperties": false,
+              "description": "Deprecated end-user object; prefer tags.",
+              "properties": {
+                "display_name": {
+                  "description": "End user display name.",
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "email": {
+                  "description": "End user email.",
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "id": {
+                  "description": "Uniquely identifies the end user.",
+                  "minLength": 1,
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id"
+              ],
+              "type": "object"
+            },
+            "metadata": {
+              "additionalProperties": true,
+              "description": "Metadata attached to the connection.",
+              "type": "object"
+            },
+            "provider_config_key": {
+              "description": "Integration ID created in Nango.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "tags": {
+              "additionalProperties": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "description": "Connection tags as key/value strings. Keys are normalized to lowercase.",
+              "type": "object"
+            }
+          },
+          "required": [
+            "provider_config_key",
+            "credentials"
+          ],
+          "type": "object"
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        }
+      },
+      {
+        "key": "connections.delete",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "connection_id": {
+              "description": "Connection ID used when the connection was created.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "provider_config_key": {
+              "description": "Integration ID (unique key) for this connection.",
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "connection_id",
+            "provider_config_key"
+          ],
+          "type": "object"
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        }
+      },
+      {
+        "key": "connections.get",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "connection_id": {
+              "description": "Connection ID used when the connection was created.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "force_refresh": {
+              "description": "Refresh the access token even if it has not expired. Defaults to false.",
+              "type": "boolean"
+            },
+            "provider_config_key": {
+              "description": "Integration ID (unique key) for this connection.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "refresh_github_app_jwt_token": {
+              "description": "Refresh the JWT for GitHub App connections.",
+              "type": "boolean"
+            },
+            "refresh_token": {
+              "description": "Include the refresh token in the response. Defaults to false.",
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "connection_id",
+            "provider_config_key"
+          ],
+          "type": "object"
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        }
+      },
+      {
+        "key": "connections.list",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
         "inputSchema": {
           "additionalProperties": false,
           "properties": {
             "connectionId": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "endUserId": {
+              "description": "Deprecated. Prefer tags[end_user_id].",
+              "minLength": 1,
+              "type": "string"
+            },
+            "endUserOrganizationId": {
+              "description": "Deprecated. Prefer tags[organization_id].",
               "minLength": 1,
               "type": "string"
             },
@@ -305391,14 +308159,18 @@
             "search": {
               "minLength": 1,
               "type": "string"
+            },
+            "tags": {
+              "additionalProperties": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "description": "Connection tags as key/value strings. Keys are normalized to lowercase.",
+              "type": "object"
             }
           },
           "type": "object"
         },
-        "key": "connections.list",
-        "kind": "action",
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
         "outputSchema": {
           "additionalProperties": false,
           "properties": {
@@ -305410,49 +308182,234 @@
             "data"
           ],
           "type": "object"
-        },
-        "read": true,
-        "timeoutMs": 15000,
-        "tool": true
+        }
       },
       {
+        "key": "connections.metadata.set",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
         "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "connection_id": {
+              "description": "One connection ID, or an array of connection IDs.",
+              "items": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "minItems": 1,
+              "minLength": 1,
+              "type": [
+                "string",
+                "array"
+              ]
+            },
+            "metadata": {
+              "additionalProperties": true,
+              "description": "Metadata object that replaces existing metadata.",
+              "type": "object"
+            },
+            "provider_config_key": {
+              "description": "Integration ID (unique key) for the connection(s).",
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "connection_id",
+            "provider_config_key",
+            "metadata"
+          ],
+          "type": "object"
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        }
+      },
+      {
+        "key": "connections.metadata.update",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "connection_id": {
+              "description": "One connection ID, or an array of connection IDs.",
+              "items": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "minItems": 1,
+              "minLength": 1,
+              "type": [
+                "string",
+                "array"
+              ]
+            },
+            "metadata": {
+              "additionalProperties": true,
+              "description": "Metadata properties to merge into the existing object.",
+              "type": "object"
+            },
+            "provider_config_key": {
+              "description": "Integration ID (unique key) for the connection(s).",
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "connection_id",
+            "provider_config_key",
+            "metadata"
+          ],
+          "type": "object"
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        }
+      },
+      {
+        "key": "connections.update",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "connection_id": {
+              "description": "Connection ID used when the connection was created.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "end_user": {
+              "additionalProperties": false,
+              "description": "Deprecated end-user object; prefer tags.",
+              "properties": {
+                "display_name": {
+                  "description": "End user display name.",
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "email": {
+                  "description": "End user email.",
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "id": {
+                  "description": "Uniquely identifies the end user.",
+                  "minLength": 1,
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id"
+              ],
+              "type": "object"
+            },
+            "provider_config_key": {
+              "description": "Integration ID (unique key) for this connection.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "tags": {
+              "additionalProperties": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "description": "Connection tags as key/value strings. Keys are normalized to lowercase.",
+              "type": "object"
+            }
+          },
+          "required": [
+            "connection_id",
+            "provider_config_key"
+          ],
+          "type": "object"
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        }
+      },
+      {
+        "key": "environment.variables.list",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
         "inputSchema": {
           "additionalProperties": false,
           "properties": {},
           "type": "object"
         },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {}
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        }
+      },
+      {
         "key": "healthcheck",
         "kind": "action",
+        "timeoutMs": 15000,
         "maxInputBytes": 4096,
         "maxResponseBytes": 5242880,
-        "outputSchema": {
-          "additionalProperties": false,
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "required": [
-            "data"
-          ],
-          "type": "object"
-        },
         "read": true,
-        "timeoutMs": 15000,
-        "tool": true
-      },
-      {
         "destructive": false,
+        "tool": true,
         "inputSchema": {
           "additionalProperties": false,
           "properties": {},
           "type": "object"
         },
-        "key": "integrations.list",
-        "kind": "action",
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
         "outputSchema": {
           "additionalProperties": false,
           "properties": {
@@ -305464,13 +308421,239 @@
             "data"
           ],
           "type": "object"
-        },
-        "read": true,
-        "timeoutMs": 15000,
-        "tool": true
+        }
       },
       {
+        "key": "integrations.create",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
         "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "credentials": {
+              "additionalProperties": true,
+              "description": "Integration credentials. OAUTH2 needs client_id and client_secret; APP needs app_id, app_link, and private_key.",
+              "type": "object"
+            },
+            "display_name": {
+              "description": "Human-readable integration name. Defaults to the provider name.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "forward_webhooks": {
+              "description": "Whether to forward provider webhooks. Defaults to true.",
+              "type": "boolean"
+            },
+            "provider": {
+              "description": "Provider unique name, e.g. github or slack. Use List providers for valid names.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "unique_key": {
+              "description": "Unique integration ID for later API calls.",
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "provider",
+            "unique_key"
+          ],
+          "type": "object"
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        }
+      },
+      {
+        "key": "integrations.delete",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "unique_key": {
+              "description": "Integration ID (unique_key) to delete.",
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "unique_key"
+          ],
+          "type": "object"
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        }
+      },
+      {
+        "key": "integrations.get",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "include": {
+              "description": "Extra sensitive data to include.",
+              "items": {
+                "description": "Include field.",
+                "enum": [
+                  "webhook",
+                  "credentials"
+                ],
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "unique_key": {
+              "description": "Integration ID (unique_key) created in Nango.",
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "unique_key"
+          ],
+          "type": "object"
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        }
+      },
+      {
+        "key": "integrations.list",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {},
+          "type": "object"
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        }
+      },
+      {
+        "key": "integrations.update",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "credentials": {
+              "additionalProperties": true,
+              "description": "Integration credentials. OAUTH2 needs client_id and client_secret; APP needs app_id, app_link, and private_key.",
+              "type": "object"
+            },
+            "display_name": {
+              "description": "Integration display name.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "forward_webhooks": {
+              "description": "Whether to forward provider webhooks.",
+              "type": "boolean"
+            },
+            "new_unique_key": {
+              "description": "New unique integration ID if renaming the key.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "unique_key": {
+              "description": "Current integration ID (unique_key).",
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "unique_key"
+          ],
+          "type": "object"
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        }
+      },
+      {
+        "key": "providers.get",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
         "inputSchema": {
           "additionalProperties": false,
           "properties": {
@@ -305484,10 +308667,6 @@
           ],
           "type": "object"
         },
-        "key": "providers.get",
-        "kind": "action",
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
         "outputSchema": {
           "additionalProperties": false,
           "properties": {
@@ -305499,13 +308678,339 @@
             "data"
           ],
           "type": "object"
-        },
-        "read": true,
+        }
+      },
+      {
+        "key": "providers.list",
+        "kind": "action",
         "timeoutMs": 15000,
-        "tool": true
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {},
+          "type": "object"
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        }
+      },
+      {
+        "key": "proxy.get",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "any_path": {
+              "description": "External API path without a leading slash, e.g. users or repos/owner/repo.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "base_url_override": {
+              "description": "Override the provider base URL from providers.yaml.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "connection_id": {
+              "description": "Connection ID used when the connection was created.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "decompress": {
+              "description": "Override the decompress option. Defaults to false.",
+              "type": "boolean"
+            },
+            "provider_config_key": {
+              "description": "Integration unique key (provider config key).",
+              "minLength": 1,
+              "type": "string"
+            },
+            "query_params": {
+              "additionalProperties": {
+                "type": [
+                  "string",
+                  "number",
+                  "integer",
+                  "boolean"
+                ]
+              },
+              "description": "Query parameters forwarded to the external API.",
+              "type": "object"
+            },
+            "retries": {
+              "description": "Retries with exponential backoff. Defaults to 0.",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "retry_on": {
+              "description": "Comma-separated extra status codes to retry, in addition to 5xx and 429.",
+              "type": "string"
+            }
+          },
+          "required": [
+            "any_path",
+            "connection_id",
+            "provider_config_key"
+          ],
+          "type": "object"
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {}
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        }
+      },
+      {
+        "key": "proxy.put",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "any_path": {
+              "description": "External API path without a leading slash, e.g. users or repos/owner/repo.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "base_url_override": {
+              "description": "Override the provider base URL from providers.yaml.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "body": {
+              "additionalProperties": true,
+              "description": "JSON body forwarded to the external API.",
+              "type": "object"
+            },
+            "connection_id": {
+              "description": "Connection ID used when the connection was created.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "decompress": {
+              "description": "Override the decompress option. Defaults to false.",
+              "type": "boolean"
+            },
+            "provider_config_key": {
+              "description": "Integration unique key (provider config key).",
+              "minLength": 1,
+              "type": "string"
+            },
+            "query_params": {
+              "additionalProperties": {
+                "type": [
+                  "string",
+                  "number",
+                  "integer",
+                  "boolean"
+                ]
+              },
+              "description": "Query parameters forwarded to the external API.",
+              "type": "object"
+            },
+            "retries": {
+              "description": "Retries with exponential backoff. Defaults to 0.",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "retry_on": {
+              "description": "Comma-separated extra status codes to retry, in addition to 5xx and 429.",
+              "type": "string"
+            }
+          },
+          "required": [
+            "any_path",
+            "connection_id",
+            "provider_config_key"
+          ],
+          "type": "object"
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {}
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        }
+      },
+      {
+        "key": "scripts.config.get",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "format": {
+              "description": "Output format.",
+              "enum": [
+                "nango",
+                "openai"
+              ],
+              "type": "string"
+            }
+          },
+          "type": "object"
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {}
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        }
+      },
+      {
+        "key": "syncs.status",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "connection_id": {
+              "description": "Connection ID. Omit to return every connection.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "provider_config_key": {
+              "description": "Integration ID established in Nango.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "syncs": {
+              "description": "Comma-separated sync names, or \"*\" for every sync. Variants use name::variant.",
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "provider_config_key",
+            "syncs"
+          ],
+          "type": "object"
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        }
+      },
+      {
+        "key": "syncs.trigger",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "connection_id": {
+              "description": "Connection ID. Omit to trigger every relevant connection.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "opts": {
+              "additionalProperties": false,
+              "description": "Trigger options. reset clears the checkpoint; emptyCache must be paired with reset.",
+              "properties": {
+                "emptyCache": {
+                  "description": "Delete cached records before triggering. Requires reset=true.",
+                  "type": "boolean"
+                },
+                "reset": {
+                  "description": "Clear the checkpoint and lastSyncDate so the sync starts fresh.",
+                  "type": "boolean"
+                }
+              },
+              "type": "object"
+            },
+            "provider_config_key": {
+              "description": "Integration ID established in Nango.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "syncs": {
+              "description": "Sync names to trigger. Empty list triggers every sync for the integration.",
+              "items": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "type": "array"
+            }
+          },
+          "required": [
+            "provider_config_key",
+            "syncs"
+          ],
+          "type": "object"
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        }
       }
-    ],
-    "public": true
+    ]
   },
   {
     "digest": "c4621d39e06e5bbdbc3114f25a2697b7a61d9bafeb21954feede83f20f122dcc",
