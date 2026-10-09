@@ -1297,6 +1297,7 @@ import { listContacts as resendListContacts } from "../../connectors/resend/src/
 import googlemeetManifest from "../../connectors/googlemeet/manifest.json";
 import { healthcheck as googlemeetHealthcheck } from "../../connectors/googlemeet/src/healthcheck";
 import { createMeeting as gmeetCreateMeeting, listMeetings as gmeetListMeetings, getMeeting as gmeetGetMeeting, updateMeeting as gmeetUpdateMeeting, deleteMeeting as gmeetDeleteMeeting } from "../../connectors/googlemeet/src/actions";
+import { statuscakeFormHandlers } from "../../connectors/statuscake/src/actions";
 
 // Google Meet operations (extend the existing google-workspace connector).
 import {
@@ -1313,6 +1314,7 @@ import {
 } from "../../connectors/microsoft-365/src/actions";
 
 import { createField as lapostaCreateField, createMember as lapostaCreateMember, updateMember as lapostaUpdateMember } from "../../connectors/laposta/src/actions";
+import { getMeetingAnalysis as avomaGetMeetingAnalysis } from "../../connectors/avoma/src/handlers";
 import { createConnectorHttpClient, type ConnectorHttpClient } from "./http";
 import { withDeclarativeConnectors } from "./declarative/loader";
 
@@ -1467,6 +1469,9 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
       "fields.create": lapostaCreateField,
       "members.create": lapostaCreateMember,
       "members.update": lapostaUpdateMember,
+    },
+    avoma: {
+      "meetings.analysis.get": avomaGetMeetingAnalysis,
     },
     notion: {
       "credentials.validate": validateNotionCredentials,
@@ -2872,6 +2877,7 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
       "meetings.update": gmeetUpdateMeeting,
       "meetings.delete": gmeetDeleteMeeting,
     },
+    statuscake: statuscakeFormHandlers,
   },
   syncs: {
     notion: {
