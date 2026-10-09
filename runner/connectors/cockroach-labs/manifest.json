@@ -1,7 +1,17 @@
 {
+  "key": "cockroach-labs",
+  "name": "Cockroach Labs",
+  "version": "0.2.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "dev-tools"
+  ],
   "auth": {
+    "type": "api_key",
     "scopes": [],
     "setup": {
+      "mode": "api_key",
       "fields": [
         {
           "key": "apiKey",
@@ -9,195 +19,78 @@
           "required": true,
           "secret": true
         }
-      ],
-      "mode": "api_key"
-    },
-    "type": "api_key"
-  },
-  "categories": [
-    "dev-tools"
-  ],
-  "evidence": {
-    "fixture": {
-      "status": "supplied"
-    },
-    "live": {
-      "status": "unverified"
+      ]
     }
   },
+  "network": {
+    "allowedHosts": [
+      "cockroachlabs.cloud"
+    ]
+  },
+  "models": [
+    "organization",
+    "cluster",
+    "region",
+    "sqlUser",
+    "allowlist",
+    "database",
+    "backup",
+    "invoice",
+    "folder",
+    "serviceAccount"
+  ],
   "http": {
+    "baseUrl": "https://cockroachlabs.cloud",
     "auth": {
       "field": "apiKey",
       "in": "header",
       "name": "Authorization",
       "value": "Bearer {{apiKey}}"
     },
-    "baseUrl": "https://cockroachlabs.cloud",
+    "headers": {
+      "Accept": "application/json",
+      "Cc-Version": "2024-09-16"
+    },
     "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after",
       "defaultRetryAfterSeconds": 30,
       "messagePaths": [
         "message",
         "error"
-      ],
-      "rateLimitStatuses": [
-        429
-      ],
-      "retryAfterHeader": "retry-after"
-    },
-    "headers": {
-      "Accept": "application/json",
-      "Cc-Version": "2024-09-16"
+      ]
     }
   },
-  "key": "cockroach-labs",
-  "models": [
-    "organization",
-    "cluster",
-    "region"
-  ],
-  "name": "Cockroach Labs",
-  "network": {
-    "allowedHosts": [
-      "cockroachlabs.cloud"
-    ]
-  },
   "operations": {
-    "clusters.get": {
-      "description": "Get extended information about one CockroachDB Cloud cluster.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "clusterId": {
-            "minLength": 1,
-            "type": "string"
-          }
-        },
-        "required": [
-          "clusterId"
-        ],
-        "type": "object"
-      },
-      "kind": "action",
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "outputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "type": "object"
-      },
-      "request": {
-        "method": "GET",
-        "path": "/api/v1/clusters/{{clusterId}}",
-        "success": [
-          200
-        ]
-      },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "title": "Get cluster",
-      "validationMode": "strict-generated"
-    },
-    "clusters.list": {
-      "description": "List CockroachDB Cloud clusters in the organization.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "limit": {
-            "minimum": 1,
-            "type": "integer"
-          },
-          "page": {
-            "minLength": 1,
-            "type": "string"
-          },
-          "showInactive": {
-            "type": "boolean"
-          },
-          "sortBy": {
-            "enum": [
-              "NAME",
-              "CREATED_AT",
-              "DELETED_AT"
-            ],
-            "type": "string"
-          },
-          "sortOrder": {
-            "enum": [
-              "ASC",
-              "DESC"
-            ],
-            "type": "string"
-          }
-        },
-        "type": "object"
-      },
-      "kind": "action",
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "outputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "type": "object"
-      },
-      "request": {
-        "method": "GET",
-        "path": "/api/v1/clusters",
-        "query": {
-          "pagination.limit": "{{limit}}",
-          "pagination.page": "{{page}}",
-          "pagination.sort_by": "{{sortBy}}",
-          "pagination.sort_order": "{{sortOrder}}",
-          "show_inactive": "{{showInactive}}"
-        },
-        "success": [
-          200
-        ]
-      },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "title": "List clusters",
-      "validationMode": "strict-generated"
-    },
     "healthcheck": {
-      "description": "Validate the CockroachDB Cloud API key with GET /api/v1/organization.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {},
-        "type": "object"
-      },
-      "kind": "action",
+      "timeoutMs": 5000,
       "maxInputBytes": 4096,
       "maxResponseBytes": 65536,
+      "kind": "action",
+      "sideEffect": "read",
       "outputSchema": {
-        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "required": [
-          "data"
-        ],
-        "type": "object"
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "title": "Healthcheck",
+      "description": "Validate the CockroachDB Cloud API key with GET /api/v1/organization.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
       },
       "request": {
         "method": "GET",
@@ -205,91 +98,1152 @@
         "success": [
           200
         ]
-      },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 5000,
-      "title": "Healthcheck",
-      "validationMode": "strict-generated"
+      }
     },
-    "regions.list": {
-      "description": "List cloud regions available for new CockroachDB Cloud clusters.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "limit": {
-            "minimum": 1,
-            "type": "integer"
-          },
-          "page": {
-            "minLength": 1,
-            "type": "string"
-          },
-          "provider": {
-            "enum": [
-              "GCP",
-              "AWS",
-              "AZURE"
-            ],
-            "type": "string"
-          },
-          "serverless": {
-            "type": "boolean"
-          },
-          "sortOrder": {
-            "enum": [
-              "ASC",
-              "DESC"
-            ],
-            "type": "string"
-          }
-        },
-        "type": "object"
-      },
-      "kind": "action",
+    "clusters.list": {
+      "timeoutMs": 15000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
       "outputSchema": {
-        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "title": "List clusters",
+      "description": "List CockroachDB Cloud clusters in the organization.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "showInactive": {
+            "type": "boolean"
+          },
+          "page": {
+            "type": "string",
+            "minLength": 1
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "sortOrder": {
+            "type": "string",
+            "enum": [
+              "ASC",
+              "DESC"
+            ]
+          },
+          "sortBy": {
+            "type": "string",
+            "enum": [
+              "NAME",
+              "CREATED_AT",
+              "DELETED_AT"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/clusters",
+        "query": {
+          "show_inactive": "{{showInactive}}",
+          "pagination.page": "{{page}}",
+          "pagination.limit": "{{limit}}",
+          "pagination.sort_order": "{{sortOrder}}",
+          "pagination.sort_by": "{{sortBy}}"
+        },
+        "success": [
+          200
+        ]
+      }
+    },
+    "clusters.get": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "outputSchema": {
+        "type": "object",
         "required": [
           "data"
         ],
-        "type": "object"
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "title": "Get cluster",
+      "description": "Get extended information about one CockroachDB Cloud cluster.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "clusterId": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "clusterId"
+        ],
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/clusters/{{clusterId}}",
+        "success": [
+          200
+        ]
+      }
+    },
+    "clusters.create": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Create cluster",
+      "description": "Create a CockroachDB Cloud cluster.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Cluster name."
+          },
+          "provider": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Cloud provider.",
+            "enum": [
+              "AWS",
+              "GCP",
+              "AZURE"
+            ]
+          },
+          "spec": {
+            "type": "object",
+            "description": "Cluster specification including serverless or dedicated fields."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "provider",
+          "spec"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/clusters",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "name": "{{name}}",
+          "provider": "{{provider}}",
+          "spec": "{{spec}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "clusters.update": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Update cluster",
+      "description": "Update a CockroachDB Cloud cluster.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "clusterId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Cluster ID."
+          },
+          "deleteProtection": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Delete protection setting.",
+            "enum": [
+              "ENABLED",
+              "DISABLED"
+            ]
+          },
+          "cockroachVersion": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Target CockroachDB version."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "clusterId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/api/v1/clusters/{{clusterId}}",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "delete_protection": "{{deleteProtection}}",
+          "cockroach_version": "{{cockroachVersion}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "clusters.delete": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "destructive",
+      "title": "Delete cluster",
+      "description": "Delete a CockroachDB Cloud cluster.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "clusterId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Cluster ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "clusterId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/api/v1/clusters/{{clusterId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "regions.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "title": "List available regions",
+      "description": "List cloud regions available for new CockroachDB Cloud clusters.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "provider": {
+            "type": "string",
+            "enum": [
+              "GCP",
+              "AWS",
+              "AZURE"
+            ]
+          },
+          "serverless": {
+            "type": "boolean"
+          },
+          "page": {
+            "type": "string",
+            "minLength": 1
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "sortOrder": {
+            "type": "string",
+            "enum": [
+              "ASC",
+              "DESC"
+            ]
+          }
+        },
+        "additionalProperties": false
       },
       "request": {
         "method": "GET",
         "path": "/api/v1/clusters/available-regions",
         "query": {
-          "pagination.limit": "{{limit}}",
-          "pagination.page": "{{page}}",
-          "pagination.sort_order": "{{sortOrder}}",
           "provider": "{{provider}}",
-          "serverless": "{{serverless}}"
+          "serverless": "{{serverless}}",
+          "pagination.page": "{{page}}",
+          "pagination.limit": "{{limit}}",
+          "pagination.sort_order": "{{sortOrder}}"
         },
         "success": [
           200
         ]
-      },
-      "responseFormat": "json",
-      "sideEffect": "read",
+      }
+    },
+    "sqlUsers.list": {
       "timeoutMs": 15000,
-      "title": "List available regions",
-      "validationMode": "strict-generated"
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List SQL users",
+      "description": "List SQL users on a CockroachDB Cloud cluster.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "clusterId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Cluster ID."
+          },
+          "page": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Pagination page token."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Page size."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "clusterId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/clusters/{{clusterId}}/sql-users",
+        "success": [
+          200
+        ],
+        "query": {
+          "pagination.page": "{{page}}",
+          "pagination.limit": "{{limit}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "sqlUsers.create": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Create SQL user",
+      "description": "Create a SQL user on a CockroachDB Cloud cluster.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "clusterId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Cluster ID."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "SQL username."
+          },
+          "password": {
+            "type": "string",
+            "minLength": 1,
+            "description": "SQL user password."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "clusterId",
+          "name",
+          "password"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/clusters/{{clusterId}}/sql-users",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "name": "{{name}}",
+          "password": "{{password}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "sqlUsers.delete": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "destructive",
+      "title": "Delete SQL user",
+      "description": "Delete a SQL user from a CockroachDB Cloud cluster.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "clusterId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Cluster ID."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "SQL username."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "clusterId",
+          "name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "null"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/api/v1/clusters/{{clusterId}}/sql-users/{{name}}",
+        "success": [
+          200,
+          204
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "sqlUsers.updatePassword": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Update SQL user password",
+      "description": "Set a SQL user password on a CockroachDB Cloud cluster.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "clusterId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Cluster ID."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "SQL username."
+          },
+          "password": {
+            "type": "string",
+            "minLength": 1,
+            "description": "New SQL user password."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "clusterId",
+          "name",
+          "password"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/api/v1/clusters/{{clusterId}}/sql-users/{{name}}/password",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "password": "{{password}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "allowlist.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List IP allowlist",
+      "description": "List networking allowlist entries for a CockroachDB Cloud cluster.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "clusterId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Cluster ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "clusterId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/clusters/{{clusterId}}/networking/allowlist",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "allowlist.add": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Add IP allowlist entry",
+      "description": "Add a CIDR entry to a CockroachDB Cloud cluster allowlist.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "clusterId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Cluster ID."
+          },
+          "cidrIp": {
+            "type": "string",
+            "minLength": 1,
+            "description": "CIDR IP address."
+          },
+          "cidrMask": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "CIDR mask.",
+            "maximum": 32
+          },
+          "sql": {
+            "type": "boolean",
+            "description": "Allow SQL connections."
+          },
+          "ui": {
+            "type": "boolean",
+            "description": "Allow DB Console access."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Allowlist entry name."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "clusterId",
+          "cidrIp",
+          "cidrMask",
+          "sql",
+          "ui"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/clusters/{{clusterId}}/networking/allowlist",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "cidr_ip": "{{cidrIp}}",
+          "cidr_mask": "{{cidrMask}}",
+          "sql": "{{sql}}",
+          "ui": "{{ui}}",
+          "name": "{{name}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "allowlist.delete": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "destructive",
+      "title": "Delete IP allowlist entry",
+      "description": "Delete a CIDR entry from a CockroachDB Cloud cluster allowlist.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "clusterId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Cluster ID."
+          },
+          "cidrIp": {
+            "type": "string",
+            "minLength": 1,
+            "description": "CIDR IP address."
+          },
+          "cidrMask": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "CIDR mask.",
+            "maximum": 32
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "clusterId",
+          "cidrIp",
+          "cidrMask"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "null"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/api/v1/clusters/{{clusterId}}/networking/allowlist/{{cidrIp}}/{{cidrMask}}",
+        "success": [
+          200,
+          204
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "databases.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List databases",
+      "description": "List databases on a CockroachDB Cloud cluster.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "clusterId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Cluster ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "clusterId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/clusters/{{clusterId}}/databases",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "databases.create": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Create database",
+      "description": "Create a database on a CockroachDB Cloud cluster.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "clusterId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Cluster ID."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Database name."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "clusterId",
+          "name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/clusters/{{clusterId}}/databases",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "name": "{{name}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "backups.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List backups",
+      "description": "List managed backups for a CockroachDB Cloud cluster.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "clusterId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Cluster ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "clusterId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/clusters/{{clusterId}}/backups",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "invoices.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List invoices",
+      "description": "List invoices billed to the CockroachDB Cloud organization.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/invoices",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "folders.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List folders",
+      "description": "List folders in the CockroachDB Cloud organization.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/folders",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "serviceAccounts.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List service accounts",
+      "description": "List service accounts in the CockroachDB Cloud organization.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/service-accounts",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "clusterVersions.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List cluster versions",
+      "description": "List available CockroachDB major versions for new clusters.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/cluster-versions",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "nodes.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List cluster nodes",
+      "description": "List nodes in a CockroachDB Cloud cluster.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "clusterId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Cluster ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "clusterId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/clusters/{{clusterId}}/nodes",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
     }
   },
   "provenance": {
     "source": {
-      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
-      "url": "https://github.com/oomol-lab/open-connector"
+      "url": "https://github.com/oomol-lab/open-connector",
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"
     }
   },
-  "runtime": "bun",
-  "version": "0.1.0",
-  "visibility": "public"
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
+    }
+  }
 }
