@@ -1313,6 +1313,7 @@ import {
 } from "../../connectors/microsoft-365/src/actions";
 
 import { createField as lapostaCreateField, createMember as lapostaCreateMember, updateMember as lapostaUpdateMember } from "../../connectors/laposta/src/actions";
+import { getMeetingAnalysis as avomaGetMeetingAnalysis } from "../../connectors/avoma/src/handlers";
 import { createConnectorHttpClient, type ConnectorHttpClient } from "./http";
 import { withDeclarativeConnectors } from "./declarative/loader";
 
@@ -1467,6 +1468,9 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
       "fields.create": lapostaCreateField,
       "members.create": lapostaCreateMember,
       "members.update": lapostaUpdateMember,
+    },
+    avoma: {
+      "meetings.analysis.get": avomaGetMeetingAnalysis,
     },
     notion: {
       "credentials.validate": validateNotionCredentials,
