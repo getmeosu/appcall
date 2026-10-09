@@ -1473,155 +1473,624 @@
     "public": true
   },
   {
-    "digest": "844a914b059ee4ec7d5af636aa80d897fa9820ddfb30484b401f43ccda2babeb",
-    "egress": true,
     "key": "abyssale",
+    "digest": "e3b23f6107d5f3bf4179552757072f41fcc298e54d49b006bc3ebd0d0ec1f311",
+    "public": true,
+    "egress": true,
     "operations": [
       {
-        "destructive": false,
-        "inputSchema": {
-          "additionalProperties": false,
-          "properties": {
-            "designId": {
-              "minLength": 1,
-              "type": "string"
-            }
-          },
-          "required": [
-            "designId"
-          ],
-          "type": "object"
-        },
-        "key": "designs.get",
+        "key": "auth.verify",
         "kind": "action",
-        "maxInputBytes": 65536,
+        "timeoutMs": 15000,
+        "maxInputBytes": 4096,
         "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        },
         "outputSchema": {
-          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "data"
+          ],
           "properties": {
             "data": {
               "type": "object"
             }
           },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "banners.export",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "ids": {
+              "type": "array",
+              "minItems": 1,
+              "description": "Generated asset IDs to include.",
+              "items": {
+                "type": "string"
+              }
+            },
+            "callbackUrl": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Webhook URL that receives NEW_EXPORT."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "ids"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
           "required": [
             "data"
           ],
-          "type": "object"
-        },
-        "read": true,
-        "timeoutMs": 15000,
-        "tool": true
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        }
       },
       {
+        "key": "banners.generate",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
         "destructive": false,
+        "tool": true,
         "inputSchema": {
+          "type": "object",
+          "properties": {
+            "designId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Design ID."
+            },
+            "templateFormatName": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Format name to generate."
+            },
+            "elements": {
+              "type": "object",
+              "description": "Layer overrides keyed by element name."
+            }
+          },
           "additionalProperties": false,
-          "properties": {},
-          "type": "object"
+          "required": [
+            "designId",
+            "templateFormatName"
+          ]
         },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "banners.generate_async",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "designId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Design ID."
+            },
+            "callbackUrl": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Webhook URL that receives NEW_BANNER_BATCH."
+            },
+            "templateFormatNames": {
+              "type": "array",
+              "minItems": 1,
+              "description": "Format names to generate.",
+              "items": {
+                "type": "string"
+              }
+            },
+            "elements": {
+              "type": "object",
+              "description": "Layer overrides keyed by element name."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "designId"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "banners.generate_pdf",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "designId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Design ID."
+            },
+            "callbackUrl": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Webhook URL that receives completion events."
+            },
+            "elements": {
+              "type": "object",
+              "description": "Layer overrides keyed by element name."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "designId"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "designs.formats.get",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "designId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Design ID."
+            },
+            "formatSpecifier": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Format name or ID."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "designId",
+            "formatSpecifier"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "designs.get",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "required": [
+            "designId"
+          ],
+          "properties": {
+            "designId": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
         "key": "designs.list",
         "kind": "action",
-        "maxInputBytes": 4096,
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
         "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "projectId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Limit designs to one project."
+            },
+            "type": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Design type filter.",
+              "enum": [
+                "static",
+                "animated",
+                "printer",
+                "printer_multipage"
+              ]
+            }
+          },
+          "additionalProperties": false
+        },
         "outputSchema": {
-          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "data"
+          ],
           "properties": {
             "data": {
               "type": "array"
             }
           },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "dynamic-images.create",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "designId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Design ID."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "designId"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
           "required": [
             "data"
           ],
-          "type": "object"
-        },
-        "read": true,
-        "timeoutMs": 15000,
-        "tool": true
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        }
       },
       {
-        "destructive": false,
-        "inputSchema": {
-          "additionalProperties": false,
-          "properties": {},
-          "type": "object"
-        },
         "key": "fonts.list",
         "kind": "action",
+        "timeoutMs": 15000,
         "maxInputBytes": 4096,
         "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        },
         "outputSchema": {
-          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "data"
+          ],
           "properties": {
             "data": {
               "type": "array"
             }
           },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "generation-requests.get",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "generationRequestId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Generation request ID."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "generationRequestId"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
           "required": [
             "data"
           ],
-          "type": "object"
-        },
-        "read": true,
-        "timeoutMs": 15000,
-        "tool": true
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        }
       },
       {
-        "destructive": false,
-        "inputSchema": {
-          "additionalProperties": false,
-          "properties": {},
-          "type": "object"
-        },
         "key": "healthcheck",
         "kind": "action",
+        "timeoutMs": 5000,
         "maxInputBytes": 4096,
         "maxResponseBytes": 65536,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        },
         "outputSchema": {
-          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "data"
+          ],
           "properties": {
             "data": {
               "type": "array"
             }
           },
-          "required": [
-            "data"
-          ],
-          "type": "object"
-        },
-        "read": true,
-        "timeoutMs": 5000,
-        "tool": true
+          "additionalProperties": false
+        }
       },
       {
-        "destructive": false,
-        "inputSchema": {
-          "additionalProperties": false,
-          "properties": {},
-          "type": "object"
-        },
         "key": "projects.list",
         "kind": "action",
+        "timeoutMs": 15000,
         "maxInputBytes": 4096,
         "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        },
         "outputSchema": {
-          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "data"
+          ],
           "properties": {
             "data": {
               "type": "array"
             }
           },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "signing-secret.get",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 4096,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
           "required": [
             "data"
           ],
-          "type": "object"
-        },
-        "read": true,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "signing-secret.revoke",
+        "kind": "action",
         "timeoutMs": 15000,
-        "tool": true
+        "maxInputBytes": 4096,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "signing-secret.rotate",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 4096,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "workspace-templates.use",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "companyTemplateId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Workspace template ID."
+            },
+            "projectId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Target project ID."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "companyTemplateId",
+            "projectId"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        }
       }
-    ],
-    "public": true
+    ]
   },
   {
     "key": "accredible-certificates",
@@ -39536,218 +40005,929 @@
     "public": true
   },
   {
-    "digest": "2fff7bfec4867ce8399e3566955655daa908070a045e654f8117d244ed7f7a65",
-    "egress": true,
     "key": "beeminder",
+    "digest": "6174c7056a1a3ccd1f7dc4539fbc890c3e5791c1fc7f62bedc56071fc830a0dc",
+    "public": true,
+    "egress": true,
     "operations": [
       {
-        "destructive": false,
-        "inputSchema": {
-          "additionalProperties": false,
-          "properties": {
-            "count": {
-              "minimum": 0,
-              "type": "integer"
-            },
-            "goalSlug": {
-              "minLength": 1,
-              "type": "string"
-            },
-            "page": {
-              "minimum": 1,
-              "type": "integer"
-            },
-            "per": {
-              "minimum": 1,
-              "type": "integer"
-            },
-            "username": {
-              "minLength": 1,
-              "type": "string"
-            }
-          },
-          "required": [
-            "username",
-            "goalSlug"
-          ],
-          "type": "object"
-        },
-        "key": "datapoints.list",
+        "key": "charges.create",
         "kind": "action",
+        "timeoutMs": 15000,
         "maxInputBytes": 65536,
         "maxResponseBytes": 5242880,
-        "outputSchema": {
-          "additionalProperties": false,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
           "properties": {
-            "data": {
-              "type": "array"
+            "userId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Username of the user being charged."
+            },
+            "amount": {
+              "type": "number",
+              "description": "Amount in US dollars. Minimum 1.00.",
+              "minimum": 1
+            },
+            "note": {
+              "type": "string",
+              "description": "Explanation of the charge."
+            },
+            "dryrun": {
+              "type": "boolean",
+              "description": "Return the charge JSON without creating it."
             }
           },
+          "additionalProperties": false,
+          "required": [
+            "userId",
+            "amount"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
           "required": [
             "data"
           ],
-          "type": "object"
-        },
-        "read": true,
-        "timeoutMs": 15000,
-        "tool": true
-      },
-      {
-        "destructive": false,
-        "inputSchema": {
-          "additionalProperties": false,
-          "properties": {
-            "datapoints": {
-              "type": "boolean"
-            },
-            "goalSlug": {
-              "minLength": 1,
-              "type": "string"
-            },
-            "username": {
-              "minLength": 1,
-              "type": "string"
-            }
-          },
-          "required": [
-            "username",
-            "goalSlug"
-          ],
-          "type": "object"
-        },
-        "key": "goals.get",
-        "kind": "action",
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "outputSchema": {
-          "additionalProperties": false,
           "properties": {
             "data": {
               "type": "object"
             }
           },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "datapoints.create",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "username": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Beeminder username."
+            },
+            "goalSlug": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Goal slug."
+            },
+            "value": {
+              "type": "number",
+              "description": "Datapoint value."
+            },
+            "timestamp": {
+              "type": "integer",
+              "description": "Unix timestamp in seconds.",
+              "minimum": 0
+            },
+            "daystamp": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Daystamp in YYYYMMDD form."
+            },
+            "comment": {
+              "type": "string",
+              "description": "Optional comment."
+            },
+            "requestid": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Idempotency key for retries."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "username",
+            "goalSlug",
+            "value"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
           "required": [
             "data"
           ],
-          "type": "object"
-        },
-        "read": true,
-        "timeoutMs": 15000,
-        "tool": true
-      },
-      {
-        "destructive": false,
-        "inputSchema": {
-          "additionalProperties": false,
           "properties": {
-            "username": {
-              "minLength": 1,
-              "type": "string"
+            "data": {
+              "type": "object"
             }
           },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "datapoints.create_all",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "username": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Beeminder username."
+            },
+            "goalSlug": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Goal slug."
+            },
+            "datapoints": {
+              "type": "array",
+              "minItems": 1,
+              "description": "Datapoints to create.",
+              "items": {
+                "type": "object"
+              }
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "username",
+            "goalSlug",
+            "datapoints"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "array"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "datapoints.delete",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": true,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "username": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Beeminder username."
+            },
+            "goalSlug": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Goal slug."
+            },
+            "datapointId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Datapoint ID."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "username",
+            "goalSlug",
+            "datapointId"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "datapoints.list",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "required": [
+            "username",
+            "goalSlug"
+          ],
+          "properties": {
+            "username": {
+              "type": "string",
+              "minLength": 1
+            },
+            "goalSlug": {
+              "type": "string",
+              "minLength": 1
+            },
+            "count": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "page": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "per": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "array"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "datapoints.update",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "username": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Beeminder username."
+            },
+            "goalSlug": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Goal slug."
+            },
+            "datapointId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Datapoint ID."
+            },
+            "value": {
+              "type": "number",
+              "description": "Datapoint value."
+            },
+            "comment": {
+              "type": "string",
+              "description": "Optional comment."
+            },
+            "timestamp": {
+              "type": "integer",
+              "description": "Unix timestamp in seconds.",
+              "minimum": 0
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "username",
+            "goalSlug",
+            "datapointId"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "goals.archived.list",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "username": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Beeminder username."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "username"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "array"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "goals.cancel_stepdown",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "username": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Beeminder username."
+            },
+            "goalSlug": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Goal slug."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "username",
+            "goalSlug"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "goals.create",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "username": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Beeminder username."
+            },
+            "slug": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Goal slug used in the URL."
+            },
+            "title": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Display title."
+            },
+            "goalType": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Goal type such as hustler, fatloser, or custom."
+            },
+            "gunits": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Units plotted on the y-axis."
+            },
+            "goaldate": {
+              "type": "integer",
+              "description": "Unix timestamp of the goal date.",
+              "minimum": 0
+            },
+            "goalval": {
+              "type": "number",
+              "description": "Target value."
+            },
+            "rate": {
+              "type": "number",
+              "description": "Bright red line rate."
+            },
+            "initval": {
+              "type": "number",
+              "description": "Initial value for today."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "username",
+            "slug",
+            "title",
+            "goalType",
+            "gunits"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "goals.get",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "required": [
+            "username",
+            "goalSlug"
+          ],
+          "properties": {
+            "username": {
+              "type": "string",
+              "minLength": 1
+            },
+            "goalSlug": {
+              "type": "string",
+              "minLength": 1
+            },
+            "datapoints": {
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "goals.list",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
           "required": [
             "username"
           ],
-          "type": "object"
+          "properties": {
+            "username": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false
         },
-        "key": "goals.list",
-        "kind": "action",
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
         "outputSchema": {
-          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "data"
+          ],
           "properties": {
             "data": {
               "type": "array"
             }
           },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "goals.ratchet",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "username": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Beeminder username."
+            },
+            "goalSlug": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Goal slug."
+            },
+            "value": {
+              "type": "number",
+              "description": "Ratchet value."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "username",
+            "goalSlug",
+            "value"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
           "required": [
             "data"
           ],
-          "type": "object"
-        },
-        "read": true,
-        "timeoutMs": 15000,
-        "tool": true
-      },
-      {
-        "destructive": false,
-        "inputSchema": {
-          "additionalProperties": false,
-          "properties": {},
-          "type": "object"
-        },
-        "key": "healthcheck",
-        "kind": "action",
-        "maxInputBytes": 4096,
-        "maxResponseBytes": 65536,
-        "outputSchema": {
-          "additionalProperties": false,
           "properties": {
             "data": {
               "type": "object"
             }
           },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "goals.refresh",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "username": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Beeminder username."
+            },
+            "goalSlug": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Goal slug."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "username",
+            "goalSlug"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
           "required": [
             "data"
           ],
-          "type": "object"
-        },
-        "read": true,
-        "timeoutMs": 10000,
-        "tool": true
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        }
       },
       {
+        "key": "goals.shortcircuit",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
         "destructive": false,
+        "tool": true,
         "inputSchema": {
-          "additionalProperties": false,
+          "type": "object",
           "properties": {
+            "username": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Beeminder username."
+            },
+            "goalSlug": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Goal slug."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "username",
+            "goalSlug"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "goals.stepdown",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "username": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Beeminder username."
+            },
+            "goalSlug": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Goal slug."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "username",
+            "goalSlug"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "goals.uncle",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "username": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Beeminder username."
+            },
+            "goalSlug": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Goal slug."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "username",
+            "goalSlug"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "goals.update",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "username": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Beeminder username."
+            },
+            "goalSlug": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Goal slug."
+            },
+            "title": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Display title."
+            },
+            "yaxis": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Y-axis label."
+            },
+            "secret": {
+              "type": "boolean",
+              "description": "Hide the goal from public view."
+            },
+            "datapublic": {
+              "type": "boolean",
+              "description": "Publish datapoints."
+            },
+            "callbackUrl": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Datapoint webhook callback URL."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "username",
+            "goalSlug"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "healthcheck",
+        "kind": "action",
+        "timeoutMs": 10000,
+        "maxInputBytes": 4096,
+        "maxResponseBytes": 65536,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "users.get",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "required": [
+            "username"
+          ],
+          "properties": {
+            "username": {
+              "type": "string",
+              "minLength": 1
+            },
             "associations": {
               "type": "boolean"
             },
-            "datapointsCount": {
-              "minimum": 1,
-              "type": "integer"
-            },
             "diffSince": {
-              "minimum": 0,
-              "type": "integer"
+              "type": "integer",
+              "minimum": 0
             },
             "skinny": {
               "type": "boolean"
             },
-            "username": {
-              "minLength": 1,
-              "type": "string"
+            "datapointsCount": {
+              "type": "integer",
+              "minimum": 1
             }
           },
-          "required": [
-            "username"
-          ],
-          "type": "object"
+          "additionalProperties": false
         },
-        "key": "users.get",
-        "kind": "action",
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
         "outputSchema": {
-          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "data"
+          ],
           "properties": {
             "data": {
               "type": "object"
             }
           },
-          "required": [
-            "data"
-          ],
-          "type": "object"
-        },
-        "read": true,
-        "timeoutMs": 15000,
-        "tool": true
+          "additionalProperties": false
+        }
       }
-    ],
-    "public": true
+    ]
   },
   {
     "digest": "1e66072210822ceefab3f6ee51d0d6bff07f1f2f3da09cce6cce575e6c7218bc",
@@ -370928,185 +372108,922 @@
     "public": true
   },
   {
-    "digest": "0cc2340ed6fda8096712d6baa890bdb0dd72b1f3cdd994484ab39c63e282ec68",
-    "egress": true,
     "key": "process-street",
+    "digest": "4028ff538b2565930172524a385b31134c227254d96525ba451e0da24b39ff5a",
+    "public": true,
+    "egress": true,
     "operations": [
       {
-        "destructive": false,
-        "inputSchema": {
-          "additionalProperties": false,
-          "properties": {},
-          "type": "object"
-        },
-        "key": "healthcheck",
+        "key": "comments.create",
         "kind": "action",
-        "maxInputBytes": 4096,
-        "maxResponseBytes": 65536,
-        "outputSchema": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "workflowRunId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Workflow run ID."
+            },
+            "taskId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Task ID."
+            },
+            "text": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Comment text."
+            }
+          },
           "additionalProperties": false,
+          "required": [
+            "workflowRunId",
+            "taskId",
+            "text"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
           "properties": {
             "data": {
               "type": "object"
             }
           },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "comments.list",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "workflowId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Filter by workflow ID."
+            },
+            "workflowRunId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Filter by workflow run ID."
+            },
+            "taskId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Filter by task ID."
+            },
+            "cursor": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Opaque pagination cursor."
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
           "required": [
             "data"
           ],
-          "type": "object"
-        },
-        "read": true,
-        "timeoutMs": 5000,
-        "tool": true
-      },
-      {
-        "destructive": false,
-        "inputSchema": {
-          "additionalProperties": false,
           "properties": {
-            "workflowRunId": {
-              "minLength": 1,
-              "type": "string"
+            "data": {
+              "type": "object"
             }
           },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "folders.list",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "cursor": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Opaque pagination cursor."
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "healthcheck",
+        "kind": "action",
+        "timeoutMs": 5000,
+        "maxInputBytes": 4096,
+        "maxResponseBytes": 65536,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "tasks.get",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "workflowRunId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Workflow run ID."
+            },
+            "taskId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Task ID."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "workflowRunId",
+            "taskId"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "tasks.list",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "workflowRunId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Workflow run ID."
+            },
+            "cursor": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Opaque pagination cursor."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "workflowRunId"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "tasks.update",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "workflowRunId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Workflow run ID."
+            },
+            "taskId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Task ID."
+            },
+            "status": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Task status.",
+              "enum": [
+                "NotCompleted",
+                "Completed"
+              ]
+            },
+            "dueDate": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Due date as an ISO-8601 timestamp."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "workflowRunId",
+            "taskId",
+            "status"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "users.list",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "cursor": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Opaque pagination cursor."
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "webhooks.create",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "url": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Destination URL."
+            },
+            "triggers": {
+              "type": "array",
+              "minItems": 1,
+              "description": "Webhook trigger names.",
+              "items": {
+                "type": "string"
+              }
+            },
+            "workflowId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Limit the subscription to one workflow."
+            },
+            "taskId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Limit the subscription to one task."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "url"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "webhooks.list",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "cursor": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Opaque pagination cursor."
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "workflow-runs.create",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "workflowId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Workflow ID."
+            },
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Run name."
+            },
+            "dueDate": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Due date as an ISO-8601 timestamp."
+            },
+            "shared": {
+              "type": "boolean",
+              "description": "Whether the run is publicly shared."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "workflowId"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "workflow-runs.delete",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": true,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "workflowRunId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Workflow run ID."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "workflowRunId"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "workflow-runs.get",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
           "required": [
             "workflowRunId"
           ],
-          "type": "object"
+          "properties": {
+            "workflowRunId": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false
         },
-        "key": "workflow-runs.get",
-        "kind": "action",
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
         "outputSchema": {
-          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "data"
+          ],
           "properties": {
             "data": {
               "type": "object"
             }
           },
-          "required": [
-            "data"
-          ],
-          "type": "object"
-        },
-        "read": true,
-        "timeoutMs": 15000,
-        "tool": true
+          "additionalProperties": false
+        }
       },
       {
-        "destructive": false,
-        "inputSchema": {
-          "additionalProperties": false,
-          "properties": {
-            "cursor": {
-              "minLength": 1,
-              "type": "string"
-            },
-            "status": {
-              "minLength": 1,
-              "type": "string"
-            },
-            "workflowId": {
-              "minLength": 1,
-              "type": "string"
-            }
-          },
-          "type": "object"
-        },
         "key": "workflow-runs.list",
         "kind": "action",
+        "timeoutMs": 15000,
         "maxInputBytes": 65536,
         "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "workflowId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "status": {
+              "type": "string",
+              "minLength": 1
+            },
+            "cursor": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false
+        },
         "outputSchema": {
-          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "data"
+          ],
           "properties": {
             "data": {
               "type": "object"
             }
           },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "workflow-runs.update",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "workflowRunId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Workflow run ID."
+            },
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Run name."
+            },
+            "status": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Run status.",
+              "enum": [
+                "Active",
+                "Completed",
+                "Archived",
+                "Deleted"
+              ]
+            },
+            "shared": {
+              "type": "boolean",
+              "description": "Whether the run is publicly shared."
+            },
+            "dueDate": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Due date as an ISO-8601 timestamp."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "workflowRunId",
+            "name",
+            "status",
+            "shared"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
           "required": [
             "data"
           ],
-          "type": "object"
-        },
-        "read": true,
-        "timeoutMs": 15000,
-        "tool": true
-      },
-      {
-        "destructive": false,
-        "inputSchema": {
-          "additionalProperties": false,
           "properties": {
-            "workflowId": {
-              "minLength": 1,
-              "type": "string"
+            "data": {
+              "type": "object"
             }
           },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "workflows.create",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Workflow name."
+            },
+            "folderId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Folder ID."
+            },
+            "description": {
+              "type": "string",
+              "description": "Optional description."
+            },
+            "shareLevel": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Workflow share level.",
+              "enum": [
+                "None",
+                "Overview",
+                "View",
+                "Run"
+              ]
+            },
+            "runLinkShareLevel": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Run-link share level.",
+              "enum": [
+                "Organization",
+                "Public"
+              ]
+            },
+            "allowComments": {
+              "type": "boolean",
+              "description": "Allow comments on runs."
+            },
+            "sharedRunsByDefault": {
+              "type": "boolean",
+              "description": "Share new runs by default."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "name",
+            "folderId",
+            "shareLevel",
+            "runLinkShareLevel",
+            "allowComments",
+            "sharedRunsByDefault"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "workflows.delete",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": true,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "workflowId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Workflow ID."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "workflowId"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "workflows.get",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
           "required": [
             "workflowId"
           ],
-          "type": "object"
+          "properties": {
+            "workflowId": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false
         },
-        "key": "workflows.get",
-        "kind": "action",
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
         "outputSchema": {
-          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "data"
+          ],
           "properties": {
             "data": {
               "type": "object"
             }
           },
-          "required": [
-            "data"
-          ],
-          "type": "object"
-        },
-        "read": true,
-        "timeoutMs": 15000,
-        "tool": true
+          "additionalProperties": false
+        }
       },
       {
-        "destructive": false,
-        "inputSchema": {
-          "additionalProperties": false,
-          "properties": {
-            "cursor": {
-              "minLength": 1,
-              "type": "string"
-            },
-            "name": {
-              "minLength": 1,
-              "type": "string"
-            }
-          },
-          "type": "object"
-        },
         "key": "workflows.list",
         "kind": "action",
+        "timeoutMs": 15000,
         "maxInputBytes": 65536,
         "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "minLength": 1
+            },
+            "cursor": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false
+        },
         "outputSchema": {
-          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "data"
+          ],
           "properties": {
             "data": {
               "type": "object"
             }
           },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "workflows.update",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "workflowId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Workflow ID."
+            },
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Workflow name."
+            },
+            "folderId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Folder ID."
+            },
+            "description": {
+              "type": "string",
+              "description": "Optional description."
+            },
+            "shareLevel": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Workflow share level.",
+              "enum": [
+                "None",
+                "Overview",
+                "View",
+                "Run"
+              ]
+            },
+            "runLinkShareLevel": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Run-link share level.",
+              "enum": [
+                "Organization",
+                "Public"
+              ]
+            },
+            "allowComments": {
+              "type": "boolean",
+              "description": "Allow comments on runs."
+            },
+            "sharedRunsByDefault": {
+              "type": "boolean",
+              "description": "Share new runs by default."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "workflowId",
+            "name",
+            "folderId",
+            "shareLevel",
+            "runLinkShareLevel",
+            "allowComments",
+            "sharedRunsByDefault"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
           "required": [
             "data"
           ],
-          "type": "object"
-        },
-        "read": true,
-        "timeoutMs": 15000,
-        "tool": true
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        }
       }
-    ],
-    "public": true
+    ]
   },
   {
     "key": "productboard",
