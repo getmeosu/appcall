@@ -1297,6 +1297,7 @@ import { listContacts as resendListContacts } from "../../connectors/resend/src/
 import googlemeetManifest from "../../connectors/googlemeet/manifest.json";
 import { healthcheck as googlemeetHealthcheck } from "../../connectors/googlemeet/src/healthcheck";
 import { createMeeting as gmeetCreateMeeting, listMeetings as gmeetListMeetings, getMeeting as gmeetGetMeeting, updateMeeting as gmeetUpdateMeeting, deleteMeeting as gmeetDeleteMeeting } from "../../connectors/googlemeet/src/actions";
+import { statuscakeFormHandlers } from "../../connectors/statuscake/src/actions";
 
 // Google Meet operations (extend the existing google-workspace connector).
 import {
@@ -2876,6 +2877,7 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
       "meetings.update": gmeetUpdateMeeting,
       "meetings.delete": gmeetDeleteMeeting,
     },
+    statuscake: statuscakeFormHandlers,
   },
   syncs: {
     notion: {
