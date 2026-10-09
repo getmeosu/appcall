@@ -1305,6 +1305,10 @@ import {
   createMeetSpace as gwCreateMeetSpace, getMeetSpace as gwGetMeetSpace,
   listConferenceRecords as gwListConferenceRecords,
 } from "../../connectors/google-workspace/src/meet";
+import {
+  getAnalystRatings as nasdaqGetAnalystRatings,
+  listDatabasesByDate as nasdaqListDatabasesByDate,
+} from "../../connectors/nasdaq/src/actions";
 
 // Microsoft Teams meeting operations (extend the existing microsoft-365 connector).
 import {
@@ -2872,6 +2876,10 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
       "meetings.get": gmeetGetMeeting,
       "meetings.update": gmeetUpdateMeeting,
       "meetings.delete": gmeetDeleteMeeting,
+    },
+    nasdaq: {
+      "analystRatings.get": nasdaqGetAnalystRatings,
+      "databases.listByDate": nasdaqListDatabasesByDate,
     },
     statuscake: statuscakeFormHandlers,
   },
