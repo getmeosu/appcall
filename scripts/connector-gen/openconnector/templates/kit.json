@@ -1,13 +1,1342 @@
 {
-  "key":"kit","name":"Kit","version":"0.1.0","runtime":"bun","visibility":"public","categories":["email-marketing","productivity"],
-  "auth":{"type":"api_key","scopes":[],"setup":{"mode":"api_key","fields":[{"key":"apiKey","label":"Kit API key","required":true,"secret":true}]}},
-  "network":{"allowedHosts":["api.kit.com"]},"models":["account","user","subscriber","form","tag"],
-  "http":{"baseUrl":"https://api.kit.com/v4","auth":{"field":"apiKey","in":"header","name":"X-Kit-Api-Key","value":"{{apiKey}}"},"errors":{"rateLimitStatuses":[429],"retryAfterHeader":"Retry-After","defaultRetryAfterSeconds":30,"messagePaths":["message","error"]}},
-  "operations":{
-    "healthcheck":{"kind":"action","sideEffect":"read","timeoutMs":5000,"maxInputBytes":4096,"maxResponseBytes":65536,"title":"Healthcheck","description":"Validate the Kit API key with the current account endpoint.","inputSchema":{"type":"object","properties":{},"additionalProperties":false},"outputSchema":{"type":"object","required":["account"],"properties":{"account":{"type":"object"},"user":{"type":"object"}}},"request":{"method":"GET","path":"/account","success":[200],"result":{"account":"{{response.account}}","user":"{{response.user}}"}},"enforceOutputSchema":true},
-    "subscribers.list":{"kind":"action","sideEffect":"read","timeoutMs":15000,"maxInputBytes":65536,"maxResponseBytes":5242880,"title":"List Subscribers","description":"List Kit subscribers with bounded cursor pagination and filters.","inputSchema":{"type":"object","properties":{"after":{"type":"string","minLength":1},"before":{"type":"string","minLength":1},"per_page":{"type":"integer","minimum":1,"maximum":1000},"status":{"type":"string","enum":["active","inactive","bounced","complained","cancelled","all"]},"email_address":{"type":"string","minLength":1},"include":{"type":"array","items":{"type":"string"}}},"additionalProperties":false},"outputSchema":{"type":"object","required":["subscribers","pagination"],"properties":{"subscribers":{"type":"array","items":{"type":"object"}},"pagination":{"type":"object"}}},"request":{"method":"GET","path":"/subscribers","query":{"after":"{{after}}","before":"{{before}}","per_page":"{{per_page}}","status":"{{status}}","email_address":"{{email_address}}","include":"{{include}}"},"success":[200],"result":{"subscribers":"{{response.subscribers}}","pagination":"{{response.pagination}}"}},"enforceOutputSchema":true},
-    "subscribers.get":{"kind":"action","sideEffect":"read","timeoutMs":10000,"maxInputBytes":4096,"maxResponseBytes":1048576,"title":"Get Subscriber","description":"Get a Kit subscriber by numeric ID.","inputSchema":{"type":"object","properties":{"id":{"type":"integer","minimum":1}},"required":["id"],"additionalProperties":false},"outputSchema":{"type":"object","required":["subscriber"],"properties":{"subscriber":{"type":"object"}}},"request":{"method":"GET","path":"/subscribers/{{id}}","success":[200],"result":{"subscriber":"{{response.subscriber}}"}},"enforceOutputSchema":true},
-    "forms.list":{"kind":"action","sideEffect":"read","timeoutMs":15000,"maxInputBytes":4096,"maxResponseBytes":1048576,"title":"List Forms","description":"List Kit forms with cursor pagination.","inputSchema":{"type":"object","properties":{"after":{"type":"string","minLength":1},"before":{"type":"string","minLength":1},"per_page":{"type":"integer","minimum":1,"maximum":1000},"status":{"type":"string","enum":["active","archived","trashed","all"]},"type":{"type":"string","enum":["embed","hosted"]}},"additionalProperties":false},"outputSchema":{"type":"object","required":["forms","pagination"],"properties":{"forms":{"type":"array","items":{"type":"object"}},"pagination":{"type":"object"}}},"request":{"method":"GET","path":"/forms","query":{"after":"{{after}}","before":"{{before}}","per_page":"{{per_page}}","status":"{{status}}","type":"{{type}}"},"success":[200],"result":{"forms":"{{response.forms}}","pagination":"{{response.pagination}}"}},"enforceOutputSchema":true}
+  "key": "kit",
+  "name": "Kit",
+  "version": "0.2.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "email-marketing",
+    "productivity"
+  ],
+  "auth": {
+    "type": "api_key",
+    "scopes": [],
+    "setup": {
+      "mode": "api_key",
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "Kit API key",
+          "required": true,
+          "secret": true
+        }
+      ]
+    }
   },
-  "provenance":{"source":{"url":"https://github.com/oomol-lab/open-connector","revision":"33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"}},"evidence":{"fixture":{"status":"supplied"},"live":{"status":"unverified"}}
+  "network": {
+    "allowedHosts": [
+      "api.kit.com"
+    ]
+  },
+  "models": [
+    "account",
+    "user",
+    "subscriber",
+    "form",
+    "tag",
+    "sequence",
+    "broadcast",
+    "purchase",
+    "custom_field"
+  ],
+  "http": {
+    "baseUrl": "https://api.kit.com/v4",
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "X-Kit-Api-Key",
+      "value": "{{apiKey}}"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "Retry-After",
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "message",
+        "error"
+      ]
+    }
+  },
+  "operations": {
+    "healthcheck": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 5000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "title": "Healthcheck",
+      "description": "Validate the Kit API key with the current account endpoint.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "account"
+        ],
+        "properties": {
+          "account": {
+            "type": "object"
+          },
+          "user": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/account",
+        "success": [
+          200
+        ],
+        "result": {
+          "account": "{{response.account}}",
+          "user": "{{response.user}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "subscribers.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List Subscribers",
+      "description": "List Kit subscribers with bounded cursor pagination and filters.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "after": {
+            "type": "string",
+            "minLength": 1
+          },
+          "before": {
+            "type": "string",
+            "minLength": 1
+          },
+          "per_page": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "inactive",
+              "bounced",
+              "complained",
+              "cancelled",
+              "all"
+            ]
+          },
+          "email_address": {
+            "type": "string",
+            "minLength": 1
+          },
+          "include": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "subscribers",
+          "pagination"
+        ],
+        "properties": {
+          "subscribers": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "pagination": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/subscribers",
+        "query": {
+          "after": "{{after}}",
+          "before": "{{before}}",
+          "per_page": "{{per_page}}",
+          "status": "{{status}}",
+          "email_address": "{{email_address}}",
+          "include": "{{include}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "subscribers": "{{response.subscribers}}",
+          "pagination": "{{response.pagination}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "subscribers.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "title": "Get Subscriber",
+      "description": "Get a Kit subscriber by numeric ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "subscriber"
+        ],
+        "properties": {
+          "subscriber": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/subscribers/{{id}}",
+        "success": [
+          200
+        ],
+        "result": {
+          "subscriber": "{{response.subscriber}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "forms.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "title": "List Forms",
+      "description": "List Kit forms with cursor pagination.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "after": {
+            "type": "string",
+            "minLength": 1
+          },
+          "before": {
+            "type": "string",
+            "minLength": 1
+          },
+          "per_page": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "archived",
+              "trashed",
+              "all"
+            ]
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "embed",
+              "hosted"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "forms",
+          "pagination"
+        ],
+        "properties": {
+          "forms": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "pagination": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/forms",
+        "query": {
+          "after": "{{after}}",
+          "before": "{{before}}",
+          "per_page": "{{per_page}}",
+          "status": "{{status}}",
+          "type": "{{type}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "forms": "{{response.forms}}",
+          "pagination": "{{response.pagination}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "subscribers.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create Subscriber",
+      "description": "Create or upsert a Kit subscriber by email address.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "email_address": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Subscriber email address."
+          },
+          "first_name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Subscriber first name."
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "active",
+              "inactive",
+              "bounced",
+              "complained",
+              "cancelled"
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "email_address"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "subscriber"
+        ],
+        "properties": {
+          "subscriber": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/subscribers",
+        "success": [
+          200,
+          201
+        ],
+        "body": {
+          "email_address": "{{email_address}}",
+          "first_name": "{{first_name}}",
+          "state": "{{state}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "result": {
+          "subscriber": "{{response.subscriber}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "subscribers.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Update Subscriber",
+      "description": "Update a Kit subscriber by numeric ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Numeric Kit resource ID."
+          },
+          "email_address": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Subscriber email address."
+          },
+          "first_name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Subscriber first name."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "subscriber"
+        ],
+        "properties": {
+          "subscriber": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/subscribers/{{id}}",
+        "success": [
+          200
+        ],
+        "body": {
+          "email_address": "{{email_address}}",
+          "first_name": "{{first_name}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "result": {
+          "subscriber": "{{response.subscriber}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "subscribers.unsubscribe": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Unsubscribe Subscriber",
+      "description": "Unsubscribe a Kit subscriber from all future emails. Returns 204 No Content.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Numeric Kit resource ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "success"
+        ],
+        "properties": {
+          "success": {
+            "type": "boolean"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/subscribers/{{id}}/unsubscribe",
+        "success": [
+          204
+        ],
+        "result": {
+          "success": true
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "forms.subscribe": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Add Subscriber to Form",
+      "description": "Add an existing Kit subscriber to a form by email address.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "form_id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Form ID."
+          },
+          "email_address": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Subscriber email address."
+          },
+          "first_name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Subscriber first name."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "form_id",
+          "email_address"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "subscriber"
+        ],
+        "properties": {
+          "subscriber": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/forms/{{form_id}}/subscribers",
+        "success": [
+          200,
+          201
+        ],
+        "body": {
+          "email_address": "{{email_address}}",
+          "first_name": "{{first_name}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "result": {
+          "subscriber": "{{response.subscriber}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "forms.subscribers.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List Form Subscribers",
+      "description": "List Kit subscribers for a form with cursor pagination.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "form_id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Form ID."
+          },
+          "after": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Cursor for the next page."
+          },
+          "before": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Cursor for the previous page."
+          },
+          "per_page": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000,
+            "description": "Page size."
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "inactive",
+              "bounced",
+              "complained",
+              "cancelled",
+              "all"
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "form_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "subscribers",
+          "pagination"
+        ],
+        "properties": {
+          "subscribers": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "pagination": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/forms/{{form_id}}/subscribers",
+        "success": [
+          200
+        ],
+        "query": {
+          "after": "{{after}}",
+          "before": "{{before}}",
+          "per_page": "{{per_page}}",
+          "status": "{{status}}"
+        },
+        "result": {
+          "subscribers": "{{response.subscribers}}",
+          "pagination": "{{response.pagination}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "tags.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List Tags",
+      "description": "List Kit tags with cursor pagination.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "after": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Cursor for the next page."
+          },
+          "before": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Cursor for the previous page."
+          },
+          "per_page": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000,
+            "description": "Page size."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "tags",
+          "pagination"
+        ],
+        "properties": {
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "pagination": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/tags",
+        "success": [
+          200
+        ],
+        "query": {
+          "after": "{{after}}",
+          "before": "{{before}}",
+          "per_page": "{{per_page}}"
+        },
+        "result": {
+          "tags": "{{response.tags}}",
+          "pagination": "{{response.pagination}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "tags.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create Tag",
+      "description": "Create a Kit tag. Creation is idempotent on name.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Tag name."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "tag"
+        ],
+        "properties": {
+          "tag": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/tags",
+        "success": [
+          200,
+          201
+        ],
+        "body": {
+          "name": "{{name}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "result": {
+          "tag": "{{response.tag}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "tags.subscribers.add": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Tag Subscriber",
+      "description": "Add a tag to a Kit subscriber by email address.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "tag_id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Tag ID."
+          },
+          "email_address": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Subscriber email address."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "tag_id",
+          "email_address"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "subscriber"
+        ],
+        "properties": {
+          "subscriber": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/tags/{{tag_id}}/subscribers",
+        "success": [
+          200,
+          201
+        ],
+        "body": {
+          "email_address": "{{email_address}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "result": {
+          "subscriber": "{{response.subscriber}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "tags.subscribers.remove": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Remove Tag From Subscriber",
+      "description": "Remove a tag from a Kit subscriber by numeric IDs. Returns 204 No Content.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "tag_id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Tag ID."
+          },
+          "id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Numeric Kit resource ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "tag_id",
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "success"
+        ],
+        "properties": {
+          "success": {
+            "type": "boolean"
+          }
+        }
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/tags/{{tag_id}}/subscribers/{{id}}",
+        "success": [
+          204
+        ],
+        "result": {
+          "success": true
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "sequences.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List Sequences",
+      "description": "List Kit sequences with cursor pagination.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "after": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Cursor for the next page."
+          },
+          "before": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Cursor for the previous page."
+          },
+          "per_page": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000,
+            "description": "Page size."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "sequences",
+          "pagination"
+        ],
+        "properties": {
+          "sequences": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "pagination": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/sequences",
+        "success": [
+          200
+        ],
+        "query": {
+          "after": "{{after}}",
+          "before": "{{before}}",
+          "per_page": "{{per_page}}"
+        },
+        "result": {
+          "sequences": "{{response.sequences}}",
+          "pagination": "{{response.pagination}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "sequences.subscribe": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Add Subscriber to Sequence",
+      "description": "Add an existing Kit subscriber to a sequence by email address.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "sequence_id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Sequence ID."
+          },
+          "email_address": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Subscriber email address."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "sequence_id",
+          "email_address"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "subscriber"
+        ],
+        "properties": {
+          "subscriber": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/sequences/{{sequence_id}}/subscribers",
+        "success": [
+          200,
+          201
+        ],
+        "body": {
+          "email_address": "{{email_address}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "result": {
+          "subscriber": "{{response.subscriber}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "custom_fields.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List Custom Fields",
+      "description": "List Kit custom fields with cursor pagination.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "after": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Cursor for the next page."
+          },
+          "before": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Cursor for the previous page."
+          },
+          "per_page": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000,
+            "description": "Page size."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "custom_fields",
+          "pagination"
+        ],
+        "properties": {
+          "custom_fields": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "pagination": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/custom_fields",
+        "success": [
+          200
+        ],
+        "query": {
+          "after": "{{after}}",
+          "before": "{{before}}",
+          "per_page": "{{per_page}}"
+        },
+        "result": {
+          "custom_fields": "{{response.custom_fields}}",
+          "pagination": "{{response.pagination}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "custom_fields.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create Custom Field",
+      "description": "Create a Kit custom field from a unique label.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "label": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Custom field label."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "label"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "custom_field"
+        ],
+        "properties": {
+          "custom_field": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/custom_fields",
+        "success": [
+          200,
+          201
+        ],
+        "body": {
+          "label": "{{label}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "result": {
+          "custom_field": "{{response.custom_field}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "broadcasts.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List Broadcasts",
+      "description": "List Kit broadcasts with cursor pagination.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "after": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Cursor for the next page."
+          },
+          "before": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Cursor for the previous page."
+          },
+          "per_page": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000,
+            "description": "Page size."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "broadcasts",
+          "pagination"
+        ],
+        "properties": {
+          "broadcasts": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "pagination": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/broadcasts",
+        "success": [
+          200
+        ],
+        "query": {
+          "after": "{{after}}",
+          "before": "{{before}}",
+          "per_page": "{{per_page}}"
+        },
+        "result": {
+          "broadcasts": "{{response.broadcasts}}",
+          "pagination": "{{response.pagination}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "broadcasts.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get Broadcast",
+      "description": "Get a Kit broadcast by numeric ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Numeric Kit resource ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "broadcast"
+        ],
+        "properties": {
+          "broadcast": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/broadcasts/{{id}}",
+        "success": [
+          200
+        ],
+        "result": {
+          "broadcast": "{{response.broadcast}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "purchases.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List Purchases",
+      "description": "List Kit purchases with cursor pagination.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "after": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Cursor for the next page."
+          },
+          "before": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Cursor for the previous page."
+          },
+          "per_page": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000,
+            "description": "Page size."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "purchases",
+          "pagination"
+        ],
+        "properties": {
+          "purchases": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "pagination": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/purchases",
+        "success": [
+          200
+        ],
+        "query": {
+          "after": "{{after}}",
+          "before": "{{before}}",
+          "per_page": "{{per_page}}"
+        },
+        "result": {
+          "purchases": "{{response.purchases}}",
+          "pagination": "{{response.pagination}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    }
+  },
+  "provenance": {
+    "source": {
+      "url": "https://github.com/oomol-lab/open-connector",
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"
+    }
+  },
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
+    }
+  }
 }
