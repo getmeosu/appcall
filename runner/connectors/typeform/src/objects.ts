@@ -89,6 +89,97 @@ function extractPageCursor(
   return null;
 }
 
+export type NormalizedWorkspace = {
+  id: string;
+  provider: "typeform";
+  providerWorkspaceId: string;
+  name: string;
+  shared: boolean;
+  formCount: number;
+  modelVersion: "2026-05-17";
+  raw: Record<string, unknown>;
+};
+
+export function normalizeWorkspace(w: Record<string, unknown>): NormalizedWorkspace {
+  const forms = isRecord(w.forms) ? w.forms : {};
+  return {
+    id: `tf-workspace:${String(w.id ?? "")}`,
+    provider: "typeform",
+    providerWorkspaceId: String(w.id ?? ""),
+    name: typeof w.name === "string" ? w.name : "",
+    shared: typeof w.shared === "boolean" ? w.shared : false,
+    formCount: typeof forms.count === "number" ? forms.count : 0,
+    modelVersion: "2026-05-17",
+    raw: w,
+  };
+}
+
+export type NormalizedTheme = {
+  id: string;
+  provider: "typeform";
+  providerThemeId: string;
+  name: string;
+  visibility: string;
+  modelVersion: "2026-05-17";
+  raw: Record<string, unknown>;
+};
+
+export function normalizeTheme(t: Record<string, unknown>): NormalizedTheme {
+  return {
+    id: `tf-theme:${String(t.id ?? "")}`,
+    provider: "typeform",
+    providerThemeId: String(t.id ?? ""),
+    name: typeof t.name === "string" ? t.name : "",
+    visibility: typeof t.visibility === "string" ? t.visibility : "",
+    modelVersion: "2026-05-17",
+    raw: t,
+  };
+}
+
+export type NormalizedImage = {
+  id: string;
+  provider: "typeform";
+  providerImageId: string;
+  src: string;
+  fileName: string;
+  modelVersion: "2026-05-17";
+  raw: Record<string, unknown>;
+};
+
+export function normalizeImage(i: Record<string, unknown>): NormalizedImage {
+  return {
+    id: `tf-image:${String(i.id ?? "")}`,
+    provider: "typeform",
+    providerImageId: String(i.id ?? ""),
+    src: typeof i.src === "string" ? i.src : "",
+    fileName: typeof i.file_name === "string" ? i.file_name : "",
+    modelVersion: "2026-05-17",
+    raw: i,
+  };
+}
+
+export type NormalizedUser = {
+  id: string;
+  provider: "typeform";
+  email: string;
+  alias: string;
+  language: string;
+  modelVersion: "2026-05-17";
+  raw: Record<string, unknown>;
+};
+
+export function normalizeUser(u: Record<string, unknown>): NormalizedUser {
+  return {
+    id: `tf-user:${String(u.user_id ?? u.email ?? "")}`,
+    provider: "typeform",
+    email: typeof u.email === "string" ? u.email : "",
+    alias: typeof u.alias === "string" ? u.alias : "",
+    language: typeof u.language === "string" ? u.language : "",
+    modelVersion: "2026-05-17",
+    raw: u,
+  };
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }

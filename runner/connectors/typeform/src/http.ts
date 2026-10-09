@@ -123,6 +123,7 @@ export function createTypeFormClient(options: TypeFormClientOptions) {
           headers: {
             Authorization: `Bearer ${options.accessToken}`,
             "Content-Type": "application/json",
+            Accept: "application/json",
             ...(init.headers as Record<string, string>),
           },
         },
