@@ -95,6 +95,7 @@ import {
   createContact as msCreateContact, listContacts as msListContacts, getContact as msGetContact, updateContact as msUpdateContact,
   getMe as msGetMe,
 } from "../../connectors/microsoft-365/src/actions";
+import { createShot as dribbbleCreateShot, createAttachment as dribbbleCreateAttachment } from "../../connectors/dribbble/src/actions";
 import { healthcheck as microsoft365Healthcheck } from "../../connectors/microsoft-365/src/healthcheck";
 import { executeMessagesListSync as listOutlookMessages, executeEventsListSync as listOutlookEvents, executeCalendarsListSync as listOutlookCalendars, executeFilesListSync as listOneDriveFiles } from "../../connectors/microsoft-365/src/sync";
 import githubManifest from "../../connectors/github/manifest.json";
@@ -1463,6 +1464,10 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
   actions: {
     fake: {
       "messages.send": (input) => ({ input }),
+    },
+    dribbble: {
+      "shots.create": dribbbleCreateShot,
+      "attachments.create": dribbbleCreateAttachment,
     },
     laposta: {
       "fields.create": lapostaCreateField,
