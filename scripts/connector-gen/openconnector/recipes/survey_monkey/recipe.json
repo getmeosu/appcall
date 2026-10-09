@@ -94,13 +94,30 @@
     "providerId": "survey_monkey",
     "appcallId": "survey-monkey",
     "disposition": "APPROVED",
-    "edition": "international SurveyMonkey API v3 US",
+    "edition": "international SurveyMonkey API v3 US (Composio SURVEY_MONKEY HTTP tools)",
     "operations": [
-      "healthcheck",
-      "surveys.list",
-      "surveys.get",
       "collectors.list",
-      "contact-lists.list"
+      "contact-lists.list",
+      "healthcheck",
+      "surveys.get",
+      "surveys.list",
+      "benchmark-bundles.list",
+      "contact-fields.list",
+      "contact-lists.create",
+      "contacts.bulk.create",
+      "contacts.bulk.list",
+      "contacts.create",
+      "contacts.list",
+      "groups.list",
+      "responses.bulk.list",
+      "responses.list",
+      "survey-folders.create",
+      "survey-languages.list",
+      "surveys.create",
+      "surveys.delete",
+      "surveys.get_summary",
+      "surveys.trends.get",
+      "webhooks.list"
     ],
     "upstreamSha": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
     "marketFocus": "international",
@@ -185,7 +202,8 @@
         "Private-app long-lived access tokens are the documented Bearer path; OAuth2 authorization-code is not implemented.",
         "EU (api.eu.surveymonkey.com) and Canada (api.surveymonkey.ca) hosts are not expressed: the source maps a stored optional origin onto three hostnames, and the US value is api.surveymonkey.com, so a bounded wildcard plus required stored id cannot represent the mapping. The native template pins api.surveymonkey.com, matching the pinned executor.",
         "Returns raw SurveyMonkey JSON under data instead of the source {user} wrapper. Native omits the upstream user-agent.",
-        "Native category is forms (source Productivity/Data)."
+        "Native category is forms (source Productivity/Data).",
+        "Maps to SURVEY_MONKEY_GET_CURRENT_USER. Healthcheck remains GET /v3/users/me with empty input."
       ]
     },
     "surveys.list": {
@@ -201,7 +219,8 @@
       "responseContract": "appcall-provider-json-v1",
       "adaptations": [
         "Maps to official GET /v3/surveys. Native perPage is sent as per_page; folderId as folder_id; sortBy as sort_by; sortOrder as sort_order; startModifiedAt as start_modified_at; endModifiedAt as end_modified_at.",
-        "Returns raw SurveyMonkey paginated JSON under data instead of the source {items,page,perPage,total,links} wrapper."
+        "Returns raw SurveyMonkey paginated JSON under data instead of the source {items,page,perPage,total,links} wrapper.",
+        "Maps to SURVEY_MONKEY_GET_SURVEYS. Optional include is a string array sent as a comma-separated query value."
       ]
     },
     "surveys.get": {
@@ -216,7 +235,8 @@
       ],
       "responseContract": "appcall-provider-json-v1",
       "adaptations": [
-        "surveyId is a URL-encoded path segment on official GET /v3/surveys/{id}/details. Returns raw SurveyMonkey JSON under data."
+        "surveyId is a URL-encoded path segment on official GET /v3/surveys/{id}/details. Returns raw SurveyMonkey JSON under data.",
+        "Maps to SURVEY_MONKEY_GET_SURVEY_DETAILS2 (expanded GET /v3/surveys/{id}/details). Origin path and surveyId input name are unchanged."
       ]
     },
     "collectors.list": {
@@ -231,7 +251,8 @@
       ],
       "responseContract": "appcall-provider-json-v1",
       "adaptations": [
-        "Maps to official GET /v3/surveys/{id}/collectors with optional page and per_page. Returns raw SurveyMonkey JSON under data."
+        "Maps to official GET /v3/surveys/{id}/collectors with optional page and per_page. Returns raw SurveyMonkey JSON under data.",
+        "Maps to SURVEY_MONKEY_GET_COLLECTORS. Added optional name, include, sortBy/sort_by, sortOrder/sort_order, startDate/start_date, and endDate/end_date. Origin surveyId/page/perPage names are unchanged."
       ]
     },
     "contact-lists.list": {
@@ -247,24 +268,304 @@
       "responseContract": "appcall-provider-json-v1",
       "adaptations": [
         "Maps to official GET /v3/contact_lists with optional page and per_page. Returns raw SurveyMonkey JSON under data.",
-        "Writes, response bulk download, and rollups with comma-joined collector_ids are omitted."
+        "Writes, response bulk download, and rollups with comma-joined collector_ids are omitted.",
+        "Maps to SURVEY_MONKEY_LIST_CONTACT_LISTS."
+      ]
+    },
+    "benchmark-bundles.list": {
+      "upstreamActionId": "benchmark-bundles.list",
+      "sourceRefs": [
+        "request-headers",
+        "executor-us-host"
+      ],
+      "documentationUrls": [
+        "https://api.surveymonkey.com/v3/docs",
+        "https://docs.composio.dev/toolkits/survey_monkey"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "GET /v3/benchmark_bundles.",
+        "Returns raw SurveyMonkey JSON under data unless DELETE returns an empty body, which maps to {success: true}.",
+        "Private-app Bearer access token. The upstream user-agent is not sent. EU and Canada hosts are not expressed."
+      ]
+    },
+    "contact-fields.list": {
+      "upstreamActionId": "contact-fields.list",
+      "sourceRefs": [
+        "request-headers",
+        "executor-us-host"
+      ],
+      "documentationUrls": [
+        "https://api.surveymonkey.com/v3/docs",
+        "https://docs.composio.dev/toolkits/survey_monkey"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "GET /v3/contact_fields.",
+        "Returns raw SurveyMonkey JSON under data unless DELETE returns an empty body, which maps to {success: true}.",
+        "Private-app Bearer access token. The upstream user-agent is not sent. EU and Canada hosts are not expressed."
+      ]
+    },
+    "contact-lists.create": {
+      "upstreamActionId": "contact-lists.create",
+      "sourceRefs": [
+        "request-headers",
+        "executor-us-host"
+      ],
+      "documentationUrls": [
+        "https://api.surveymonkey.com/v3/docs",
+        "https://docs.composio.dev/toolkits/survey_monkey"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "POST /v3/contact_lists.",
+        "Returns raw SurveyMonkey JSON under data unless DELETE returns an empty body, which maps to {success: true}.",
+        "Private-app Bearer access token. The upstream user-agent is not sent. EU and Canada hosts are not expressed."
+      ]
+    },
+    "contacts.bulk.create": {
+      "upstreamActionId": "contacts.bulk.create",
+      "sourceRefs": [
+        "request-headers",
+        "executor-us-host"
+      ],
+      "documentationUrls": [
+        "https://api.surveymonkey.com/v3/docs",
+        "https://docs.composio.dev/toolkits/survey_monkey"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "POST /v3/contacts/bulk.",
+        "Returns raw SurveyMonkey JSON under data unless DELETE returns an empty body, which maps to {success: true}.",
+        "Private-app Bearer access token. The upstream user-agent is not sent. EU and Canada hosts are not expressed."
+      ]
+    },
+    "contacts.bulk.list": {
+      "upstreamActionId": "contacts.bulk.list",
+      "sourceRefs": [
+        "request-headers",
+        "executor-us-host"
+      ],
+      "documentationUrls": [
+        "https://api.surveymonkey.com/v3/docs",
+        "https://docs.composio.dev/toolkits/survey_monkey"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "GET /v3/contacts/bulk.",
+        "Returns raw SurveyMonkey JSON under data unless DELETE returns an empty body, which maps to {success: true}.",
+        "Private-app Bearer access token. The upstream user-agent is not sent. EU and Canada hosts are not expressed."
+      ]
+    },
+    "contacts.create": {
+      "upstreamActionId": "contacts.create",
+      "sourceRefs": [
+        "request-headers",
+        "executor-us-host"
+      ],
+      "documentationUrls": [
+        "https://api.surveymonkey.com/v3/docs",
+        "https://docs.composio.dev/toolkits/survey_monkey"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "POST /v3/contacts.",
+        "Returns raw SurveyMonkey JSON under data unless DELETE returns an empty body, which maps to {success: true}.",
+        "Private-app Bearer access token. The upstream user-agent is not sent. EU and Canada hosts are not expressed."
+      ]
+    },
+    "contacts.list": {
+      "upstreamActionId": "contacts.list",
+      "sourceRefs": [
+        "request-headers",
+        "executor-us-host"
+      ],
+      "documentationUrls": [
+        "https://api.surveymonkey.com/v3/docs",
+        "https://docs.composio.dev/toolkits/survey_monkey"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "GET /v3/contacts.",
+        "Returns raw SurveyMonkey JSON under data unless DELETE returns an empty body, which maps to {success: true}.",
+        "Private-app Bearer access token. The upstream user-agent is not sent. EU and Canada hosts are not expressed."
+      ]
+    },
+    "groups.list": {
+      "upstreamActionId": "groups.list",
+      "sourceRefs": [
+        "request-headers",
+        "executor-us-host"
+      ],
+      "documentationUrls": [
+        "https://api.surveymonkey.com/v3/docs",
+        "https://docs.composio.dev/toolkits/survey_monkey"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "GET /v3/groups.",
+        "Returns raw SurveyMonkey JSON under data unless DELETE returns an empty body, which maps to {success: true}.",
+        "Private-app Bearer access token. The upstream user-agent is not sent. EU and Canada hosts are not expressed."
+      ]
+    },
+    "responses.bulk.list": {
+      "upstreamActionId": "responses.bulk.list",
+      "sourceRefs": [
+        "request-headers",
+        "executor-us-host"
+      ],
+      "documentationUrls": [
+        "https://api.surveymonkey.com/v3/docs",
+        "https://docs.composio.dev/toolkits/survey_monkey"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "GET /v3/surveys/{{id}}/responses/bulk.",
+        "Returns raw SurveyMonkey JSON under data unless DELETE returns an empty body, which maps to {success: true}.",
+        "Private-app Bearer access token. The upstream user-agent is not sent. EU and Canada hosts are not expressed."
+      ]
+    },
+    "responses.list": {
+      "upstreamActionId": "responses.list",
+      "sourceRefs": [
+        "request-headers",
+        "executor-us-host"
+      ],
+      "documentationUrls": [
+        "https://api.surveymonkey.com/v3/docs",
+        "https://docs.composio.dev/toolkits/survey_monkey"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "GET /v3/surveys/{{survey_id}}/responses.",
+        "Returns raw SurveyMonkey JSON under data unless DELETE returns an empty body, which maps to {success: true}.",
+        "Private-app Bearer access token. The upstream user-agent is not sent. EU and Canada hosts are not expressed."
+      ]
+    },
+    "survey-folders.create": {
+      "upstreamActionId": "survey-folders.create",
+      "sourceRefs": [
+        "request-headers",
+        "executor-us-host"
+      ],
+      "documentationUrls": [
+        "https://api.surveymonkey.com/v3/docs",
+        "https://docs.composio.dev/toolkits/survey_monkey"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "POST /v3/survey_folders.",
+        "Returns raw SurveyMonkey JSON under data unless DELETE returns an empty body, which maps to {success: true}.",
+        "Private-app Bearer access token. The upstream user-agent is not sent. EU and Canada hosts are not expressed."
+      ]
+    },
+    "survey-languages.list": {
+      "upstreamActionId": "survey-languages.list",
+      "sourceRefs": [
+        "request-headers",
+        "executor-us-host"
+      ],
+      "documentationUrls": [
+        "https://api.surveymonkey.com/v3/docs",
+        "https://docs.composio.dev/toolkits/survey_monkey"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "GET /v3/survey_languages.",
+        "Returns raw SurveyMonkey JSON under data unless DELETE returns an empty body, which maps to {success: true}.",
+        "Private-app Bearer access token. The upstream user-agent is not sent. EU and Canada hosts are not expressed."
+      ]
+    },
+    "surveys.create": {
+      "upstreamActionId": "surveys.create",
+      "sourceRefs": [
+        "request-headers",
+        "executor-us-host"
+      ],
+      "documentationUrls": [
+        "https://api.surveymonkey.com/v3/docs",
+        "https://docs.composio.dev/toolkits/survey_monkey"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "POST /v3/surveys.",
+        "Returns raw SurveyMonkey JSON under data unless DELETE returns an empty body, which maps to {success: true}.",
+        "Private-app Bearer access token. The upstream user-agent is not sent. EU and Canada hosts are not expressed."
+      ]
+    },
+    "surveys.delete": {
+      "upstreamActionId": "surveys.delete",
+      "sourceRefs": [
+        "request-headers",
+        "executor-us-host"
+      ],
+      "documentationUrls": [
+        "https://api.surveymonkey.com/v3/docs",
+        "https://docs.composio.dev/toolkits/survey_monkey"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "DELETE /v3/surveys/{{survey_id}}.",
+        "Returns raw SurveyMonkey JSON under data unless DELETE returns an empty body, which maps to {success: true}.",
+        "Private-app Bearer access token. The upstream user-agent is not sent. EU and Canada hosts are not expressed."
+      ]
+    },
+    "surveys.get_summary": {
+      "upstreamActionId": "surveys.get_summary",
+      "sourceRefs": [
+        "request-headers",
+        "executor-us-host"
+      ],
+      "documentationUrls": [
+        "https://api.surveymonkey.com/v3/docs",
+        "https://docs.composio.dev/toolkits/survey_monkey"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "GET /v3/surveys/{{survey_id}}.",
+        "Returns raw SurveyMonkey JSON under data unless DELETE returns an empty body, which maps to {success: true}.",
+        "Private-app Bearer access token. The upstream user-agent is not sent. EU and Canada hosts are not expressed."
+      ]
+    },
+    "surveys.trends.get": {
+      "upstreamActionId": "surveys.trends.get",
+      "sourceRefs": [
+        "request-headers",
+        "executor-us-host"
+      ],
+      "documentationUrls": [
+        "https://api.surveymonkey.com/v3/docs",
+        "https://docs.composio.dev/toolkits/survey_monkey"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "GET /v3/surveys/{{survey_id}}/trends.",
+        "Returns raw SurveyMonkey JSON under data unless DELETE returns an empty body, which maps to {success: true}.",
+        "Private-app Bearer access token. The upstream user-agent is not sent. EU and Canada hosts are not expressed."
+      ]
+    },
+    "webhooks.list": {
+      "upstreamActionId": "webhooks.list",
+      "sourceRefs": [
+        "request-headers",
+        "executor-us-host"
+      ],
+      "documentationUrls": [
+        "https://api.surveymonkey.com/v3/docs",
+        "https://docs.composio.dev/toolkits/survey_monkey"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "GET /v3/webhooks.",
+        "Returns raw SurveyMonkey JSON under data unless DELETE returns an empty body, which maps to {success: true}.",
+        "Private-app Bearer access token. The upstream user-agent is not sent. EU and Canada hosts are not expressed."
       ]
     }
   },
   "manifest": {
-    "key": "survey-monkey",
-    "name": "SurveyMonkey",
-    "version": "0.1.0",
-    "runtime": "bun",
-    "visibility": "public",
-    "categories": [
-      "forms"
-    ],
     "auth": {
-      "type": "api_key",
       "scopes": [],
       "setup": {
-        "mode": "api_key",
         "fields": [
           {
             "key": "apiKey",
@@ -272,36 +573,31 @@
             "required": true,
             "secret": true
           }
-        ]
+        ],
+        "mode": "api_key"
+      },
+      "type": "api_key"
+    },
+    "categories": [
+      "forms"
+    ],
+    "evidence": {
+      "fixture": {
+        "status": "supplied"
+      },
+      "live": {
+        "status": "unverified"
       }
     },
-    "network": {
-      "allowedHosts": [
-        "api.surveymonkey.com"
-      ]
-    },
-    "models": [
-      "user",
-      "survey",
-      "collector",
-      "contact-list"
-    ],
     "http": {
-      "baseUrl": "https://api.surveymonkey.com",
       "auth": {
         "field": "apiKey",
         "in": "header",
         "name": "Authorization",
         "value": "Bearer {{apiKey}}"
       },
-      "headers": {
-        "Accept": "application/json"
-      },
+      "baseUrl": "https://api.surveymonkey.com",
       "errors": {
-        "rateLimitStatuses": [
-          429
-        ],
-        "retryAfterHeader": "retry-after",
         "defaultRetryAfterSeconds": 30,
         "messagePaths": [
           "error.message",
@@ -309,34 +605,232 @@
           "errmsg",
           "message",
           "error"
-        ]
+        ],
+        "rateLimitStatuses": [
+          429
+        ],
+        "retryAfterHeader": "retry-after"
+      },
+      "headers": {
+        "Accept": "application/json"
       }
     },
+    "key": "survey-monkey",
+    "models": [
+      "user",
+      "survey",
+      "collector",
+      "contact-list",
+      "contact",
+      "contact-field",
+      "group",
+      "webhook",
+      "survey-folder",
+      "benchmark-bundle",
+      "response",
+      "survey-language"
+    ],
+    "name": "SurveyMonkey",
+    "network": {
+      "allowedHosts": [
+        "api.surveymonkey.com"
+      ]
+    },
     "operations": {
-      "healthcheck": {
-        "timeoutMs": 5000,
-        "maxInputBytes": 4096,
-        "maxResponseBytes": 65536,
-        "kind": "action",
-        "sideEffect": "read",
-        "title": "Healthcheck",
-        "description": "Validate the SurveyMonkey access token with GET /v3/users/me.",
+      "collectors.list": {
+        "description": "List collectors and distribution URLs for a SurveyMonkey survey via GET /v3/surveys/{surveyId}/collectors. Maps to SURVEY_MONKEY_GET_COLLECTORS.",
+        "enforceOutputSchema": true,
         "inputSchema": {
-          "type": "object",
-          "properties": {},
-          "additionalProperties": false
-        },
-        "outputSchema": {
-          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "page": {
+              "minimum": 1,
+              "type": "integer"
+            },
+            "perPage": {
+              "maximum": 1000,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "surveyId": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Partial match filter on collector name."
+            },
+            "include": {
+              "type": "array",
+              "minItems": 1,
+              "description": "Additional fields to include per collector: type, status, response_count, date_created, date_modified, url.",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "type",
+                  "status",
+                  "response_count",
+                  "date_created",
+                  "date_modified",
+                  "url"
+                ]
+              }
+            },
+            "sortBy": {
+              "type": "string",
+              "enum": [
+                "id",
+                "date_modified",
+                "type",
+                "status",
+                "name"
+              ],
+              "description": "Field to sort collectors by."
+            },
+            "sortOrder": {
+              "type": "string",
+              "enum": [
+                "ASC",
+                "DESC"
+              ],
+              "description": "Sort order."
+            },
+            "startDate": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Filter collectors created after this datetime (YYYY-MM-DDTHH:MM:SS)."
+            },
+            "endDate": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Filter collectors created before this datetime (YYYY-MM-DDTHH:MM:SS)."
+            }
+          },
           "required": [
-            "data"
+            "surveyId"
           ],
+          "type": "object"
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "additionalProperties": false,
           "properties": {
             "data": {
               "type": "object"
             }
           },
-          "additionalProperties": false
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        },
+        "request": {
+          "method": "GET",
+          "path": "/v3/surveys/{{surveyId}}/collectors",
+          "query": {
+            "page": "{{page}}",
+            "per_page": "{{perPage}}",
+            "name": "{{name}}",
+            "sort_by": "{{sortBy}}",
+            "sort_order": "{{sortOrder}}",
+            "start_date": "{{startDate}}",
+            "end_date": "{{endDate}}"
+          },
+          "success": [
+            200
+          ],
+          "parameters": [
+            {
+              "in": "query",
+              "inputName": "include",
+              "wireName": "include",
+              "style": "form",
+              "explode": false,
+              "allowReserved": false
+            }
+          ]
+        },
+        "responseFormat": "json",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "title": "List collectors",
+        "validationMode": "strict-generated"
+      },
+      "contact-lists.list": {
+        "description": "List contact lists in the connected SurveyMonkey account via GET /v3/contact_lists. Maps to SURVEY_MONKEY_LIST_CONTACT_LISTS.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "page": {
+              "minimum": 1,
+              "type": "integer"
+            },
+            "perPage": {
+              "maximum": 1000,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          "type": "object"
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        },
+        "request": {
+          "method": "GET",
+          "path": "/v3/contact_lists",
+          "query": {
+            "page": "{{page}}",
+            "per_page": "{{perPage}}"
+          },
+          "success": [
+            200
+          ]
+        },
+        "responseFormat": "json",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "title": "List contact lists",
+        "validationMode": "strict-generated"
+      },
+      "healthcheck": {
+        "description": "Validate the SurveyMonkey access token with GET /v3/users/me. Maps to SURVEY_MONKEY_GET_CURRENT_USER.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {},
+          "type": "object"
+        },
+        "kind": "action",
+        "maxInputBytes": 4096,
+        "maxResponseBytes": 65536,
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
         },
         "request": {
           "method": "GET",
@@ -345,129 +839,42 @@
             200
           ]
         },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "surveys.list": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
+        "responseFormat": "json",
         "sideEffect": "read",
-        "title": "List surveys",
-        "description": "List surveys available to the connected SurveyMonkey account.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "page": {
-              "type": "integer",
-              "minimum": 1
-            },
-            "perPage": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 1000
-            },
-            "title": {
-              "type": "string",
-              "minLength": 1
-            },
-            "folderId": {
-              "type": "string",
-              "minLength": 1
-            },
-            "sortBy": {
-              "type": "string",
-              "enum": [
-                "title",
-                "date_modified",
-                "num_responses"
-              ]
-            },
-            "sortOrder": {
-              "type": "string",
-              "enum": [
-                "ASC",
-                "DESC"
-              ]
-            },
-            "startModifiedAt": {
-              "type": "string",
-              "minLength": 1
-            },
-            "endModifiedAt": {
-              "type": "string",
-              "minLength": 1
-            }
-          },
-          "additionalProperties": false
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "GET",
-          "path": "/v3/surveys",
-          "success": [
-            200
-          ],
-          "query": {
-            "page": "{{page}}",
-            "per_page": "{{perPage}}",
-            "title": "{{title}}",
-            "folder_id": "{{folderId}}",
-            "sort_by": "{{sortBy}}",
-            "sort_order": "{{sortOrder}}",
-            "start_modified_at": "{{startModifiedAt}}",
-            "end_modified_at": "{{endModifiedAt}}"
-          }
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
+        "timeoutMs": 5000,
+        "title": "Healthcheck",
+        "validationMode": "strict-generated"
       },
       "surveys.get": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
-        "sideEffect": "read",
-        "title": "Get survey details",
-        "description": "Get a survey with its pages, questions, and answer choices.",
+        "description": "Get expanded survey details including pages, questions, and answer choices via GET /v3/surveys/{surveyId}/details. Maps to SURVEY_MONKEY_GET_SURVEY_DETAILS2.",
+        "enforceOutputSchema": true,
         "inputSchema": {
-          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "surveyId": {
+              "minLength": 1,
+              "type": "string"
+            }
+          },
           "required": [
             "surveyId"
           ],
-          "properties": {
-            "surveyId": {
-              "type": "string",
-              "minLength": 1
-            }
-          },
-          "additionalProperties": false
+          "type": "object"
         },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
         "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
+          "additionalProperties": false,
           "properties": {
             "data": {
               "type": "object"
             }
           },
-          "additionalProperties": false
+          "required": [
+            "data"
+          ],
+          "type": "object"
         },
         "request": {
           "method": "GET",
@@ -476,131 +883,1315 @@
             200
           ]
         },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "collectors.list": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
+        "responseFormat": "json",
         "sideEffect": "read",
-        "title": "List collectors",
-        "description": "List collectors and distribution URLs for a SurveyMonkey survey.",
+        "timeoutMs": 15000,
+        "title": "Get survey details",
+        "validationMode": "strict-generated"
+      },
+      "surveys.list": {
+        "description": "List surveys available to the connected SurveyMonkey account via GET /v3/surveys. Maps to SURVEY_MONKEY_GET_SURVEYS.",
+        "enforceOutputSchema": true,
         "inputSchema": {
-          "type": "object",
-          "required": [
-            "surveyId"
-          ],
+          "additionalProperties": false,
           "properties": {
-            "surveyId": {
-              "type": "string",
-              "minLength": 1
+            "endModifiedAt": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "folderId": {
+              "minLength": 1,
+              "type": "string"
             },
             "page": {
-              "type": "integer",
-              "minimum": 1
+              "minimum": 1,
+              "type": "integer"
             },
             "perPage": {
-              "type": "integer",
+              "maximum": 1000,
               "minimum": 1,
-              "maximum": 1000
+              "type": "integer"
+            },
+            "sortBy": {
+              "enum": [
+                "title",
+                "date_modified",
+                "num_responses"
+              ],
+              "type": "string"
+            },
+            "sortOrder": {
+              "enum": [
+                "ASC",
+                "DESC"
+              ],
+              "type": "string"
+            },
+            "startModifiedAt": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "title": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "include": {
+              "type": "array",
+              "minItems": 1,
+              "description": "Additional fields to include per survey, or filters: response_count, date_modified, date_created, question_count, page_count, category, language, folder_id, shared_with, shared_by, owned, analyze_url, preview.",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "response_count",
+                  "date_modified",
+                  "date_created",
+                  "question_count",
+                  "page_count",
+                  "category",
+                  "language",
+                  "folder_id",
+                  "shared_with",
+                  "shared_by",
+                  "owned",
+                  "analyze_url",
+                  "preview"
+                ]
+              }
             }
           },
-          "additionalProperties": false
+          "type": "object"
         },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
         "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
+          "additionalProperties": false,
           "properties": {
             "data": {
               "type": "object"
             }
           },
-          "additionalProperties": false
+          "required": [
+            "data"
+          ],
+          "type": "object"
         },
         "request": {
           "method": "GET",
-          "path": "/v3/surveys/{{surveyId}}/collectors",
+          "path": "/v3/surveys",
+          "query": {
+            "end_modified_at": "{{endModifiedAt}}",
+            "folder_id": "{{folderId}}",
+            "page": "{{page}}",
+            "per_page": "{{perPage}}",
+            "sort_by": "{{sortBy}}",
+            "sort_order": "{{sortOrder}}",
+            "start_modified_at": "{{startModifiedAt}}",
+            "title": "{{title}}"
+          },
+          "success": [
+            200
+          ],
+          "parameters": [
+            {
+              "in": "query",
+              "inputName": "include",
+              "wireName": "include",
+              "style": "form",
+              "explode": false,
+              "allowReserved": false
+            }
+          ]
+        },
+        "responseFormat": "json",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "title": "List surveys",
+        "validationMode": "strict-generated"
+      },
+      "benchmark-bundles.list": {
+        "description": "List SurveyMonkey benchmark bundles via GET /v3/benchmark_bundles. Maps to SURVEY_MONKEY_LIST_BENCHMARK_BUNDLES.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "page": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Page of resources to return. Defaults to 1."
+            },
+            "per_page": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Resources per page.",
+              "maximum": 1000
+            },
+            "country": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Country code to filter benchmark bundles. Default is US."
+            }
+          }
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          }
+        },
+        "request": {
+          "method": "GET",
+          "path": "/v3/benchmark_bundles",
           "success": [
             200
           ],
           "query": {
             "page": "{{page}}",
-            "per_page": "{{perPage}}"
+            "per_page": "{{per_page}}",
+            "country": "{{country}}"
           }
         },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "contact-lists.list": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
+        "responseFormat": "json",
         "sideEffect": "read",
-        "title": "List contact lists",
-        "description": "List contact lists in the connected SurveyMonkey account.",
+        "timeoutMs": 15000,
+        "title": "List benchmark bundles",
+        "validationMode": "strict-generated"
+      },
+      "contact-fields.list": {
+        "description": "List custom contact fields via GET /v3/contact_fields. Maps to SURVEY_MONKEY_LIST_CONTACT_FIELDS.",
+        "enforceOutputSchema": true,
         "inputSchema": {
           "type": "object",
+          "additionalProperties": false,
           "properties": {
             "page": {
               "type": "integer",
-              "minimum": 1
+              "minimum": 1,
+              "description": "Page of resources to return. Defaults to 1."
             },
-            "perPage": {
+            "per_page": {
               "type": "integer",
               "minimum": 1,
-              "maximum": 1000
+              "description": "Resources per page.",
+              "maximum": 50
             }
-          },
-          "additionalProperties": false
+          }
         },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
         "outputSchema": {
           "type": "object",
           "required": [
             "data"
           ],
+          "additionalProperties": false,
           "properties": {
             "data": {
               "type": "object"
             }
-          },
-          "additionalProperties": false
+          }
         },
         "request": {
           "method": "GET",
+          "path": "/v3/contact_fields",
+          "success": [
+            200
+          ],
+          "query": {
+            "page": "{{page}}",
+            "per_page": "{{per_page}}"
+          }
+        },
+        "responseFormat": "json",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "title": "List contact fields",
+        "validationMode": "strict-generated"
+      },
+      "contact-lists.create": {
+        "description": "Create a SurveyMonkey contact list via POST /v3/contact_lists. Maps to SURVEY_MONKEY_CREATE_CONTACT_LIST. Name defaults to New List when omitted.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Name of the contact list to create."
+            }
+          }
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          }
+        },
+        "request": {
+          "method": "POST",
           "path": "/v3/contact_lists",
           "success": [
+            200,
+            201
+          ],
+          "body": {
+            "name": "{{name}}"
+          },
+          "headers": {
+            "Content-Type": "application/json"
+          }
+        },
+        "responseFormat": "json",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "title": "Create contact list",
+        "validationMode": "strict-generated"
+      },
+      "contacts.bulk.create": {
+        "description": "Create multiple contacts via POST /v3/contacts/bulk. Maps to SURVEY_MONKEY_CREATE_BULK_CONTACTS. Requires contacts_write.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "contacts": {
+              "type": "array",
+              "minItems": 1,
+              "description": "Contact objects to create. Each contact should include first_name, last_name, and either email or phone_number.",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "description": "One SurveyMonkey contact. Official API requires first_name, last_name, and either email or phone_number.",
+                "properties": {
+                  "first_name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "Contact first name."
+                  },
+                  "last_name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "Contact last name."
+                  },
+                  "email": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "Contact email address."
+                  },
+                  "phone_number": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "Contact phone number."
+                  },
+                  "custom_fields": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Custom field values keyed by field ID (for example '1', '2')."
+                  }
+                }
+              }
+            },
+            "update_existing": {
+              "type": "boolean",
+              "description": "Whether to update existing contacts with the same email or phone number. Defaults to false."
+            }
+          },
+          "required": [
+            "contacts"
+          ]
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          }
+        },
+        "request": {
+          "method": "POST",
+          "path": "/v3/contacts/bulk",
+          "success": [
+            200,
+            201
+          ],
+          "body": {
+            "contacts": "{{contacts}}",
+            "update_existing": "{{update_existing}}"
+          },
+          "headers": {
+            "Content-Type": "application/json"
+          }
+        },
+        "responseFormat": "json",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "title": "Create bulk contacts",
+        "validationMode": "strict-generated"
+      },
+      "contacts.bulk.list": {
+        "description": "Retrieve contacts with all available fields via GET /v3/contacts/bulk. Maps to SURVEY_MONKEY_GET_BULK_CONTACTS.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "page": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Page of resources to return. Defaults to 1."
+            },
+            "per_page": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Resources per page.",
+              "maximum": 1000
+            }
+          }
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          }
+        },
+        "request": {
+          "method": "GET",
+          "path": "/v3/contacts/bulk",
+          "success": [
             200
           ],
           "query": {
             "page": "{{page}}",
-            "per_page": "{{perPage}}"
+            "per_page": "{{per_page}}"
           }
         },
+        "responseFormat": "json",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "title": "Bulk get contacts",
+        "validationMode": "strict-generated"
+      },
+      "contacts.create": {
+        "description": "Create a SurveyMonkey contact via POST /v3/contacts. Maps to SURVEY_MONKEY_CREATE_CONTACT. Contacts can be used for email invitations.",
         "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "email": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Contact email address. Primary identifier for the contact."
+            },
+            "first_name": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Contact first name."
+            },
+            "last_name": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Contact last name."
+            },
+            "phone_number": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Contact phone number. Official API requires email or phone_number."
+            },
+            "custom_fields": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              },
+              "description": "Custom field values keyed by field ID (for example '1', '2')."
+            }
+          },
+          "required": [
+            "email"
+          ]
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          }
+        },
+        "request": {
+          "method": "POST",
+          "path": "/v3/contacts",
+          "success": [
+            200,
+            201
+          ],
+          "body": {
+            "email": "{{email}}",
+            "first_name": "{{first_name}}",
+            "last_name": "{{last_name}}",
+            "phone_number": "{{phone_number}}",
+            "custom_fields": "{{custom_fields}}"
+          },
+          "headers": {
+            "Content-Type": "application/json"
+          }
+        },
+        "responseFormat": "json",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "title": "Create contact",
+        "validationMode": "strict-generated"
+      },
+      "contacts.list": {
+        "description": "List, filter, and search contacts via GET /v3/contacts. Maps to SURVEY_MONKEY_GET_CONTACTS. Requires contacts_read or contacts_write.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "page": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Page of resources to return. Defaults to 1."
+            },
+            "per_page": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Resources per page.",
+              "maximum": 1000
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "active",
+                "optout",
+                "bounced"
+              ],
+              "description": "Filter contacts by status. Defaults to active."
+            },
+            "sort_by": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Field to sort by. Options: email (default), first_name, last_name, or custom fields 1 through 6."
+            },
+            "sort_order": {
+              "type": "string",
+              "enum": [
+                "ASC",
+                "DESC"
+              ],
+              "description": "Sort order."
+            },
+            "search": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Search query string to filter contacts."
+            },
+            "search_by": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Field to search in. Options: email, first_name, last_name, or custom fields 1 through 6."
+            }
+          }
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          }
+        },
+        "request": {
+          "method": "GET",
+          "path": "/v3/contacts",
+          "success": [
+            200
+          ],
+          "query": {
+            "page": "{{page}}",
+            "per_page": "{{per_page}}",
+            "status": "{{status}}",
+            "sort_by": "{{sort_by}}",
+            "sort_order": "{{sort_order}}",
+            "search": "{{search}}",
+            "search_by": "{{search_by}}"
+          }
+        },
+        "responseFormat": "json",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "title": "Get contacts",
+        "validationMode": "strict-generated"
+      },
+      "groups.list": {
+        "description": "List SurveyMonkey groups (teams) via GET /v3/groups. Maps to SURVEY_MONKEY_GET_GROUPS.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "page": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Page of resources to return. Defaults to 1."
+            },
+            "per_page": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Resources per page.",
+              "maximum": 1000
+            },
+            "include": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Comma-separated additional fields to include in each group object, for example member_count."
+            }
+          }
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          }
+        },
+        "request": {
+          "method": "GET",
+          "path": "/v3/groups",
+          "success": [
+            200
+          ],
+          "query": {
+            "page": "{{page}}",
+            "per_page": "{{per_page}}",
+            "include": "{{include}}"
+          }
+        },
+        "responseFormat": "json",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "title": "Get groups",
+        "validationMode": "strict-generated"
+      },
+      "responses.bulk.list": {
+        "description": "Retrieve bulk survey responses with full question answers via GET /v3/surveys/{id}/responses/bulk. Maps to SURVEY_MONKEY_GET_SURVEY_RESPONSES_BULK. Requires responses_read_detail.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Survey ID to fetch bulk responses for."
+            },
+            "page": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Page number to return (1-based)."
+            },
+            "per_page": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Responses per page. Max 100.",
+              "maximum": 100
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "completed",
+                "partial",
+                "overquota",
+                "disqualified"
+              ],
+              "description": "Filter responses by status."
+            },
+            "start_created_at": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Filter responses created after this datetime (ISO 8601)."
+            },
+            "end_created_at": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Filter responses created before this datetime (ISO 8601)."
+            }
+          },
+          "required": [
+            "id"
+          ]
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          }
+        },
+        "request": {
+          "method": "GET",
+          "path": "/v3/surveys/{{id}}/responses/bulk",
+          "success": [
+            200
+          ],
+          "query": {
+            "page": "{{page}}",
+            "per_page": "{{per_page}}",
+            "status": "{{status}}",
+            "start_created_at": "{{start_created_at}}",
+            "end_created_at": "{{end_created_at}}"
+          }
+        },
+        "responseFormat": "json",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "title": "Get survey responses (bulk)",
+        "validationMode": "strict-generated"
+      },
+      "responses.list": {
+        "description": "List response metadata for a survey via GET /v3/surveys/{survey_id}/responses. Maps to SURVEY_MONKEY_GET_RESPONSES. Iterate pages to avoid missing responses.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "survey_id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The unique identifier of the survey."
+            },
+            "page": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Page number to return. Defaults to 1."
+            },
+            "per_page": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Responses per page. Defaults to 50.",
+              "maximum": 1000
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "completed",
+                "partial",
+                "overquota",
+                "disqualified"
+              ],
+              "description": "Filter responses by status."
+            },
+            "sort_by": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Field to sort by. Official API accepts date_modified."
+            },
+            "sort_order": {
+              "type": "string",
+              "enum": [
+                "ASC",
+                "DESC"
+              ],
+              "description": "Sort order."
+            },
+            "start_created_at": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Filter responses created after this datetime (YYYY-MM-DDTHH:MM:SS)."
+            },
+            "end_created_at": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Filter responses created before this datetime (YYYY-MM-DDTHH:MM:SS)."
+            },
+            "start_modified_at": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Filter responses modified after this datetime (YYYY-MM-DDTHH:MM:SS)."
+            },
+            "end_modified_at": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Filter responses modified before this datetime (YYYY-MM-DDTHH:MM:SS)."
+            },
+            "email": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Filter responses by recipient email."
+            },
+            "first_name": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Filter responses by recipient first name."
+            },
+            "last_name": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Filter responses by recipient last name."
+            },
+            "ip": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Filter responses by IP address."
+            },
+            "custom": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Filter responses by custom value associated with the response."
+            },
+            "custom_variables": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Filter responses by custom variables as key:value pairs."
+            },
+            "total_time_min": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Filter responses with total time greater than or equal to this value."
+            },
+            "total_time_max": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Filter responses with total time less than or equal to this value."
+            },
+            "total_time_units": {
+              "type": "string",
+              "enum": [
+                "second",
+                "minute",
+                "hour"
+              ],
+              "description": "Unit for total_time_min and total_time_max."
+            }
+          },
+          "required": [
+            "survey_id"
+          ]
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          }
+        },
+        "request": {
+          "method": "GET",
+          "path": "/v3/surveys/{{survey_id}}/responses",
+          "success": [
+            200
+          ],
+          "query": {
+            "page": "{{page}}",
+            "per_page": "{{per_page}}",
+            "status": "{{status}}",
+            "sort_by": "{{sort_by}}",
+            "sort_order": "{{sort_order}}",
+            "start_created_at": "{{start_created_at}}",
+            "end_created_at": "{{end_created_at}}",
+            "start_modified_at": "{{start_modified_at}}",
+            "end_modified_at": "{{end_modified_at}}",
+            "email": "{{email}}",
+            "first_name": "{{first_name}}",
+            "last_name": "{{last_name}}",
+            "ip": "{{ip}}",
+            "custom": "{{custom}}",
+            "custom_variables": "{{custom_variables}}",
+            "total_time_min": "{{total_time_min}}",
+            "total_time_max": "{{total_time_max}}",
+            "total_time_units": "{{total_time_units}}"
+          }
+        },
+        "responseFormat": "json",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "title": "Get survey responses",
+        "validationMode": "strict-generated"
+      },
+      "survey-folders.create": {
+        "description": "Create a survey folder via POST /v3/survey_folders. Maps to SURVEY_MONKEY_CREATE_SURVEY_FOLDER.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "title": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Title of the survey folder used to organize surveys."
+            }
+          },
+          "required": [
+            "title"
+          ]
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          }
+        },
+        "request": {
+          "method": "POST",
+          "path": "/v3/survey_folders",
+          "success": [
+            200,
+            201
+          ],
+          "body": {
+            "title": "{{title}}"
+          },
+          "headers": {
+            "Content-Type": "application/json"
+          }
+        },
+        "responseFormat": "json",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "title": "Create survey folder",
+        "validationMode": "strict-generated"
+      },
+      "survey-languages.list": {
+        "description": "List languages available for multilingual surveys via GET /v3/survey_languages. Maps to SURVEY_MONKEY_LIST_AVAILABLE_LANGUAGES.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "page": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Page of resources to return. Defaults to 1."
+            },
+            "per_page": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Resources per page.",
+              "maximum": 1000
+            }
+          }
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          }
+        },
+        "request": {
+          "method": "GET",
+          "path": "/v3/survey_languages",
+          "success": [
+            200
+          ],
+          "query": {
+            "page": "{{page}}",
+            "per_page": "{{per_page}}"
+          }
+        },
+        "responseFormat": "json",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "title": "List available languages",
+        "validationMode": "strict-generated"
+      },
+      "surveys.create": {
+        "description": "Create an empty SurveyMonkey survey with one empty page via POST /v3/surveys. Maps to SURVEY_MONKEY_CREATE_SURVEY. Shareable collector URLs are not returned; use collectors.list after creation.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "title": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Title of the new survey. Displayed to respondents."
+            },
+            "nickname": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Optional internal nickname (not shown to respondents)."
+            },
+            "language": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Survey language code in ISO 639-1 format. Defaults to en."
+            },
+            "footer": {
+              "type": "boolean",
+              "description": "Whether to display SurveyMonkey branding footer. Defaults to true."
+            }
+          },
+          "required": [
+            "title"
+          ]
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          }
+        },
+        "request": {
+          "method": "POST",
+          "path": "/v3/surveys",
+          "success": [
+            200,
+            201
+          ],
+          "body": {
+            "title": "{{title}}",
+            "nickname": "{{nickname}}",
+            "language": "{{language}}",
+            "footer": "{{footer}}"
+          },
+          "headers": {
+            "Content-Type": "application/json"
+          }
+        },
+        "responseFormat": "json",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "title": "Create survey",
+        "validationMode": "strict-generated"
+      },
+      "surveys.delete": {
+        "description": "Delete a survey via DELETE /v3/surveys/{survey_id}. Maps to SURVEY_MONKEY_DELETE_SURVEY. Deletion is irreversible.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "survey_id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The unique identifier of the survey to delete."
+            }
+          },
+          "required": [
+            "survey_id"
+          ]
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 65536,
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "success"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "success": {
+              "type": "boolean"
+            }
+          }
+        },
+        "request": {
+          "method": "DELETE",
+          "path": "/v3/surveys/{{survey_id}}",
+          "success": [
+            200,
+            204
+          ],
+          "result": {
+            "success": true
+          }
+        },
+        "responseFormat": "json",
+        "sideEffect": "destructive",
+        "timeoutMs": 15000,
+        "title": "Delete survey",
+        "validationMode": "strict-generated"
+      },
+      "surveys.get_summary": {
+        "description": "Get survey metadata via GET /v3/surveys/{survey_id} (not the expanded /details payload). Maps to SURVEY_MONKEY_GET_SURVEY_DETAILS. Use surveys.get for pages, questions, and answer options.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "survey_id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The unique identifier of the survey to fetch details for."
+            }
+          },
+          "required": [
+            "survey_id"
+          ]
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          }
+        },
+        "request": {
+          "method": "GET",
+          "path": "/v3/surveys/{{survey_id}}",
+          "success": [
+            200
+          ]
+        },
+        "responseFormat": "json",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "title": "Get survey details",
+        "validationMode": "strict-generated"
+      },
+      "surveys.trends.get": {
+        "description": "Get trend data for a survey via GET /v3/surveys/{survey_id}/trends. Maps to SURVEY_MONKEY_GET_SURVEY_TRENDS. Not available for file_upload, slider, presentation, demographic, matrix_menu, or datetime questions.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "survey_id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The unique identifier of the survey to get trends for."
+            },
+            "trend_by": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Time period grouping for trend data (day, week, or month)."
+            },
+            "start_created_at": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Filter responses by creation date start (YYYY-MM-DDTHH:MM:SS)."
+            },
+            "end_created_at": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Filter responses by creation date end (YYYY-MM-DDTHH:MM:SS)."
+            },
+            "start_modified_at": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Filter responses by modified date start (YYYY-MM-DDTHH:MM:SS)."
+            },
+            "end_modified_at": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Filter responses by modified date end (YYYY-MM-DDTHH:MM:SS)."
+            }
+          },
+          "required": [
+            "survey_id"
+          ]
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          }
+        },
+        "request": {
+          "method": "GET",
+          "path": "/v3/surveys/{{survey_id}}/trends",
+          "success": [
+            200
+          ],
+          "query": {
+            "trend_by": "{{trend_by}}",
+            "start_created_at": "{{start_created_at}}",
+            "end_created_at": "{{end_created_at}}",
+            "start_modified_at": "{{start_modified_at}}",
+            "end_modified_at": "{{end_modified_at}}"
+          }
+        },
+        "responseFormat": "json",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "title": "Get survey trends",
+        "validationMode": "strict-generated"
+      },
+      "webhooks.list": {
+        "description": "List configured SurveyMonkey webhooks via GET /v3/webhooks. Maps to SURVEY_MONKEY_LIST_WEBHOOKS. This is an outbound webhook catalog, not an inbound trigger.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "page": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Page of resources to return. Defaults to 1."
+            },
+            "per_page": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Resources per page.",
+              "maximum": 1000
+            }
+          }
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          }
+        },
+        "request": {
+          "method": "GET",
+          "path": "/v3/webhooks",
+          "success": [
+            200
+          ],
+          "query": {
+            "page": "{{page}}",
+            "per_page": "{{per_page}}"
+          }
+        },
+        "responseFormat": "json",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "title": "List webhooks",
+        "validationMode": "strict-generated"
       }
     },
     "provenance": {
       "source": {
-        "url": "https://github.com/oomol-lab/open-connector",
-        "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"
+        "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
+        "url": "https://github.com/oomol-lab/open-connector"
       }
     },
-    "evidence": {
-      "fixture": {
-        "status": "supplied"
-      },
-      "live": {
-        "status": "unverified"
-      }
-    }
+    "runtime": "bun",
+    "version": "0.2.0",
+    "visibility": "public"
   }
 }
