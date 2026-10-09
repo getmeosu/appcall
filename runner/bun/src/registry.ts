@@ -1316,6 +1316,7 @@ import {
 import { createField as lapostaCreateField, createMember as lapostaCreateMember, updateMember as lapostaUpdateMember } from "../../connectors/laposta/src/actions";
 import { createConnectorHttpClient, type ConnectorHttpClient } from "./http";
 import { withDeclarativeConnectors } from "./declarative/loader";
+import { senderWriteHandlers } from "../../connectors/sender/src/writes";
 
 type Manifest = {
   key: string;
@@ -1464,6 +1465,7 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
     fake: {
       "messages.send": (input) => ({ input }),
     },
+    sender: senderWriteHandlers,
     laposta: {
       "fields.create": lapostaCreateField,
       "members.create": lapostaCreateMember,
