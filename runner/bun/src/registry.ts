@@ -1312,6 +1312,7 @@ import {
   getTeamsMeetingByJoinUrl as msGetTeamsByJoinUrl, createCalendarTeamsEvent as msCreateCalendarTeamsEvent,
 } from "../../connectors/microsoft-365/src/actions";
 
+import { generateSpeech as deepgramGenerateSpeech } from "../../connectors/deepgram/actions";
 import { createConnectorHttpClient, type ConnectorHttpClient } from "./http";
 import { withDeclarativeConnectors } from "./declarative/loader";
 
@@ -1461,6 +1462,9 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
   actions: {
     fake: {
       "messages.send": (input) => ({ input }),
+    },
+    deepgram: {
+      "speak.generate": deepgramGenerateSpeech,
     },
     notion: {
       "credentials.validate": validateNotionCredentials,
