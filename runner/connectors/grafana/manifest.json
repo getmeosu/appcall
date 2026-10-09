@@ -1,1 +1,1292 @@
-{"auth":{"scopes":[],"setup":{"fields":[{"key":"apiKey","label":"Grafana service account token","required":true,"secret":true},{"key":"stack","label":"Grafana Cloud stack slug","required":true,"secret":false}],"mode":"api_key"},"type":"api_key"},"categories":["dev-tools"],"evidence":{"fixture":{"status":"supplied"},"live":{"status":"unverified"}},"http":{"auth":{"field":"apiKey","in":"header","name":"Authorization","value":"Bearer {{apiKey}}"},"baseUrl":"https://{{stack}}.grafana.net","errors":{"defaultRetryAfterSeconds":30,"messagePaths":["message","error","detail","title"],"rateLimitStatuses":[429],"retryAfterHeader":"retry-after"},"headers":{"Accept":"application/json"}},"key":"grafana","models":["organization","datasource","alert-rule","contact-point"],"name":"Grafana","network":{"allowedHosts":["*.grafana.net"]},"operations":{"alert-rules.get":{"description":"Retrieve one Grafana-managed alert rule by UID via the provisioning API.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{"uid":{"minLength":1,"type":"string"}},"required":["uid"],"type":"object"},"kind":"action","maxInputBytes":65536,"maxResponseBytes":1048576,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/api/v1/provisioning/alert-rules/{{uid}}","success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":15000,"title":"Get alert rule","validationMode":"strict-generated"},"alert-rules.list":{"description":"List Grafana-managed alert rules via the provisioning API.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{},"type":"object"},"kind":"action","maxInputBytes":65536,"maxResponseBytes":5242880,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"array"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/api/v1/provisioning/alert-rules","success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":15000,"title":"List alert rules","validationMode":"strict-generated"},"contact-points.list":{"description":"List Grafana notification contact points via the provisioning API.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{},"type":"object"},"kind":"action","maxInputBytes":65536,"maxResponseBytes":5242880,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"array"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/api/v1/provisioning/contact-points","success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":15000,"title":"List contact points","validationMode":"strict-generated"},"datasources.get":{"description":"Retrieve one Grafana data source by UID.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{"uid":{"minLength":1,"type":"string"}},"required":["uid"],"type":"object"},"kind":"action","maxInputBytes":65536,"maxResponseBytes":1048576,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/api/datasources/uid/{{uid}}","success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":15000,"title":"Get data source","validationMode":"strict-generated"},"datasources.list":{"description":"List Grafana data sources available to the service account token.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{},"type":"object"},"kind":"action","maxInputBytes":65536,"maxResponseBytes":5242880,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"array"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/api/datasources","success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":15000,"title":"List data sources","validationMode":"strict-generated"},"healthcheck":{"description":"Validate the Grafana Cloud service account token with GET /api/org.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{},"type":"object"},"kind":"action","maxInputBytes":4096,"maxResponseBytes":65536,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/api/org","success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":10000,"title":"Healthcheck","validationMode":"strict-generated"}},"provenance":{"source":{"revision":"33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a","url":"https://github.com/oomol-lab/open-connector"}},"runtime":"bun","version":"0.1.0","visibility":"public"}
+{
+  "key": "grafana",
+  "name": "Grafana",
+  "version": "0.2.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "dev-tools"
+  ],
+  "auth": {
+    "type": "api_key",
+    "scopes": [],
+    "setup": {
+      "mode": "api_key",
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "Grafana service account token",
+          "required": true,
+          "secret": true
+        },
+        {
+          "key": "stack",
+          "label": "Grafana Cloud stack slug",
+          "required": true,
+          "secret": false
+        }
+      ]
+    }
+  },
+  "provenance": {
+    "source": {
+      "url": "https://github.com/oomol-lab/open-connector",
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "*.grafana.net"
+    ]
+  },
+  "models": [
+    "organization",
+    "datasource",
+    "alert-rule",
+    "contact-point",
+    "folder",
+    "dashboard",
+    "annotation"
+  ],
+  "http": {
+    "baseUrl": "https://{{stack}}.grafana.net",
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "Authorization",
+      "value": "Bearer {{apiKey}}"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after",
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "message",
+        "error",
+        "detail",
+        "title"
+      ]
+    },
+    "headers": {
+      "Accept": "application/json"
+    }
+  },
+  "operations": {
+    "healthcheck": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "title": "Healthcheck",
+      "description": "Validate the Grafana Cloud service account token with GET /api/org.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/org",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "datasources.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List data sources",
+      "description": "List Grafana data sources available to the service account token.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/datasources",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "datasources.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get data source",
+      "description": "Retrieve one Grafana data source by UID.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "uid"
+        ],
+        "properties": {
+          "uid": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/datasources/uid/{{uid}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "alert-rules.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List alert rules",
+      "description": "List Grafana-managed alert rules via the provisioning API.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/provisioning/alert-rules",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "alert-rules.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get alert rule",
+      "description": "Retrieve one Grafana-managed alert rule by UID via the provisioning API.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "uid"
+        ],
+        "properties": {
+          "uid": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/provisioning/alert-rules/{{uid}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "contact-points.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List contact points",
+      "description": "List Grafana notification contact points via the provisioning API.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/provisioning/contact-points",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "datasources.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create data source",
+      "description": "Create a Grafana data source.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Data source name."
+          },
+          "type": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Data source type, for example prometheus or graphite."
+          },
+          "url": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Data source URL."
+          },
+          "access": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Access mode, typically proxy."
+          },
+          "uid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Optional data source UID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "type"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/api/datasources",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "name": "{{name}}",
+          "type": "{{type}}",
+          "url": "{{url}}",
+          "access": "{{access}}",
+          "uid": "{{uid}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "datasources.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Update data source",
+      "description": "Update a Grafana data source by UID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "uid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Data source UID."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Data source name."
+          },
+          "type": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Data source type."
+          },
+          "url": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Data source URL."
+          },
+          "access": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Access mode, typically proxy."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "uid",
+          "name",
+          "type"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/api/datasources/uid/{{uid}}",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "name": "{{name}}",
+          "type": "{{type}}",
+          "url": "{{url}}",
+          "access": "{{access}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "datasources.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Delete data source",
+      "description": "Delete a Grafana data source by UID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "uid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Data source UID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "uid"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/api/datasources/uid/{{uid}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "folders.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List folders",
+      "description": "List Grafana folders visible to the service account token.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/folders",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "folders.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get folder",
+      "description": "Retrieve one Grafana folder by UID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "uid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Folder UID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "uid"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/folders/{{uid}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "folders.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Create folder",
+      "description": "Create a Grafana folder.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Folder title."
+          },
+          "uid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Optional folder UID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "title"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/api/folders",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "title": "{{title}}",
+          "uid": "{{uid}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "dashboards.search": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Search dashboards",
+      "description": "Search Grafana dashboards and folders.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Search query."
+          },
+          "type": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Result type filter, for example dash-db."
+          },
+          "tag": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Tag filter."
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Maximum results to return.",
+            "minimum": 1,
+            "maximum": 5000
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/search",
+        "success": [
+          200
+        ],
+        "query": {
+          "query": "{{query}}",
+          "type": "{{type}}",
+          "tag": "{{tag}}",
+          "limit": "{{limit}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "dashboards.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get dashboard",
+      "description": "Retrieve one Grafana dashboard by UID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "uid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Dashboard UID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "uid"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/dashboards/uid/{{uid}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "dashboards.save": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 524288,
+      "maxResponseBytes": 5242880,
+      "title": "Save dashboard",
+      "description": "Create or update a Grafana dashboard.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "dashboard": {
+            "type": "object",
+            "description": "Dashboard document."
+          },
+          "folderUid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Destination folder UID."
+          },
+          "overwrite": {
+            "type": "boolean",
+            "description": "Overwrite an existing dashboard with the same UID."
+          },
+          "message": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Version message."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "dashboard"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/api/dashboards/db",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "dashboard": "{{dashboard}}",
+          "folderUid": "{{folderUid}}",
+          "overwrite": "{{overwrite}}",
+          "message": "{{message}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "dashboards.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Delete dashboard",
+      "description": "Delete a Grafana dashboard by UID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "uid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Dashboard UID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "uid"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/api/dashboards/uid/{{uid}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "alert-rules.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create alert rule",
+      "description": "Create a Grafana-managed alert rule via the provisioning API.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Alert rule title."
+          },
+          "uid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Optional alert rule UID."
+          },
+          "folderUID": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Folder UID that owns the rule."
+          },
+          "ruleGroup": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Rule group name."
+          },
+          "condition": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Condition refId, for example A."
+          },
+          "noDataState": {
+            "type": "string",
+            "minLength": 1,
+            "description": "State when no data is returned."
+          },
+          "execErrState": {
+            "type": "string",
+            "minLength": 1,
+            "description": "State when the query errors."
+          },
+          "for": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Pending duration, for example 5m."
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            },
+            "description": "Alert query nodes."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "title",
+          "folderUID",
+          "condition",
+          "noDataState",
+          "execErrState",
+          "for",
+          "data"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/provisioning/alert-rules",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "title": "{{title}}",
+          "uid": "{{uid}}",
+          "folderUID": "{{folderUID}}",
+          "ruleGroup": "{{ruleGroup}}",
+          "condition": "{{condition}}",
+          "noDataState": "{{noDataState}}",
+          "execErrState": "{{execErrState}}",
+          "for": "{{for}}",
+          "data": "{{data}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "alert-rules.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Delete alert rule",
+      "description": "Delete a Grafana-managed alert rule by UID via the provisioning API.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "uid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Alert rule UID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "uid"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "null"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/api/v1/provisioning/alert-rules/{{uid}}",
+        "success": [
+          200,
+          204
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "contact-points.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Create contact point",
+      "description": "Create a Grafana notification contact point via the provisioning API.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Contact point name."
+          },
+          "type": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Contact point type, for example email or webhook."
+          },
+          "settings": {
+            "type": "object",
+            "description": "Type-specific settings."
+          },
+          "uid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Optional contact point UID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "type",
+          "settings"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/provisioning/contact-points",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "name": "{{name}}",
+          "type": "{{type}}",
+          "settings": "{{settings}}",
+          "uid": "{{uid}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "contact-points.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Delete contact point",
+      "description": "Delete a Grafana notification contact point by UID via the provisioning API.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "uid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Contact point UID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "uid"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "null"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/api/v1/provisioning/contact-points/{{uid}}",
+        "success": [
+          200,
+          202,
+          204
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "annotations.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List annotations",
+      "description": "List Grafana annotations in a time range.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "from": {
+            "type": "integer",
+            "description": "Start time in epoch milliseconds."
+          },
+          "to": {
+            "type": "integer",
+            "description": "End time in epoch milliseconds."
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Maximum annotations to return.",
+            "minimum": 1
+          },
+          "dashboardUID": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by dashboard UID."
+          },
+          "type": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Annotation type filter."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/annotations",
+        "success": [
+          200
+        ],
+        "query": {
+          "from": "{{from}}",
+          "to": "{{to}}",
+          "limit": "{{limit}}",
+          "dashboardUID": "{{dashboardUID}}",
+          "type": "{{type}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "annotations.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Create annotation",
+      "description": "Create a Grafana annotation.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Annotation text."
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Annotation tags."
+          },
+          "dashboardUID": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Dashboard UID."
+          },
+          "panelId": {
+            "type": "integer",
+            "description": "Panel ID."
+          },
+          "time": {
+            "type": "integer",
+            "description": "Annotation time in epoch milliseconds."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "text"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/api/annotations",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "text": "{{text}}",
+          "tags": "{{tags}}",
+          "dashboardUID": "{{dashboardUID}}",
+          "panelId": "{{panelId}}",
+          "time": "{{time}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    }
+  },
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
+    }
+  }
+}
