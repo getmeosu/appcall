@@ -1,8 +1,8 @@
 # Drata
 
-Read-only international Drata Public API v2 recipe pinned to the documented default US host `public-api.drata.com`. Configure a Drata Settings API key. The runner sends `Authorization: Bearer` to `https://public-api.drata.com/public/v2`.
+International Drata Public API v2 recipe pinned to the documented default US host `public-api.drata.com`. Configure a Drata Settings API key. The runner sends `Authorization: Bearer` to `https://public-api.drata.com/public/v2`.
 
-Covered operations: credential-only `healthcheck` (`GET /company`), `workspaces.list`, `personnel.list`, `personnel.get`, and `vendors.list`. Control/workspace writes, evidence uploads, and OpenSearch `personnel-search` are omitted.
+Covered HTTP operations: credential-only `healthcheck` (`GET /company`), workspaces, personnel, vendors (list/get/create/update/delete), assets, policies, devices, workspace-scoped controls, personnel devices, users, events, and risks. Event-only webhooks cover custom-workflow personnel non-compliance, control not ready, evidence past due, and residual-risk changes. Evidence uploads, policy multipart creates, and OpenSearch `personnel-search` are omitted.
 
 EU (`public-api.eu.drata.com`) and APAC (`public-api.apac.drata.com`) hosts are not expressed: the source maps a stored region enum onto three hostnames, and the US value is not `public-api.us.drata.com`, so a bounded wildcard plus required stored id cannot represent the mapping. `expand[]` and other repeated query arrays are omitted.
 
