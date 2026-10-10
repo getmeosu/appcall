@@ -1,20 +1,1281 @@
 {
   "key": "rollbar",
   "name": "Rollbar",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "runtime": "bun",
   "visibility": "public",
-  "categories": ["dev-tools"],
-  "auth": {"type": "api_key", "scopes": ["rollbar.project.read"], "setup": {"mode": "api_key", "fields": [{"key": "apiKey", "label": "Rollbar project access token", "required": true, "secret": true}]}},
-  "network": {"allowedHosts": ["api.rollbar.com"]},
-  "models": ["project", "item", "occurrence", "environment", "deploy"],
-  "http": {"baseUrl": "https://api.rollbar.com/api/1", "auth": {"field": "apiKey", "in": "header", "name": "X-Rollbar-Access-Token", "value": "{{apiKey}}"}, "headers": {"Accept": "application/json"}, "errors": {"rateLimitStatuses": [429], "retryAfterHeader": "Retry-After", "retryAfterKind": "seconds", "defaultRetryAfterSeconds": 30, "messagePaths": ["message", "error"]}},
-  "operations": {
-    "healthcheck": {"kind": "action", "sideEffect": "read", "timeoutMs": 5000, "maxInputBytes": 4096, "maxResponseBytes": 65536, "title": "Healthcheck", "description": "Validate a Rollbar project access token by listing one environment.", "inputSchema": {"type": "object", "additionalProperties": false}, "outputSchema": {"type": "object", "required": ["result"], "properties": {"result": {"type": "object"}}}, "request": {"method": "GET", "path": "/environments", "query": {"page": 1, "limit": 1}, "success": [200], "result": {"result": "{{response}}"}}, "enforceOutputSchema": true},
-    "projects.get": {"kind": "action", "sideEffect": "read", "timeoutMs": 10000, "maxInputBytes": 4096, "maxResponseBytes": 1048576, "title": "Get Project", "description": "Get a Rollbar project by numeric ID.", "inputSchema": {"type": "object", "required": ["projectId"], "additionalProperties": false, "properties": {"projectId": {"type": "integer", "minimum": 1}}}, "outputSchema": {"type": "object"}, "request": {"method": "GET", "path": "/project/{{projectId}}", "success": [200], "result": "{{response.result}}"}, "enforceOutputSchema": true},
-    "items.list": {"kind": "action", "sideEffect": "read", "timeoutMs": 15000, "maxInputBytes": 16384, "maxResponseBytes": 5242880, "title": "List Items", "description": "List Rollbar items with bounded page and limit filters.", "inputSchema": {"type": "object", "additionalProperties": false, "properties": {"page": {"type": "integer", "minimum": 1}, "status": {"type": "string", "minLength": 1}, "environment": {"type": "string", "minLength": 1}, "limit": {"type": "integer", "minimum": 1, "maximum": 5000}}}, "outputSchema": {"type": "object", "required": ["items"], "properties": {"items": {"type": "array", "items": {"type": "object"}}}}, "request": {"method": "GET", "path": "/items", "query": {"page": "{{page}}", "status": "{{status}}", "environment": "{{environment}}", "limit": "{{limit}}"}, "success": [200], "result": "{{response.result}}"}, "enforceOutputSchema": true},
-    "items.get": {"kind": "action", "sideEffect": "read", "timeoutMs": 10000, "maxInputBytes": 4096, "maxResponseBytes": 1048576, "title": "Get Item", "description": "Get a Rollbar item by numeric ID.", "inputSchema": {"type": "object", "required": ["itemId"], "additionalProperties": false, "properties": {"itemId": {"type": "integer", "minimum": 1}}}, "outputSchema": {"type": "object"}, "request": {"method": "GET", "path": "/item/{{itemId}}", "success": [200], "result": "{{response.result}}"}, "enforceOutputSchema": true}
+  "categories": [
+    "dev-tools"
+  ],
+  "auth": {
+    "type": "api_key",
+    "scopes": [
+      "rollbar.project.read"
+    ],
+    "setup": {
+      "mode": "api_key",
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "Rollbar project access token",
+          "required": true,
+          "secret": true
+        }
+      ]
+    }
   },
-  "provenance": {"source": {"url": "https://github.com/oomol-lab/open-connector", "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"}},
-  "evidence": {"fixture": {"status": "supplied"}, "live": {"status": "unverified"}}
+  "network": {
+    "allowedHosts": [
+      "api.rollbar.com"
+    ]
+  },
+  "models": [
+    "project",
+    "item",
+    "occurrence",
+    "environment",
+    "deploy",
+    "team",
+    "user"
+  ],
+  "http": {
+    "baseUrl": "https://api.rollbar.com/api/1",
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "X-Rollbar-Access-Token",
+      "value": "{{apiKey}}"
+    },
+    "headers": {
+      "Accept": "application/json"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "Retry-After",
+      "retryAfterKind": "seconds",
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "message",
+        "error"
+      ]
+    }
+  },
+  "operations": {
+    "healthcheck": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 5000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "title": "Healthcheck",
+      "description": "Validate a Rollbar project access token by listing one environment.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "result"
+        ],
+        "properties": {
+          "result": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/environments",
+        "query": {
+          "page": 1,
+          "limit": 1
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "result": "{{response}}"
+        }
+      },
+      "enforceOutputSchema": true
+    },
+    "projects.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "title": "Get Project",
+      "description": "Get a Rollbar project by numeric ID.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "projectId"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "projectId": {
+            "type": "integer",
+            "minimum": 1
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/project/{{projectId}}",
+        "success": [
+          200
+        ],
+        "result": "{{response.result}}"
+      },
+      "enforceOutputSchema": true
+    },
+    "items.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 5242880,
+      "title": "List Items",
+      "description": "List Rollbar items with bounded page and limit filters.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "page": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "status": {
+            "type": "string",
+            "minLength": 1
+          },
+          "environment": {
+            "type": "string",
+            "minLength": 1
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 5000
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/items",
+        "query": {
+          "page": "{{page}}",
+          "status": "{{status}}",
+          "environment": "{{environment}}",
+          "limit": "{{limit}}"
+        },
+        "success": [
+          200
+        ],
+        "result": "{{response.result}}"
+      },
+      "enforceOutputSchema": true
+    },
+    "items.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "title": "Get Item",
+      "description": "Get a Rollbar item by numeric ID.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "itemId"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "itemId": {
+            "type": "integer",
+            "minimum": 1
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/item/{{itemId}}",
+        "success": [
+          200
+        ],
+        "result": "{{response.result}}"
+      },
+      "enforceOutputSchema": true
+    },
+    "teams.check_project": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "title": "Check team project assignment",
+      "description": "Check whether a Rollbar team is assigned to a project. Maps to ROLLBAR_CHECK_TEAM_PROJECT_ASSIGNMENT. Returns 404 when the project is not on the team.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "team_id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "The unique identifier of the team to check."
+          },
+          "project_id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "The unique identifier of the project to check."
+          }
+        },
+        "required": [
+          "team_id",
+          "project_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/team/{{team_id}}/project/{{project_id}}",
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response.result}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json"
+    },
+    "teams.check_user": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "title": "Check user team assignment",
+      "description": "Check whether a user is assigned to a Rollbar team. Maps to ROLLBAR_CHECK_USER_TEAM_ASSIGNMENT.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "team_id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "The unique identifier of the team to check."
+          },
+          "user_id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "The unique identifier of the user to check."
+          }
+        },
+        "required": [
+          "team_id",
+          "user_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/team/{{team_id}}/user/{{user_id}}",
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response.result}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json"
+    },
+    "metrics.occurrences": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 5242880,
+      "title": "Get occurrence metrics",
+      "description": "Get occurrence counts over a span of time with grouping, filtering, and aggregation. Maps to ROLLBAR_GET_OCCURRENCES_METRICS. POST /metrics/occurrences is a read query.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "start_time": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Unix timestamp of start time for the query."
+          },
+          "end_time": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Unix timestamp of end time for the query, inclusive."
+          },
+          "filters": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "field": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Column name to filter."
+                },
+                "values": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "Match values."
+                },
+                "operator": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Filter operator such as eq or gt."
+                }
+              }
+            },
+            "description": "Filter conditions that narrow results by field values."
+          },
+          "group_by": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "description": "Column names to group the results."
+          },
+          "aggregates": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "field": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Column to aggregate on."
+                },
+                "function": {
+                  "type": "string",
+                  "enum": [
+                    "count_all",
+                    "count_distinct",
+                    "max",
+                    "min"
+                  ],
+                  "description": "Aggregate function."
+                },
+                "alias": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Alias name in the response."
+                }
+              }
+            },
+            "description": "Aggregate functions per group: count_all, count_distinct, max, min."
+          },
+          "sort": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "order": {
+                "type": "string",
+                "enum": [
+                  "asc",
+                  "desc"
+                ],
+                "description": "Sort direction."
+              },
+              "field": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Column to sort on."
+              }
+            },
+            "description": "Sort configuration for query results."
+          },
+          "granularity": {
+            "type": "string",
+            "enum": [
+              "second",
+              "minute",
+              "hour",
+              "day",
+              "week",
+              "month",
+              "year"
+            ],
+            "description": "Timepoint size of the returned results."
+          },
+          "timezone": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Timezone for the query results. Default is US/Pacific."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Total rows or groups to return."
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Offset for pagination."
+          }
+        },
+        "required": [
+          "start_time",
+          "end_time"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/metrics/occurrences",
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response.result}}"
+        },
+        "body": {
+          "start_time": "{{start_time}}",
+          "end_time": "{{end_time}}",
+          "filters": "{{filters}}",
+          "group_by": "{{group_by}}",
+          "aggregates": "{{aggregates}}",
+          "sort": "{{sort}}",
+          "granularity": "{{granularity}}",
+          "timezone": "{{timezone}}",
+          "limit": "{{limit}}",
+          "offset": "{{offset}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json"
+    },
+    "teams.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "title": "Get team",
+      "description": "Retrieve a Rollbar team by ID including name, account ID, and access level. Maps to ROLLBAR_GET_TEAM.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "team_id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "The unique identifier of the team to retrieve."
+          }
+        },
+        "required": [
+          "team_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/team/{{team_id}}",
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response.result}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json"
+    },
+    "metrics.ttr": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 5242880,
+      "title": "Get TTR metrics",
+      "description": "Get time-to-resolution metrics for Rollbar projects. Maps to ROLLBAR_GET_TTR_METRICS. POST /metrics/ttr is a read query.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "start_time": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Unix timestamp of start time for the query."
+          },
+          "end_time": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Unix timestamp of end time, inclusive. Default is now."
+          },
+          "granularity": {
+            "type": "string",
+            "enum": [
+              "second",
+              "minute",
+              "hour",
+              "day",
+              "week",
+              "month",
+              "year"
+            ],
+            "description": "Timepoint size of the returned results."
+          },
+          "function": {
+            "type": "string",
+            "enum": [
+              "mean",
+              "median",
+              "min",
+              "max"
+            ],
+            "description": "Aggregate function for time-to-resolution. Default is median."
+          },
+          "project_ids": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "description": "Project IDs. Requires an account access token."
+          },
+          "environments": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "description": "Environment names to filter by."
+          },
+          "levels": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "description": "Level names such as error or warning."
+          },
+          "frameworks": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "description": "Framework names to filter by."
+          },
+          "timezone": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Timezone for the results. Default is US/Pacific."
+          }
+        },
+        "required": [
+          "start_time"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/metrics/ttr",
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response.result}}"
+        },
+        "body": {
+          "start_time": "{{start_time}}",
+          "end_time": "{{end_time}}",
+          "granularity": "{{granularity}}",
+          "function": "{{function}}",
+          "project_ids": "{{project_ids}}",
+          "environments": "{{environments}}",
+          "levels": "{{levels}}",
+          "frameworks": "{{frameworks}}",
+          "timezone": "{{timezone}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json"
+    },
+    "users.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "title": "Get user",
+      "description": "Retrieve a Rollbar user by ID including username, email, and notification settings. Maps to ROLLBAR_GET_USER.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "user_id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "The unique identifier of the user to retrieve."
+          }
+        },
+        "required": [
+          "user_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/user/{{user_id}}",
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response.result}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json"
+    },
+    "projects.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 5242880,
+      "title": "List all projects",
+      "description": "List all projects in the Rollbar account. Maps to ROLLBAR_LIST_ALL_PROJECTS. Requires an account access token.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/projects",
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response.result}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json"
+    },
+    "teams.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 5242880,
+      "title": "List all teams",
+      "description": "List all teams in the Rollbar account. Maps to ROLLBAR_LIST_ALL_TEAMS. Requires an account access token.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/teams",
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response.result}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json"
+    },
+    "users.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 5242880,
+      "title": "List all users",
+      "description": "List all users in the Rollbar account, optionally filtered by email. Maps to ROLLBAR_LIST_ALL_USERS.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "email": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter users by email address."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/users",
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response.result}}"
+        },
+        "query": {
+          "email": "{{email}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json"
+    },
+    "projects.teams.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 5242880,
+      "title": "List project teams",
+      "description": "List teams with access to a Rollbar project. Maps to ROLLBAR_LIST_PROJECT_TEAMS.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "project_id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Unique identifier of the Rollbar project to list teams for."
+          },
+          "exclude_builtin_teams": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 1,
+            "description": "When 1, exclude built-in teams (Owners, Everyone). Omit or 0 to include all teams."
+          }
+        },
+        "required": [
+          "project_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/project/{{project_id}}/teams",
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response.result}}"
+        },
+        "query": {
+          "exclude_builtin_teams": "{{exclude_builtin_teams}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json"
+    },
+    "rql.jobs.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 5242880,
+      "title": "List RQL jobs",
+      "description": "List Rollbar Query Language jobs and their statuses. Maps to ROLLBAR_LIST_RQL_JOBS.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Page number starting from 1."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/rql/jobs",
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response.result}}"
+        },
+        "query": {
+          "page": "{{page}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json"
+    },
+    "teams.invites.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 5242880,
+      "title": "List team invitations",
+      "description": "List invitations sent for a Rollbar team. Maps to ROLLBAR_LIST_TEAM_INVITATIONS. Official path is GET /team/{id}/invites.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "team_id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Unique identifier of the team to list invitations for."
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Page number. Returns up to 5000 results per page."
+          }
+        },
+        "required": [
+          "team_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/team/{{team_id}}/invites",
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response.result}}"
+        },
+        "query": {
+          "page": "{{page}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json"
+    },
+    "teams.projects.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 5242880,
+      "title": "List team projects",
+      "description": "List projects a team can access. Maps to ROLLBAR_LIST_TEAM_PROJECTS.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "team_id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "The unique identifier of the team whose projects to list."
+          }
+        },
+        "required": [
+          "team_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/team/{{team_id}}/projects",
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response.result}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json"
+    },
+    "teams.users.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 5242880,
+      "title": "List team users",
+      "description": "List users assigned to a Rollbar team. Maps to ROLLBAR_LIST_TEAM_USERS.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "team_id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "The unique identifier for the team."
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Results are returned in sets of 5000. Use page=2 for more."
+          }
+        },
+        "required": [
+          "team_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/team/{{team_id}}/users",
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response.result}}"
+        },
+        "query": {
+          "page": "{{page}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json"
+    },
+    "users.projects.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 5242880,
+      "title": "List user projects",
+      "description": "List projects a user can access. Maps to ROLLBAR_LIST_USER_PROJECTS.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "user_id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "The unique identifier of the user whose projects to retrieve."
+          }
+        },
+        "required": [
+          "user_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/user/{{user_id}}/projects",
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response.result}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json"
+    },
+    "users.teams.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 5242880,
+      "title": "List user teams",
+      "description": "List teams a user belongs to. Maps to ROLLBAR_LIST_USER_TEAMS.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "user_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "The unique identifier of the user whose teams to list."
+          }
+        },
+        "required": [
+          "user_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/user/{{user_id}}/teams",
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response.result}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json"
+    }
+  },
+  "provenance": {
+    "source": {
+      "url": "https://github.com/oomol-lab/open-connector",
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"
+    }
+  },
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
+    }
+  }
 }

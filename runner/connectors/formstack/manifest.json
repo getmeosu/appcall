@@ -1,1 +1,1145 @@
-{"auth":{"scopes":[],"setup":{"fields":[{"key":"apiKey","label":"Formstack personal access token","required":true,"secret":true}],"mode":"api_key"},"type":"api_key"},"categories":["productivity"],"evidence":{"fixture":{"status":"supplied"},"live":{"status":"unverified"}},"http":{"auth":{"field":"apiKey","in":"header","name":"Authorization","value":"Bearer {{apiKey}}"},"baseUrl":"https://www.formstack.com/api/v2025","errors":{"defaultRetryAfterSeconds":30,"messagePaths":["message","error","errors"],"rateLimitStatuses":[429],"retryAfterHeader":"retry-after"},"headers":{"Accept":"application/json"}},"key":"formstack","models":["form","field","submission"],"name":"Formstack","network":{"allowedHosts":["www.formstack.com"]},"operations":{"form-fields.list":{"description":"List fields defined on a Formstack form.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{"formId":{"minimum":1,"type":"integer"}},"required":["formId"],"type":"object"},"kind":"action","maxInputBytes":65536,"maxResponseBytes":5242880,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/forms/{{formId}}/fields","success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":15000,"title":"List form fields","validationMode":"strict-generated"},"forms.get":{"description":"Retrieve one Formstack form, optionally including fields.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{"formId":{"minimum":1,"type":"integer"},"includeFields":{"type":"boolean"}},"required":["formId"],"type":"object"},"kind":"action","maxInputBytes":65536,"maxResponseBytes":5242880,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/forms/{{formId}}","query":{"withFields":"{{includeFields}}"},"success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":15000,"title":"Get form","validationMode":"strict-generated"},"forms.list":{"description":"List Formstack forms with optional pagination, name search, sort, and folder filter.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{"folderId":{"minimum":1,"type":"integer"},"order":{"enum":["ASC","DESC"],"type":"string"},"orderBy":{"minLength":1,"type":"string"},"pageNumber":{"minimum":1,"type":"integer"},"pageSize":{"maximum":500,"minimum":10,"type":"integer"},"search":{"minLength":1,"type":"string"}},"type":"object"},"kind":"action","maxInputBytes":65536,"maxResponseBytes":5242880,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/forms","query":{"folder":"{{folderId}}","order":"{{order}}","orderBy":"{{orderBy}}","pageNumber":"{{pageNumber}}","pageSize":"{{pageSize}}","search":"{{search}}"},"success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":15000,"title":"List forms","validationMode":"strict-generated"},"healthcheck":{"description":"Validate the Formstack personal access token with a first-page forms list.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{},"type":"object"},"kind":"action","maxInputBytes":4096,"maxResponseBytes":65536,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/forms","query":{"pageNumber":1,"pageSize":10},"success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":5000,"title":"Healthcheck","validationMode":"strict-generated"},"submissions.list":{"description":"List submissions for one Formstack form with optional pagination and keyword filter.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{"formId":{"minimum":1,"type":"integer"},"keyword":{"minLength":1,"type":"string"},"order":{"enum":["ASC","DESC"],"type":"string"},"pageNumber":{"minimum":1,"type":"integer"},"pageSize":{"maximum":100,"minimum":10,"type":"integer"}},"required":["formId"],"type":"object"},"kind":"action","maxInputBytes":65536,"maxResponseBytes":5242880,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/forms/{{formId}}/submissions","query":{"keyword":"{{keyword}}","order":"{{order}}","pageNumber":"{{pageNumber}}","pageSize":"{{pageSize}}"},"success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":15000,"title":"List submissions","validationMode":"strict-generated"}},"provenance":{"source":{"revision":"33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a","url":"https://github.com/oomol-lab/open-connector"}},"runtime":"bun","version":"0.1.0","visibility":"public"}
+{
+  "key": "formstack",
+  "name": "Formstack",
+  "version": "0.2.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "productivity"
+  ],
+  "auth": {
+    "type": "api_key",
+    "scopes": [],
+    "setup": {
+      "mode": "api_key",
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "Formstack personal access token",
+          "required": true,
+          "secret": true
+        }
+      ]
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "www.formstack.com"
+    ]
+  },
+  "models": [
+    "form",
+    "field",
+    "submission",
+    "folder",
+    "webhook",
+    "notification"
+  ],
+  "http": {
+    "baseUrl": "https://www.formstack.com/api/v2025",
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "Authorization",
+      "value": "Bearer {{apiKey}}"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after",
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "message",
+        "error",
+        "errors"
+      ]
+    },
+    "headers": {
+      "Accept": "application/json"
+    }
+  },
+  "operations": {
+    "healthcheck": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 5000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "title": "Healthcheck",
+      "description": "Validate the Formstack personal access token with a first-page forms list.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/forms",
+        "query": {
+          "pageNumber": 1,
+          "pageSize": 10
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "forms.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List forms",
+      "description": "List Formstack forms with optional pagination, name search, sort, and folder filter.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "pageNumber": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "pageSize": {
+            "type": "integer",
+            "minimum": 10,
+            "maximum": 500
+          },
+          "search": {
+            "type": "string",
+            "minLength": 1
+          },
+          "orderBy": {
+            "type": "string",
+            "minLength": 1
+          },
+          "order": {
+            "type": "string",
+            "enum": [
+              "ASC",
+              "DESC"
+            ]
+          },
+          "folderId": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/forms",
+        "query": {
+          "pageNumber": "{{pageNumber}}",
+          "pageSize": "{{pageSize}}",
+          "search": "{{search}}",
+          "orderBy": "{{orderBy}}",
+          "order": "{{order}}",
+          "folder": "{{folderId}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "forms.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get form",
+      "description": "Retrieve one Formstack form, optionally including fields.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "formId": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "includeFields": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "formId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/forms/{{formId}}",
+        "query": {
+          "withFields": "{{includeFields}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "forms.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create form",
+      "description": "Create a Formstack form.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Form name."
+          },
+          "folderId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Destination folder ID."
+          },
+          "db": {
+            "type": "boolean",
+            "description": "Whether the form uses a database backend."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/forms",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "name": "{{name}}",
+          "folder": "{{folderId}}",
+          "db": "{{db}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "forms.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Update form",
+      "description": "Update a Formstack form.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "formId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Form ID."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Form name."
+          },
+          "active": {
+            "type": "boolean",
+            "description": "Whether the form is active."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "formId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/forms/{{formId}}",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "name": "{{name}}",
+          "active": "{{active}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "forms.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Delete form",
+      "description": "Soft-delete a Formstack form.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "formId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Form ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "formId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/forms/{{formId}}",
+        "success": [
+          200,
+          204
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "form-fields.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List form fields",
+      "description": "List fields defined on a Formstack form.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "formId": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "formId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/forms/{{formId}}/fields",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "form-fields.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get form field",
+      "description": "Retrieve one field from a Formstack form.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "formId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Form ID."
+          },
+          "fieldId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Field ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "formId",
+          "fieldId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/forms/{{formId}}/fields/{{fieldId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "form-fields.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create form field",
+      "description": "Create a field on a Formstack form.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "formId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Form ID."
+          },
+          "label": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Field label."
+          },
+          "type": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Field type such as text or email."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "formId",
+          "label",
+          "type"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/forms/{{formId}}/fields",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "label": "{{label}}",
+          "type": "{{type}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "submissions.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List submissions",
+      "description": "List submissions for one Formstack form with optional pagination and keyword filter.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "formId": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "pageNumber": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "pageSize": {
+            "type": "integer",
+            "minimum": 10,
+            "maximum": 100
+          },
+          "order": {
+            "type": "string",
+            "enum": [
+              "ASC",
+              "DESC"
+            ]
+          },
+          "keyword": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "formId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/forms/{{formId}}/submissions",
+        "query": {
+          "pageNumber": "{{pageNumber}}",
+          "pageSize": "{{pageSize}}",
+          "order": "{{order}}",
+          "keyword": "{{keyword}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "submissions.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get submission",
+      "description": "Retrieve one Formstack submission.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "submissionId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Submission ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "submissionId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/submissions/{{submissionId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "submissions.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create submission",
+      "description": "Create a submission on a Formstack form.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "formId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Form ID."
+          },
+          "fields": {
+            "type": "object",
+            "description": "Field values keyed by field id."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "formId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/forms/{{formId}}/submissions",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "fields": "{{fields}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "submissions.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Update submission",
+      "description": "Update an existing Formstack submission.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "submissionId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Submission ID."
+          },
+          "fields": {
+            "type": "object",
+            "description": "Field values keyed by field id."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "submissionId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/submissions/{{submissionId}}",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "fields": "{{fields}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "submissions.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Delete submission",
+      "description": "Permanently delete a Formstack submission.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "submissionId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Submission ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "submissionId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/submissions/{{submissionId}}",
+        "success": [
+          200,
+          204
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "folders.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List folders",
+      "description": "List Formstack folders and subfolders.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/folders",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "folders.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get folder",
+      "description": "Retrieve one Formstack folder.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "folderId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Folder ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "folderId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/folders/{{folderId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "folders.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create folder",
+      "description": "Create a Formstack folder.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Folder name."
+          },
+          "parent": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Parent folder ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/folders",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "name": "{{name}}",
+          "parent": "{{parent}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "webhooks.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List webhooks",
+      "description": "List webhooks configured on a Formstack form.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "formId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Form ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "formId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/forms/{{formId}}/webhooks",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "webhooks.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create webhook",
+      "description": "Create a webhook on a Formstack form.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "formId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Form ID."
+          },
+          "url": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Destination URL."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Webhook name."
+          },
+          "contentType": {
+            "type": "string",
+            "enum": [
+              "urlencoded",
+              "json"
+            ],
+            "description": "Payload content type."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "formId",
+          "url"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/forms/{{formId}}/webhooks",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "url": "{{url}}",
+          "name": "{{name}}",
+          "contentType": "{{contentType}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "notifications.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List notifications",
+      "description": "List notification emails configured on a Formstack form.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "formId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Form ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "formId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/forms/{{formId}}/notifications",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    }
+  },
+  "provenance": {
+    "source": {
+      "url": "https://github.com/oomol-lab/open-connector",
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"
+    }
+  },
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
+    }
+  }
+}

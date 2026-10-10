@@ -53,8 +53,13 @@
   "key": "bright-data",
   "models": [
     "account",
+    "archive",
     "dataset",
-    "view"
+    "scraper",
+    "serp",
+    "snapshot",
+    "view",
+    "zone"
   ],
   "name": "Bright Data",
   "network": {
@@ -99,6 +104,80 @@
       "title": "Get account status",
       "validationMode": "strict-generated"
     },
+    "countries.list": {
+      "description": "List country codes available for each static proxy zone type via GET /countrieslist.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {},
+        "required": [],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/countrieslist",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List available countries",
+      "validationMode": "strict-generated"
+    },
+    "customer.balance.get": {
+      "description": "Get current and pending Bright Data account balances. Requires an API key with Admin permission.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {},
+        "required": [],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/customer/balance",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get customer balance",
+      "validationMode": "strict-generated"
+    },
     "dataset.views.list": {
       "description": "List Bright Data dataset views available to the connected account.",
       "enforceOutputSchema": true,
@@ -133,6 +212,326 @@
       "sideEffect": "read",
       "timeoutMs": 15000,
       "title": "List dataset views",
+      "validationMode": "strict-generated"
+    },
+    "datasets.crawl.trigger": {
+      "description": "Start an asynchronous dataset or site crawl. Poll snapshot_id with snapshots.progress.get, then download with snapshots.results.get.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "custom_output_fields": {
+            "description": "Pipe-separated output fields to include, such as url|title.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "dataset_id": {
+            "description": "Dataset or crawler ID to run.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "include_errors": {
+            "description": "Include an error report with the results.",
+            "type": "boolean"
+          },
+          "items": {
+            "description": "Crawler or scraper input objects. Fields vary by dataset; URL crawlers commonly require url.",
+            "items": {
+              "additionalProperties": true,
+              "properties": {},
+              "type": "object"
+            },
+            "minItems": 1,
+            "type": "array"
+          }
+        },
+        "required": [
+          "items",
+          "dataset_id"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "body": "{{items}}",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "method": "POST",
+        "path": "/datasets/v3/trigger",
+        "query": {
+          "custom_output_fields": "{{custom_output_fields}}",
+          "dataset_id": "{{dataset_id}}",
+          "include_errors": "{{include_errors}}"
+        },
+        "success": [
+          200,
+          201,
+          202
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 30000,
+      "title": "Start site crawl",
+      "validationMode": "strict-generated"
+    },
+    "datasets.deep_lookup.results.get": {
+      "description": "Retrieve enriched records plus progress, cost, and provider metadata for a completed Deep Lookup request.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "request_id": {
+            "description": "Completed Deep Lookup request_id whose records should be retrieved.",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "request_id"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/datasets/deep_lookup/v1/request/{{request_id}}",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "title": "Get Deep Lookup results",
+      "validationMode": "strict-generated"
+    },
+    "datasets.deep_lookup.status.get": {
+      "description": "Check a Deep Lookup request's status, progress, cost, and provider metadata. Poll until completion before retrieving results.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "request_id": {
+            "description": "Deep Lookup request_id returned when the lookup was started.",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "request_id"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/datasets/deep_lookup/v1/request/{{request_id}}/status",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get Deep Lookup status",
+      "validationMode": "strict-generated"
+    },
+    "datasets.deep_lookup.trigger": {
+      "description": "Start an asynchronous Deep Lookup research request and return its request_id. Billing is per matched record.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "columns": {
+            "description": "Columns to enrich or constrain for every matched Deep Lookup record.",
+            "items": {
+              "additionalProperties": true,
+              "properties": {},
+              "type": "object"
+            },
+            "minItems": 1,
+            "type": "array"
+          },
+          "name": {
+            "description": "Machine-readable name for the requested entity collection.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "query": {
+            "description": "Research query. Bright Data requires it to begin with 'Find all'.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "result_limit": {
+            "description": "Maximum number of matched, billable records to return.",
+            "minimum": 1,
+            "type": "integer"
+          },
+          "title": {
+            "description": "Optional human-readable title for the lookup.",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "query",
+          "columns",
+          "result_limit"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "body": {
+          "query": "{{query}}",
+          "result_limit": "{{result_limit}}",
+          "spec": {
+            "columns": "{{columns}}",
+            "name": "{{name}}",
+            "query": "{{query}}",
+            "title": "{{title}}"
+          }
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "method": "POST",
+        "path": "/datasets/deep_lookup/v1/trigger",
+        "success": [
+          200,
+          201
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 30000,
+      "title": "Start Deep Lookup",
+      "validationMode": "strict-generated"
+    },
+    "datasets.filter": {
+      "description": "Create a billable filtered marketplace-dataset snapshot. Use records_limit to cap included records. File uploads are not sent.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "dataset_id": {
+            "description": "ID of the dataset to filter.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "filter": {
+            "additionalProperties": true,
+            "description": "Filter criteria. Basic: {name, operator, value}. Combine with {operator: and|or, filters: [...]}.",
+            "properties": {},
+            "type": "object"
+          },
+          "records_limit": {
+            "description": "Optional maximum number of records to include in the snapshot.",
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "dataset_id",
+          "filter"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "body": {
+          "filter": "{{filter}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "method": "POST",
+        "path": "/datasets/filter",
+        "query": {
+          "dataset_id": "{{dataset_id}}",
+          "records_limit": "{{records_limit}}"
+        },
+        "success": [
+          200,
+          201
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Filter dataset",
       "validationMode": "strict-generated"
     },
     "datasets.list": {
@@ -215,6 +614,97 @@
       "title": "Get dataset metadata",
       "validationMode": "strict-generated"
     },
+    "datasets.scrape": {
+      "description": "Scrape up to 20 input objects synchronously. Requests exceeding the one-minute limit fall back to an asynchronous snapshot.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "custom_output_fields": {
+            "description": "Pipe-separated output fields to return, such as title|final_price|url.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "dataset_id": {
+            "description": "Dataset ID whose scraper should process the inputs.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "format": {
+            "description": "Response format. Bright Data defaults to JSON when omitted.",
+            "enum": [
+              "json",
+              "csv",
+              "ndjson"
+            ],
+            "type": "string"
+          },
+          "include_errors": {
+            "description": "Whether the response should include an errors report.",
+            "type": "boolean"
+          },
+          "items": {
+            "description": "One to 20 input objects accepted by the selected dataset.",
+            "items": {
+              "additionalProperties": true,
+              "properties": {},
+              "type": "object"
+            },
+            "minItems": 1,
+            "type": "array"
+          },
+          "limit_per_input": {
+            "description": "Maximum records returned for each input.",
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "dataset_id"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {}
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "body": {
+          "input": "{{items}}",
+          "limit_per_input": "{{limit_per_input}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "method": "POST",
+        "path": "/datasets/v3/scrape",
+        "query": {
+          "custom_output_fields": "{{custom_output_fields}}",
+          "dataset_id": "{{dataset_id}}",
+          "format": "{{format}}",
+          "include_errors": "{{include_errors}}"
+        },
+        "success": [
+          200,
+          202
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 60000,
+      "title": "Scrape data synchronously",
+      "validationMode": "strict-generated"
+    },
     "healthcheck": {
       "description": "Validate the Bright Data API key by reading account status.",
       "enforceOutputSchema": true,
@@ -250,6 +740,802 @@
       "timeoutMs": 5000,
       "title": "Healthcheck",
       "validationMode": "strict-generated"
+    },
+    "scrapers.list": {
+      "description": "List account-owned Scraper Studio scrapers and discover collector IDs.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "search": {
+            "description": "Optional term used to filter scrapers by name.",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/dca/collectors_list",
+        "query": {
+          "search": "{{search}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List Scraper Studio scrapers",
+      "validationMode": "strict-generated"
+    },
+    "serp.results.get": {
+      "description": "Retrieve JSON or raw results for an asynchronous serp.search request. HTTP 202 means the job is still pending.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "response_id": {
+            "description": "Async SERP response ID returned by serp.search.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "result_format": {
+            "description": "Expected result format. Match the format used in serp.search. Not sent on the wire.",
+            "enum": [
+              "json",
+              "raw"
+            ],
+            "type": "string"
+          },
+          "zone": {
+            "description": "Optional SERP zone name when the provider requires it for result retrieval.",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "response_id"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {}
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/serp/get_result",
+        "query": {
+          "response_id": "{{response_id}}",
+          "zone": "{{zone}}"
+        },
+        "success": [
+          200,
+          202
+        ]
+      },
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get SERP results",
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "serp.search": {
+      "description": "Submit an asynchronous SERP search and return its response_id. Retrieve it with serp.results.get. search_engine and data_format are accepted and not mapped onto POST /serp/req.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "country": {
+            "description": "Two-letter ISO country code for localized results.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "data_format": {
+            "description": "Optional transformation. Accepted and not sent on POST /serp/req.",
+            "enum": [
+              "markdown",
+              "screenshot"
+            ],
+            "type": "string"
+          },
+          "format": {
+            "description": "Provider response format requested for the async job. Sent as brd_json.",
+            "enum": [
+              "json",
+              "raw"
+            ],
+            "type": "string"
+          },
+          "query": {
+            "description": "Search query to execute.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "search_engine": {
+            "description": "Search engine to query. Accepted and not sent; the zone's configured engine is used.",
+            "enum": [
+              "google",
+              "bing",
+              "yahoo",
+              "duckduckgo",
+              "yandex"
+            ],
+            "type": "string"
+          },
+          "zone": {
+            "description": "SERP API zone name. Use zones.list to discover configured zones.",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "zone",
+          "query"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "body": {
+          "brd_json": "{{format}}",
+          "country": "{{country}}",
+          "query": {
+            "q": "{{query}}"
+          }
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "method": "POST",
+        "path": "/serp/req",
+        "query": {
+          "zone": "{{zone}}"
+        },
+        "success": [
+          200,
+          201
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Search SERP",
+      "validationMode": "strict-generated"
+    },
+    "snapshots.progress.get": {
+      "description": "Check whether a dataset snapshot is running, ready, or failed before downloading it.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "snapshot_id": {
+            "description": "Identifier of the snapshot to check, typically s_ followed by hex.",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "snapshot_id"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/datasets/v3/progress/{{snapshot_id}}",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Check snapshot status",
+      "validationMode": "strict-generated"
+    },
+    "snapshots.results.get": {
+      "description": "Download a completed dataset snapshot. Poll snapshots.progress.get before retrying a pending snapshot.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "batch_size": {
+            "description": "Divide snapshot into batches of this size. Use with part.",
+            "minimum": 1000,
+            "type": "integer"
+          },
+          "compress": {
+            "description": "Whether to compress the result using gzip.",
+            "type": "boolean"
+          },
+          "format": {
+            "description": "Desired output format.",
+            "enum": [
+              "json",
+              "csv",
+              "ndjson",
+              "jsonl"
+            ],
+            "type": "string"
+          },
+          "part": {
+            "description": "Which batch part to download (starts from 1).",
+            "minimum": 1,
+            "type": "integer"
+          },
+          "snapshot_id": {
+            "description": "Identifier of the snapshot to fetch results for.",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "snapshot_id"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {}
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/datasets/v3/snapshot/{{snapshot_id}}",
+        "query": {
+          "batch_size": "{{batch_size}}",
+          "compress": "{{compress}}",
+          "format": "{{format}}",
+          "part": "{{part}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "title": "Download snapshot results",
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "unlocker.request": {
+      "description": "Scrape a public URL through Web Unlocker when ordinary requests are blocked or require JavaScript rendering.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "country": {
+            "description": "ISO 3166-1 alpha-2 country code for the proxy location.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "data_format": {
+            "description": "Set to markdown to convert page content to markdown format.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "format": {
+            "description": "Response format. raw returns HTML; json returns structured data.",
+            "enum": [
+              "raw",
+              "json"
+            ],
+            "type": "string"
+          },
+          "url": {
+            "description": "The URL of the website to unlock and scrape.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "zone": {
+            "description": "Web Unlocker zone name. Call zones.list first to get available zones.",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "url",
+          "zone"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {}
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "body": {
+          "country": "{{country}}",
+          "data_format": "{{data_format}}",
+          "format": "{{format}}",
+          "url": "{{url}}",
+          "zone": "{{zone}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "method": "POST",
+        "path": "/request",
+        "success": [
+          200,
+          201
+        ]
+      },
+      "sideEffect": "write",
+      "timeoutMs": 60000,
+      "title": "Scrape protected URL",
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "webarchive.search.create": {
+      "description": "Search Bright Data's Web Archive and estimate matching files, dump size, and dump cost. filters must include max_age or both min_date and max_date.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "filters": {
+            "additionalProperties": true,
+            "description": "Required archive filters. A search needs max_age, or both min_date and max_date.",
+            "properties": {},
+            "type": "object"
+          }
+        },
+        "required": [
+          "filters"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "body": {
+          "filters": "{{filters}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "method": "POST",
+        "path": "/webarchive/search",
+        "success": [
+          200,
+          201
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 45000,
+      "title": "Search web archive",
+      "validationMode": "strict-generated"
+    },
+    "webarchive.search.get": {
+      "description": "Get a Web Archive search's status and its matching-file, dump-size, and dump-cost estimates.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "search_id": {
+            "description": "Archive search identifier returned by webarchive.search.create.",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "search_id"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/webarchive/search/{{search_id}}",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get web archive search",
+      "validationMode": "strict-generated"
+    },
+    "zones.bandwidth.get": {
+      "description": "Get uploaded, downloaded, and total byte usage for one zone and date range.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "from_date": {
+            "description": "Optional ISO 8601 start date or timestamp for the usage window.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "to_date": {
+            "description": "Optional ISO 8601 end date or timestamp for the usage window.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "zone": {
+            "description": "Zone name to report.",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "zone"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/zone/bw",
+        "query": {
+          "from": "{{from_date}}",
+          "to": "{{to_date}}",
+          "zone": "{{zone}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get zone bandwidth",
+      "validationMode": "strict-generated"
+    },
+    "zones.cities.list": {
+      "description": "List static-network cities available for a country and proxy pool type.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "country": {
+            "description": "ISO 3166-1 alpha-2 country code to list available cities for.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "pool_ip_type": {
+            "description": "Type of static proxy pool. dc for datacenter, static_res for residential/ISP.",
+            "enum": [
+              "dc",
+              "static_res"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "country"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "array"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/zone/static/cities",
+        "query": {
+          "country": "{{country}}",
+          "pool_ip_type": "{{pool_ip_type}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List available cities",
+      "validationMode": "strict-generated"
+    },
+    "zones.cost.get": {
+      "description": "Get invoice-aligned billed cost and bandwidth for one zone and date range. The to_date boundary is exclusive.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "from_date": {
+            "description": "Inclusive start date in ISO YYYY-MM-DD format.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "to_date": {
+            "description": "Exclusive end date in ISO YYYY-MM-DD format; use the first day after the desired period.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "zone": {
+            "description": "Zone name to report.",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "zone"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/zone/cost",
+        "query": {
+          "from": "{{from_date}}",
+          "to": "{{to_date}}",
+          "zone": "{{zone}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get zone cost",
+      "validationMode": "strict-generated"
+    },
+    "zones.create": {
+      "description": "Create a durable SERP API zone using Bright Data's safe SERP plan (zone.type=serp, plan.type=unblocker, plan.serp=true). product=scraping_browser is accepted and still provisions a SERP zone; Browser API plan mapping is not applied.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "country": {
+            "description": "Lowercase ISO 3166-1 alpha-2 country code, or any.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "custom_headers": {
+            "description": "Allow custom request headers in the new zone.",
+            "type": "boolean"
+          },
+          "name": {
+            "description": "Name for the new Bright Data zone.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "product": {
+            "description": "Safe product to provision. scraping_browser is accepted; this operation always sends the official SERP plan.",
+            "enum": [
+              "serp",
+              "scraping_browser"
+            ],
+            "type": "string"
+          },
+          "solve_captcha_disable": {
+            "description": "For SERP zones, disable Bright Data captcha solving.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "name",
+          "product"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "body": {
+          "plan": {
+            "country": "{{country}}",
+            "custom_headers": "{{custom_headers}}",
+            "serp": true,
+            "solve_captcha_disable": "{{solve_captcha_disable}}",
+            "type": "unblocker"
+          },
+          "zone": {
+            "name": "{{name}}",
+            "type": "serp"
+          }
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "method": "POST",
+        "path": "/zone",
+        "success": [
+          200,
+          201
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Create safe zone",
+      "validationMode": "strict-generated"
+    },
+    "zones.list": {
+      "description": "List configured zones and their types, including Web Unlocker, SERP, and Scraping Browser zones.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {},
+        "required": [],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "array"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/zone/get_all_zones",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List unlocker zones",
+      "validationMode": "strict-generated"
     }
   },
   "provenance": {
@@ -259,6 +1545,6 @@
     }
   },
   "runtime": "bun",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "visibility": "public"
 }

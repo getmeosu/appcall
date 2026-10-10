@@ -97,13 +97,29 @@
     "providerId": "openweather_api",
     "appcallId": "openweather-api",
     "disposition": "APPROVED",
-    "edition": "international OpenWeather Current Weather, Geocoding, 5-day Forecast, and Air Pollution APIs",
+    "edition": "international OpenWeather Current Weather, Geocoding, 5-day Forecast, Air Pollution, UV Index, Weather Stations, Weather Maps, and Weather Triggers APIs",
     "operations": [
-      "healthcheck",
+      "air-pollution.current",
       "geocoding.direct",
+      "healthcheck",
       "weather.current",
       "weather.forecast",
-      "air-pollution.current"
+      "air-pollution.forecast",
+      "air-pollution.history",
+      "geocoding.reverse",
+      "geocoding.zip",
+      "weather.find",
+      "uv.current",
+      "uv.forecast",
+      "uv.history",
+      "stations.list",
+      "stations.get",
+      "stations.create",
+      "stations.update",
+      "stations.delete",
+      "stations.measurements.create",
+      "stations.measurements.list",
+      "triggers.list"
     ],
     "upstreamSha": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
     "marketFocus": "international",
@@ -120,7 +136,11 @@
         "https://openweathermap.org/api/air-pollution",
         "https://openweathermap.org/faq",
         "https://openweathermap.org/terms",
-        "https://openweathermap.org/"
+        "https://openweathermap.org/",
+        "https://openweathermap.org/stations",
+        "https://openweathermap.org/api/weathermaps",
+        "https://openweathermap.org/api/uvi",
+        "https://docs.composio.dev/toolkits/openweather_api"
       ]
     },
     "breach": {
@@ -146,7 +166,7 @@
     "decision": "APPROVED",
     "providerId": "openweather_api",
     "appcallId": "openweather-api",
-    "edition": "international OpenWeather Current Weather, Geocoding, 5-day Forecast, and Air Pollution APIs",
+    "edition": "international OpenWeather Current Weather, Geocoding, 5-day Forecast, Air Pollution, UV Index, Weather Stations, Weather Maps, and Weather Triggers APIs",
     "marketFocus": "international",
     "reviewedAt": "2026-09-13",
     "reviewer": "research review",
@@ -158,9 +178,13 @@
       "https://openweathermap.org/api/air-pollution",
       "https://openweathermap.org/faq",
       "https://openweathermap.org/terms",
-      "https://openweathermap.org/"
+      "https://openweathermap.org/",
+      "https://openweathermap.org/stations",
+      "https://openweathermap.org/api/weathermaps",
+      "https://openweathermap.org/api/uvi",
+      "https://docs.composio.dev/toolkits/openweather_api"
     ],
-    "searchCoverage": "Official OpenWeather HTTP API at https://api.openweathermap.org with appid query authentication, GET /geo/1.0/direct, GET /data/2.5/weather, GET /data/2.5/forecast, GET /data/2.5/air_pollution, free-plan 60 calls/minute, Openweather Ltd London identity, and dated 2026-09-13 incident search. No dedicated non-lookup account/quota JSON GET exists in official docs or pinned actions. Pinned credential validator uses GET /geo/1.0/direct?q=London&limit=1. Tile host tile.openweathermap.org, One Call 3.0 UV helpers, weather-station writes, and retired Weather Triggers are not exposed. No current unresolved customer-account compromise identified. Bounded coverage is not a breach-free claim.",
+    "searchCoverage": "Official OpenWeather HTTP API at https://api.openweathermap.org with appid query authentication, Current Weather, 5-day forecast, Geocoding, Air Pollution, UV Index, Weather Stations 3.0, Weather Maps 1.0 tiles at tile.openweathermap.org, and Weather Triggers list, plus Composio OPENWEATHER_API (21 tools). Pinned credential validator uses GET /geo/1.0/direct?q=London&limit=1. No current unresolved customer-account compromise identified. Bounded coverage is not a breach-free claim.",
     "incidents": [],
     "remainingGates": [
       "live authentication unverified",
@@ -221,7 +245,7 @@
       ],
       "responseContract": "appcall-provider-json-v1",
       "adaptations": [
-        "Requires lat and lon rather than the pinned exclusive q/id/zip/lat+lon selector, matching official guidance that coordinates are the most accurate location form.",
+        "Requires lat and lon matching origin fixtures and official coordinate guidance. Optional q, id, and zip are forwarded to the built-in geocoder used by Composio GET_CURRENT_WEATHER.",
         "Optional units and lang bind to documented query names. Returns raw OpenWeather JSON under data."
       ]
     },
@@ -238,8 +262,8 @@
       ],
       "responseContract": "appcall-provider-json-v1",
       "adaptations": [
-        "Requires lat and lon rather than the pinned exclusive location selector. Optional units and lang bind to documented query names.",
-        "Omits the pinned json-only mode query because JSON is the official default. Returns raw OpenWeather JSON under data."
+        "Requires lat and lon matching origin fixtures. Optional q, id, zip, and mode are forwarded to match Composio GET5_DAY_FORECAST.",
+        "Returns raw OpenWeather JSON under data."
       ]
     },
     "air-pollution.current": {
@@ -257,22 +281,253 @@
       "adaptations": [
         "Requires lat and lon matching official Current Air Pollution API. Returns raw OpenWeather JSON under data."
       ]
+    },
+    "air-pollution.forecast": {
+      "upstreamActionId": "get_air_pollution_forecast",
+      "sourceRefs": [
+        "action-air-pollution",
+        "build-url"
+      ],
+      "documentationUrls": [
+        "https://openweathermap.org/api/air-pollution"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Official GET /data/2.5/air_pollution/forecast requires lat and lon."
+      ]
+    },
+    "air-pollution.history": {
+      "upstreamActionId": "get_air_pollution_history",
+      "sourceRefs": [
+        "build-url",
+        "proxy-auth"
+      ],
+      "documentationUrls": [
+        "https://openweathermap.org/api/air-pollution"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Official GET /data/2.5/air_pollution/history requires lat, lon, start, and end Unix timestamps."
+      ]
+    },
+    "geocoding.reverse": {
+      "upstreamActionId": "get_geocoding_reverse",
+      "sourceRefs": [
+        "action-geocoding-direct",
+        "build-url"
+      ],
+      "documentationUrls": [
+        "https://openweathermap.org/api/geocoding-api"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Official GET /geo/1.0/reverse requires lat and lon. Optional limit is 1-5."
+      ]
+    },
+    "geocoding.zip": {
+      "upstreamActionId": "get_geocoding_by_zip",
+      "sourceRefs": [
+        "build-url",
+        "proxy-auth"
+      ],
+      "documentationUrls": [
+        "https://openweathermap.org/api/geocoding-api"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Official GET /geo/1.0/zip requires zip as zip,country. Returns a location object under data."
+      ]
+    },
+    "weather.find": {
+      "upstreamActionId": "get_circle_city_weather",
+      "sourceRefs": [
+        "build-url",
+        "proxy-auth"
+      ],
+      "documentationUrls": [
+        "https://openweathermap.org/current"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Official GET /data/2.5/find searches cities in a circle around lat/lon. Optional cnt is 1-50."
+      ]
+    },
+    "uv.current": {
+      "upstreamActionId": "get_uv_index",
+      "sourceRefs": [
+        "build-url",
+        "proxy-auth"
+      ],
+      "documentationUrls": [
+        "https://openweathermap.org/api/uvi"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Composio still exposes the retired UV Index product as GET /data/2.5/uvi. One Call 3.0 uvi fields are not a separate Composio tool."
+      ]
+    },
+    "uv.forecast": {
+      "upstreamActionId": "get_uv_index_forecast",
+      "sourceRefs": [
+        "build-url",
+        "proxy-auth"
+      ],
+      "documentationUrls": [
+        "https://openweathermap.org/api/uvi"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Official GET /data/2.5/uvi/forecast. Optional cnt is 1-8 days."
+      ]
+    },
+    "uv.history": {
+      "upstreamActionId": "get_uv_index_history",
+      "sourceRefs": [
+        "build-url",
+        "proxy-auth"
+      ],
+      "documentationUrls": [
+        "https://openweathermap.org/api/uvi"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Official GET /data/2.5/uvi/history requires start and end Unix timestamps."
+      ]
+    },
+    "maps.tile": {
+      "upstreamActionId": "get_weather_map_tile",
+      "sourceRefs": [
+        "build-url",
+        "proxy-auth"
+      ],
+      "documentationUrls": [
+        "https://openweathermap.org/api/weathermaps"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Composio layer enum matches Weather Maps 1.0 (clouds_new, temp_new, \u2026) at https://tile.openweathermap.org/map/{layer}/{z}/{x}/{y}.png, not Maps 2.0 op codes.",
+        "Optional opacity, palette, fill_bound, scale, fill, color, and format query parameters are forwarded when set. Non-JSON PNG bodies are returned as a string under data."
+      ]
+    },
+    "stations.list": {
+      "upstreamActionId": "get_weather_stations",
+      "sourceRefs": [
+        "build-url",
+        "proxy-auth"
+      ],
+      "documentationUrls": [
+        "https://openweathermap.org/stations"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Official GET /data/3.0/stations lists stations on the account."
+      ]
+    },
+    "stations.get": {
+      "upstreamActionId": "get_weather_station",
+      "sourceRefs": [
+        "build-url",
+        "proxy-auth"
+      ],
+      "documentationUrls": [
+        "https://openweathermap.org/stations"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Official GET /data/3.0/stations/{id}. Composio station_id is the internal OpenWeather station id."
+      ]
+    },
+    "stations.create": {
+      "upstreamActionId": "post_add_weather_station",
+      "sourceRefs": [
+        "build-url",
+        "proxy-auth"
+      ],
+      "documentationUrls": [
+        "https://openweathermap.org/stations"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Official POST /data/3.0/stations returns 201. Body uses external_id, name, latitude, longitude, altitude."
+      ]
+    },
+    "stations.update": {
+      "upstreamActionId": "update_weather_station",
+      "sourceRefs": [
+        "build-url",
+        "proxy-auth"
+      ],
+      "documentationUrls": [
+        "https://openweathermap.org/stations"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Official PUT /data/3.0/stations/{id}. Composio requires latitude and longitude; name, altitude, and external_id are optional."
+      ]
+    },
+    "stations.delete": {
+      "upstreamActionId": "delete_weather_station",
+      "sourceRefs": [
+        "build-url",
+        "proxy-auth"
+      ],
+      "documentationUrls": [
+        "https://openweathermap.org/stations"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Official DELETE /data/3.0/stations/{id} returns 204. Empty bodies map to {success: true}."
+      ]
+    },
+    "stations.measurements.create": {
+      "upstreamActionId": "post_submit_station_measurements",
+      "sourceRefs": [
+        "build-url",
+        "proxy-auth"
+      ],
+      "documentationUrls": [
+        "https://openweathermap.org/stations"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Official POST /data/3.0/measurements sends a JSON array and returns 204."
+      ]
+    },
+    "stations.measurements.list": {
+      "upstreamActionId": "get_station_measurements",
+      "sourceRefs": [
+        "build-url",
+        "proxy-auth"
+      ],
+      "documentationUrls": [
+        "https://openweathermap.org/stations"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Official GET /data/3.0/measurements requires station_id, type (m|h|d), from, to, and limit."
+      ]
+    },
+    "triggers.list": {
+      "upstreamActionId": "get_weather_triggers",
+      "sourceRefs": [
+        "build-url",
+        "proxy-auth"
+      ],
+      "documentationUrls": [
+        "https://openweathermap.org/triggers",
+        "https://docs.composio.dev/toolkits/openweather_api"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Composio GET_WEATHER_TRIGGERS retrieves registered triggers. Implemented as official GET /data/3.0/triggers.",
+        "Optional triggers array is accepted for Composio-shaped input and is not sent on the list GET."
+      ]
     }
   },
   "manifest": {
-    "key": "openweather-api",
-    "name": "OpenWeather",
-    "version": "0.1.0",
-    "runtime": "bun",
-    "visibility": "public",
-    "categories": [
-      "utility"
-    ],
     "auth": {
-      "type": "api_key",
       "scopes": [],
       "setup": {
-        "mode": "api_key",
         "fields": [
           {
             "key": "apiKey",
@@ -280,320 +535,101 @@
             "required": true,
             "secret": true
           }
-        ]
+        ],
+        "mode": "api_key"
+      },
+      "type": "api_key"
+    },
+    "categories": [
+      "utility"
+    ],
+    "evidence": {
+      "fixture": {
+        "status": "supplied"
+      },
+      "live": {
+        "status": "unverified"
       }
     },
-    "network": {
-      "allowedHosts": [
-        "api.openweathermap.org"
-      ]
-    },
-    "models": [
-      "location",
-      "weather",
-      "forecast",
-      "air-pollution"
-    ],
     "http": {
-      "baseUrl": "https://api.openweathermap.org",
       "auth": {
         "field": "apiKey",
         "in": "query",
         "name": "appid",
         "value": "{{apiKey}}"
       },
-      "headers": {
-        "Accept": "application/json"
-      },
+      "baseUrl": "https://api.openweathermap.org",
       "errors": {
-        "rateLimitStatuses": [
-          429
-        ],
-        "retryAfterHeader": "retry-after",
         "defaultRetryAfterSeconds": 30,
         "messagePaths": [
           "message",
           "cod"
-        ]
+        ],
+        "rateLimitStatuses": [
+          429
+        ],
+        "retryAfterHeader": "retry-after"
+      },
+      "headers": {
+        "Accept": "application/json"
       }
     },
+    "key": "openweather-api",
+    "models": [
+      "location",
+      "weather",
+      "forecast",
+      "air-pollution",
+      "station",
+      "uv",
+      "map",
+      "trigger"
+    ],
+    "name": "OpenWeather",
+    "network": {
+      "allowedHosts": [
+        "api.openweathermap.org",
+        "tile.openweathermap.org"
+      ]
+    },
     "operations": {
-      "healthcheck": {
-        "timeoutMs": 5000,
-        "maxInputBytes": 4096,
-        "maxResponseBytes": 65536,
-        "kind": "action",
-        "sideEffect": "read",
-        "title": "Healthcheck",
-        "description": "Validate the OpenWeather API key with GET /geo/1.0/direct?q=London&limit=1.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {},
-          "additionalProperties": false
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": [
-                "array",
-                "object"
-              ]
-            }
-          },
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "GET",
-          "path": "/geo/1.0/direct",
-          "query": {
-            "q": "London",
-            "limit": 1
-          },
-          "success": [
-            200
-          ]
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "geocoding.direct": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 1048576,
-        "kind": "action",
-        "sideEffect": "read",
-        "title": "Direct geocoding",
-        "description": "Resolve one place name into OpenWeather geocoding matches.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "q": {
-              "type": "string",
-              "minLength": 1
-            },
-            "limit": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 5
-            }
-          },
-          "required": [
-            "q"
-          ],
-          "additionalProperties": false
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": [
-                "array",
-                "object"
-              ]
-            }
-          },
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "GET",
-          "path": "/geo/1.0/direct",
-          "query": {
-            "q": "{{q}}",
-            "limit": "{{limit}}"
-          },
-          "success": [
-            200
-          ]
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "weather.current": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 1048576,
-        "kind": "action",
-        "sideEffect": "read",
-        "title": "Current weather",
-        "description": "Retrieve current weather for one latitude and longitude.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "lat": {
-              "type": "number",
-              "minimum": -90,
-              "maximum": 90
-            },
-            "lon": {
-              "type": "number",
-              "minimum": -180,
-              "maximum": 180
-            },
-            "units": {
-              "type": "string",
-              "enum": [
-                "standard",
-                "metric",
-                "imperial"
-              ]
-            },
-            "lang": {
-              "type": "string",
-              "minLength": 1
-            }
-          },
-          "required": [
-            "lat",
-            "lon"
-          ],
-          "additionalProperties": false
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "GET",
-          "path": "/data/2.5/weather",
-          "query": {
-            "lat": "{{lat}}",
-            "lon": "{{lon}}",
-            "units": "{{units}}",
-            "lang": "{{lang}}"
-          },
-          "success": [
-            200
-          ]
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "weather.forecast": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
-        "sideEffect": "read",
-        "title": "5-day forecast",
-        "description": "Retrieve the OpenWeather 5-day forecast in 3-hour steps for one latitude and longitude.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "lat": {
-              "type": "number",
-              "minimum": -90,
-              "maximum": 90
-            },
-            "lon": {
-              "type": "number",
-              "minimum": -180,
-              "maximum": 180
-            },
-            "units": {
-              "type": "string",
-              "enum": [
-                "standard",
-                "metric",
-                "imperial"
-              ]
-            },
-            "lang": {
-              "type": "string",
-              "minLength": 1
-            }
-          },
-          "required": [
-            "lat",
-            "lon"
-          ],
-          "additionalProperties": false
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "GET",
-          "path": "/data/2.5/forecast",
-          "query": {
-            "lat": "{{lat}}",
-            "lon": "{{lon}}",
-            "units": "{{units}}",
-            "lang": "{{lang}}"
-          },
-          "success": [
-            200
-          ]
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
       "air-pollution.current": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 1048576,
-        "kind": "action",
-        "sideEffect": "read",
-        "title": "Current air pollution",
         "description": "Retrieve the current air-pollution snapshot for one latitude and longitude.",
+        "enforceOutputSchema": true,
         "inputSchema": {
-          "type": "object",
+          "additionalProperties": false,
           "properties": {
             "lat": {
-              "type": "number",
+              "maximum": 90,
               "minimum": -90,
-              "maximum": 90
+              "type": "number"
             },
             "lon": {
-              "type": "number",
+              "maximum": 180,
               "minimum": -180,
-              "maximum": 180
+              "type": "number"
             }
           },
           "required": [
             "lat",
             "lon"
           ],
-          "additionalProperties": false
+          "type": "object"
         },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
         "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
+          "additionalProperties": false,
           "properties": {
             "data": {
               "type": "object"
             }
           },
-          "additionalProperties": false
+          "required": [
+            "data"
+          ],
+          "type": "object"
         },
         "request": {
           "method": "GET",
@@ -606,24 +642,1334 @@
             200
           ]
         },
+        "responseFormat": "json",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "title": "Current air pollution",
+        "validationMode": "strict-generated"
+      },
+      "geocoding.direct": {
+        "description": "Resolve one place name into OpenWeather geocoding matches.",
         "enforceOutputSchema": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "limit": {
+              "maximum": 5,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "q": {
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "q"
+          ],
+          "type": "object"
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": [
+                "array",
+                "object"
+              ]
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        },
+        "request": {
+          "method": "GET",
+          "path": "/geo/1.0/direct",
+          "query": {
+            "limit": "{{limit}}",
+            "q": "{{q}}"
+          },
+          "success": [
+            200
+          ]
+        },
+        "responseFormat": "json",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "title": "Direct geocoding",
+        "validationMode": "strict-generated"
+      },
+      "healthcheck": {
+        "description": "Validate the OpenWeather API key with GET /geo/1.0/direct?q=London&limit=1.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {},
+          "type": "object"
+        },
+        "kind": "action",
+        "maxInputBytes": 4096,
+        "maxResponseBytes": 65536,
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": [
+                "array",
+                "object"
+              ]
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        },
+        "request": {
+          "method": "GET",
+          "path": "/geo/1.0/direct",
+          "query": {
+            "limit": 1,
+            "q": "London"
+          },
+          "success": [
+            200
+          ]
+        },
+        "responseFormat": "json",
+        "sideEffect": "read",
+        "timeoutMs": 5000,
+        "title": "Healthcheck",
+        "validationMode": "strict-generated"
+      },
+      "weather.current": {
+        "description": "Retrieve current weather for one location. Requires lat and lon; optional q, id, or zip are forwarded to OpenWeather's built-in geocoder.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "lang": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "lat": {
+              "maximum": 90,
+              "minimum": -90,
+              "type": "number"
+            },
+            "lon": {
+              "maximum": 180,
+              "minimum": -180,
+              "type": "number"
+            },
+            "units": {
+              "enum": [
+                "standard",
+                "metric",
+                "imperial"
+              ],
+              "type": "string"
+            },
+            "q": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "id": {
+              "minimum": 1,
+              "type": "integer"
+            },
+            "zip": {
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "lat",
+            "lon"
+          ],
+          "type": "object"
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        },
+        "request": {
+          "method": "GET",
+          "path": "/data/2.5/weather",
+          "query": {
+            "lang": "{{lang}}",
+            "lat": "{{lat}}",
+            "lon": "{{lon}}",
+            "units": "{{units}}",
+            "q": "{{q}}",
+            "id": "{{id}}",
+            "zip": "{{zip}}"
+          },
+          "success": [
+            200
+          ]
+        },
+        "responseFormat": "json",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "title": "Current weather",
+        "validationMode": "strict-generated"
+      },
+      "weather.forecast": {
+        "description": "Retrieve the OpenWeather 5-day forecast in 3-hour steps. Requires lat and lon; optional q, id, zip, and mode are forwarded to the 5 day / 3 hour API.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "lang": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "lat": {
+              "maximum": 90,
+              "minimum": -90,
+              "type": "number"
+            },
+            "lon": {
+              "maximum": 180,
+              "minimum": -180,
+              "type": "number"
+            },
+            "units": {
+              "enum": [
+                "standard",
+                "metric",
+                "imperial"
+              ],
+              "type": "string"
+            },
+            "q": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "id": {
+              "minimum": 1,
+              "type": "integer"
+            },
+            "zip": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "mode": {
+              "enum": [
+                "json",
+                "xml",
+                "html"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "lat",
+            "lon"
+          ],
+          "type": "object"
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        },
+        "request": {
+          "method": "GET",
+          "path": "/data/2.5/forecast",
+          "query": {
+            "lang": "{{lang}}",
+            "lat": "{{lat}}",
+            "lon": "{{lon}}",
+            "units": "{{units}}",
+            "q": "{{q}}",
+            "id": "{{id}}",
+            "zip": "{{zip}}",
+            "mode": "{{mode}}"
+          },
+          "success": [
+            200
+          ]
+        },
+        "responseFormat": "json",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "title": "5-day forecast",
+        "validationMode": "strict-generated"
+      },
+      "air-pollution.forecast": {
+        "description": "Retrieve forecasted air-pollution data for one latitude and longitude.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "lat": {
+              "maximum": 90,
+              "minimum": -90,
+              "type": "number"
+            },
+            "lon": {
+              "maximum": 180,
+              "minimum": -180,
+              "type": "number"
+            }
+          },
+          "type": "object",
+          "required": [
+            "lat",
+            "lon"
+          ]
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        },
+        "request": {
+          "method": "GET",
+          "path": "/data/2.5/air_pollution/forecast",
+          "query": {
+            "lat": "{{lat}}",
+            "lon": "{{lon}}"
+          },
+          "success": [
+            200
+          ]
+        },
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "title": "Air pollution forecast",
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "air-pollution.history": {
+        "description": "Retrieve historical air-pollution data for one latitude, longitude, and UTC window.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "lat": {
+              "maximum": 90,
+              "minimum": -90,
+              "type": "number"
+            },
+            "lon": {
+              "maximum": 180,
+              "minimum": -180,
+              "type": "number"
+            },
+            "start": {
+              "minimum": 0,
+              "type": "integer"
+            },
+            "end": {
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          "type": "object",
+          "required": [
+            "lat",
+            "lon",
+            "start",
+            "end"
+          ]
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        },
+        "request": {
+          "method": "GET",
+          "path": "/data/2.5/air_pollution/history",
+          "query": {
+            "lat": "{{lat}}",
+            "lon": "{{lon}}",
+            "start": "{{start}}",
+            "end": "{{end}}"
+          },
+          "success": [
+            200
+          ]
+        },
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "title": "Air pollution history",
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "geocoding.reverse": {
+        "description": "Convert geographic coordinates into nearby OpenWeather location names.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "lat": {
+              "maximum": 90,
+              "minimum": -90,
+              "type": "number"
+            },
+            "lon": {
+              "maximum": 180,
+              "minimum": -180,
+              "type": "number"
+            },
+            "limit": {
+              "maximum": 5,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          "type": "object",
+          "required": [
+            "lat",
+            "lon"
+          ]
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": [
+                "array",
+                "object"
+              ]
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        },
+        "request": {
+          "method": "GET",
+          "path": "/geo/1.0/reverse",
+          "query": {
+            "lat": "{{lat}}",
+            "lon": "{{lon}}",
+            "limit": "{{limit}}"
+          },
+          "success": [
+            200
+          ]
+        },
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "title": "Reverse geocoding",
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "geocoding.zip": {
+        "description": "Convert a zip/post code into geographic coordinates.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "zip": {
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "type": "object",
+          "required": [
+            "zip"
+          ]
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        },
+        "request": {
+          "method": "GET",
+          "path": "/geo/1.0/zip",
+          "query": {
+            "zip": "{{zip}}"
+          },
+          "success": [
+            200
+          ]
+        },
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "title": "Geocoding by zip code",
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "weather.find": {
+        "description": "Search current weather for cities around a geographic point.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "lat": {
+              "maximum": 90,
+              "minimum": -90,
+              "type": "number"
+            },
+            "lon": {
+              "maximum": 180,
+              "minimum": -180,
+              "type": "number"
+            },
+            "cnt": {
+              "maximum": 50,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "lang": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "mode": {
+              "enum": [
+                "json",
+                "xml"
+              ],
+              "type": "string"
+            },
+            "units": {
+              "enum": [
+                "standard",
+                "metric",
+                "imperial"
+              ],
+              "type": "string"
+            }
+          },
+          "type": "object",
+          "required": [
+            "lat",
+            "lon"
+          ]
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        },
+        "request": {
+          "method": "GET",
+          "path": "/data/2.5/find",
+          "query": {
+            "lat": "{{lat}}",
+            "lon": "{{lon}}",
+            "cnt": "{{cnt}}",
+            "lang": "{{lang}}",
+            "mode": "{{mode}}",
+            "units": "{{units}}"
+          },
+          "success": [
+            200
+          ]
+        },
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "title": "Circle city weather",
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "uv.current": {
+        "description": "Retrieve the current UV index for one latitude and longitude.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "lat": {
+              "maximum": 90,
+              "minimum": -90,
+              "type": "number"
+            },
+            "lon": {
+              "maximum": 180,
+              "minimum": -180,
+              "type": "number"
+            }
+          },
+          "type": "object",
+          "required": [
+            "lat",
+            "lon"
+          ]
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        },
+        "request": {
+          "method": "GET",
+          "path": "/data/2.5/uvi",
+          "query": {
+            "lat": "{{lat}}",
+            "lon": "{{lon}}"
+          },
+          "success": [
+            200
+          ]
+        },
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "title": "Current UV index",
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "uv.forecast": {
+        "description": "Retrieve up to 8 days of UV index forecast for one latitude and longitude.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "lat": {
+              "maximum": 90,
+              "minimum": -90,
+              "type": "number"
+            },
+            "lon": {
+              "maximum": 180,
+              "minimum": -180,
+              "type": "number"
+            },
+            "cnt": {
+              "maximum": 8,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          "type": "object",
+          "required": [
+            "lat",
+            "lon"
+          ]
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": [
+                "array",
+                "object"
+              ]
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        },
+        "request": {
+          "method": "GET",
+          "path": "/data/2.5/uvi/forecast",
+          "query": {
+            "lat": "{{lat}}",
+            "lon": "{{lon}}",
+            "cnt": "{{cnt}}"
+          },
+          "success": [
+            200
+          ]
+        },
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "title": "UV index forecast",
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "uv.history": {
+        "description": "Retrieve historical UV index data for one latitude, longitude, and UTC window.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "lat": {
+              "maximum": 90,
+              "minimum": -90,
+              "type": "number"
+            },
+            "lon": {
+              "maximum": 180,
+              "minimum": -180,
+              "type": "number"
+            },
+            "start": {
+              "minimum": 0,
+              "type": "integer"
+            },
+            "end": {
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          "type": "object",
+          "required": [
+            "lat",
+            "lon",
+            "start",
+            "end"
+          ]
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": [
+                "array",
+                "object"
+              ]
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        },
+        "request": {
+          "method": "GET",
+          "path": "/data/2.5/uvi/history",
+          "query": {
+            "lat": "{{lat}}",
+            "lon": "{{lon}}",
+            "start": "{{start}}",
+            "end": "{{end}}"
+          },
+          "success": [
+            200
+          ]
+        },
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "title": "UV index history",
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "stations.list": {
+        "description": "List weather stations registered to the authenticated OpenWeather account.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {},
+          "type": "object"
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": [
+                "array",
+                "object"
+              ]
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        },
+        "request": {
+          "method": "GET",
+          "path": "/data/3.0/stations",
+          "query": {},
+          "success": [
+            200
+          ]
+        },
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "title": "List weather stations",
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "stations.get": {
+        "description": "Retrieve one registered weather station by internal station ID.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "station_id": {
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "type": "object",
+          "required": [
+            "station_id"
+          ]
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        },
+        "request": {
+          "method": "GET",
+          "path": "/data/3.0/stations/{{station_id}}",
+          "query": {},
+          "success": [
+            200
+          ]
+        },
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "title": "Get weather station",
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "stations.create": {
+        "description": "Register a personal weather station on the authenticated OpenWeather account.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "external_id": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "name": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "latitude": {
+              "maximum": 90,
+              "minimum": -90,
+              "type": "number"
+            },
+            "longitude": {
+              "maximum": 180,
+              "minimum": -180,
+              "type": "number"
+            },
+            "altitude": {
+              "type": "number"
+            }
+          },
+          "type": "object",
+          "required": [
+            "external_id",
+            "name",
+            "latitude",
+            "longitude",
+            "altitude"
+          ]
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        },
+        "request": {
+          "method": "POST",
+          "path": "/data/3.0/stations",
+          "success": [
+            201
+          ],
+          "body": {
+            "external_id": "{{external_id}}",
+            "name": "{{name}}",
+            "latitude": "{{latitude}}",
+            "longitude": "{{longitude}}",
+            "altitude": "{{altitude}}"
+          },
+          "headers": {
+            "Content-Type": "application/json"
+          }
+        },
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "title": "Add weather station",
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "stations.update": {
+        "description": "Update name, location, altitude, or external ID of a registered weather station.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "station_id": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "latitude": {
+              "maximum": 90,
+              "minimum": -90,
+              "type": "number"
+            },
+            "longitude": {
+              "maximum": 180,
+              "minimum": -180,
+              "type": "number"
+            },
+            "name": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "altitude": {
+              "type": "number"
+            },
+            "external_id": {
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "type": "object",
+          "required": [
+            "station_id",
+            "latitude",
+            "longitude"
+          ]
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        },
+        "request": {
+          "method": "PUT",
+          "path": "/data/3.0/stations/{{station_id}}",
+          "success": [
+            200
+          ],
+          "body": {
+            "external_id": "{{external_id}}",
+            "name": "{{name}}",
+            "latitude": "{{latitude}}",
+            "longitude": "{{longitude}}",
+            "altitude": "{{altitude}}"
+          },
+          "headers": {
+            "Content-Type": "application/json"
+          }
+        },
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "title": "Update weather station",
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "stations.delete": {
+        "description": "Delete a registered weather station and its stored measurements.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "station_id": {
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "type": "object",
+          "required": [
+            "station_id"
+          ]
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "success": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "success"
+          ],
+          "type": "object"
+        },
+        "request": {
+          "method": "DELETE",
+          "path": "/data/3.0/stations/{{station_id}}",
+          "success": [
+            204
+          ],
+          "result": {
+            "success": true
+          }
+        },
+        "sideEffect": "destructive",
+        "timeoutMs": 15000,
+        "title": "Delete weather station",
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "stations.measurements.create": {
+        "description": "Submit weather measurements from a registered station.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "measurements": {
+              "minItems": 1,
+              "type": "array",
+              "items": {
+                "additionalProperties": false,
+                "properties": {
+                  "station_id": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "dt": {
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "temperature": {
+                    "type": "number"
+                  },
+                  "wind_speed": {
+                    "type": "number"
+                  },
+                  "wind_gust": {
+                    "type": "number"
+                  },
+                  "wind_deg": {
+                    "maximum": 360,
+                    "minimum": 0,
+                    "type": "number"
+                  },
+                  "pressure": {
+                    "type": "number"
+                  },
+                  "humidity": {
+                    "maximum": 100,
+                    "minimum": 0,
+                    "type": "number"
+                  },
+                  "rain_1h": {
+                    "type": "number"
+                  },
+                  "rain_6h": {
+                    "type": "number"
+                  },
+                  "rain_24h": {
+                    "type": "number"
+                  },
+                  "snow_1h": {
+                    "type": "number"
+                  },
+                  "snow_6h": {
+                    "type": "number"
+                  },
+                  "snow_24h": {
+                    "type": "number"
+                  },
+                  "dew_point": {
+                    "type": "number"
+                  },
+                  "humidex": {
+                    "type": "number"
+                  },
+                  "heat_index": {
+                    "type": "number"
+                  },
+                  "visibility_distance": {
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "station_id",
+                  "dt"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "type": "object",
+          "required": [
+            "measurements"
+          ]
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "success": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "success"
+          ],
+          "type": "object"
+        },
+        "request": {
+          "method": "POST",
+          "path": "/data/3.0/measurements",
+          "success": [
+            204
+          ],
+          "body": "{{measurements}}",
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "result": {
+            "success": true
+          }
+        },
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "title": "Submit station measurements",
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "stations.measurements.list": {
+        "description": "Retrieve aggregated measurements from a registered weather station.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "station_id": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "type": {
+              "enum": [
+                "m",
+                "h",
+                "d"
+              ],
+              "type": "string"
+            },
+            "from": {
+              "minimum": 0,
+              "type": "integer"
+            },
+            "to": {
+              "minimum": 0,
+              "type": "integer"
+            },
+            "limit": {
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          "type": "object",
+          "required": [
+            "station_id",
+            "type",
+            "from",
+            "to",
+            "limit"
+          ]
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": [
+                "array",
+                "object"
+              ]
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        },
+        "request": {
+          "method": "GET",
+          "path": "/data/3.0/measurements",
+          "query": {
+            "station_id": "{{station_id}}",
+            "type": "{{type}}",
+            "from": "{{from}}",
+            "to": "{{to}}",
+            "limit": "{{limit}}"
+          },
+          "success": [
+            200
+          ]
+        },
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "title": "Station measurements",
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "triggers.list": {
+        "description": "List weather triggers registered on the authenticated account. Optional trigger definitions are accepted for Composio compatibility and are not sent on GET /data/3.0/triggers.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "triggers": {
+              "type": "array",
+              "items": {
+                "additionalProperties": true,
+                "properties": {},
+                "type": "object"
+              }
+            }
+          },
+          "type": "object"
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": [
+                "array",
+                "object"
+              ]
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        },
+        "request": {
+          "method": "GET",
+          "path": "/data/3.0/triggers",
+          "query": {},
+          "success": [
+            200
+          ]
+        },
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "title": "List weather triggers",
         "validationMode": "strict-generated",
         "responseFormat": "json"
       }
     },
     "provenance": {
       "source": {
-        "url": "https://github.com/oomol-lab/open-connector",
-        "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"
+        "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
+        "url": "https://github.com/oomol-lab/open-connector"
       }
     },
-    "evidence": {
-      "fixture": {
-        "status": "supplied"
-      },
-      "live": {
-        "status": "unverified"
-      }
-    }
+    "runtime": "bun",
+    "version": "0.2.0",
+    "visibility": "public"
   }
 }

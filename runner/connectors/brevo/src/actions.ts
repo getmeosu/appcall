@@ -222,3 +222,29 @@ export function getEmailCampaign(input: unknown): Record<string, unknown> | Prom
 
 function requireString(v: unknown, f: string): string { if (typeof v !== "string" || !v.length) throw new Error(`${f} is required`); return v; }
 function isRecord(v: unknown): v is Record<string, unknown> { return typeof v === "object" && v !== null && !Array.isArray(v); }
+
+export {
+  brevoParityActions,
+  createCompany,
+  createOrUpdateEmailTemplate,
+  createSmsCampaign,
+  deleteCompany,
+  deleteEmailTemplate,
+  deleteSmsCampaign,
+  getAccountInfo,
+  getCompany,
+  getContactCampaignStats,
+  getEmailTemplate,
+  getSmsCampaign,
+  importContacts,
+  listCompanies,
+  listContactAttributes,
+  listCrmNotes,
+  listCustomObjectRecords,
+  listEmailTemplates,
+  listSenderDomains,
+  listSenders,
+  listSmsCampaigns,
+  listTransactionalEmailEvents,
+  updateEmailCampaign,
+} from "./parity";

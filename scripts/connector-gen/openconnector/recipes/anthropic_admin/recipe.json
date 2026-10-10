@@ -97,8 +97,27 @@
       "healthcheck",
       "organization.get",
       "users.list",
+      "users.get",
+      "users.update",
+      "users.delete",
+      "invites.list",
+      "invites.get",
+      "invites.create",
+      "invites.delete",
       "workspaces.list",
-      "api_keys.list"
+      "workspaces.get",
+      "workspaces.create",
+      "workspaces.update",
+      "workspaces.archive",
+      "workspace_members.list",
+      "workspace_members.get",
+      "workspace_members.create",
+      "workspace_members.update",
+      "workspace_members.delete",
+      "api_keys.list",
+      "api_keys.get",
+      "api_keys.update",
+      "usage.messages"
     ],
     "upstreamSha": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
     "marketFocus": "international",
@@ -131,8 +150,27 @@
         "healthcheck",
         "organization.get",
         "users.list",
+        "users.get",
+        "users.update",
+        "users.delete",
+        "invites.list",
+        "invites.get",
+        "invites.create",
+        "invites.delete",
         "workspaces.list",
-        "api_keys.list"
+        "workspaces.get",
+        "workspaces.create",
+        "workspaces.update",
+        "workspaces.archive",
+        "workspace_members.list",
+        "workspace_members.get",
+        "workspace_members.create",
+        "workspace_members.update",
+        "workspace_members.delete",
+        "api_keys.list",
+        "api_keys.get",
+        "api_keys.update",
+        "usage.messages"
       ],
       "productIds": [
         "anthropic_admin"
@@ -199,25 +237,21 @@
     "healthcheck": {
       "upstreamActionId": "get_organization",
       "sourceRefs": [
-        "api-base",
-        "credential-validate",
-        "handler-get-organization",
-        "request-auth"
+        "request-auth",
+        "request-json"
       ],
       "documentationUrls": [
-        "https://platform.claude.com/docs/en/api/admin/organizations/me",
-        "https://console.anthropic.com/settings/admin-keys"
+        "https://platform.claude.com/docs/en/api/admin/organizations/me"
       ],
       "responseContract": "appcall-provider-json-v1",
       "adaptations": [
-        "Credential-only healthcheck maps to GET /v1/organizations/me, the cheap authenticated org read used by the pinned validator. Native omits the upstream user-agent. Content-Type application/json is sent on GET to match the pinned executor and official Admin curl examples. OAuth org:admin bearer is omitted; this recipe is Admin API-key only."
+        "Credential-only healthcheck maps to GET /v1/organizations/me."
       ]
     },
     "organization.get": {
       "upstreamActionId": "get_organization",
       "sourceRefs": [
-        "action-get-organization",
-        "handler-get-organization",
+        "request-auth",
         "request-json"
       ],
       "documentationUrls": [
@@ -231,53 +265,316 @@
     "users.list": {
       "upstreamActionId": "list_users",
       "sourceRefs": [
-        "action-list-users",
-        "handler-list-users",
-        "build-path"
+        "request-auth",
+        "request-json"
       ],
       "documentationUrls": [
-        "https://platform.claude.com/docs/en/manage-claude/admin-api"
+        "https://platform.claude.com/docs/en/api/admin/users/list"
       ],
       "responseContract": "appcall-provider-json-v1",
       "adaptations": [
-        "Optional before_id, after_id, and limit (1-1000) are sent as query parameters. Returns raw Anthropic JSON under data."
+        "Maps to GET /v1/organizations/users with optional cursor pagination."
+      ]
+    },
+    "users.get": {
+      "upstreamActionId": "get_user",
+      "sourceRefs": [
+        "request-auth",
+        "request-json"
+      ],
+      "documentationUrls": [
+        "https://platform.claude.com/docs/en/api/admin/users/retrieve"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Maps to GET /v1/organizations/users/{user_id}."
+      ]
+    },
+    "users.update": {
+      "upstreamActionId": "update_user",
+      "sourceRefs": [
+        "request-auth",
+        "request-json"
+      ],
+      "documentationUrls": [
+        "https://platform.claude.com/docs/en/api/admin/users/update"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Maps to POST /v1/organizations/users/{user_id} with role."
+      ]
+    },
+    "users.delete": {
+      "upstreamActionId": "delete_user",
+      "sourceRefs": [
+        "request-auth",
+        "request-json"
+      ],
+      "documentationUrls": [
+        "https://platform.claude.com/docs/en/api/admin/users/delete"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Maps to DELETE /v1/organizations/users/{user_id}."
+      ]
+    },
+    "invites.list": {
+      "upstreamActionId": "list_invites",
+      "sourceRefs": [
+        "request-auth",
+        "request-json"
+      ],
+      "documentationUrls": [
+        "https://platform.claude.com/docs/en/api/admin/invites/list"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Maps to GET /v1/organizations/invites with optional cursor pagination."
+      ]
+    },
+    "invites.get": {
+      "upstreamActionId": "get_invite",
+      "sourceRefs": [
+        "request-auth",
+        "request-json"
+      ],
+      "documentationUrls": [
+        "https://platform.claude.com/docs/en/api/admin/invites/retrieve"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Maps to GET /v1/organizations/invites/{invite_id}."
+      ]
+    },
+    "invites.create": {
+      "upstreamActionId": "create_invite",
+      "sourceRefs": [
+        "request-auth",
+        "request-json"
+      ],
+      "documentationUrls": [
+        "https://platform.claude.com/docs/en/api/admin/invites/create"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Maps to POST /v1/organizations/invites with email and role."
+      ]
+    },
+    "invites.delete": {
+      "upstreamActionId": "delete_invite",
+      "sourceRefs": [
+        "request-auth",
+        "request-json"
+      ],
+      "documentationUrls": [
+        "https://platform.claude.com/docs/en/api/admin/invites/delete"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Maps to DELETE /v1/organizations/invites/{invite_id}."
       ]
     },
     "workspaces.list": {
       "upstreamActionId": "list_workspaces",
       "sourceRefs": [
-        "action-list-workspaces",
-        "handler-list-workspaces",
-        "build-path"
+        "request-auth",
+        "request-json"
       ],
       "documentationUrls": [
-        "https://platform.claude.com/docs/en/manage-claude/admin-api"
+        "https://platform.claude.com/docs/en/api/admin/workspaces/list"
       ],
       "responseContract": "appcall-provider-json-v1",
       "adaptations": [
-        "Optional before_id, after_id, and limit (1-1000) are sent as query parameters. Returns raw Anthropic JSON under data."
+        "Maps to GET /v1/organizations/workspaces with optional include_archived."
+      ]
+    },
+    "workspaces.get": {
+      "upstreamActionId": "get_workspace",
+      "sourceRefs": [
+        "request-auth",
+        "request-json"
+      ],
+      "documentationUrls": [
+        "https://platform.claude.com/docs/en/api/admin/workspaces/retrieve"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Maps to GET /v1/organizations/workspaces/{workspace_id}."
+      ]
+    },
+    "workspaces.create": {
+      "upstreamActionId": "create_workspace",
+      "sourceRefs": [
+        "request-auth",
+        "request-json"
+      ],
+      "documentationUrls": [
+        "https://platform.claude.com/docs/en/api/admin/workspaces/create"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Maps to POST /v1/organizations/workspaces with name."
+      ]
+    },
+    "workspaces.update": {
+      "upstreamActionId": "update_workspace",
+      "sourceRefs": [
+        "request-auth",
+        "request-json"
+      ],
+      "documentationUrls": [
+        "https://platform.claude.com/docs/en/api/admin/workspaces/update"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Maps to POST /v1/organizations/workspaces/{workspace_id} with name."
+      ]
+    },
+    "workspaces.archive": {
+      "upstreamActionId": "archive_workspace",
+      "sourceRefs": [
+        "request-auth",
+        "request-json"
+      ],
+      "documentationUrls": [
+        "https://platform.claude.com/docs/en/api/admin/workspaces/archive"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Maps to POST /v1/organizations/workspaces/{workspace_id}/archive."
+      ]
+    },
+    "workspace_members.list": {
+      "upstreamActionId": "list_workspace_members",
+      "sourceRefs": [
+        "request-auth",
+        "request-json"
+      ],
+      "documentationUrls": [
+        "https://platform.claude.com/docs/en/api/admin/workspace-members/list"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Maps to GET /v1/organizations/workspaces/{workspace_id}/members."
+      ]
+    },
+    "workspace_members.get": {
+      "upstreamActionId": "get_workspace_member",
+      "sourceRefs": [
+        "request-auth",
+        "request-json"
+      ],
+      "documentationUrls": [
+        "https://platform.claude.com/docs/en/api/admin/workspace-members/retrieve"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Maps to GET /v1/organizations/workspaces/{workspace_id}/members/{user_id}."
+      ]
+    },
+    "workspace_members.create": {
+      "upstreamActionId": "create_workspace_member",
+      "sourceRefs": [
+        "request-auth",
+        "request-json"
+      ],
+      "documentationUrls": [
+        "https://platform.claude.com/docs/en/api/admin/workspace-members/create"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Maps to POST /v1/organizations/workspaces/{workspace_id}/members."
+      ]
+    },
+    "workspace_members.update": {
+      "upstreamActionId": "update_workspace_member",
+      "sourceRefs": [
+        "request-auth",
+        "request-json"
+      ],
+      "documentationUrls": [
+        "https://platform.claude.com/docs/en/api/admin/workspace-members/update"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Maps to POST /v1/organizations/workspaces/{workspace_id}/members/{user_id}."
+      ]
+    },
+    "workspace_members.delete": {
+      "upstreamActionId": "delete_workspace_member",
+      "sourceRefs": [
+        "request-auth",
+        "request-json"
+      ],
+      "documentationUrls": [
+        "https://platform.claude.com/docs/en/api/admin/workspace-members/delete"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Maps to DELETE /v1/organizations/workspaces/{workspace_id}/members/{user_id}."
       ]
     },
     "api_keys.list": {
       "upstreamActionId": "list_api_keys",
       "sourceRefs": [
-        "action-list-api-keys",
-        "handler-list-api-keys",
-        "build-path"
+        "request-auth",
+        "request-json"
       ],
       "documentationUrls": [
         "https://docs.claude.com/en/api/admin-api/apikeys/list-api-keys"
       ],
       "responseContract": "appcall-provider-json-v1",
       "adaptations": [
-        "Optional workspace_id, before_id, after_id, and limit (1-1000) are sent as query parameters. Official status and created_by_user_id filters are omitted because the pinned list_api_keys action does not declare them."
+        "Maps to GET /v1/organizations/api_keys with optional workspace, status, and creator filters."
+      ]
+    },
+    "api_keys.get": {
+      "upstreamActionId": "get_api_key",
+      "sourceRefs": [
+        "request-auth",
+        "request-json"
+      ],
+      "documentationUrls": [
+        "https://platform.claude.com/docs/en/api/admin/api-keys/retrieve"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Maps to GET /v1/organizations/api_keys/{api_key_id}. Never returns the secret."
+      ]
+    },
+    "api_keys.update": {
+      "upstreamActionId": "update_api_key",
+      "sourceRefs": [
+        "request-auth",
+        "request-json"
+      ],
+      "documentationUrls": [
+        "https://platform.claude.com/docs/en/api/admin/api-keys/update"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Maps to POST /v1/organizations/api_keys/{api_key_id} with optional name and status."
+      ]
+    },
+    "usage.messages": {
+      "upstreamActionId": "usage_report_messages",
+      "sourceRefs": [
+        "request-auth",
+        "request-json"
+      ],
+      "documentationUrls": [
+        "https://platform.claude.com/docs/en/manage-claude/usage-cost-api"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Maps to GET /v1/organizations/usage_report/messages. Array filters such as group_by[] are omitted."
       ]
     }
   },
   "manifest": {
     "key": "anthropic-admin",
     "name": "Anthropic Admin",
-    "version": "0.1.0",
+    "version": "0.2.0",
     "runtime": "bun",
     "visibility": "public",
     "categories": [
@@ -307,7 +604,9 @@
       "organization",
       "user",
       "workspace",
-      "api-key"
+      "api-key",
+      "invite",
+      "workspace-member"
     ],
     "http": {
       "baseUrl": "https://api.anthropic.com",
@@ -419,11 +718,11 @@
         "inputSchema": {
           "type": "object",
           "properties": {
-            "before_id": {
+            "after_id": {
               "type": "string",
               "minLength": 1
             },
-            "after_id": {
+            "before_id": {
               "type": "string",
               "minLength": 1
             },
@@ -454,10 +753,358 @@
             200
           ],
           "query": {
-            "before_id": "{{before_id}}",
             "after_id": "{{after_id}}",
+            "before_id": "{{before_id}}",
             "limit": "{{limit}}"
           }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "users.get": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "read",
+        "title": "Get user",
+        "description": "Retrieve one organization user by ID.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "user_id": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "user_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/v1/organizations/users/{{user_id}}",
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "users.update": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "write",
+        "title": "Update user",
+        "description": "Update an organization user's role.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "user_id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "role": {
+              "type": "string",
+              "enum": [
+                "user",
+                "developer",
+                "billing",
+                "admin",
+                "claude_code_user"
+              ]
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "user_id",
+            "role"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "POST",
+          "path": "/v1/organizations/users/{{user_id}}",
+          "success": [
+            200
+          ],
+          "body": {
+            "role": "{{role}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "users.delete": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "destructive",
+        "title": "Remove user",
+        "description": "Remove a user from the organization.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "user_id": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "user_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "DELETE",
+          "path": "/v1/organizations/users/{{user_id}}",
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "invites.list": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "read",
+        "title": "List invites",
+        "description": "List pending organization invites with cursor pagination.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "after_id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "before_id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/v1/organizations/invites",
+          "success": [
+            200
+          ],
+          "query": {
+            "after_id": "{{after_id}}",
+            "before_id": "{{before_id}}",
+            "limit": "{{limit}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "invites.get": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "read",
+        "title": "Get invite",
+        "description": "Retrieve one organization invite by ID.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "invite_id": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "invite_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/v1/organizations/invites/{{invite_id}}",
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "invites.create": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "write",
+        "title": "Create invite",
+        "description": "Invite a user to the organization with a Console role.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "email": {
+              "type": "string",
+              "minLength": 1
+            },
+            "role": {
+              "type": "string",
+              "enum": [
+                "user",
+                "developer",
+                "billing",
+                "admin",
+                "claude_code_user"
+              ]
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "email",
+            "role"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "POST",
+          "path": "/v1/organizations/invites",
+          "success": [
+            200
+          ],
+          "body": {
+            "email": "{{email}}",
+            "role": "{{role}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "invites.delete": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "destructive",
+        "title": "Delete invite",
+        "description": "Withdraw a pending organization invite.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "invite_id": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "invite_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "DELETE",
+          "path": "/v1/organizations/invites/{{invite_id}}",
+          "success": [
+            200
+          ]
         },
         "enforceOutputSchema": true,
         "validationMode": "strict-generated",
@@ -474,11 +1121,11 @@
         "inputSchema": {
           "type": "object",
           "properties": {
-            "before_id": {
+            "after_id": {
               "type": "string",
               "minLength": 1
             },
-            "after_id": {
+            "before_id": {
               "type": "string",
               "minLength": 1
             },
@@ -486,6 +1133,9 @@
               "type": "integer",
               "minimum": 1,
               "maximum": 1000
+            },
+            "include_archived": {
+              "type": "boolean"
             }
           },
           "additionalProperties": false
@@ -509,10 +1159,481 @@
             200
           ],
           "query": {
-            "before_id": "{{before_id}}",
             "after_id": "{{after_id}}",
+            "before_id": "{{before_id}}",
+            "limit": "{{limit}}",
+            "include_archived": "{{include_archived}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "workspaces.get": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "read",
+        "title": "Get workspace",
+        "description": "Retrieve one workspace by ID.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "workspace_id": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "workspace_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/v1/organizations/workspaces/{{workspace_id}}",
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "workspaces.create": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "write",
+        "title": "Create workspace",
+        "description": "Create a workspace in the organization.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "name"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "POST",
+          "path": "/v1/organizations/workspaces",
+          "success": [
+            200
+          ],
+          "body": {
+            "name": "{{name}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "workspaces.update": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "write",
+        "title": "Update workspace",
+        "description": "Rename a workspace.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "workspace_id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "name": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "workspace_id",
+            "name"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "POST",
+          "path": "/v1/organizations/workspaces/{{workspace_id}}",
+          "success": [
+            200
+          ],
+          "body": {
+            "name": "{{name}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "workspaces.archive": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "write",
+        "title": "Archive workspace",
+        "description": "Archive a workspace. Archived workspaces stop new spend.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "workspace_id": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "workspace_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "POST",
+          "path": "/v1/organizations/workspaces/{{workspace_id}}/archive",
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "workspace_members.list": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "read",
+        "title": "List workspace members",
+        "description": "List members of one workspace with cursor pagination.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "workspace_id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "after_id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "before_id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "workspace_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/v1/organizations/workspaces/{{workspace_id}}/members",
+          "success": [
+            200
+          ],
+          "query": {
+            "after_id": "{{after_id}}",
+            "before_id": "{{before_id}}",
             "limit": "{{limit}}"
           }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "workspace_members.get": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "read",
+        "title": "Get workspace member",
+        "description": "Retrieve one workspace member by user ID.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "workspace_id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "user_id": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "workspace_id",
+            "user_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/v1/organizations/workspaces/{{workspace_id}}/members/{{user_id}}",
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "workspace_members.create": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "write",
+        "title": "Add workspace member",
+        "description": "Add a user to a workspace with a workspace role.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "workspace_id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "user_id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "workspace_role": {
+              "type": "string",
+              "enum": [
+                "workspace_user",
+                "workspace_developer",
+                "workspace_admin"
+              ]
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "workspace_id",
+            "user_id",
+            "workspace_role"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "POST",
+          "path": "/v1/organizations/workspaces/{{workspace_id}}/members",
+          "success": [
+            200
+          ],
+          "body": {
+            "user_id": "{{user_id}}",
+            "workspace_role": "{{workspace_role}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "workspace_members.update": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "write",
+        "title": "Update workspace member",
+        "description": "Change a workspace member's role.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "workspace_id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "user_id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "workspace_role": {
+              "type": "string",
+              "enum": [
+                "workspace_user",
+                "workspace_developer",
+                "workspace_admin"
+              ]
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "workspace_id",
+            "user_id",
+            "workspace_role"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "POST",
+          "path": "/v1/organizations/workspaces/{{workspace_id}}/members/{{user_id}}",
+          "success": [
+            200
+          ],
+          "body": {
+            "workspace_role": "{{workspace_role}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "workspace_members.delete": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "destructive",
+        "title": "Remove workspace member",
+        "description": "Remove a user from a workspace.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "workspace_id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "user_id": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "workspace_id",
+            "user_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "DELETE",
+          "path": "/v1/organizations/workspaces/{{workspace_id}}/members/{{user_id}}",
+          "success": [
+            200
+          ]
         },
         "enforceOutputSchema": true,
         "validationMode": "strict-generated",
@@ -529,7 +1650,7 @@
         "inputSchema": {
           "type": "object",
           "properties": {
-            "workspace_id": {
+            "after_id": {
               "type": "string",
               "minLength": 1
             },
@@ -537,14 +1658,26 @@
               "type": "string",
               "minLength": 1
             },
-            "after_id": {
-              "type": "string",
-              "minLength": 1
-            },
             "limit": {
               "type": "integer",
               "minimum": 1,
               "maximum": 1000
+            },
+            "workspace_id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "active",
+                "inactive",
+                "archived"
+              ]
+            },
+            "created_by_user_id": {
+              "type": "string",
+              "minLength": 1
             }
           },
           "additionalProperties": false
@@ -568,10 +1701,189 @@
             200
           ],
           "query": {
-            "workspace_id": "{{workspace_id}}",
-            "before_id": "{{before_id}}",
             "after_id": "{{after_id}}",
-            "limit": "{{limit}}"
+            "before_id": "{{before_id}}",
+            "limit": "{{limit}}",
+            "workspace_id": "{{workspace_id}}",
+            "status": "{{status}}",
+            "created_by_user_id": "{{created_by_user_id}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "api_keys.get": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "read",
+        "title": "Get API key",
+        "description": "Retrieve one API key's metadata. Never returns the secret value.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "api_key_id": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "api_key_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/v1/organizations/api_keys/{{api_key_id}}",
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "api_keys.update": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "write",
+        "title": "Update API key",
+        "description": "Update an API key name or status (active, inactive, archived).",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "api_key_id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "name": {
+              "type": "string",
+              "minLength": 1
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "active",
+                "inactive",
+                "archived"
+              ]
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "api_key_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "POST",
+          "path": "/v1/organizations/api_keys/{{api_key_id}}",
+          "success": [
+            200
+          ],
+          "body": {
+            "name": "{{name}}",
+            "status": "{{status}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "usage.messages": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "read",
+        "title": "Messages usage report",
+        "description": "Read organization Messages usage buckets between starting_at and ending_at.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "starting_at": {
+              "type": "string",
+              "minLength": 1
+            },
+            "ending_at": {
+              "type": "string",
+              "minLength": 1
+            },
+            "bucket_width": {
+              "type": "string",
+              "enum": [
+                "1m",
+                "1h",
+                "1d"
+              ]
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000
+            },
+            "page": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "starting_at",
+            "ending_at"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/v1/organizations/usage_report/messages",
+          "success": [
+            200
+          ],
+          "query": {
+            "starting_at": "{{starting_at}}",
+            "ending_at": "{{ending_at}}",
+            "bucket_width": "{{bucket_width}}",
+            "limit": "{{limit}}",
+            "page": "{{page}}"
           }
         },
         "enforceOutputSchema": true,

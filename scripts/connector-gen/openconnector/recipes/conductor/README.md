@@ -1,7 +1,20 @@
 # Conductor
 
-Read-only Conductor Monitoring Reporting API v2 recipe for the international product at `api.cm.conductor.com`. Account owners copy the Reporting API token from Account → Integration Tokens. The runner sends `Authorization: token <token>` plus `Accept` and `Content-Type: application/json`, which the official docs require on every request.
+International **Conductor cloud API** (`https://api.conductor.build`) recipe covering credential `healthcheck` plus every Composio `CONDUCTOR_*` HTTP tool (17 tools, 18 operations). Healthcheck is an authenticated `GET /me` probe and is not a Composio slug.
 
-Covered operations: credential-only `healthcheck` (`GET /v2/entities/websites`), `websites.list`, `segments.list`, `statistics.get`, and `issues.list`. Page lists, per-URL page gets, affected-pages, CMS check, Data Enrichment, and Conductor's separate Data API at `api.conductor.com` are omitted. Native category is `ads` (source Marketing/Data are not in the Rust CATEGORIES allowlist).
+Origin/main shipped a different product under this slug (Conductor Monitoring Reporting API at `api.cm.conductor.com`). Composio's `CONDUCTOR` toolkit is conductor.build: cloud workspaces, coding-agent sessions, messages, and transcript search. This recipe follows the Composio toolkit.
 
-Source attribution: oomol-lab/open-connector at `33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a` (Apache License 2.0). Fixtures are independently derived from official docs plus pinned source and do not represent live provider access. Live smoke is unverified: configure the Reporting API token, call `healthcheck` with `{}`, then `websites.list`.
+Create an API key at https://app.conductor.build/home/api-keys and store it as `apiKey`. Requests send `Authorization: Bearer <token>` and `Accept: application/json`.
+
+## Operations
+
+- Auth: `healthcheck`, `me.get` (`GET /me`).
+- Projects: `projects.list`, `projects.get`.
+- Workspaces: `workspaces.list`, `workspaces.get`, `workspaces.create`, `workspaces.rename`, `workspaces.change_state` (`archive` | `unarchive` | `sleep`).
+- Sessions: `sessions.list`, `sessions.create`, `sessions.get`, `sessions.rename`, `sessions.cancel`.
+- Messages: `messages.list`, `messages.get`, `messages.create`.
+- Transcripts: `transcripts.query` (`POST /v0/sql` over `session_transcripts_view`).
+
+Successful JSON responses are raw Conductor JSON under AppCall `data`. Optional query/body fields are omitted when unset. `workspaces.change_state` posts to `/v0/workspaces/{id}/{archive|unarchive|sleep}` with no body. Native category is `dev-tools`.
+
+Official docs: https://www.conductor.build/docs/api. OpenAPI: https://api.conductor.build/v0/openapi.json. Fixtures are independently derived and do not represent live provider access. Live smoke remains unverified.

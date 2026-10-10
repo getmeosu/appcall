@@ -10,15 +10,46 @@ export function parseBrevoRateLimit(status: number, headers: Record<string, stri
 }
 
 export type BrevoClientOptions = { apiKey: string; fetch?: typeof fetch; operation?: string };
+export type BrevoFetchInit = RequestInit & { query?: Record<string, unknown> };
+
+export function appendQuery(path: string, query?: Record<string, unknown>): string {
+  if (!query) return path;
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(query)) {
+    if (value === undefined || value === null) continue;
+    if (typeof value === "string" && value.length === 0) continue;
+    if (Array.isArray(value)) {
+      for (const item of value) {
+        if (item === undefined || item === null || item === "") continue;
+        params.append(key, String(item));
+      }
+      continue;
+    }
+    if (typeof value === "boolean") {
+      params.set(key, value ? "true" : "false");
+      continue;
+    }
+    params.set(key, String(value));
+  }
+  const encoded = params.toString();
+  return encoded ? `${path}?${encoded}` : path;
+}
 
 export function createBrevoClient(options: BrevoClientOptions) {
   const operation = options.operation ?? "contacts.list";
-  const maxResponseBytes = (manifest.operations as Record<string, { maxResponseBytes?: number }>)[operation]?.maxResponseBytes ?? 5242880;
-  const httpClient = createConnectorHttpClient({ allowedHosts: manifest.network.allowedHosts as string[], maxResponseBytes, fetch: options.fetch });
+  const declared = (manifest.operations as Record<string, { maxResponseBytes?: number; timeoutMs?: number }>)[operation];
+  const maxResponseBytes = declared?.maxResponseBytes ?? 5242880;
+  const httpClient = createConnectorHttpClient({
+    allowedHosts: manifest.network.allowedHosts as string[],
+    maxResponseBytes,
+    timeoutMs: declared?.timeoutMs,
+    fetch: options.fetch,
+  });
   return {
-    async fetchJSON(path: string, init: RequestInit = {}): Promise<{ status: number; headers: Record<string, string>; body: unknown }> {
-      const response = await httpClient.fetchText(`https://api.brevo.com/v3${path}`, {
-        ...init, headers: { "api-key": options.apiKey, "Content-Type": "application/json", ...(init.headers as Record<string, string>) },
+    async fetchJSON(path: string, init: BrevoFetchInit = {}): Promise<{ status: number; headers: Record<string, string>; body: unknown }> {
+      const { query, ...rest } = init;
+      const response = await httpClient.fetchText(`https://api.brevo.com/v3${appendQuery(path, query)}`, {
+        ...rest, headers: { "api-key": options.apiKey, "Content-Type": "application/json", ...(rest.headers as Record<string, string>) },
       });
       let body: unknown;
       try { body = JSON.parse(response.body); } catch { body = response.body; }

@@ -1,7 +1,17 @@
 {
+  "key": "databox",
+  "name": "Databox",
+  "version": "0.2.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "productivity"
+  ],
   "auth": {
+    "type": "api_key",
     "scopes": [],
     "setup": {
+      "mode": "api_key",
       "fields": [
         {
           "key": "apiKey",
@@ -9,14 +19,1082 @@
           "required": true,
           "secret": true
         }
-      ],
-      "mode": "api_key"
-    },
-    "type": "api_key"
+      ]
+    }
   },
-  "categories": [
-    "productivity"
+  "network": {
+    "allowedHosts": [
+      "api.databox.com"
+    ]
+  },
+  "models": [
+    "account",
+    "data_source",
+    "dataset",
+    "ingestion",
+    "timezone"
   ],
+  "http": {
+    "baseUrl": "https://api.databox.com",
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "x-api-key",
+      "value": "{{apiKey}}"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after",
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "message",
+        "errors.0.message",
+        "error",
+        "detail"
+      ]
+    },
+    "headers": {
+      "Accept": "application/json"
+    }
+  },
+  "operations": {
+    "healthcheck": {
+      "timeoutMs": 5000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Healthcheck",
+      "description": "Validate the Databox API key by listing accessible accounts.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/v1/accounts",
+        "success": [
+          200
+        ]
+      }
+    },
+    "accounts.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List accounts",
+      "description": "List Databox accounts accessible to the API key.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/v1/accounts",
+        "success": [
+          200
+        ]
+      }
+    },
+    "ingestions.get": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Get ingestion",
+      "description": "Get the processing status of a Databox dataset ingestion.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "datasetId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "ingestionId": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "datasetId",
+          "ingestionId"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/v1/datasets/{{datasetId}}/ingestions/{{ingestionId}}",
+        "success": [
+          200
+        ]
+      }
+    },
+    "auth.validate": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Validate API key",
+      "description": "Validate the Databox API key via GET /v1/auth/validate-key.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/auth/validate-key",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "timezones.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List timezones",
+      "description": "List timezones supported when creating Databox data sources via GET /v1/timezones.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/timezones",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "data_sources.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List data sources",
+      "description": "List Databox data sources via GET /v1/data-sources.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "accountId": {
+            "type": "integer",
+            "description": "Optional account id filter."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/data-sources",
+        "success": [
+          200
+        ],
+        "query": {
+          "accountId": "{{accountId}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "data_sources.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get data source",
+      "description": "Get a Databox data source via GET /v1/data-sources/{dataSourceId}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "dataSourceId": {
+            "type": "integer",
+            "description": "Data source id."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "dataSourceId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/data-sources/{{dataSourceId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "data_sources.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create data source",
+      "description": "Create a Databox data source via POST /v1/data-sources.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "accountId": {
+            "type": "integer",
+            "description": "Databox account id."
+          },
+          "title": {
+            "type": "string",
+            "description": "Data source title.",
+            "minLength": 1
+          },
+          "timezone": {
+            "type": "string",
+            "description": "IANA timezone, e.g. UTC."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "accountId",
+          "title"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/data-sources",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "accountId": "{{accountId}}",
+          "title": "{{title}}",
+          "timezone": "{{timezone}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "data_sources.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Delete data source",
+      "description": "Delete a Databox data source via DELETE /v1/data-sources/{dataSourceId}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "dataSourceId": {
+            "type": "integer",
+            "description": "Data source id."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "dataSourceId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "deleted": {
+            "type": "boolean"
+          },
+          "id": {
+            "type": [
+              "string",
+              "integer"
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "deleted",
+          "id"
+        ]
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/v1/data-sources/{{dataSourceId}}",
+        "success": [
+          204,
+          200
+        ],
+        "result": {
+          "deleted": true,
+          "id": "{{input.dataSourceId}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "data_sources.datasets.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List data source datasets",
+      "description": "List datasets for a Databox data source via GET /v1/data-sources/{dataSourceId}/datasets.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "dataSourceId": {
+            "type": "integer",
+            "description": "Data source id."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "dataSourceId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/data-sources/{{dataSourceId}}/datasets",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "datasets.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create dataset",
+      "description": "Create a Databox dataset via POST /v1/datasets.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "description": "Dataset title.",
+            "minLength": 1
+          },
+          "dataSourceId": {
+            "type": "integer",
+            "description": "Parent data source id."
+          },
+          "primaryKeys": {
+            "type": "array",
+            "description": "Column names that uniquely identify rows."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "title",
+          "dataSourceId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/datasets",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "title": "{{title}}",
+          "dataSourceId": "{{dataSourceId}}",
+          "primaryKeys": "{{primaryKeys}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "datasets.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get dataset",
+      "description": "Get a Databox dataset via GET /v1/datasets/{datasetId}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "datasetId": {
+            "type": "string",
+            "description": "Dataset id.",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "datasetId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/datasets/{{datasetId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "datasets.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Update dataset",
+      "description": "Update a Databox dataset via PATCH /v1/datasets/{datasetId}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "datasetId": {
+            "type": "string",
+            "description": "Dataset id.",
+            "minLength": 1
+          },
+          "title": {
+            "type": "string",
+            "description": "Dataset title."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "datasetId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/v1/datasets/{{datasetId}}",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "title": "{{title}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "datasets.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Delete dataset",
+      "description": "Delete a Databox dataset via DELETE /v1/datasets/{datasetId}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "datasetId": {
+            "type": "string",
+            "description": "Dataset id.",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "datasetId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "deleted": {
+            "type": "boolean"
+          },
+          "id": {
+            "type": [
+              "string",
+              "integer"
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "deleted",
+          "id"
+        ]
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/v1/datasets/{{datasetId}}",
+        "success": [
+          204,
+          200
+        ],
+        "result": {
+          "deleted": true,
+          "id": "{{input.datasetId}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "datasets.ingest": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Ingest dataset records",
+      "description": "Ingest records into a Databox dataset via POST /v1/datasets/{datasetId}/data.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "datasetId": {
+            "type": "string",
+            "description": "Dataset id.",
+            "minLength": 1
+          },
+          "records": {
+            "type": "array",
+            "description": "Records to ingest.",
+            "minItems": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "datasetId",
+          "records"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/datasets/{{datasetId}}/data",
+        "success": [
+          200,
+          201,
+          202
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "records": "{{records}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "datasets.purge": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Purge dataset",
+      "description": "Permanently remove stored records from a Databox dataset via POST /v1/datasets/{datasetId}/purge.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "datasetId": {
+            "type": "string",
+            "description": "Dataset id.",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "datasetId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "deleted": {
+            "type": "boolean"
+          },
+          "id": {
+            "type": [
+              "string",
+              "integer"
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "deleted",
+          "id"
+        ]
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/datasets/{{datasetId}}/purge",
+        "success": [
+          200,
+          202,
+          204
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {},
+        "result": {
+          "deleted": true,
+          "id": "{{input.datasetId}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "datasets.schema": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get dataset schema",
+      "description": "Get Databox dataset column definitions via GET /v1/datasets/{datasetId}/schema.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "datasetId": {
+            "type": "string",
+            "description": "Dataset id.",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "datasetId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/datasets/{{datasetId}}/schema",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "datasets.data": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List dataset data",
+      "description": "List records stored in a Databox dataset via GET /v1/datasets/{datasetId}/data.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "datasetId": {
+            "type": "string",
+            "description": "Dataset id.",
+            "minLength": 1
+          },
+          "page": {
+            "type": "integer",
+            "description": "Page number.",
+            "minimum": 0
+          },
+          "pageSize": {
+            "type": "integer",
+            "description": "Page size.",
+            "minimum": 1,
+            "maximum": 100
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "datasetId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/datasets/{{datasetId}}/data",
+        "success": [
+          200
+        ],
+        "query": {
+          "page": "{{page}}",
+          "pageSize": "{{pageSize}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "ingestions.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List ingestions",
+      "description": "List Databox dataset ingestions via GET /v1/datasets/{datasetId}/ingestions.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "datasetId": {
+            "type": "string",
+            "description": "Dataset id.",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "datasetId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/datasets/{{datasetId}}/ingestions",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "datasets.duplicate": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Duplicate dataset",
+      "description": "Duplicate a Databox dataset via POST /v1/datasets/{datasetId}/duplicate.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "datasetId": {
+            "type": "string",
+            "description": "Dataset id.",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "datasetId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/datasets/{{datasetId}}/duplicate",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {}
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    }
+  },
+  "provenance": {
+    "source": {
+      "url": "https://github.com/oomol-lab/open-connector",
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"
+    }
+  },
   "evidence": {
     "fixture": {
       "status": "supplied"
@@ -24,173 +1102,5 @@
     "live": {
       "status": "unverified"
     }
-  },
-  "http": {
-    "auth": {
-      "field": "apiKey",
-      "in": "header",
-      "name": "x-api-key",
-      "value": "{{apiKey}}"
-    },
-    "baseUrl": "https://api.databox.com",
-    "errors": {
-      "defaultRetryAfterSeconds": 30,
-      "messagePaths": [
-        "message",
-        "errors.0.message",
-        "error",
-        "detail"
-      ],
-      "rateLimitStatuses": [
-        429
-      ],
-      "retryAfterHeader": "retry-after"
-    },
-    "headers": {
-      "Accept": "application/json"
-    }
-  },
-  "key": "databox",
-  "models": [
-    "account",
-    "ingestion"
-  ],
-  "name": "Databox",
-  "network": {
-    "allowedHosts": [
-      "api.databox.com"
-    ]
-  },
-  "operations": {
-    "accounts.list": {
-      "description": "List Databox accounts accessible to the API key.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {},
-        "type": "object"
-      },
-      "kind": "action",
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "outputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "type": "object"
-      },
-      "request": {
-        "method": "GET",
-        "path": "/v1/accounts",
-        "success": [
-          200
-        ]
-      },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "title": "List accounts",
-      "validationMode": "strict-generated"
-    },
-    "healthcheck": {
-      "description": "Validate the Databox API key by listing accessible accounts.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {},
-        "type": "object"
-      },
-      "kind": "action",
-      "maxInputBytes": 4096,
-      "maxResponseBytes": 65536,
-      "outputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "type": "object"
-      },
-      "request": {
-        "method": "GET",
-        "path": "/v1/accounts",
-        "success": [
-          200
-        ]
-      },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 5000,
-      "title": "Healthcheck",
-      "validationMode": "strict-generated"
-    },
-    "ingestions.get": {
-      "description": "Get the processing status of a Databox dataset ingestion.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "datasetId": {
-            "minLength": 1,
-            "type": "string"
-          },
-          "ingestionId": {
-            "minLength": 1,
-            "type": "string"
-          }
-        },
-        "required": [
-          "datasetId",
-          "ingestionId"
-        ],
-        "type": "object"
-      },
-      "kind": "action",
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "outputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "type": "object"
-      },
-      "request": {
-        "method": "GET",
-        "path": "/v1/datasets/{{datasetId}}/ingestions/{{ingestionId}}",
-        "success": [
-          200
-        ]
-      },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "title": "Get ingestion",
-      "validationMode": "strict-generated"
-    }
-  },
-  "provenance": {
-    "source": {
-      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
-      "url": "https://github.com/oomol-lab/open-connector"
-    }
-  },
-  "runtime": "bun",
-  "version": "0.1.0",
-  "visibility": "public"
+  }
 }

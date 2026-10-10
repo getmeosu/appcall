@@ -1,7 +1,17 @@
 {
+  "key": "7-shifts",
+  "name": "7shifts",
+  "version": "0.2.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "scheduling"
+  ],
   "auth": {
+    "type": "api_key",
     "scopes": [],
     "setup": {
+      "mode": "api_key",
       "fields": [
         {
           "key": "apiKey",
@@ -9,31 +19,42 @@
           "required": true,
           "secret": true
         }
-      ],
-      "mode": "api_key"
-    },
-    "type": "api_key"
-  },
-  "categories": [
-    "scheduling"
-  ],
-  "evidence": {
-    "fixture": {
-      "status": "supplied"
-    },
-    "live": {
-      "status": "unverified"
+      ]
     }
   },
+  "network": {
+    "allowedHosts": [
+      "api.7shifts.com"
+    ]
+  },
+  "models": [
+    "identity",
+    "company",
+    "location",
+    "department",
+    "role",
+    "user",
+    "shift",
+    "time_punch",
+    "time_off"
+  ],
   "http": {
+    "baseUrl": "https://api.7shifts.com",
     "auth": {
       "field": "apiKey",
       "in": "header",
       "name": "Authorization",
       "value": "Bearer {{apiKey}}"
     },
-    "baseUrl": "https://api.7shifts.com",
+    "headers": {
+      "Accept": "application/json",
+      "x-api-version": "{{apiVersion}}"
+    },
     "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after",
       "defaultRetryAfterSeconds": 30,
       "messagePaths": [
         "message",
@@ -41,109 +62,124 @@
         "title",
         "error_description",
         "error"
-      ],
-      "rateLimitStatuses": [
-        429
-      ],
-      "retryAfterHeader": "retry-after"
-    },
-    "headers": {
-      "Accept": "application/json",
-      "x-api-version": "{{apiVersion}}"
+      ]
     }
   },
-  "key": "7-shifts",
-  "models": [
-    "identity",
-    "company",
-    "location"
-  ],
-  "name": "7shifts",
-  "network": {
-    "allowedHosts": [
-      "api.7shifts.com"
-    ]
-  },
   "operations": {
-    "companies.get": {
-      "description": "Retrieve one 7shifts company by ID.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "apiVersion": {
-            "minLength": 10,
-            "type": "string"
-          },
-          "id": {
-            "type": "integer"
-          }
-        },
-        "required": [
-          "id"
-        ],
-        "type": "object"
-      },
-      "kind": "action",
-      "maxInputBytes": 65536,
+    "healthcheck": {
+      "timeoutMs": 5000,
+      "maxInputBytes": 4096,
       "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Healthcheck",
+      "description": "Validate the 7shifts access token with GET /v2/whoami.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
       "outputSchema": {
-        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "required": [
-          "data"
-        ],
-        "type": "object"
+        "additionalProperties": false
       },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
       "request": {
         "method": "GET",
-        "path": "/v2/companies/{{id}}",
+        "path": "/v2/whoami",
         "success": [
           200
         ]
-      },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "title": "Get company",
-      "validationMode": "strict-generated"
+      }
     },
-    "companies.list": {
-      "description": "List 7shifts companies available to the access token.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "apiVersion": {
-            "minLength": 10,
-            "type": "string"
-          },
-          "modified_since": {
-            "minLength": 10,
-            "type": "string"
-          }
-        },
-        "type": "object"
-      },
-      "kind": "action",
+    "identity.get": {
+      "timeoutMs": 15000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Get identity",
+      "description": "Retrieve the 7shifts identity associated with the access token.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "apiVersion": {
+            "type": "string",
+            "minLength": 10
+          }
+        },
+        "additionalProperties": false
+      },
       "outputSchema": {
-        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/v2/whoami",
+        "success": [
+          200
+        ]
+      }
+    },
+    "companies.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List companies",
+      "description": "List 7shifts companies available to the access token.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "apiVersion": {
+            "type": "string",
+            "minLength": 10
+          },
+          "modified_since": {
+            "type": "string",
+            "minLength": 10
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
         "required": [
           "data"
         ],
-        "type": "object"
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
       },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
       "request": {
         "method": "GET",
         "path": "/v2/companies",
@@ -153,167 +189,1190 @@
         "success": [
           200
         ]
-      },
-      "responseFormat": "json",
-      "sideEffect": "read",
+      }
+    },
+    "companies.get": {
       "timeoutMs": 15000,
-      "title": "List companies",
-      "validationMode": "strict-generated"
-    },
-    "healthcheck": {
-      "description": "Validate the 7shifts access token with GET /v2/whoami.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {},
-        "type": "object"
-      },
-      "kind": "action",
-      "maxInputBytes": 4096,
-      "maxResponseBytes": 1048576,
-      "outputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "type": "object"
-      },
-      "request": {
-        "method": "GET",
-        "path": "/v2/whoami",
-        "success": [
-          200
-        ]
-      },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 5000,
-      "title": "Healthcheck",
-      "validationMode": "strict-generated"
-    },
-    "identity.get": {
-      "description": "Retrieve the 7shifts identity associated with the access token.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "apiVersion": {
-            "minLength": 10,
-            "type": "string"
-          }
-        },
-        "type": "object"
-      },
-      "kind": "action",
       "maxInputBytes": 65536,
       "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Get company",
+      "description": "Retrieve one 7shifts company by ID.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "properties": {
+          "apiVersion": {
+            "type": "string",
+            "minLength": 10
+          },
+          "id": {
+            "type": "integer"
+          }
+        },
+        "additionalProperties": false
+      },
       "outputSchema": {
-        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "required": [
-          "data"
-        ],
-        "type": "object"
+        "additionalProperties": false
       },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
       "request": {
         "method": "GET",
-        "path": "/v2/whoami",
+        "path": "/v2/companies/{{id}}",
         "success": [
           200
         ]
-      },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "title": "Get identity",
-      "validationMode": "strict-generated"
+      }
     },
     "locations.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List locations",
       "description": "List 7shifts locations for a company.",
-      "enforceOutputSchema": true,
       "inputSchema": {
-        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "company_id"
+        ],
         "properties": {
           "apiVersion": {
-            "minLength": 10,
-            "type": "string"
+            "type": "string",
+            "minLength": 10
           },
           "company_id": {
             "type": "integer"
           },
-          "cursor": {
-            "minLength": 1,
-            "type": "string"
+          "modified_since": {
+            "type": "string",
+            "minLength": 10
           },
           "deleted": {
             "type": "boolean"
           },
-          "limit": {
-            "maximum": 500,
-            "minimum": 1,
-            "type": "integer"
+          "cursor": {
+            "type": "string",
+            "minLength": 1
           },
-          "modified_since": {
-            "minLength": 10,
-            "type": "string"
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 500
           }
         },
-        "required": [
-          "company_id"
-        ],
-        "type": "object"
+        "additionalProperties": false
       },
-      "kind": "action",
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 1048576,
       "outputSchema": {
-        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "required": [
-          "data"
-        ],
-        "type": "object"
+        "additionalProperties": false
       },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
       "request": {
         "method": "GET",
         "path": "/v2/company/{{company_id}}/locations",
         "query": {
-          "cursor": "{{cursor}}",
+          "modified_since": "{{modified_since}}",
           "deleted": "{{deleted}}",
-          "limit": "{{limit}}",
-          "modified_since": "{{modified_since}}"
+          "cursor": "{{cursor}}",
+          "limit": "{{limit}}"
         },
         "success": [
           200
         ]
-      },
-      "responseFormat": "json",
-      "sideEffect": "read",
+      }
+    },
+    "locations.get": {
       "timeoutMs": 15000,
-      "title": "List locations",
-      "validationMode": "strict-generated"
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Get location",
+      "description": "Retrieve one 7shifts location by ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "apiVersion": {
+            "type": "string",
+            "minLength": 10,
+            "description": "Optional x-api-version override."
+          },
+          "company_id": {
+            "type": "integer",
+            "description": "Company ID."
+          },
+          "id": {
+            "type": "integer",
+            "description": "Location ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "company_id",
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/v2/company/{{company_id}}/locations/{{id}}",
+        "success": [
+          200
+        ]
+      }
+    },
+    "departments.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List departments",
+      "description": "List 7shifts departments for a company.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "apiVersion": {
+            "type": "string",
+            "minLength": 10,
+            "description": "Optional x-api-version override."
+          },
+          "company_id": {
+            "type": "integer",
+            "description": "Company ID."
+          },
+          "location_id": {
+            "type": "integer",
+            "description": "Location ID."
+          },
+          "cursor": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Pagination cursor."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 500,
+            "description": "Page size."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "company_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/v2/company/{{company_id}}/departments",
+        "success": [
+          200
+        ],
+        "query": {
+          "location_id": "{{location_id}}",
+          "cursor": "{{cursor}}",
+          "limit": "{{limit}}"
+        }
+      }
+    },
+    "departments.get": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Get department",
+      "description": "Retrieve one 7shifts department by ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "apiVersion": {
+            "type": "string",
+            "minLength": 10,
+            "description": "Optional x-api-version override."
+          },
+          "company_id": {
+            "type": "integer",
+            "description": "Company ID."
+          },
+          "id": {
+            "type": "integer",
+            "description": "Department ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "company_id",
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/v2/company/{{company_id}}/departments/{{id}}",
+        "success": [
+          200
+        ]
+      }
+    },
+    "departments.create": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Create department",
+      "description": "Create a 7shifts department via POST /v2/company/{company_id}/departments.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "apiVersion": {
+            "type": "string",
+            "minLength": 10,
+            "description": "Optional x-api-version override."
+          },
+          "company_id": {
+            "type": "integer",
+            "description": "Company ID."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Department name."
+          },
+          "location_id": {
+            "type": "integer",
+            "description": "Location ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "company_id",
+          "name",
+          "location_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "POST",
+        "path": "/v2/company/{{company_id}}/departments",
+        "success": [
+          201,
+          200
+        ],
+        "body": {
+          "name": "{{name}}",
+          "location_id": "{{location_id}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
+    },
+    "roles.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List roles",
+      "description": "List 7shifts roles for a company.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "apiVersion": {
+            "type": "string",
+            "minLength": 10,
+            "description": "Optional x-api-version override."
+          },
+          "company_id": {
+            "type": "integer",
+            "description": "Company ID."
+          },
+          "location_id": {
+            "type": "integer",
+            "description": "Location ID."
+          },
+          "cursor": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Pagination cursor."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 500,
+            "description": "Page size."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "company_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/v2/company/{{company_id}}/roles",
+        "success": [
+          200
+        ],
+        "query": {
+          "location_id": "{{location_id}}",
+          "cursor": "{{cursor}}",
+          "limit": "{{limit}}"
+        }
+      }
+    },
+    "users.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List users",
+      "description": "List 7shifts users for a company.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "apiVersion": {
+            "type": "string",
+            "minLength": 10,
+            "description": "Optional x-api-version override."
+          },
+          "company_id": {
+            "type": "integer",
+            "description": "Company ID."
+          },
+          "location_id": {
+            "type": "integer",
+            "description": "Location ID."
+          },
+          "cursor": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Pagination cursor."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 500,
+            "description": "Page size."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "company_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/v2/company/{{company_id}}/users",
+        "success": [
+          200
+        ],
+        "query": {
+          "location_id": "{{location_id}}",
+          "cursor": "{{cursor}}",
+          "limit": "{{limit}}"
+        }
+      }
+    },
+    "users.get": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Get user",
+      "description": "Retrieve one 7shifts user by ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "apiVersion": {
+            "type": "string",
+            "minLength": 10,
+            "description": "Optional x-api-version override."
+          },
+          "company_id": {
+            "type": "integer",
+            "description": "Company ID."
+          },
+          "id": {
+            "type": "integer",
+            "description": "User ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "company_id",
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/v2/company/{{company_id}}/users/{{id}}",
+        "success": [
+          200
+        ]
+      }
+    },
+    "users.create": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Create user",
+      "description": "Create a 7shifts user via POST /v2/company/{company_id}/users.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "apiVersion": {
+            "type": "string",
+            "minLength": 10,
+            "description": "Optional x-api-version override."
+          },
+          "company_id": {
+            "type": "integer",
+            "description": "Company ID."
+          },
+          "first_name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "First name."
+          },
+          "last_name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Last name."
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "employee",
+              "manager",
+              "admin"
+            ],
+            "description": "User type."
+          },
+          "email": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Optional email."
+          },
+          "location_ids": {
+            "type": "array",
+            "items": {
+              "type": "integer"
+            },
+            "description": "Assigned location IDs."
+          },
+          "department_ids": {
+            "type": "array",
+            "items": {
+              "type": "integer"
+            },
+            "description": "Assigned department IDs."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "company_id",
+          "first_name",
+          "last_name",
+          "type"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "POST",
+        "path": "/v2/company/{{company_id}}/users",
+        "success": [
+          201,
+          200
+        ],
+        "body": {
+          "first_name": "{{first_name}}",
+          "last_name": "{{last_name}}",
+          "type": "{{type}}",
+          "email": "{{email}}",
+          "location_ids": "{{location_ids}}",
+          "department_ids": "{{department_ids}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
+    },
+    "shifts.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List shifts",
+      "description": "List 7shifts shifts for a company.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "apiVersion": {
+            "type": "string",
+            "minLength": 10,
+            "description": "Optional x-api-version override."
+          },
+          "company_id": {
+            "type": "integer",
+            "description": "Company ID."
+          },
+          "location_id": {
+            "type": "integer",
+            "description": "Location ID."
+          },
+          "user_id": {
+            "type": "integer",
+            "description": "Filter by user ID."
+          },
+          "cursor": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Pagination cursor."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 500,
+            "description": "Page size."
+          },
+          "deleted": {
+            "type": "boolean",
+            "description": "Include deleted records."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "company_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/v2/company/{{company_id}}/shifts",
+        "success": [
+          200
+        ],
+        "query": {
+          "location_id": "{{location_id}}",
+          "user_id": "{{user_id}}",
+          "cursor": "{{cursor}}",
+          "limit": "{{limit}}",
+          "deleted": "{{deleted}}"
+        }
+      }
+    },
+    "shifts.get": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Get shift",
+      "description": "Retrieve one 7shifts shift by ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "apiVersion": {
+            "type": "string",
+            "minLength": 10,
+            "description": "Optional x-api-version override."
+          },
+          "company_id": {
+            "type": "integer",
+            "description": "Company ID."
+          },
+          "id": {
+            "type": "integer",
+            "description": "Shift ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "company_id",
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/v2/company/{{company_id}}/shifts/{{id}}",
+        "success": [
+          200
+        ]
+      }
+    },
+    "shifts.create": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Create shift",
+      "description": "Create a 7shifts shift via POST /v2/company/{company_id}/shifts.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "apiVersion": {
+            "type": "string",
+            "minLength": 10,
+            "description": "Optional x-api-version override."
+          },
+          "company_id": {
+            "type": "integer",
+            "description": "Company ID."
+          },
+          "location_id": {
+            "type": "integer",
+            "description": "Location ID."
+          },
+          "start": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Shift start timestamp."
+          },
+          "end": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Shift end timestamp."
+          },
+          "user_id": {
+            "type": "integer",
+            "description": "Assigned user ID."
+          },
+          "department_id": {
+            "type": "integer",
+            "description": "Department ID."
+          },
+          "role_id": {
+            "type": "integer",
+            "description": "Role ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "company_id",
+          "location_id",
+          "start",
+          "end"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "POST",
+        "path": "/v2/company/{{company_id}}/shifts",
+        "success": [
+          201,
+          200
+        ],
+        "body": {
+          "location_id": "{{location_id}}",
+          "start": "{{start}}",
+          "end": "{{end}}",
+          "user_id": "{{user_id}}",
+          "department_id": "{{department_id}}",
+          "role_id": "{{role_id}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
+    },
+    "shifts.update": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Update shift",
+      "description": "Update a 7shifts shift via PUT /v2/company/{company_id}/shifts/{id}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "apiVersion": {
+            "type": "string",
+            "minLength": 10,
+            "description": "Optional x-api-version override."
+          },
+          "company_id": {
+            "type": "integer",
+            "description": "Company ID."
+          },
+          "id": {
+            "type": "integer",
+            "description": "Shift ID."
+          },
+          "start": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Updated start timestamp."
+          },
+          "end": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Updated end timestamp."
+          },
+          "user_id": {
+            "type": "integer",
+            "description": "Assigned user ID."
+          },
+          "department_id": {
+            "type": "integer",
+            "description": "Department ID."
+          },
+          "role_id": {
+            "type": "integer",
+            "description": "Role ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "company_id",
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "PUT",
+        "path": "/v2/company/{{company_id}}/shifts/{{id}}",
+        "success": [
+          200
+        ],
+        "body": {
+          "start": "{{start}}",
+          "end": "{{end}}",
+          "user_id": "{{user_id}}",
+          "department_id": "{{department_id}}",
+          "role_id": "{{role_id}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
+    },
+    "shifts.delete": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "destructive",
+      "title": "Delete shift",
+      "description": "Delete a 7shifts shift via DELETE /v2/company/{company_id}/shifts/{id}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "apiVersion": {
+            "type": "string",
+            "minLength": 10,
+            "description": "Optional x-api-version override."
+          },
+          "company_id": {
+            "type": "integer",
+            "description": "Company ID."
+          },
+          "id": {
+            "type": "integer",
+            "description": "Shift ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "company_id",
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "DELETE",
+        "path": "/v2/company/{{company_id}}/shifts/{{id}}",
+        "success": [
+          200,
+          204
+        ],
+        "result": {
+          "data": {
+            "deleted": true,
+            "id": "{{input.id}}"
+          }
+        }
+      }
+    },
+    "timePunches.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List time punches",
+      "description": "List 7shifts time punches for a company.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "apiVersion": {
+            "type": "string",
+            "minLength": 10,
+            "description": "Optional x-api-version override."
+          },
+          "company_id": {
+            "type": "integer",
+            "description": "Company ID."
+          },
+          "location_id": {
+            "type": "integer",
+            "description": "Location ID."
+          },
+          "user_id": {
+            "type": "integer",
+            "description": "Filter by user ID."
+          },
+          "cursor": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Pagination cursor."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 500,
+            "description": "Page size."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "company_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/v2/company/{{company_id}}/time_punches",
+        "success": [
+          200
+        ],
+        "query": {
+          "location_id": "{{location_id}}",
+          "user_id": "{{user_id}}",
+          "cursor": "{{cursor}}",
+          "limit": "{{limit}}"
+        }
+      }
+    },
+    "timeOff.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List time off",
+      "description": "List 7shifts time-off requests via GET /v2/time_off.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "apiVersion": {
+            "type": "string",
+            "minLength": 10,
+            "description": "Optional x-api-version override."
+          },
+          "company_id": {
+            "type": "integer",
+            "description": "Company ID."
+          },
+          "user_id": {
+            "type": "integer",
+            "description": "Filter by user ID."
+          },
+          "cursor": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Pagination cursor."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 500,
+            "description": "Page size."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "company_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/v2/time_off",
+        "success": [
+          200
+        ],
+        "query": {
+          "company_id": "{{company_id}}",
+          "user_id": "{{user_id}}",
+          "cursor": "{{cursor}}",
+          "limit": "{{limit}}"
+        }
+      }
     }
   },
   "provenance": {
     "source": {
-      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
-      "url": "https://github.com/oomol-lab/open-connector"
+      "url": "https://github.com/oomol-lab/open-connector",
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"
     }
   },
-  "runtime": "bun",
-  "version": "0.1.0",
-  "visibility": "public"
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
+    }
+  }
 }

@@ -1,7 +1,17 @@
 {
+  "key": "browse-ai",
+  "name": "Browse AI",
+  "version": "0.2.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "dev-tools"
+  ],
   "auth": {
+    "type": "api_key",
     "scopes": [],
     "setup": {
+      "mode": "api_key",
       "fields": [
         {
           "key": "apiKey",
@@ -9,31 +19,37 @@
           "required": true,
           "secret": true
         }
-      ],
-      "mode": "api_key"
-    },
-    "type": "api_key"
-  },
-  "categories": [
-    "dev-tools"
-  ],
-  "evidence": {
-    "fixture": {
-      "status": "supplied"
-    },
-    "live": {
-      "status": "unverified"
+      ]
     }
   },
+  "network": {
+    "allowedHosts": [
+      "api.browse.ai"
+    ]
+  },
+  "models": [
+    "robot",
+    "task",
+    "monitor",
+    "webhook",
+    "bulkRun"
+  ],
   "http": {
+    "baseUrl": "https://api.browse.ai/v2",
     "auth": {
       "field": "apiKey",
       "in": "header",
       "name": "Authorization",
       "value": "Bearer {{apiKey}}"
     },
-    "baseUrl": "https://api.browse.ai/v2",
+    "headers": {
+      "Accept": "application/json"
+    },
     "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after",
       "defaultRetryAfterSeconds": 30,
       "messagePaths": [
         "errorMessage",
@@ -41,50 +57,34 @@
         "error",
         "userFriendlyError",
         "messageCode"
-      ],
-      "rateLimitStatuses": [
-        429
-      ],
-      "retryAfterHeader": "retry-after"
-    },
-    "headers": {
-      "Accept": "application/json"
+      ]
     }
-  },
-  "key": "browse-ai",
-  "models": [
-    "robot",
-    "task"
-  ],
-  "name": "Browse AI",
-  "network": {
-    "allowedHosts": [
-      "api.browse.ai"
-    ]
   },
   "operations": {
     "healthcheck": {
-      "description": "Validate the Browse AI API key by listing robots.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {},
-        "type": "object"
-      },
-      "kind": "action",
+      "timeoutMs": 5000,
       "maxInputBytes": 4096,
       "maxResponseBytes": 65536,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Healthcheck",
+      "description": "Validate the Browse AI API key by listing robots.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
       "outputSchema": {
-        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "required": [
-          "data"
-        ],
-        "type": "object"
+        "additionalProperties": false
       },
       "request": {
         "method": "GET",
@@ -93,42 +93,78 @@
           200
         ]
       },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 5000,
-      "title": "Healthcheck",
-      "validationMode": "strict-generated"
-    },
-    "robots.get": {
-      "description": "Retrieve one Browse AI robot and its input parameter definitions.",
       "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "robotId": {
-            "minLength": 1,
-            "type": "string"
-          }
-        },
-        "required": [
-          "robotId"
-        ],
-        "type": "object"
-      },
-      "kind": "action",
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "robots.list": {
+      "timeoutMs": 15000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List robots",
+      "description": "List Browse AI robots available to the connected API key.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
       "outputSchema": {
-        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/robots",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "robots.get": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Get robot",
+      "description": "Retrieve one Browse AI robot and its input parameter definitions.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "robotId": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "robotId"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
         "required": [
           "data"
         ],
-        "type": "object"
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
       },
       "request": {
         "method": "GET",
@@ -137,83 +173,113 @@
           200
         ]
       },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "title": "Get robot",
-      "validationMode": "strict-generated"
-    },
-    "robots.list": {
-      "description": "List Browse AI robots available to the connected API key.",
       "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {},
-        "type": "object"
-      },
-      "kind": "action",
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "tasks.list": {
+      "timeoutMs": 15000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List robot tasks",
+      "description": "List Browse AI robot tasks with optional pagination and status filters.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "robotId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "pageSize": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 10
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "failed",
+              "successful",
+              "in-progress"
+            ]
+          }
+        },
+        "required": [
+          "robotId"
+        ],
+        "additionalProperties": false
+      },
       "outputSchema": {
-        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "required": [
-          "data"
-        ],
-        "type": "object"
+        "additionalProperties": false
       },
       "request": {
         "method": "GET",
-        "path": "/robots",
+        "path": "/robots/{{robotId}}/tasks",
         "success": [
           200
-        ]
+        ],
+        "query": {
+          "page": "{{page}}",
+          "pageSize": "{{pageSize}}",
+          "status": "{{status}}"
+        }
       },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "title": "List robots",
-      "validationMode": "strict-generated"
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
     },
     "tasks.get": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Get robot task",
       "description": "Retrieve one Browse AI robot task and its captured data.",
-      "enforceOutputSchema": true,
       "inputSchema": {
-        "additionalProperties": false,
+        "type": "object",
         "properties": {
           "robotId": {
-            "minLength": 1,
-            "type": "string"
+            "type": "string",
+            "minLength": 1
           },
           "taskId": {
-            "minLength": 1,
-            "type": "string"
+            "type": "string",
+            "minLength": 1
           }
         },
         "required": [
           "robotId",
           "taskId"
         ],
-        "type": "object"
+        "additionalProperties": false
       },
-      "kind": "action",
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
       "outputSchema": {
-        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "required": [
-          "data"
-        ],
-        "type": "object"
+        "additionalProperties": false
       },
       "request": {
         "method": "GET",
@@ -222,86 +288,815 @@
           200
         ]
       },
-      "responseFormat": "json",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "status.get": {
+      "kind": "action",
       "sideEffect": "read",
       "timeoutMs": 15000,
-      "title": "Get robot task",
-      "validationMode": "strict-generated"
-    },
-    "tasks.list": {
-      "description": "List Browse AI robot tasks with optional pagination and status filters.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "page": {
-            "minimum": 1,
-            "type": "integer"
-          },
-          "pageSize": {
-            "maximum": 10,
-            "minimum": 1,
-            "type": "integer"
-          },
-          "robotId": {
-            "minLength": 1,
-            "type": "string"
-          },
-          "status": {
-            "enum": [
-              "failed",
-              "successful",
-              "in-progress"
-            ],
-            "type": "string"
-          }
-        },
-        "required": [
-          "robotId"
-        ],
-        "type": "object"
-      },
-      "kind": "action",
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
+      "title": "Get system status",
+      "description": "Check Browse AI infrastructure status including the tasks queue.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
       "outputSchema": {
-        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "required": [
-          "data"
-        ],
-        "type": "object"
+        "additionalProperties": false
       },
       "request": {
         "method": "GET",
-        "path": "/robots/{{robotId}}/tasks",
-        "query": {
-          "page": "{{page}}",
-          "pageSize": "{{pageSize}}",
-          "status": "{{status}}"
-        },
+        "path": "/status",
         "success": [
-          200
+          200,
+          201,
+          202,
+          204
         ]
       },
-      "responseFormat": "json",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "robots.updateCookies": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Update robot cookies",
+      "description": "Replace a Browse AI robot's cookies used for authenticated sessions.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "robotId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Browse AI robot ID."
+          },
+          "cookies": {
+            "type": "array",
+            "minItems": 1,
+            "description": "Cookie objects to store on the robot.",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Cookie name."
+                },
+                "value": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Cookie value."
+                },
+                "domain": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Cookie domain."
+                }
+              },
+              "additionalProperties": false,
+              "required": [
+                "name",
+                "value"
+              ]
+            }
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "robotId",
+          "cookies"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/robots/{{robotId}}/cookies",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ],
+        "body": {
+          "cookies": "{{cookies}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "tasks.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Run robot",
+      "description": "Run a Browse AI robot on demand with optional input parameters.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "robotId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Browse AI robot ID."
+          },
+          "inputParameters": {
+            "type": "object",
+            "description": "Robot input parameter overrides.",
+            "additionalProperties": true
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "robotId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/robots/{{robotId}}/tasks",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ],
+        "body": {
+          "inputParameters": "{{inputParameters}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "bulkRuns.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create bulk run",
+      "description": "Bulk-run a Browse AI robot across many input parameter sets.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "robotId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Browse AI robot ID."
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Bulk run title."
+          },
+          "inputParameters": {
+            "type": "array",
+            "minItems": 1,
+            "description": "Per-task input parameter objects.",
+            "items": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "robotId",
+          "inputParameters"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/robots/{{robotId}}/bulk-runs",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ],
+        "body": {
+          "title": "{{title}}",
+          "inputParameters": "{{inputParameters}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "bulkRuns.get": {
+      "kind": "action",
       "sideEffect": "read",
       "timeoutMs": 15000,
-      "title": "List robot tasks",
-      "validationMode": "strict-generated"
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get bulk run",
+      "description": "Retrieve a Browse AI bulk run and its progress counters.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "robotId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Browse AI robot ID."
+          },
+          "bulkRunId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Browse AI bulk run ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "robotId",
+          "bulkRunId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/robots/{{robotId}}/bulk-runs/{{bulkRunId}}",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "monitors.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List monitors",
+      "description": "List monitors configured on a Browse AI robot.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "robotId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Browse AI robot ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "robotId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/robots/{{robotId}}/monitors",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "monitors.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get monitor",
+      "description": "Retrieve one Browse AI robot monitor.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "robotId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Browse AI robot ID."
+          },
+          "monitorId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Browse AI monitor ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "robotId",
+          "monitorId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/robots/{{robotId}}/monitors/{{monitorId}}",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "monitors.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create monitor",
+      "description": "Create a scheduled monitor on a Browse AI robot.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "robotId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Browse AI robot ID."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Monitor display name."
+          },
+          "frequency": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Schedule unit such as daily or hourly."
+          },
+          "interval": {
+            "type": "integer",
+            "description": "Schedule interval count.",
+            "minimum": 1
+          },
+          "inputParameters": {
+            "type": "object",
+            "description": "Robot input parameter overrides.",
+            "additionalProperties": true
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "robotId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/robots/{{robotId}}/monitors",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ],
+        "body": {
+          "name": "{{name}}",
+          "frequency": "{{frequency}}",
+          "interval": "{{interval}}",
+          "inputParameters": "{{inputParameters}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "monitors.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Update monitor",
+      "description": "Update a Browse AI robot monitor schedule or name.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "robotId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Browse AI robot ID."
+          },
+          "monitorId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Browse AI monitor ID."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Monitor display name."
+          },
+          "frequency": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Schedule unit such as daily or hourly."
+          },
+          "interval": {
+            "type": "integer",
+            "description": "Schedule interval count.",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "robotId",
+          "monitorId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/robots/{{robotId}}/monitors/{{monitorId}}",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ],
+        "body": {
+          "name": "{{name}}",
+          "frequency": "{{frequency}}",
+          "interval": "{{interval}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "monitors.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Delete monitor",
+      "description": "Delete a Browse AI robot monitor.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "robotId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Browse AI robot ID."
+          },
+          "monitorId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Browse AI monitor ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "robotId",
+          "monitorId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/robots/{{robotId}}/monitors/{{monitorId}}",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "webhooks.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List webhooks",
+      "description": "List webhooks configured on a Browse AI robot.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "robotId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Browse AI robot ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "robotId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/robots/{{robotId}}/webhooks",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "webhooks.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create webhook",
+      "description": "Create a Browse AI robot webhook subscription.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "robotId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Browse AI robot ID."
+          },
+          "hookUrl": {
+            "type": "string",
+            "minLength": 1,
+            "description": "HTTPS URL that receives task events."
+          },
+          "eventType": {
+            "type": "string",
+            "description": "Webhook event type.",
+            "enum": [
+              "taskFinished",
+              "taskFinishedSuccessfully",
+              "taskFinishedWithError",
+              "taskCapturedDataChanged",
+              "tableExportFinishedSuccessfully"
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "robotId",
+          "hookUrl",
+          "eventType"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/robots/{{robotId}}/webhooks",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ],
+        "body": {
+          "hookUrl": "{{hookUrl}}",
+          "eventType": "{{eventType}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "webhooks.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Delete webhook",
+      "description": "Delete a Browse AI robot webhook subscription.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "robotId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Browse AI robot ID."
+          },
+          "webhookId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Browse AI webhook ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "robotId",
+          "webhookId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/robots/{{robotId}}/webhooks/{{webhookId}}",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
     }
   },
   "provenance": {
     "source": {
-      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
-      "url": "https://github.com/oomol-lab/open-connector"
+      "url": "https://github.com/oomol-lab/open-connector",
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"
     }
   },
-  "runtime": "bun",
-  "version": "0.1.0",
-  "visibility": "public"
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
+    }
+  }
 }

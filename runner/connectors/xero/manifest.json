@@ -1,14 +1,24 @@
 {
   "key": "xero",
   "name": "Xero",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "runtime": "bun",
-  "categories": ["accounting"],
+  "categories": [
+    "accounting"
+  ],
   "auth": {
     "type": "oauth2",
     "scopes": [
       "accounting.transactions",
       "accounting.contacts",
+      "accounting.settings",
+      "accounting.reports.read",
+      "accounting.attachments",
+      "accounting.journals.read",
+      "accounting.budgets.read",
+      "assets",
+      "projects",
+      "files",
       "offline_access"
     ],
     "setup": {
@@ -26,19 +36,25 @@
       "kind": "sync",
       "timeoutMs": 30000,
       "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880
+      "maxResponseBytes": 5242880,
+      "title": "List Invoices (sync)",
+      "description": "Normalize a previously fetched Xero Invoices list payload into connector invoice models."
     },
     "contacts.list": {
       "kind": "sync",
       "timeoutMs": 30000,
       "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880
+      "maxResponseBytes": 5242880,
+      "title": "List Contacts (sync)",
+      "description": "Normalize a previously fetched Xero Contacts list payload into connector contact models."
     },
     "bank_transactions.list": {
       "kind": "sync",
       "timeoutMs": 30000,
       "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880
+      "maxResponseBytes": 5242880,
+      "title": "List Bank Transactions (sync)",
+      "description": "Normalize a previously fetched Xero BankTransactions list payload into connector bank transaction models."
     },
     "healthcheck": {
       "kind": "action",
@@ -61,11 +77,4759 @@
           }
         }
       }
+    },
+    "xero.create_bank_transaction": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "write",
+      "title": "Create Bank Transaction",
+      "description": "Create a spent or received money transaction in Xero. Use SPEND for payments out or RECEIVE for money received.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "tenant_id": {
+            "type": "string",
+            "description": "Xero tenant/organisation ID (UUID). Required so requests cannot silently hit another connected organisation."
+          },
+          "Type": {
+            "type": "string",
+            "description": "Transaction type.",
+            "enum": [
+              "SPEND",
+              "RECEIVE"
+            ]
+          },
+          "ContactID": {
+            "type": "string",
+            "description": "Xero Contact ID for the transaction."
+          },
+          "LineItems": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "A Xero line item.",
+              "properties": {
+                "Description": {
+                  "type": "string",
+                  "description": "Line item description."
+                },
+                "Quantity": {
+                  "type": "number",
+                  "description": "Quantity."
+                },
+                "UnitAmount": {
+                  "type": "number",
+                  "description": "Unit price."
+                },
+                "AccountCode": {
+                  "type": "string",
+                  "description": "Account code this line posts to."
+                },
+                "ItemCode": {
+                  "type": "string",
+                  "description": "Optional inventory item code."
+                },
+                "TaxType": {
+                  "type": "string",
+                  "description": "Tax type code from the organisation's tax rates."
+                },
+                "LineAmount": {
+                  "type": "number",
+                  "description": "Optional explicit line amount."
+                },
+                "LineItemID": {
+                  "type": "string",
+                  "description": "Existing line item UUID when updating."
+                }
+              }
+            },
+            "description": "Line items for the bank transaction."
+          },
+          "Date": {
+            "type": "string",
+            "description": "Transaction date (YYYY-MM-DD)."
+          },
+          "Status": {
+            "type": "string",
+            "description": "Transaction status.",
+            "enum": [
+              "AUTHORISED",
+              "DELETED"
+            ]
+          },
+          "Reference": {
+            "type": "string",
+            "description": "Reference or transaction description."
+          },
+          "CurrencyCode": {
+            "type": "string",
+            "description": "ISO currency code, e.g. USD."
+          },
+          "BankAccountID": {
+            "type": "string",
+            "description": "Bank account UUID. Provide BankAccountID or BankAccountCode."
+          },
+          "BankAccountCode": {
+            "type": "string",
+            "description": "Short bank account code, max 10 characters."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "Type",
+          "ContactID",
+          "LineItems",
+          "tenant_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "Parsed Xero JSON response."
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/BankTransactions",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ],
+        "headers": {
+          "Xero-Tenant-Id": "{{tenant_id}}"
+        },
+        "body": {
+          "Type": "{{Type}}",
+          "Contact": {
+            "ContactID": "{{ContactID}}"
+          },
+          "BankAccount": {
+            "AccountID": "{{BankAccountID}}",
+            "Code": "{{BankAccountCode}}"
+          },
+          "LineItems": "{{LineItems}}",
+          "Date": "{{Date}}",
+          "Status": "{{Status}}",
+          "Reference": "{{Reference}}",
+          "CurrencyCode": "{{CurrencyCode}}"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "xero.create_contact": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "write",
+      "title": "Create Contact",
+      "description": "Create a customer or supplier contact in Xero.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "tenant_id": {
+            "type": "string",
+            "description": "Xero tenant/organisation ID (UUID). Required so requests cannot silently hit another connected organisation."
+          },
+          "Name": {
+            "type": "string",
+            "description": "Full name of the contact or organisation."
+          },
+          "FirstName": {
+            "type": "string",
+            "description": "First name of the contact person."
+          },
+          "LastName": {
+            "type": "string",
+            "description": "Last name of the contact person."
+          },
+          "EmailAddress": {
+            "type": "string",
+            "description": "Email address of the contact."
+          },
+          "Website": {
+            "type": "string",
+            "description": "Website URL of the contact."
+          },
+          "TaxNumber": {
+            "type": "string",
+            "description": "Tax number (VAT/ABN/GST)."
+          },
+          "AccountNumber": {
+            "type": "string",
+            "description": "Account reference number for the contact."
+          },
+          "BankAccountDetails": {
+            "type": "string",
+            "description": "Bank account details for the contact."
+          },
+          "DefaultCurrency": {
+            "type": "string",
+            "description": "Default currency code, e.g. USD."
+          },
+          "IsCustomer": {
+            "type": "boolean",
+            "description": "Mark as customer when true."
+          },
+          "IsSupplier": {
+            "type": "boolean",
+            "description": "Mark as supplier when true."
+          },
+          "Phones": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "A Xero phone number.",
+              "properties": {
+                "PhoneType": {
+                  "type": "string",
+                  "description": "Phone type, e.g. DEFAULT or MOBILE."
+                },
+                "PhoneNumber": {
+                  "type": "string",
+                  "description": "Phone number."
+                }
+              }
+            },
+            "description": "Phone numbers. Use PhoneType DEFAULT or MOBILE."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "Name",
+          "tenant_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "Parsed Xero JSON response."
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/Contacts",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ],
+        "headers": {
+          "Xero-Tenant-Id": "{{tenant_id}}"
+        },
+        "body": {
+          "Name": "{{Name}}",
+          "FirstName": "{{FirstName}}",
+          "LastName": "{{LastName}}",
+          "EmailAddress": "{{EmailAddress}}",
+          "Website": "{{Website}}",
+          "TaxNumber": "{{TaxNumber}}",
+          "AccountNumber": "{{AccountNumber}}",
+          "BankAccountDetails": "{{BankAccountDetails}}",
+          "DefaultCurrency": "{{DefaultCurrency}}",
+          "IsCustomer": "{{IsCustomer}}",
+          "IsSupplier": "{{IsSupplier}}",
+          "Phones": "{{Phones}}"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "xero.create_credit_note": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "write",
+      "title": "Create Credit Note",
+      "description": "Create an accounts receivable (ACCRECCREDIT) or accounts payable (ACCPAYCREDIT) credit note.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "tenant_id": {
+            "type": "string",
+            "description": "Xero tenant/organisation ID (UUID). Required so requests cannot silently hit another connected organisation."
+          },
+          "Type": {
+            "type": "string",
+            "description": "Credit note type.",
+            "enum": [
+              "ACCRECCREDIT",
+              "ACCPAYCREDIT"
+            ]
+          },
+          "ContactID": {
+            "type": "string",
+            "description": "Xero Contact ID (UUID). Provide ContactID or ContactName."
+          },
+          "ContactName": {
+            "type": "string",
+            "description": "Contact name when ContactID is not provided."
+          },
+          "LineItems": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "A Xero line item.",
+              "properties": {
+                "Description": {
+                  "type": "string",
+                  "description": "Line item description."
+                },
+                "Quantity": {
+                  "type": "number",
+                  "description": "Quantity."
+                },
+                "UnitAmount": {
+                  "type": "number",
+                  "description": "Unit price."
+                },
+                "AccountCode": {
+                  "type": "string",
+                  "description": "Account code this line posts to."
+                },
+                "ItemCode": {
+                  "type": "string",
+                  "description": "Optional inventory item code."
+                },
+                "TaxType": {
+                  "type": "string",
+                  "description": "Tax type code from the organisation's tax rates."
+                },
+                "LineAmount": {
+                  "type": "number",
+                  "description": "Optional explicit line amount."
+                },
+                "LineItemID": {
+                  "type": "string",
+                  "description": "Existing line item UUID when updating."
+                }
+              }
+            },
+            "description": "Line items for the credit note."
+          },
+          "Date": {
+            "type": "string",
+            "description": "Credit note date (YYYY-MM-DD)."
+          },
+          "DueDate": {
+            "type": "string",
+            "description": "Due date (YYYY-MM-DD)."
+          },
+          "Status": {
+            "type": "string",
+            "description": "Credit note status.",
+            "enum": [
+              "DRAFT",
+              "SUBMITTED",
+              "AUTHORISED"
+            ]
+          },
+          "Reference": {
+            "type": "string",
+            "description": "Reference or additional information."
+          },
+          "CurrencyCode": {
+            "type": "string",
+            "description": "ISO currency code."
+          },
+          "CreditNoteNumber": {
+            "type": "string",
+            "description": "Credit note number. Omit to let Xero allocate the next number."
+          },
+          "BrandingThemeID": {
+            "type": "string",
+            "description": "Branding theme UUID."
+          },
+          "LineAmountTypes": {
+            "type": "string",
+            "description": "Tax calculation method.",
+            "enum": [
+              "Exclusive",
+              "Inclusive",
+              "NoTax"
+            ]
+          },
+          "SentToContact": {
+            "type": "boolean",
+            "description": "Mark AUTHORISED credit notes as sent."
+          },
+          "unitdp": {
+            "type": "integer",
+            "description": "Unit decimal places, e.g. 4."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "Type",
+          "tenant_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "Parsed Xero JSON response."
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/CreditNotes",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ],
+        "query": {
+          "unitdp": "{{unitdp}}"
+        },
+        "headers": {
+          "Xero-Tenant-Id": "{{tenant_id}}"
+        },
+        "body": {
+          "Type": "{{Type}}",
+          "Contact": {
+            "ContactID": "{{ContactID}}",
+            "Name": "{{ContactName}}"
+          },
+          "LineItems": "{{LineItems}}",
+          "Date": "{{Date}}",
+          "DueDate": "{{DueDate}}",
+          "Status": "{{Status}}",
+          "Reference": "{{Reference}}",
+          "CurrencyCode": "{{CurrencyCode}}",
+          "CreditNoteNumber": "{{CreditNoteNumber}}",
+          "BrandingThemeID": "{{BrandingThemeID}}",
+          "LineAmountTypes": "{{LineAmountTypes}}",
+          "SentToContact": "{{SentToContact}}"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "xero.create_invoice": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "write",
+      "title": "Create Invoice",
+      "description": "Create a sales invoice (ACCREC) or bill (ACCPAY). Omit InvoiceNumber so Xero cannot update an existing invoice by number collision.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "tenant_id": {
+            "type": "string",
+            "description": "Xero tenant/organisation ID (UUID). Required so requests cannot silently hit another connected organisation."
+          },
+          "Type": {
+            "type": "string",
+            "description": "Invoice type.",
+            "enum": [
+              "ACCREC",
+              "ACCPAY"
+            ]
+          },
+          "ContactID": {
+            "type": "string",
+            "description": "Xero Contact ID (UUID). Provide ContactID or ContactName."
+          },
+          "ContactName": {
+            "type": "string",
+            "description": "Contact name when ContactID is not provided."
+          },
+          "LineItems": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "A Xero line item.",
+              "properties": {
+                "Description": {
+                  "type": "string",
+                  "description": "Line item description."
+                },
+                "Quantity": {
+                  "type": "number",
+                  "description": "Quantity."
+                },
+                "UnitAmount": {
+                  "type": "number",
+                  "description": "Unit price."
+                },
+                "AccountCode": {
+                  "type": "string",
+                  "description": "Account code this line posts to."
+                },
+                "ItemCode": {
+                  "type": "string",
+                  "description": "Optional inventory item code."
+                },
+                "TaxType": {
+                  "type": "string",
+                  "description": "Tax type code from the organisation's tax rates."
+                },
+                "LineAmount": {
+                  "type": "number",
+                  "description": "Optional explicit line amount."
+                },
+                "LineItemID": {
+                  "type": "string",
+                  "description": "Existing line item UUID when updating."
+                }
+              }
+            },
+            "description": "Invoice line items."
+          },
+          "Date": {
+            "type": "string",
+            "description": "Invoice date (YYYY-MM-DD)."
+          },
+          "DueDate": {
+            "type": "string",
+            "description": "Due date (YYYY-MM-DD)."
+          },
+          "Status": {
+            "type": "string",
+            "description": "Invoice status.",
+            "enum": [
+              "DRAFT",
+              "SUBMITTED",
+              "AUTHORISED"
+            ]
+          },
+          "Reference": {
+            "type": "string",
+            "description": "Reference or purchase order number."
+          },
+          "CurrencyCode": {
+            "type": "string",
+            "description": "ISO currency code."
+          },
+          "InvoiceNumber": {
+            "type": "string",
+            "description": "Invoice number. Omit to create a new invoice with the next number."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "Type",
+          "LineItems",
+          "tenant_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "Parsed Xero JSON response."
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/Invoices",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ],
+        "headers": {
+          "Xero-Tenant-Id": "{{tenant_id}}"
+        },
+        "body": {
+          "Type": "{{Type}}",
+          "Contact": {
+            "ContactID": "{{ContactID}}",
+            "Name": "{{ContactName}}"
+          },
+          "LineItems": "{{LineItems}}",
+          "Date": "{{Date}}",
+          "DueDate": "{{DueDate}}",
+          "Status": "{{Status}}",
+          "Reference": "{{Reference}}",
+          "CurrencyCode": "{{CurrencyCode}}",
+          "InvoiceNumber": "{{InvoiceNumber}}"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "xero.create_item": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Create Item",
+      "description": "Create an inventory item that can be sold and/or purchased.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "tenant_id": {
+            "type": "string",
+            "description": "Xero tenant/organisation ID (UUID). Required so requests cannot silently hit another connected organisation."
+          },
+          "Code": {
+            "type": "string",
+            "description": "Unique item code (SKU)."
+          },
+          "Name": {
+            "type": "string",
+            "description": "Item name/description."
+          },
+          "IsSold": {
+            "type": "boolean",
+            "description": "Item can be sold when true."
+          },
+          "IsPurchased": {
+            "type": "boolean",
+            "description": "Item can be purchased when true."
+          },
+          "SalesDetails": {
+            "type": "object",
+            "description": "Sales details.",
+            "properties": {
+              "UnitPrice": {
+                "type": "number",
+                "description": "Unit price for sales."
+              },
+              "AccountCode": {
+                "type": "string",
+                "description": "Account code for sales."
+              }
+            }
+          },
+          "PurchaseDetails": {
+            "type": "object",
+            "description": "Purchase details.",
+            "properties": {
+              "UnitPrice": {
+                "type": "number",
+                "description": "Unit price for purchases."
+              },
+              "AccountCode": {
+                "type": "string",
+                "description": "Account code for purchases."
+              }
+            }
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "Code",
+          "Name",
+          "tenant_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "Parsed Xero JSON response."
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/Items",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ],
+        "headers": {
+          "Xero-Tenant-Id": "{{tenant_id}}"
+        },
+        "body": {
+          "Code": "{{Code}}",
+          "Name": "{{Name}}",
+          "IsSold": "{{IsSold}}",
+          "IsPurchased": "{{IsPurchased}}",
+          "SalesDetails": "{{SalesDetails}}",
+          "PurchaseDetails": "{{PurchaseDetails}}"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "xero.create_manual_journal": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "write",
+      "title": "Create Manual Journal",
+      "description": "Create a manual journal. Journal lines must balance (debits equal credits).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "tenant_id": {
+            "type": "string",
+            "description": "Xero tenant/organisation ID (UUID). Required so requests cannot silently hit another connected organisation."
+          },
+          "Narration": {
+            "type": "string",
+            "description": "Journal description shown in Xero."
+          },
+          "Date": {
+            "type": "string",
+            "description": "Date the journal is posted (YYYY-MM-DD)."
+          },
+          "JournalLines": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "A manual journal line.",
+              "properties": {
+                "Description": {
+                  "type": "string",
+                  "description": "Journal line description."
+                },
+                "LineAmount": {
+                  "type": "number",
+                  "description": "Signed line amount. Manual journals must balance."
+                },
+                "AccountCode": {
+                  "type": "string",
+                  "description": "Account code this line posts to."
+                },
+                "TaxType": {
+                  "type": "string",
+                  "description": "Optional tax type code."
+                },
+                "Tracking": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "description": "Tracking category assignment.",
+                    "properties": {
+                      "Name": {
+                        "type": "string",
+                        "description": "Tracking category name."
+                      },
+                      "Option": {
+                        "type": "string",
+                        "description": "Tracking option."
+                      }
+                    }
+                  },
+                  "description": "Optional tracking categories."
+                }
+              },
+              "required": [
+                "LineAmount",
+                "AccountCode"
+              ]
+            },
+            "description": "Journal lines that must balance."
+          },
+          "Status": {
+            "type": "string",
+            "description": "DRAFT or POSTED. Defaults to DRAFT.",
+            "enum": [
+              "DRAFT",
+              "POSTED"
+            ]
+          },
+          "LineAmountTypes": {
+            "type": "string",
+            "description": "How tax is calculated on line amounts.",
+            "enum": [
+              "Exclusive",
+              "Inclusive",
+              "NoTax"
+            ]
+          },
+          "ShowOnCashBasisReports": {
+            "type": "boolean",
+            "description": "Include on cash basis reports. Defaults to true."
+          },
+          "Url": {
+            "type": "string",
+            "description": "Optional source document URL."
+          },
+          "idempotency_key": {
+            "type": "string",
+            "description": "Idempotency key sent as the Idempotency-Key header."
+          },
+          "summarize_errors": {
+            "type": "boolean",
+            "description": "Return summarised validation errors when true."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "Narration",
+          "Date",
+          "JournalLines",
+          "tenant_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "Parsed Xero JSON response."
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/ManualJournals",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ],
+        "query": {
+          "summarizeErrors": "{{summarize_errors}}"
+        },
+        "headers": {
+          "Idempotency-Key": "{{idempotency_key}}",
+          "Xero-Tenant-Id": "{{tenant_id}}"
+        },
+        "body": {
+          "Narration": "{{Narration}}",
+          "Date": "{{Date}}",
+          "JournalLines": "{{JournalLines}}",
+          "Status": "{{Status}}",
+          "LineAmountTypes": "{{LineAmountTypes}}",
+          "ShowOnCashBasisReports": "{{ShowOnCashBasisReports}}",
+          "Url": "{{Url}}"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "xero.create_payment": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Create Payment",
+      "description": "Create a payment that links an invoice to a bank account.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "tenant_id": {
+            "type": "string",
+            "description": "Xero tenant/organisation ID (UUID). Required so requests cannot silently hit another connected organisation."
+          },
+          "InvoiceID": {
+            "type": "string",
+            "description": "Invoice UUID this payment is for."
+          },
+          "AccountID": {
+            "type": "string",
+            "description": "Bank account UUID the payment is paid from or to."
+          },
+          "Amount": {
+            "type": "number",
+            "description": "Payment amount."
+          },
+          "Date": {
+            "type": "string",
+            "description": "Payment date (YYYY-MM-DD)."
+          },
+          "Reference": {
+            "type": "string",
+            "description": "Payment reference."
+          },
+          "CurrencyRate": {
+            "type": "number",
+            "description": "Exchange rate for foreign currency payments."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "InvoiceID",
+          "AccountID",
+          "Amount",
+          "tenant_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "Parsed Xero JSON response."
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/Payments",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ],
+        "headers": {
+          "Xero-Tenant-Id": "{{tenant_id}}"
+        },
+        "body": {
+          "Invoice": {
+            "InvoiceID": "{{InvoiceID}}"
+          },
+          "Account": {
+            "AccountID": "{{AccountID}}"
+          },
+          "Amount": "{{Amount}}",
+          "Date": "{{Date}}",
+          "Reference": "{{Reference}}",
+          "CurrencyRate": "{{CurrencyRate}}"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "xero.create_purchase_order": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "write",
+      "title": "Create Purchase Order",
+      "description": "Create a purchase order for goods or services from a supplier.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "tenant_id": {
+            "type": "string",
+            "description": "Xero tenant/organisation ID (UUID). Required so requests cannot silently hit another connected organisation."
+          },
+          "ContactID": {
+            "type": "string",
+            "description": "Supplier contact UUID."
+          },
+          "LineItems": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "A Xero line item.",
+              "properties": {
+                "Description": {
+                  "type": "string",
+                  "description": "Line item description."
+                },
+                "Quantity": {
+                  "type": "number",
+                  "description": "Quantity."
+                },
+                "UnitAmount": {
+                  "type": "number",
+                  "description": "Unit price."
+                },
+                "AccountCode": {
+                  "type": "string",
+                  "description": "Account code this line posts to."
+                },
+                "ItemCode": {
+                  "type": "string",
+                  "description": "Optional inventory item code."
+                },
+                "TaxType": {
+                  "type": "string",
+                  "description": "Tax type code from the organisation's tax rates."
+                },
+                "LineAmount": {
+                  "type": "number",
+                  "description": "Optional explicit line amount."
+                },
+                "LineItemID": {
+                  "type": "string",
+                  "description": "Existing line item UUID when updating."
+                }
+              }
+            },
+            "description": "Purchase order line items."
+          },
+          "Date": {
+            "type": "string",
+            "description": "Purchase order date (YYYY-MM-DD)."
+          },
+          "DeliveryDate": {
+            "type": "string",
+            "description": "Expected delivery date (YYYY-MM-DD)."
+          },
+          "Status": {
+            "type": "string",
+            "description": "Purchase order status.",
+            "enum": [
+              "DRAFT",
+              "SUBMITTED",
+              "AUTHORISED",
+              "BILLED"
+            ]
+          },
+          "Reference": {
+            "type": "string",
+            "description": "Reference or purchase order number."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "ContactID",
+          "LineItems",
+          "tenant_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "Parsed Xero JSON response."
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/PurchaseOrders",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ],
+        "headers": {
+          "Xero-Tenant-Id": "{{tenant_id}}"
+        },
+        "body": {
+          "Contact": {
+            "ContactID": "{{ContactID}}"
+          },
+          "LineItems": "{{LineItems}}",
+          "Date": "{{Date}}",
+          "DeliveryDate": "{{DeliveryDate}}",
+          "Status": "{{Status}}",
+          "Reference": "{{Reference}}"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "xero.create_quote": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "write",
+      "title": "Create Quote",
+      "description": "Create a sales quote that can later be converted to an invoice.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "tenant_id": {
+            "type": "string",
+            "description": "Xero tenant/organisation ID (UUID). Required so requests cannot silently hit another connected organisation."
+          },
+          "ContactID": {
+            "type": "string",
+            "description": "Customer contact UUID. Provide ContactID or ContactName."
+          },
+          "ContactName": {
+            "type": "string",
+            "description": "Contact name when ContactID is not provided."
+          },
+          "LineItems": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "A Xero line item.",
+              "properties": {
+                "Description": {
+                  "type": "string",
+                  "description": "Line item description."
+                },
+                "Quantity": {
+                  "type": "number",
+                  "description": "Quantity."
+                },
+                "UnitAmount": {
+                  "type": "number",
+                  "description": "Unit price."
+                },
+                "AccountCode": {
+                  "type": "string",
+                  "description": "Account code this line posts to."
+                },
+                "ItemCode": {
+                  "type": "string",
+                  "description": "Optional inventory item code."
+                },
+                "TaxType": {
+                  "type": "string",
+                  "description": "Tax type code from the organisation's tax rates."
+                },
+                "LineAmount": {
+                  "type": "number",
+                  "description": "Optional explicit line amount."
+                },
+                "LineItemID": {
+                  "type": "string",
+                  "description": "Existing line item UUID when updating."
+                }
+              }
+            },
+            "description": "Quote line items. At least one is required."
+          },
+          "Date": {
+            "type": "string",
+            "description": "Quote date (YYYY-MM-DD)."
+          },
+          "ExpiryDate": {
+            "type": "string",
+            "description": "Quote expiry date (YYYY-MM-DD)."
+          },
+          "Status": {
+            "type": "string",
+            "description": "Quote status.",
+            "enum": [
+              "DRAFT",
+              "SENT",
+              "ACCEPTED",
+              "DECLINED",
+              "INVOICED",
+              "DELETED"
+            ]
+          },
+          "Title": {
+            "type": "string",
+            "description": "Quote title."
+          },
+          "Summary": {
+            "type": "string",
+            "description": "Summary description."
+          },
+          "Terms": {
+            "type": "string",
+            "description": "Terms and conditions."
+          },
+          "Reference": {
+            "type": "string",
+            "description": "Additional reference or purchase order number."
+          },
+          "QuoteNumber": {
+            "type": "string",
+            "description": "Unique quote number. Max 255 characters."
+          },
+          "CurrencyCode": {
+            "type": "string",
+            "description": "ISO 4217 currency code."
+          },
+          "CurrencyRate": {
+            "type": "number",
+            "description": "FX rate for a multicurrency quote."
+          },
+          "BrandingThemeID": {
+            "type": "string",
+            "description": "Branding theme UUID."
+          },
+          "LineAmountTypes": {
+            "type": "string",
+            "description": "Line amount tax mode.",
+            "enum": [
+              "Exclusive",
+              "Inclusive",
+              "NoTax"
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "LineItems",
+          "tenant_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "Parsed Xero JSON response."
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/Quotes",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ],
+        "headers": {
+          "Xero-Tenant-Id": "{{tenant_id}}"
+        },
+        "body": {
+          "Contact": {
+            "ContactID": "{{ContactID}}",
+            "Name": "{{ContactName}}"
+          },
+          "LineItems": "{{LineItems}}",
+          "Date": "{{Date}}",
+          "ExpiryDate": "{{ExpiryDate}}",
+          "Status": "{{Status}}",
+          "Title": "{{Title}}",
+          "Summary": "{{Summary}}",
+          "Terms": "{{Terms}}",
+          "Reference": "{{Reference}}",
+          "QuoteNumber": "{{QuoteNumber}}",
+          "CurrencyCode": "{{CurrencyCode}}",
+          "CurrencyRate": "{{CurrencyRate}}",
+          "BrandingThemeID": "{{BrandingThemeID}}",
+          "LineAmountTypes": "{{LineAmountTypes}}"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "xero.get_account": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Get Account",
+      "description": "Retrieve one chart-of-accounts entry by AccountID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "tenant_id": {
+            "type": "string",
+            "description": "Xero tenant/organisation ID (UUID). Required so requests cannot silently hit another connected organisation."
+          },
+          "account_id": {
+            "type": "string",
+            "description": "Xero Account ID (UUID)."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "account_id",
+          "tenant_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "Parsed Xero JSON response."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/Accounts/{{account_id}}",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ],
+        "headers": {
+          "Xero-Tenant-Id": "{{tenant_id}}"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "xero.get_asset": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Get Asset",
+      "description": "Retrieve a fixed asset by ID, including depreciation and book value.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "tenant_id": {
+            "type": "string",
+            "description": "Xero tenant/organisation ID (UUID). Required so requests cannot silently hit another connected organisation."
+          },
+          "asset_id": {
+            "type": "string",
+            "description": "Xero Asset ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "asset_id",
+          "tenant_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "Parsed Xero JSON response."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/Assets/{{asset_id}}",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ],
+        "baseUrl": "https://api.xero.com/assets.xro/1.0",
+        "headers": {
+          "Xero-Tenant-Id": "{{tenant_id}}"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "xero.get_balance_sheet_report": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "Get Balance Sheet Report",
+      "description": "Retrieve the Balance Sheet report. Liability and credit balances appear as negative numbers. Account lines nest inside section rows.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "tenant_id": {
+            "type": "string",
+            "description": "Xero tenant/organisation ID (UUID). Required so requests cannot silently hit another connected organisation."
+          },
+          "date": {
+            "type": "string",
+            "description": "As-of date (YYYY-MM-DD). Align with the organisation financial year."
+          },
+          "periods": {
+            "type": "integer",
+            "description": "Number of periods to compare."
+          },
+          "timeframe": {
+            "type": "string",
+            "description": "Comparison period size.",
+            "enum": [
+              "MONTH",
+              "QUARTER",
+              "YEAR"
+            ]
+          },
+          "paymentsOnly": {
+            "type": "boolean",
+            "description": "Cash basis when true."
+          },
+          "standardLayout": {
+            "type": "boolean",
+            "description": "Use the standard layout when true."
+          },
+          "trackingOptionID": {
+            "type": "string",
+            "description": "Filter by tracking option ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "tenant_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "Parsed Xero JSON response."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/Reports/BalanceSheet",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ],
+        "query": {
+          "date": "{{date}}",
+          "periods": "{{periods}}",
+          "timeframe": "{{timeframe}}",
+          "paymentsOnly": "{{paymentsOnly}}",
+          "standardLayout": "{{standardLayout}}",
+          "trackingOptionID": "{{trackingOptionID}}"
+        },
+        "headers": {
+          "Xero-Tenant-Id": "{{tenant_id}}"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "xero.get_bank_transaction": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "Get Bank Transaction",
+      "description": "Retrieve one spent or received money transaction by BankTransactionID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "tenant_id": {
+            "type": "string",
+            "description": "Xero tenant/organisation ID (UUID). Required so requests cannot silently hit another connected organisation."
+          },
+          "bank_transaction_id": {
+            "type": "string",
+            "description": "Bank transaction UUID."
+          },
+          "unitdp": {
+            "type": "integer",
+            "description": "Unit decimal places, e.g. 4."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "bank_transaction_id",
+          "tenant_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "Parsed Xero JSON response."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/BankTransactions/{{bank_transaction_id}}",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ],
+        "query": {
+          "unitdp": "{{unitdp}}"
+        },
+        "headers": {
+          "Xero-Tenant-Id": "{{tenant_id}}"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "xero.get_budget": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "Get Budget",
+      "description": "Retrieve a budget, optionally bounded by DateFrom and DateTo.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "tenant_id": {
+            "type": "string",
+            "description": "Xero tenant/organisation ID (UUID). Required so requests cannot silently hit another connected organisation."
+          },
+          "budget_id": {
+            "type": "string",
+            "description": "Xero Budget ID."
+          },
+          "DateFrom": {
+            "type": "string",
+            "description": "Start date (YYYY-MM-DD)."
+          },
+          "DateTo": {
+            "type": "string",
+            "description": "End date (YYYY-MM-DD)."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "budget_id",
+          "tenant_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "Parsed Xero JSON response."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/Budgets/{{budget_id}}",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ],
+        "query": {
+          "DateFrom": "{{DateFrom}}",
+          "DateTo": "{{DateTo}}"
+        },
+        "headers": {
+          "Xero-Tenant-Id": "{{tenant_id}}"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "xero.get_connections": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Get Connections",
+      "description": "List active Xero tenant connections for the access token. Use this to resolve tenant_id before data requests.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false,
+        "required": []
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "Parsed Xero JSON response."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/connections",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ],
+        "baseUrl": "https://api.xero.com"
+      },
+      "responseFormat": "json"
+    },
+    "xero.get_contacts": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "Get Contacts",
+      "description": "List or filter contacts. Pass ContactID (or IDs) to retrieve specific contacts. Use searchTerm and page/pageSize on high-volume organisations.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "tenant_id": {
+            "type": "string",
+            "description": "Xero tenant/organisation ID (UUID). Required so requests cannot silently hit another connected organisation."
+          },
+          "ContactID": {
+            "type": "string",
+            "description": "Single contact UUID. Sent as the IDs query when provided."
+          },
+          "IDs": {
+            "type": "string",
+            "description": "Comma-separated ContactIDs."
+          },
+          "page": {
+            "type": "integer",
+            "description": "Page number. Pair with pageSize."
+          },
+          "pageSize": {
+            "type": "integer",
+            "description": "Contacts per page. Pair with page."
+          },
+          "order": {
+            "type": "string",
+            "description": "Sort expression, e.g. UpdatedDateUTC DESC."
+          },
+          "where": {
+            "type": "string",
+            "description": "OData-style filter. Optimized fields include Name, EmailAddress, AccountNumber, TaxNumber, ContactStatus, City, Country, IsCustomer, IsSupplier."
+          },
+          "searchTerm": {
+            "type": "string",
+            "description": "Case-insensitive search across name, contact number, company number, and email."
+          },
+          "summaryOnly": {
+            "type": "boolean",
+            "description": "Return a lightweight summary when true."
+          },
+          "includeArchived": {
+            "type": "boolean",
+            "description": "Include archived contacts when true."
+          },
+          "If-Modified-Since": {
+            "type": "string",
+            "description": "UTC timestamp (YYYY-MM-DDThh:mm:ss) sent as If-Modified-Since."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "tenant_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "Parsed Xero JSON response."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/Contacts",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ],
+        "query": {
+          "page": "{{page}}",
+          "pageSize": "{{pageSize}}",
+          "order": "{{order}}",
+          "where": "{{where}}",
+          "searchTerm": "{{searchTerm}}",
+          "summaryOnly": "{{summaryOnly}}",
+          "includeArchived": "{{includeArchived}}"
+        },
+        "headers": {
+          "If-Modified-Since": "{{If-Modified-Since}}",
+          "Xero-Tenant-Id": "{{tenant_id}}"
+        },
+        "parameters": [
+          {
+            "wireName": "IDs",
+            "inputName": "IDs",
+            "in": "query",
+            "style": "form",
+            "explode": false,
+            "allowReserved": false
+          },
+          {
+            "wireName": "IDs",
+            "inputName": "ContactID",
+            "in": "query",
+            "style": "form",
+            "explode": false,
+            "allowReserved": false
+          }
+        ]
+      },
+      "responseFormat": "json"
+    },
+    "xero.get_credit_note": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "Get Credit Note",
+      "description": "Retrieve one credit note by UUID (not the human-readable CreditNoteNumber).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "tenant_id": {
+            "type": "string",
+            "description": "Xero tenant/organisation ID (UUID). Required so requests cannot silently hit another connected organisation."
+          },
+          "credit_note_id": {
+            "type": "string",
+            "description": "Credit note UUID."
+          },
+          "unitdp": {
+            "type": "integer",
+            "description": "Unit decimal places, e.g. 4."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "credit_note_id",
+          "tenant_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "Parsed Xero JSON response."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/CreditNotes/{{credit_note_id}}",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ],
+        "query": {
+          "unitdp": "{{unitdp}}"
+        },
+        "headers": {
+          "Xero-Tenant-Id": "{{tenant_id}}"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "xero.get_invoice": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "Get Invoice",
+      "description": "Retrieve one invoice by UUID (not the human-readable InvoiceNumber).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "tenant_id": {
+            "type": "string",
+            "description": "Xero tenant/organisation ID (UUID). Required so requests cannot silently hit another connected organisation."
+          },
+          "invoice_id": {
+            "type": "string",
+            "description": "Invoice UUID."
+          },
+          "unitdp": {
+            "type": "integer",
+            "description": "Unit decimal places, e.g. 4."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "invoice_id",
+          "tenant_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "Parsed Xero JSON response."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/Invoices/{{invoice_id}}",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ],
+        "query": {
+          "unitdp": "{{unitdp}}"
+        },
+        "headers": {
+          "Xero-Tenant-Id": "{{tenant_id}}"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "xero.get_item": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Get Item",
+      "description": "Retrieve one inventory item by ItemID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "tenant_id": {
+            "type": "string",
+            "description": "Xero tenant/organisation ID (UUID). Required so requests cannot silently hit another connected organisation."
+          },
+          "item_id": {
+            "type": "string",
+            "description": "Item UUID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "item_id",
+          "tenant_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "Parsed Xero JSON response."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/Items/{{item_id}}",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ],
+        "headers": {
+          "Xero-Tenant-Id": "{{tenant_id}}"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "xero.get_manual_journal": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "Get Manual Journal",
+      "description": "Retrieve one manual journal by ID, including journal lines.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "tenant_id": {
+            "type": "string",
+            "description": "Xero tenant/organisation ID (UUID). Required so requests cannot silently hit another connected organisation."
+          },
+          "manual_journal_id": {
+            "type": "string",
+            "description": "Manual journal UUID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "manual_journal_id",
+          "tenant_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "Parsed Xero JSON response."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/ManualJournals/{{manual_journal_id}}",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ],
+        "headers": {
+          "Xero-Tenant-Id": "{{tenant_id}}"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "xero.get_organisation": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Get Organisation",
+      "description": "Retrieve organisation profile, base currency, timezone, and tax settings. The organisation is Organisations[0] in the response.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "tenant_id": {
+            "type": "string",
+            "description": "Xero tenant/organisation ID (UUID). Required so requests cannot silently hit another connected organisation."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "tenant_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "Parsed Xero JSON response."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/Organisation",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ],
+        "headers": {
+          "Xero-Tenant-Id": "{{tenant_id}}"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "xero.get_payment": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Get Payment",
+      "description": "Retrieve one payment by UUID (not a payment reference).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "tenant_id": {
+            "type": "string",
+            "description": "Xero tenant/organisation ID (UUID). Required so requests cannot silently hit another connected organisation."
+          },
+          "payment_id": {
+            "type": "string",
+            "description": "Payment UUID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "payment_id",
+          "tenant_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "Parsed Xero JSON response."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/Payments/{{payment_id}}",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ],
+        "headers": {
+          "Xero-Tenant-Id": "{{tenant_id}}"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "xero.get_profit_loss_report": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "Get Profit And Loss Report",
+      "description": "Retrieve the Profit and Loss report. Parse rows by label, not array index. Date range must not exceed 365 days.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "tenant_id": {
+            "type": "string",
+            "description": "Xero tenant/organisation ID (UUID). Required so requests cannot silently hit another connected organisation."
+          },
+          "fromDate": {
+            "type": "string",
+            "description": "Start date (YYYY-MM-DD)."
+          },
+          "toDate": {
+            "type": "string",
+            "description": "End date (YYYY-MM-DD)."
+          },
+          "periods": {
+            "type": "integer",
+            "description": "Number of comparison periods."
+          },
+          "timeframe": {
+            "type": "string",
+            "description": "Comparison period size.",
+            "enum": [
+              "MONTH",
+              "QUARTER",
+              "YEAR"
+            ]
+          },
+          "paymentsOnly": {
+            "type": "boolean",
+            "description": "Cash basis when true."
+          },
+          "standardLayout": {
+            "type": "boolean",
+            "description": "Use the standard layout when true."
+          },
+          "trackingOptionID": {
+            "type": "string",
+            "description": "Filter by tracking option ID."
+          },
+          "trackingOptionID2": {
+            "type": "string",
+            "description": "Filter by a second tracking option ID."
+          },
+          "trackingCategoryID": {
+            "type": "string",
+            "description": "Filter by tracking category ID."
+          },
+          "trackingCategoryID2": {
+            "type": "string",
+            "description": "Filter by a second tracking category ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "tenant_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "Parsed Xero JSON response."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/Reports/ProfitAndLoss",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ],
+        "query": {
+          "fromDate": "{{fromDate}}",
+          "toDate": "{{toDate}}",
+          "periods": "{{periods}}",
+          "timeframe": "{{timeframe}}",
+          "paymentsOnly": "{{paymentsOnly}}",
+          "standardLayout": "{{standardLayout}}",
+          "trackingOptionID": "{{trackingOptionID}}",
+          "trackingOptionID2": "{{trackingOptionID2}}",
+          "trackingCategoryID": "{{trackingCategoryID}}",
+          "trackingCategoryID2": "{{trackingCategoryID2}}"
+        },
+        "headers": {
+          "Xero-Tenant-Id": "{{tenant_id}}"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "xero.get_project": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Get Project",
+      "description": "Retrieve one project by GUID (not a job number).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "tenant_id": {
+            "type": "string",
+            "description": "Xero tenant/organisation ID (UUID). Required so requests cannot silently hit another connected organisation."
+          },
+          "project_id": {
+            "type": "string",
+            "description": "Project GUID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "project_id",
+          "tenant_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "Parsed Xero JSON response."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/Projects/{{project_id}}",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ],
+        "baseUrl": "https://api.xero.com/projects.xro/2.0",
+        "headers": {
+          "Xero-Tenant-Id": "{{tenant_id}}"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "xero.get_purchase_order": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "Get Purchase Order",
+      "description": "Retrieve one purchase order by UUID, including line items.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "tenant_id": {
+            "type": "string",
+            "description": "Xero tenant/organisation ID (UUID). Required so requests cannot silently hit another connected organisation."
+          },
+          "purchase_order_id": {
+            "type": "string",
+            "description": "Purchase order UUID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "purchase_order_id",
+          "tenant_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "Parsed Xero JSON response."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/PurchaseOrders/{{purchase_order_id}}",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ],
+        "headers": {
+          "Xero-Tenant-Id": "{{tenant_id}}"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "xero.get_quotes": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "Get Quotes",
+      "description": "List, filter, or page sales quotes for a tenant.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "tenant_id": {
+            "type": "string",
+            "description": "Xero tenant/organisation ID (UUID). Required so requests cannot silently hit another connected organisation."
+          },
+          "page": {
+            "type": "integer",
+            "description": "1-based page number."
+          },
+          "order": {
+            "type": "string",
+            "description": "Order expression, e.g. ExpiryDate ASC."
+          },
+          "DateFrom": {
+            "type": "string",
+            "description": "Quotes on or after this date (YYYY-MM-DD)."
+          },
+          "DateTo": {
+            "type": "string",
+            "description": "Quotes on or before this date (YYYY-MM-DD)."
+          },
+          "ExpiryDateFrom": {
+            "type": "string",
+            "description": "Quotes expiring on or after this date (YYYY-MM-DD)."
+          },
+          "ExpiryDateTo": {
+            "type": "string",
+            "description": "Quotes expiring on or before this date (YYYY-MM-DD)."
+          },
+          "Status": {
+            "type": "string",
+            "description": "Filter by quote status."
+          },
+          "ContactID": {
+            "type": "string",
+            "description": "Filter by contact UUID."
+          },
+          "QuoteNumber": {
+            "type": "string",
+            "description": "Filter by quote number."
+          },
+          "If-Modified-Since": {
+            "type": "string",
+            "description": "RFC3339 UTC timestamp sent as If-Modified-Since."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "tenant_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "Parsed Xero JSON response."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/Quotes",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ],
+        "query": {
+          "page": "{{page}}",
+          "order": "{{order}}",
+          "DateFrom": "{{DateFrom}}",
+          "DateTo": "{{DateTo}}",
+          "ExpiryDateFrom": "{{ExpiryDateFrom}}",
+          "ExpiryDateTo": "{{ExpiryDateTo}}",
+          "Status": "{{Status}}",
+          "ContactID": "{{ContactID}}",
+          "QuoteNumber": "{{QuoteNumber}}"
+        },
+        "headers": {
+          "If-Modified-Since": "{{If-Modified-Since}}",
+          "Xero-Tenant-Id": "{{tenant_id}}"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "xero.get_trial_balance_report": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "Get Trial Balance Report",
+      "description": "Retrieve the Trial Balance report. Credit balances appear as negative numbers.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "tenant_id": {
+            "type": "string",
+            "description": "Xero tenant/organisation ID (UUID). Required so requests cannot silently hit another connected organisation."
+          },
+          "date": {
+            "type": "string",
+            "description": "Report date (YYYY-MM-DD). Defaults to today."
+          },
+          "paymentsOnly": {
+            "type": "boolean",
+            "description": "Cash basis when true."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "tenant_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "Parsed Xero JSON response."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/Reports/TrialBalance",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ],
+        "query": {
+          "date": "{{date}}",
+          "paymentsOnly": "{{paymentsOnly}}"
+        },
+        "headers": {
+          "Xero-Tenant-Id": "{{tenant_id}}"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "xero.list_accounts": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "List Accounts",
+      "description": "List the chart of accounts. Use AccountID as the unique identifier. Status filters exclude archived accounts.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "tenant_id": {
+            "type": "string",
+            "description": "Xero tenant/organisation ID (UUID). Required so requests cannot silently hit another connected organisation."
+          },
+          "order": {
+            "type": "string",
+            "description": "Sort expression, e.g. Code ASC."
+          },
+          "where": {
+            "type": "string",
+            "description": "OData-style filter, e.g. Status==\"ACTIVE\" AND Type==\"EXPENSE\"."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "tenant_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "Parsed Xero JSON response."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/Accounts",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ],
+        "query": {
+          "order": "{{order}}",
+          "where": "{{where}}"
+        },
+        "headers": {
+          "Xero-Tenant-Id": "{{tenant_id}}"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "xero.list_assets": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "List Assets",
+      "description": "List fixed assets. Status defaults to DRAFT on the provider if omitted.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "tenant_id": {
+            "type": "string",
+            "description": "Xero tenant/organisation ID (UUID). Required so requests cannot silently hit another connected organisation."
+          },
+          "page": {
+            "type": "integer",
+            "description": "Page number. Defaults to 1."
+          },
+          "pageSize": {
+            "type": "integer",
+            "description": "Assets per page. Defaults to 10."
+          },
+          "status": {
+            "type": "string",
+            "description": "Asset status filter.",
+            "enum": [
+              "DRAFT",
+              "REGISTERED",
+              "DISPOSED"
+            ]
+          },
+          "orderBy": {
+            "type": "string",
+            "description": "Sort field.",
+            "enum": [
+              "AssetType",
+              "AssetName",
+              "AssetNumber",
+              "PurchaseDate",
+              "PurchasePrice",
+              "DisposalDate",
+              "DisposalPrice"
+            ]
+          },
+          "sortDirection": {
+            "type": "string",
+            "description": "Sort direction.",
+            "enum": [
+              "asc",
+              "desc"
+            ]
+          },
+          "filterBy": {
+            "type": "string",
+            "description": "Search AssetName, AssetNumber, Description, and AssetTypeName."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "tenant_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "Parsed Xero JSON response."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/Assets",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ],
+        "baseUrl": "https://api.xero.com/assets.xro/1.0",
+        "query": {
+          "page": "{{page}}",
+          "pageSize": "{{pageSize}}",
+          "status": "{{status}}",
+          "orderBy": "{{orderBy}}",
+          "sortDirection": "{{sortDirection}}",
+          "filterBy": "{{filterBy}}"
+        },
+        "headers": {
+          "Xero-Tenant-Id": "{{tenant_id}}"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "xero.list_attachments": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "List Attachments",
+      "description": "List attachments on a Xero accounting entity.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "tenant_id": {
+            "type": "string",
+            "description": "Xero tenant/organisation ID (UUID). Required so requests cannot silently hit another connected organisation."
+          },
+          "entity_type": {
+            "type": "string",
+            "description": "Entity collection name.",
+            "enum": [
+              "Invoices",
+              "Contacts",
+              "BankTransactions",
+              "CreditNotes",
+              "Accounts",
+              "ManualJournals",
+              "PurchaseOrders",
+              "Quotes",
+              "Receipts",
+              "RepeatingInvoices"
+            ]
+          },
+          "entity_id": {
+            "type": "string",
+            "description": "Entity UUID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "entity_type",
+          "entity_id",
+          "tenant_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "Parsed Xero JSON response."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/{{entity_type}}/{{entity_id}}/Attachments",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ],
+        "headers": {
+          "Xero-Tenant-Id": "{{tenant_id}}"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "xero.list_bank_transactions": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "List Bank Transactions",
+      "description": "List spent and received money transactions. Filter Status==\"AUTHORISED\" to exclude DELETED rows. Max 100 per page.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "tenant_id": {
+            "type": "string",
+            "description": "Xero tenant/organisation ID (UUID). Required so requests cannot silently hit another connected organisation."
+          },
+          "page": {
+            "type": "integer",
+            "description": "Page number. Iterate until zero results."
+          },
+          "order": {
+            "type": "string",
+            "description": "Sort expression, e.g. Date DESC."
+          },
+          "where": {
+            "type": "string",
+            "description": "OData-style filter, e.g. Status==\"AUTHORISED\" AND Type==\"SPEND\"."
+          },
+          "unitdp": {
+            "type": "integer",
+            "description": "Unit decimal places."
+          },
+          "If-Modified-Since": {
+            "type": "string",
+            "description": "UTC timestamp sent as If-Modified-Since."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "tenant_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "Parsed Xero JSON response."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/BankTransactions",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ],
+        "query": {
+          "page": "{{page}}",
+          "order": "{{order}}",
+          "where": "{{where}}",
+          "unitdp": "{{unitdp}}"
+        },
+        "headers": {
+          "If-Modified-Since": "{{If-Modified-Since}}",
+          "Xero-Tenant-Id": "{{tenant_id}}"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "xero.list_credit_notes": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "List Credit Notes",
+      "description": "List credit notes with optional filters and pagination.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "tenant_id": {
+            "type": "string",
+            "description": "Xero tenant/organisation ID (UUID). Required so requests cannot silently hit another connected organisation."
+          },
+          "page": {
+            "type": "integer",
+            "description": "Page number."
+          },
+          "order": {
+            "type": "string",
+            "description": "Sort expression, e.g. Date DESC."
+          },
+          "where": {
+            "type": "string",
+            "description": "OData-style filter, e.g. Status==\"AUTHORISED\"."
+          },
+          "If-Modified-Since": {
+            "type": "string",
+            "description": "UTC timestamp sent as If-Modified-Since."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "tenant_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "Parsed Xero JSON response."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/CreditNotes",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ],
+        "query": {
+          "page": "{{page}}",
+          "order": "{{order}}",
+          "where": "{{where}}"
+        },
+        "headers": {
+          "If-Modified-Since": "{{If-Modified-Since}}",
+          "Xero-Tenant-Id": "{{tenant_id}}"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "xero.list_files": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "List Files",
+      "description": "List documents in Xero Files.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "tenant_id": {
+            "type": "string",
+            "description": "Xero tenant/organisation ID (UUID). Required so requests cannot silently hit another connected organisation."
+          },
+          "page": {
+            "type": "integer",
+            "description": "Page number."
+          },
+          "pagesize": {
+            "type": "integer",
+            "description": "Files per page, max 100."
+          },
+          "sort": {
+            "type": "string",
+            "description": "Sort field.",
+            "enum": [
+              "Name",
+              "Size",
+              "CreatedDateUTC"
+            ]
+          },
+          "folderId": {
+            "type": "string",
+            "description": "Filter by folder ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "tenant_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "Parsed Xero JSON response."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/Files",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ],
+        "baseUrl": "https://api.xero.com/files.xro/1.0",
+        "query": {
+          "page": "{{page}}",
+          "pagesize": "{{pagesize}}",
+          "sort": "{{sort}}",
+          "folderId": "{{folderId}}"
+        },
+        "headers": {
+          "Xero-Tenant-Id": "{{tenant_id}}"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "xero.list_folders": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "List Folders",
+      "description": "List folders in Xero Files.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "tenant_id": {
+            "type": "string",
+            "description": "Xero tenant/organisation ID (UUID). Required so requests cannot silently hit another connected organisation."
+          },
+          "sort": {
+            "type": "string",
+            "description": "Sort field.",
+            "enum": [
+              "Name",
+              "CreatedDateUTC"
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "tenant_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "Parsed Xero JSON response."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/Folders",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ],
+        "baseUrl": "https://api.xero.com/files.xro/1.0",
+        "query": {
+          "sort": "{{sort}}"
+        },
+        "headers": {
+          "Xero-Tenant-Id": "{{tenant_id}}"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "xero.list_invoices": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "List Invoices",
+      "description": "List sales invoices and bills. Filter Type in `where` when only ACCREC or ACCPAY is needed. Up to 100 invoices per page.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "tenant_id": {
+            "type": "string",
+            "description": "Xero tenant/organisation ID (UUID). Required so requests cannot silently hit another connected organisation."
+          },
+          "page": {
+            "type": "integer",
+            "description": "Page number. Check pagination.pageCount to drain results."
+          },
+          "order": {
+            "type": "string",
+            "description": "Sort expression, e.g. Date DESC."
+          },
+          "where": {
+            "type": "string",
+            "description": "OData-style filter, e.g. Status==\"AUTHORISED\" AND Total>100."
+          },
+          "Statuses": {
+            "type": "string",
+            "description": "Comma-separated statuses: DRAFT, SUBMITTED, AUTHORISED, PAID."
+          },
+          "ContactIDs": {
+            "type": "string",
+            "description": "Comma-separated contact UUIDs."
+          },
+          "InvoiceIDs": {
+            "type": "string",
+            "description": "Comma-separated invoice UUIDs."
+          },
+          "createdByMyApp": {
+            "type": "boolean",
+            "description": "Restrict to invoices created by this app when true."
+          },
+          "includeArchived": {
+            "type": "boolean",
+            "description": "Include archived invoices when true."
+          },
+          "If-Modified-Since": {
+            "type": "string",
+            "description": "UTC timestamp sent as If-Modified-Since."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "tenant_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "Parsed Xero JSON response."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/Invoices",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ],
+        "query": {
+          "page": "{{page}}",
+          "order": "{{order}}",
+          "where": "{{where}}",
+          "Statuses": "{{Statuses}}",
+          "ContactIDs": "{{ContactIDs}}",
+          "InvoiceIDs": "{{InvoiceIDs}}",
+          "createdByMyApp": "{{createdByMyApp}}",
+          "includeArchived": "{{includeArchived}}"
+        },
+        "headers": {
+          "If-Modified-Since": "{{If-Modified-Since}}",
+          "Xero-Tenant-Id": "{{tenant_id}}"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "xero.list_items": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "List Items",
+      "description": "List inventory items that can be sold and/or purchased.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "tenant_id": {
+            "type": "string",
+            "description": "Xero tenant/organisation ID (UUID). Required so requests cannot silently hit another connected organisation."
+          },
+          "order": {
+            "type": "string",
+            "description": "Sort expression, e.g. Code ASC."
+          },
+          "where": {
+            "type": "string",
+            "description": "OData-style filter, e.g. IsSold==true."
+          },
+          "unitdp": {
+            "type": "integer",
+            "description": "Unit decimal places."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "tenant_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "Parsed Xero JSON response."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/Items",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ],
+        "query": {
+          "order": "{{order}}",
+          "where": "{{where}}",
+          "unitdp": "{{unitdp}}"
+        },
+        "headers": {
+          "Xero-Tenant-Id": "{{tenant_id}}"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "xero.list_journals": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "List Journals",
+      "description": "List the journal ledger. Use If-Modified-Since and/or paymentsOnly; there is no date-range filter. Page with offset in steps of 100.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "tenant_id": {
+            "type": "string",
+            "description": "Xero tenant/organisation ID (UUID). Required so requests cannot silently hit another connected organisation."
+          },
+          "offset": {
+            "type": "integer",
+            "description": "Pagination offset. Increment by 100."
+          },
+          "paymentsOnly": {
+            "type": "boolean",
+            "description": "Restrict to payment journals when true."
+          },
+          "If-Modified-Since": {
+            "type": "string",
+            "description": "UTC timestamp sent as If-Modified-Since."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "tenant_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "Parsed Xero JSON response."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/Journals",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ],
+        "query": {
+          "offset": "{{offset}}",
+          "paymentsOnly": "{{paymentsOnly}}"
+        },
+        "headers": {
+          "If-Modified-Since": "{{If-Modified-Since}}",
+          "Xero-Tenant-Id": "{{tenant_id}}"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "xero.list_manual_journals": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "List Manual Journals",
+      "description": "List manual journals with optional filters and pagination.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "tenant_id": {
+            "type": "string",
+            "description": "Xero tenant/organisation ID (UUID). Required so requests cannot silently hit another connected organisation."
+          },
+          "page": {
+            "type": "integer",
+            "description": "Page number."
+          },
+          "order": {
+            "type": "string",
+            "description": "Sort expression, e.g. Date DESC."
+          },
+          "where": {
+            "type": "string",
+            "description": "OData-style filter, e.g. Status==\"POSTED\"."
+          },
+          "If-Modified-Since": {
+            "type": "string",
+            "description": "UTC timestamp sent as If-Modified-Since."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "tenant_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "Parsed Xero JSON response."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/ManualJournals",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ],
+        "query": {
+          "page": "{{page}}",
+          "order": "{{order}}",
+          "where": "{{where}}"
+        },
+        "headers": {
+          "If-Modified-Since": "{{If-Modified-Since}}",
+          "Xero-Tenant-Id": "{{tenant_id}}"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "xero.list_payments": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "List Payments",
+      "description": "List payments that link invoices to bank transactions. Max 100 per page.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "tenant_id": {
+            "type": "string",
+            "description": "Xero tenant/organisation ID (UUID). Required so requests cannot silently hit another connected organisation."
+          },
+          "page": {
+            "type": "integer",
+            "description": "Page number. Iterate until an empty array."
+          },
+          "order": {
+            "type": "string",
+            "description": "Sort expression, e.g. Date DESC."
+          },
+          "where": {
+            "type": "string",
+            "description": "OData-style filter, e.g. Status==\"AUTHORISED\"."
+          },
+          "If-Modified-Since": {
+            "type": "string",
+            "description": "UTC timestamp sent as If-Modified-Since."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "tenant_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "Parsed Xero JSON response."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/Payments",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ],
+        "query": {
+          "page": "{{page}}",
+          "order": "{{order}}",
+          "where": "{{where}}"
+        },
+        "headers": {
+          "If-Modified-Since": "{{If-Modified-Since}}",
+          "Xero-Tenant-Id": "{{tenant_id}}"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "xero.list_projects": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "List Projects",
+      "description": "List projects, optionally filtered by contact, state, or project IDs.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "tenant_id": {
+            "type": "string",
+            "description": "Xero tenant/organisation ID (UUID). Required so requests cannot silently hit another connected organisation."
+          },
+          "page": {
+            "type": "integer",
+            "description": "Page number."
+          },
+          "pageSize": {
+            "type": "integer",
+            "description": "Projects per page (1-500, default 50)."
+          },
+          "states": {
+            "type": "string",
+            "description": "Comma-separated states: INPROGRESS, CLOSED."
+          },
+          "contactID": {
+            "type": "string",
+            "description": "Filter by contact UUID."
+          },
+          "projectIds": {
+            "type": "string",
+            "description": "Comma-separated project IDs."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "tenant_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "Parsed Xero JSON response."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/Projects",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ],
+        "baseUrl": "https://api.xero.com/projects.xro/2.0",
+        "query": {
+          "page": "{{page}}",
+          "pageSize": "{{pageSize}}",
+          "states": "{{states}}",
+          "contactID": "{{contactID}}",
+          "projectIds": "{{projectIds}}"
+        },
+        "headers": {
+          "Xero-Tenant-Id": "{{tenant_id}}"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "xero.list_purchase_orders": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "List Purchase Orders",
+      "description": "List purchase orders with optional status and date filters.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "tenant_id": {
+            "type": "string",
+            "description": "Xero tenant/organisation ID (UUID). Required so requests cannot silently hit another connected organisation."
+          },
+          "page": {
+            "type": "integer",
+            "description": "Page number."
+          },
+          "order": {
+            "type": "string",
+            "description": "Sort expression, e.g. Date DESC."
+          },
+          "Status": {
+            "type": "string",
+            "description": "Status filter.",
+            "enum": [
+              "DRAFT",
+              "SUBMITTED",
+              "AUTHORISED",
+              "BILLED",
+              "DELETED"
+            ]
+          },
+          "DateFrom": {
+            "type": "string",
+            "description": "Filter from date (YYYY-MM-DD)."
+          },
+          "DateTo": {
+            "type": "string",
+            "description": "Filter to date (YYYY-MM-DD)."
+          },
+          "If-Modified-Since": {
+            "type": "string",
+            "description": "UTC timestamp sent as If-Modified-Since."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "tenant_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "Parsed Xero JSON response."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/PurchaseOrders",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ],
+        "query": {
+          "page": "{{page}}",
+          "order": "{{order}}",
+          "Status": "{{Status}}",
+          "DateFrom": "{{DateFrom}}",
+          "DateTo": "{{DateTo}}"
+        },
+        "headers": {
+          "If-Modified-Since": "{{If-Modified-Since}}",
+          "Xero-Tenant-Id": "{{tenant_id}}"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "xero.list_quotes": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "List Quotes",
+      "description": "List sales quotes with optional filtering and pagination. Up to 100 quotes per page with line items.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "tenant_id": {
+            "type": "string",
+            "description": "Xero tenant/organisation ID (UUID). Required so requests cannot silently hit another connected organisation."
+          },
+          "page": {
+            "type": "integer",
+            "description": "Page number."
+          },
+          "order": {
+            "type": "string",
+            "description": "Order expression."
+          },
+          "DateFrom": {
+            "type": "string",
+            "description": "Quotes on or after this date (YYYY-MM-DD)."
+          },
+          "DateTo": {
+            "type": "string",
+            "description": "Quotes on or before this date (YYYY-MM-DD)."
+          },
+          "ExpiryDateFrom": {
+            "type": "string",
+            "description": "Quotes expiring on or after this date (YYYY-MM-DD)."
+          },
+          "ExpiryDateTo": {
+            "type": "string",
+            "description": "Quotes expiring on or before this date (YYYY-MM-DD)."
+          },
+          "Status": {
+            "type": "string",
+            "description": "Filter by quote status."
+          },
+          "ContactID": {
+            "type": "string",
+            "description": "Filter by contact UUID."
+          },
+          "QuoteNumber": {
+            "type": "string",
+            "description": "Filter by quote number."
+          },
+          "if_modified_since": {
+            "type": "string",
+            "description": "ISO 8601 timestamp sent as If-Modified-Since."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "tenant_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "Parsed Xero JSON response."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/Quotes",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ],
+        "query": {
+          "page": "{{page}}",
+          "order": "{{order}}",
+          "DateFrom": "{{DateFrom}}",
+          "DateTo": "{{DateTo}}",
+          "ExpiryDateFrom": "{{ExpiryDateFrom}}",
+          "ExpiryDateTo": "{{ExpiryDateTo}}",
+          "Status": "{{Status}}",
+          "ContactID": "{{ContactID}}",
+          "QuoteNumber": "{{QuoteNumber}}"
+        },
+        "headers": {
+          "If-Modified-Since": "{{if_modified_since}}",
+          "Xero-Tenant-Id": "{{tenant_id}}"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "xero.list_tax_rates": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "List Tax Rates",
+      "description": "List tax rates. Use returned TaxType values on invoices and line items.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "tenant_id": {
+            "type": "string",
+            "description": "Xero tenant/organisation ID (UUID). Required so requests cannot silently hit another connected organisation."
+          },
+          "order": {
+            "type": "string",
+            "description": "Sort expression, e.g. Name ASC."
+          },
+          "where": {
+            "type": "string",
+            "description": "OData-style filter, e.g. Status==\"ACTIVE\"."
+          },
+          "TaxType": {
+            "type": "string",
+            "description": "Filter by a specific tax type."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "tenant_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "Parsed Xero JSON response."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/TaxRates",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ],
+        "query": {
+          "order": "{{order}}",
+          "where": "{{where}}",
+          "TaxType": "{{TaxType}}"
+        },
+        "headers": {
+          "Xero-Tenant-Id": "{{tenant_id}}"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "xero.list_tracking_categories": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "List Tracking Categories",
+      "description": "List tracking categories used to segment reporting, e.g. department or region.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "tenant_id": {
+            "type": "string",
+            "description": "Xero tenant/organisation ID (UUID). Required so requests cannot silently hit another connected organisation."
+          },
+          "order": {
+            "type": "string",
+            "description": "Sort expression, e.g. Name ASC."
+          },
+          "where": {
+            "type": "string",
+            "description": "OData-style filter, e.g. Status==\"ACTIVE\"."
+          },
+          "includeArchived": {
+            "type": "boolean",
+            "description": "Include archived categories when true."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "tenant_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "Parsed Xero JSON response."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/TrackingCategories",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ],
+        "query": {
+          "order": "{{order}}",
+          "where": "{{where}}",
+          "includeArchived": "{{includeArchived}}"
+        },
+        "headers": {
+          "Xero-Tenant-Id": "{{tenant_id}}"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "xero.post_invoice_update": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "write",
+      "title": "Update Invoice",
+      "description": "Update one or more existing invoices via POST /Invoices. Provide InvoiceID on each element. Matching InvoiceNumber values also update.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "tenant_id": {
+            "type": "string",
+            "description": "Xero tenant/organisation ID (UUID). Required so requests cannot silently hit another connected organisation."
+          },
+          "Invoices": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "Invoice update payload, including InvoiceID.",
+              "properties": {},
+              "additionalProperties": true
+            },
+            "description": "Invoice update definitions."
+          },
+          "InvoiceID": {
+            "type": "string",
+            "description": "Optional single invoice UUID when updating one invoice."
+          },
+          "InvoiceNumber": {
+            "type": "string",
+            "description": "Optional invoice number identifier."
+          },
+          "unitdp": {
+            "type": "integer",
+            "description": "Unit decimal places."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "Invoices",
+          "tenant_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "Parsed Xero JSON response."
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/Invoices",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ],
+        "query": {
+          "unitdp": "{{unitdp}}"
+        },
+        "headers": {
+          "Xero-Tenant-Id": "{{tenant_id}}"
+        },
+        "body": {
+          "Invoices": "{{Invoices}}"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "xero.update_bank_transaction": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "write",
+      "title": "Update Bank Transaction",
+      "description": "Update an existing bank transaction. Reconciled transactions cannot be updated.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "tenant_id": {
+            "type": "string",
+            "description": "Xero tenant/organisation ID (UUID). Required so requests cannot silently hit another connected organisation."
+          },
+          "BankTransactionID": {
+            "type": "string",
+            "description": "Bank transaction UUID to update."
+          },
+          "Type": {
+            "type": "string",
+            "description": "Transaction type.",
+            "enum": [
+              "SPEND",
+              "RECEIVE"
+            ]
+          },
+          "ContactID": {
+            "type": "string",
+            "description": "Xero Contact ID."
+          },
+          "LineItems": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "A Xero line item.",
+              "properties": {
+                "Description": {
+                  "type": "string",
+                  "description": "Line item description."
+                },
+                "Quantity": {
+                  "type": "number",
+                  "description": "Quantity."
+                },
+                "UnitAmount": {
+                  "type": "number",
+                  "description": "Unit price."
+                },
+                "AccountCode": {
+                  "type": "string",
+                  "description": "Account code this line posts to."
+                },
+                "ItemCode": {
+                  "type": "string",
+                  "description": "Optional inventory item code."
+                },
+                "TaxType": {
+                  "type": "string",
+                  "description": "Tax type code from the organisation's tax rates."
+                },
+                "LineAmount": {
+                  "type": "number",
+                  "description": "Optional explicit line amount."
+                },
+                "LineItemID": {
+                  "type": "string",
+                  "description": "Existing line item UUID when updating."
+                }
+              }
+            },
+            "description": "Replacement line items."
+          },
+          "Date": {
+            "type": "string",
+            "description": "Transaction date (YYYY-MM-DD)."
+          },
+          "Status": {
+            "type": "string",
+            "description": "Transaction status.",
+            "enum": [
+              "AUTHORISED",
+              "DELETED"
+            ]
+          },
+          "Reference": {
+            "type": "string",
+            "description": "Reference or description."
+          },
+          "CurrencyCode": {
+            "type": "string",
+            "description": "ISO currency code."
+          },
+          "BankAccountID": {
+            "type": "string",
+            "description": "Bank account UUID."
+          },
+          "BankAccountCode": {
+            "type": "string",
+            "description": "Bank account code."
+          },
+          "unitdp": {
+            "type": "integer",
+            "description": "Unit decimal places."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "BankTransactionID",
+          "tenant_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "Parsed Xero JSON response."
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/BankTransactions/{{BankTransactionID}}",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ],
+        "query": {
+          "unitdp": "{{unitdp}}"
+        },
+        "headers": {
+          "Xero-Tenant-Id": "{{tenant_id}}"
+        },
+        "body": {
+          "BankTransactionID": "{{BankTransactionID}}",
+          "Type": "{{Type}}",
+          "Contact": {
+            "ContactID": "{{ContactID}}"
+          },
+          "BankAccount": {
+            "AccountID": "{{BankAccountID}}",
+            "Code": "{{BankAccountCode}}"
+          },
+          "LineItems": "{{LineItems}}",
+          "Date": "{{Date}}",
+          "Status": "{{Status}}",
+          "Reference": "{{Reference}}",
+          "CurrencyCode": "{{CurrencyCode}}"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "xero.update_contact": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "write",
+      "title": "Update Contact",
+      "description": "Update an existing contact. Only provided fields are sent.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "tenant_id": {
+            "type": "string",
+            "description": "Xero tenant/organisation ID (UUID). Required so requests cannot silently hit another connected organisation."
+          },
+          "ContactID": {
+            "type": "string",
+            "description": "Contact UUID to update."
+          },
+          "Name": {
+            "type": "string",
+            "description": "Full name of the contact or organisation."
+          },
+          "FirstName": {
+            "type": "string",
+            "description": "First name."
+          },
+          "LastName": {
+            "type": "string",
+            "description": "Last name."
+          },
+          "EmailAddress": {
+            "type": "string",
+            "description": "Email address."
+          },
+          "TaxNumber": {
+            "type": "string",
+            "description": "Tax number."
+          },
+          "AccountNumber": {
+            "type": "string",
+            "description": "Account reference number."
+          },
+          "BankAccountDetails": {
+            "type": "string",
+            "description": "Bank account details."
+          },
+          "DefaultCurrency": {
+            "type": "string",
+            "description": "Default currency code."
+          },
+          "Phones": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "A Xero phone number.",
+              "properties": {
+                "PhoneType": {
+                  "type": "string",
+                  "description": "Phone type, e.g. DEFAULT or MOBILE."
+                },
+                "PhoneNumber": {
+                  "type": "string",
+                  "description": "Phone number."
+                }
+              }
+            },
+            "description": "Replacement or additional phone numbers."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "ContactID",
+          "tenant_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "Parsed Xero JSON response."
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/Contacts/{{ContactID}}",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ],
+        "headers": {
+          "Xero-Tenant-Id": "{{tenant_id}}"
+        },
+        "body": {
+          "ContactID": "{{ContactID}}",
+          "Name": "{{Name}}",
+          "FirstName": "{{FirstName}}",
+          "LastName": "{{LastName}}",
+          "EmailAddress": "{{EmailAddress}}",
+          "TaxNumber": "{{TaxNumber}}",
+          "AccountNumber": "{{AccountNumber}}",
+          "BankAccountDetails": "{{BankAccountDetails}}",
+          "DefaultCurrency": "{{DefaultCurrency}}",
+          "Phones": "{{Phones}}"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "xero.update_credit_note": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "write",
+      "title": "Update Credit Note",
+      "description": "Update an existing credit note. Not all fields are writable once AUTHORISED.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "tenant_id": {
+            "type": "string",
+            "description": "Xero tenant/organisation ID (UUID). Required so requests cannot silently hit another connected organisation."
+          },
+          "CreditNoteID": {
+            "type": "string",
+            "description": "Credit note UUID to update."
+          },
+          "Status": {
+            "type": "string",
+            "description": "Credit note status.",
+            "enum": [
+              "DRAFT",
+              "SUBMITTED",
+              "DELETED",
+              "AUTHORISED",
+              "PAID",
+              "VOIDED"
+            ]
+          },
+          "LineItems": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "A Xero line item.",
+              "properties": {
+                "Description": {
+                  "type": "string",
+                  "description": "Line item description."
+                },
+                "Quantity": {
+                  "type": "number",
+                  "description": "Quantity."
+                },
+                "UnitAmount": {
+                  "type": "number",
+                  "description": "Unit price."
+                },
+                "AccountCode": {
+                  "type": "string",
+                  "description": "Account code this line posts to."
+                },
+                "ItemCode": {
+                  "type": "string",
+                  "description": "Optional inventory item code."
+                },
+                "TaxType": {
+                  "type": "string",
+                  "description": "Tax type code from the organisation's tax rates."
+                },
+                "LineAmount": {
+                  "type": "number",
+                  "description": "Optional explicit line amount."
+                },
+                "LineItemID": {
+                  "type": "string",
+                  "description": "Existing line item UUID when updating."
+                }
+              }
+            },
+            "description": "Replacement line items."
+          },
+          "Reference": {
+            "type": "string",
+            "description": "Additional reference for ACCRECCREDIT notes."
+          },
+          "CurrencyCode": {
+            "type": "string",
+            "description": "ISO 4217 currency code."
+          },
+          "CurrencyRate": {
+            "type": "number",
+            "description": "FX rate, max 18 digits with 6 decimals."
+          },
+          "SentToContact": {
+            "type": "boolean",
+            "description": "Mark AUTHORISED credit notes as sent."
+          },
+          "BrandingThemeID": {
+            "type": "string",
+            "description": "Branding theme UUID."
+          },
+          "LineAmountTypes": {
+            "type": "string",
+            "description": "Tax calculation method.",
+            "enum": [
+              "Exclusive",
+              "Inclusive",
+              "NoTax"
+            ]
+          },
+          "unitdp": {
+            "type": "integer",
+            "description": "Unit decimal places."
+          },
+          "Idempotency-Key": {
+            "type": "string",
+            "description": "Idempotency key, max 128 characters."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "CreditNoteID",
+          "tenant_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "Parsed Xero JSON response."
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/CreditNotes/{{CreditNoteID}}",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ],
+        "query": {
+          "unitdp": "{{unitdp}}"
+        },
+        "headers": {
+          "Idempotency-Key": "{{Idempotency-Key}}",
+          "Xero-Tenant-Id": "{{tenant_id}}"
+        },
+        "body": {
+          "CreditNoteID": "{{CreditNoteID}}",
+          "Status": "{{Status}}",
+          "LineItems": "{{LineItems}}",
+          "Reference": "{{Reference}}",
+          "CurrencyCode": "{{CurrencyCode}}",
+          "CurrencyRate": "{{CurrencyRate}}",
+          "SentToContact": "{{SentToContact}}",
+          "BrandingThemeID": "{{BrandingThemeID}}",
+          "LineAmountTypes": "{{LineAmountTypes}}"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "xero.update_manual_journal": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "write",
+      "title": "Update Manual Journal",
+      "description": "Update a manual journal. Journal lines must still balance. POSTED journals accept only limited field changes.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "tenant_id": {
+            "type": "string",
+            "description": "Xero tenant/organisation ID (UUID). Required so requests cannot silently hit another connected organisation."
+          },
+          "manual_journal_id": {
+            "type": "string",
+            "description": "Manual journal UUID to update."
+          },
+          "Narration": {
+            "type": "string",
+            "description": "Journal description."
+          },
+          "Date": {
+            "type": "string",
+            "description": "Journal date (YYYY-MM-DD)."
+          },
+          "Status": {
+            "type": "string",
+            "description": "DRAFT or POSTED.",
+            "enum": [
+              "DRAFT",
+              "POSTED"
+            ]
+          },
+          "JournalLines": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "A manual journal line.",
+              "properties": {
+                "Description": {
+                  "type": "string",
+                  "description": "Journal line description."
+                },
+                "LineAmount": {
+                  "type": "number",
+                  "description": "Signed line amount. Manual journals must balance."
+                },
+                "AccountCode": {
+                  "type": "string",
+                  "description": "Account code this line posts to."
+                },
+                "TaxType": {
+                  "type": "string",
+                  "description": "Optional tax type code."
+                },
+                "Tracking": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "description": "Tracking category assignment.",
+                    "properties": {
+                      "Name": {
+                        "type": "string",
+                        "description": "Tracking category name."
+                      },
+                      "Option": {
+                        "type": "string",
+                        "description": "Tracking option."
+                      }
+                    }
+                  },
+                  "description": "Optional tracking categories."
+                }
+              },
+              "required": [
+                "LineAmount",
+                "AccountCode"
+              ]
+            },
+            "description": "Replacement journal lines."
+          },
+          "LineAmountTypes": {
+            "type": "string",
+            "description": "Tax calculation method.",
+            "enum": [
+              "Exclusive",
+              "Inclusive",
+              "NoTax"
+            ]
+          },
+          "ShowOnCashBasisReports": {
+            "type": "boolean",
+            "description": "Include on cash basis reports."
+          },
+          "Url": {
+            "type": "string",
+            "description": "Optional source document URL."
+          },
+          "idempotency_key": {
+            "type": "string",
+            "description": "Idempotency key sent as the Idempotency-Key header."
+          },
+          "summarize_errors": {
+            "type": "boolean",
+            "description": "Return summarised validation errors when true."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "manual_journal_id",
+          "Narration",
+          "tenant_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "Parsed Xero JSON response."
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/ManualJournals/{{manual_journal_id}}",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ],
+        "query": {
+          "summarizeErrors": "{{summarize_errors}}"
+        },
+        "headers": {
+          "Idempotency-Key": "{{idempotency_key}}",
+          "Xero-Tenant-Id": "{{tenant_id}}"
+        },
+        "body": {
+          "Narration": "{{Narration}}",
+          "Date": "{{Date}}",
+          "Status": "{{Status}}",
+          "JournalLines": "{{JournalLines}}",
+          "LineAmountTypes": "{{LineAmountTypes}}",
+          "ShowOnCashBasisReports": "{{ShowOnCashBasisReports}}",
+          "Url": "{{Url}}"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "xero.update_purchase_order": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "write",
+      "title": "Update Purchase Order",
+      "description": "Update an existing purchase order. Only provided fields are sent.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "tenant_id": {
+            "type": "string",
+            "description": "Xero tenant/organisation ID (UUID). Required so requests cannot silently hit another connected organisation."
+          },
+          "purchase_order_id": {
+            "type": "string",
+            "description": "Purchase order UUID to update."
+          },
+          "ContactID": {
+            "type": "string",
+            "description": "Supplier contact UUID."
+          },
+          "LineItems": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "A Xero line item.",
+              "properties": {
+                "Description": {
+                  "type": "string",
+                  "description": "Line item description."
+                },
+                "Quantity": {
+                  "type": "number",
+                  "description": "Quantity."
+                },
+                "UnitAmount": {
+                  "type": "number",
+                  "description": "Unit price."
+                },
+                "AccountCode": {
+                  "type": "string",
+                  "description": "Account code this line posts to."
+                },
+                "ItemCode": {
+                  "type": "string",
+                  "description": "Optional inventory item code."
+                },
+                "TaxType": {
+                  "type": "string",
+                  "description": "Tax type code from the organisation's tax rates."
+                },
+                "LineAmount": {
+                  "type": "number",
+                  "description": "Optional explicit line amount."
+                },
+                "LineItemID": {
+                  "type": "string",
+                  "description": "Existing line item UUID when updating."
+                }
+              }
+            },
+            "description": "Replacement line items."
+          },
+          "Date": {
+            "type": "string",
+            "description": "Purchase order date (YYYY-MM-DD)."
+          },
+          "DeliveryDate": {
+            "type": "string",
+            "description": "Expected delivery date (YYYY-MM-DD)."
+          },
+          "ExpectedArrivalDate": {
+            "type": "string",
+            "description": "Expected arrival date (YYYY-MM-DD)."
+          },
+          "Status": {
+            "type": "string",
+            "description": "Purchase order status.",
+            "enum": [
+              "DRAFT",
+              "SUBMITTED",
+              "AUTHORISED",
+              "BILLED",
+              "DELETED"
+            ]
+          },
+          "Reference": {
+            "type": "string",
+            "description": "Reference or purchase order number."
+          },
+          "Telephone": {
+            "type": "string",
+            "description": "Phone number for the person accepting delivery."
+          },
+          "AttentionTo": {
+            "type": "string",
+            "description": "Delivery attention name."
+          },
+          "DeliveryAddress": {
+            "type": "string",
+            "description": "Delivery address."
+          },
+          "DeliveryInstructions": {
+            "type": "string",
+            "description": "Free-text delivery instructions, max 500 characters."
+          },
+          "CurrencyCode": {
+            "type": "string",
+            "description": "ISO 4217 currency code."
+          },
+          "CurrencyRate": {
+            "type": "number",
+            "description": "FX rate for a multicurrency purchase order."
+          },
+          "SentToContact": {
+            "type": "boolean",
+            "description": "Mark the purchase order as sent."
+          },
+          "BrandingThemeID": {
+            "type": "string",
+            "description": "Branding theme UUID."
+          },
+          "LineAmountTypes": {
+            "type": "string",
+            "description": "Tax calculation method.",
+            "enum": [
+              "Exclusive",
+              "Inclusive",
+              "NoTax"
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "purchase_order_id",
+          "tenant_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "Parsed Xero JSON response."
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/PurchaseOrders/{{purchase_order_id}}",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ],
+        "headers": {
+          "Xero-Tenant-Id": "{{tenant_id}}"
+        },
+        "body": {
+          "PurchaseOrderID": "{{purchase_order_id}}",
+          "Contact": {
+            "ContactID": "{{ContactID}}"
+          },
+          "LineItems": "{{LineItems}}",
+          "Date": "{{Date}}",
+          "DeliveryDate": "{{DeliveryDate}}",
+          "ExpectedArrivalDate": "{{ExpectedArrivalDate}}",
+          "Status": "{{Status}}",
+          "Reference": "{{Reference}}",
+          "Telephone": "{{Telephone}}",
+          "AttentionTo": "{{AttentionTo}}",
+          "DeliveryAddress": "{{DeliveryAddress}}",
+          "DeliveryInstructions": "{{DeliveryInstructions}}",
+          "CurrencyCode": "{{CurrencyCode}}",
+          "CurrencyRate": "{{CurrencyRate}}",
+          "SentToContact": "{{SentToContact}}",
+          "BrandingThemeID": "{{BrandingThemeID}}",
+          "LineAmountTypes": "{{LineAmountTypes}}"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "xero.update_quote": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "write",
+      "title": "Update Quote",
+      "description": "Update an existing sales quote by QuoteID. QuoteNumber is read-only on the provider.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "tenant_id": {
+            "type": "string",
+            "description": "Xero tenant/organisation ID (UUID). Required so requests cannot silently hit another connected organisation."
+          },
+          "QuoteID": {
+            "type": "string",
+            "description": "Quote UUID to update."
+          },
+          "Contact": {
+            "type": "object",
+            "description": "Contact associated with the quote.",
+            "properties": {
+              "ContactID": {
+                "type": "string",
+                "description": "Contact UUID."
+              },
+              "Name": {
+                "type": "string",
+                "description": "Contact name."
+              }
+            }
+          },
+          "LineItems": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "A Xero line item.",
+              "properties": {
+                "Description": {
+                  "type": "string",
+                  "description": "Line item description."
+                },
+                "Quantity": {
+                  "type": "number",
+                  "description": "Quantity."
+                },
+                "UnitAmount": {
+                  "type": "number",
+                  "description": "Unit price."
+                },
+                "AccountCode": {
+                  "type": "string",
+                  "description": "Account code this line posts to."
+                },
+                "ItemCode": {
+                  "type": "string",
+                  "description": "Optional inventory item code."
+                },
+                "TaxType": {
+                  "type": "string",
+                  "description": "Tax type code from the organisation's tax rates."
+                },
+                "LineAmount": {
+                  "type": "number",
+                  "description": "Optional explicit line amount."
+                },
+                "LineItemID": {
+                  "type": "string",
+                  "description": "Existing line item UUID when updating."
+                }
+              }
+            },
+            "description": "Replacement line items."
+          },
+          "Date": {
+            "type": "string",
+            "description": "Quote date (YYYY-MM-DD)."
+          },
+          "ExpiryDate": {
+            "type": "string",
+            "description": "Expiry date (YYYY-MM-DD)."
+          },
+          "Status": {
+            "type": "string",
+            "description": "Quote status.",
+            "enum": [
+              "DRAFT",
+              "SENT",
+              "ACCEPTED",
+              "INVOICED",
+              "DECLINED",
+              "DELETED"
+            ]
+          },
+          "Title": {
+            "type": "string",
+            "description": "Quote title."
+          },
+          "Summary": {
+            "type": "string",
+            "description": "Summary description."
+          },
+          "Terms": {
+            "type": "string",
+            "description": "Payment terms."
+          },
+          "Reference": {
+            "type": "string",
+            "description": "Quote reference."
+          },
+          "CurrencyCode": {
+            "type": "string",
+            "description": "ISO 4217 currency code."
+          },
+          "CurrencyRate": {
+            "type": "number",
+            "description": "FX rate."
+          },
+          "BrandingThemeID": {
+            "type": "string",
+            "description": "Branding theme UUID."
+          },
+          "LineAmountTypes": {
+            "type": "string",
+            "description": "Tax calculation method.",
+            "enum": [
+              "Exclusive",
+              "Inclusive",
+              "NoTax"
+            ]
+          },
+          "Idempotency-Key": {
+            "type": "string",
+            "description": "Idempotency key, max 128 characters."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "QuoteID",
+          "tenant_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "Parsed Xero JSON response."
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/Quotes/{{QuoteID}}",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ],
+        "headers": {
+          "Idempotency-Key": "{{Idempotency-Key}}",
+          "Xero-Tenant-Id": "{{tenant_id}}"
+        },
+        "body": {
+          "QuoteID": "{{QuoteID}}",
+          "Contact": "{{Contact}}",
+          "LineItems": "{{LineItems}}",
+          "Date": "{{Date}}",
+          "ExpiryDate": "{{ExpiryDate}}",
+          "Status": "{{Status}}",
+          "Title": "{{Title}}",
+          "Summary": "{{Summary}}",
+          "Terms": "{{Terms}}",
+          "Reference": "{{Reference}}",
+          "CurrencyCode": "{{CurrencyCode}}",
+          "CurrencyRate": "{{CurrencyRate}}",
+          "BrandingThemeID": "{{BrandingThemeID}}",
+          "LineAmountTypes": "{{LineAmountTypes}}"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "xero.upload_attachment": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Upload Attachment",
+      "description": "Upload a text or base64 document as an attachment on a Xero entity. Binary octet-stream upload uses the same path; pass the file bytes in `content`.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "tenant_id": {
+            "type": "string",
+            "description": "Xero tenant/organisation ID (UUID). Required so requests cannot silently hit another connected organisation."
+          },
+          "entity_type": {
+            "type": "string",
+            "description": "Entity collection name.",
+            "enum": [
+              "Invoices",
+              "Contacts",
+              "BankTransactions",
+              "CreditNotes",
+              "Accounts",
+              "ManualJournals",
+              "PurchaseOrders",
+              "Quotes",
+              "Receipts",
+              "RepeatingInvoices"
+            ]
+          },
+          "entity_id": {
+            "type": "string",
+            "description": "Entity UUID to attach to."
+          },
+          "filename": {
+            "type": "string",
+            "description": "Filename including extension, e.g. invoice-receipt.pdf."
+          },
+          "content": {
+            "type": "string",
+            "description": "File contents as a UTF-8 string or base64 payload."
+          },
+          "content_type": {
+            "type": "string",
+            "description": "MIME type. Defaults to application/octet-stream when omitted."
+          },
+          "include_online": {
+            "type": "boolean",
+            "description": "Include the attachment on online invoices when entity_type is Invoices."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "entity_type",
+          "entity_id",
+          "filename",
+          "content",
+          "tenant_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "Parsed Xero JSON response."
+          }
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/{{entity_type}}/{{entity_id}}/Attachments/{{filename}}",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ],
+        "query": {
+          "IncludeOnline": "{{include_online}}"
+        },
+        "headers": {
+          "Content-Type": "{{content_type}}",
+          "Xero-Tenant-Id": "{{tenant_id}}"
+        },
+        "body": {
+          "content": "{{content}}"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "xero.validate_credential": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Validate Credential",
+      "description": "Validate the Xero access token by listing connected organisations.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false,
+        "required": []
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "Parsed Xero JSON response."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/connections",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ],
+        "baseUrl": "https://api.xero.com",
+        "echo": {
+          "status": "ok"
+        },
+        "result": {
+          "status": "ok",
+          "connections": "{{response}}"
+        }
+      },
+      "responseFormat": "json"
     }
   },
   "models": [
     "invoice",
     "contact",
-    "bank_transaction"
-  ]
+    "bank_transaction",
+    "credit_note",
+    "item",
+    "payment",
+    "purchase_order",
+    "quote",
+    "account",
+    "manual_journal",
+    "organisation",
+    "attachment"
+  ],
+  "http": {
+    "baseUrl": "https://api.xero.com/api.xro/2.0",
+    "auth": {
+      "field": "accessToken",
+      "in": "header",
+      "name": "Authorization",
+      "value": "Bearer {{accessToken}}"
+    },
+    "headers": {
+      "Accept": "application/json",
+      "Content-Type": "application/json"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after",
+      "retryAfterKind": "seconds",
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "Message",
+        "Elements.0.ValidationErrors.0.Message",
+        "Detail",
+        "error",
+        "message"
+      ]
+    }
+  }
 }

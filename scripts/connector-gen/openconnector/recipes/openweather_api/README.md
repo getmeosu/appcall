@@ -1,9 +1,20 @@
 # OpenWeather
 
-Read-only international OpenWeather API recipe. Configure the API key from the OpenWeather account API keys page. The runner sends `appid` as a query parameter to `https://api.openweathermap.org` plus `Accept: application/json`.
+International **OpenWeather API** recipe covering origin healthcheck plus every Composio `OPENWEATHER_API_*` HTTP tool (21 tools, 22 operations; healthcheck is an authenticated `GET /geo/1.0/direct?q=London&limit=1` probe and is not a Composio slug).
 
-Selected operations are `healthcheck` (`GET /geo/1.0/direct?q=London&limit=1`, the pinned credential validator), `geocoding.direct` (`GET /geo/1.0/direct`), `weather.current` (`GET /data/2.5/weather`), `weather.forecast` (`GET /data/2.5/forecast`), and `air-pollution.current` (`GET /data/2.5/air_pollution`). Current weather and forecast require `lat` and `lon` rather than the pinned exclusive city/zip selector. Tile host `tile.openweathermap.org`, One Call 3.0 UV helpers, weather-station writes, and retired Weather Triggers are omitted.
+Configure the API key from the OpenWeather account API keys page and store it as `apiKey`. The runner sends `appid` as a query parameter plus `Accept: application/json`. JSON APIs use `https://api.openweathermap.org`. Weather map tiles use `https://tile.openweathermap.org`.
 
-Healthcheck consumes one Geocoding call from the free-plan quota. Official docs and pinned actions have no cheap account/status/quota GET.
+## Operations
 
-Source attribution: oomol-lab/open-connector at `33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a` (Apache License 2.0). Official docs: https://openweathermap.org/appid. Fixtures are independently derived and do not represent live provider access. Live smoke remains unverified: configure the API key, call `healthcheck` with `{}`, then `weather.current` with latitude and longitude.
+- Auth: `healthcheck` (`GET /geo/1.0/direct?q=London&limit=1`).
+- Geocoding: `geocoding.direct`, `geocoding.reverse`, `geocoding.zip`.
+- Weather: `weather.current`, `weather.forecast`, `weather.find`.
+- Air pollution: `air-pollution.current`, `air-pollution.forecast`, `air-pollution.history`.
+- UV index: `uv.current`, `uv.forecast`, `uv.history` (legacy `/data/2.5/uvi*` endpoints still used by Composio).
+- Weather map tiles are omitted because the provider returns binary PNG bytes, outside the declarative JSON response contract.
+- Stations: `stations.list`, `stations.get`, `stations.create`, `stations.update`, `stations.delete`, `stations.measurements.list`, `stations.measurements.create`.
+- Triggers: `triggers.list` (`GET /data/3.0/triggers`; retired Weather Triggers product, still a Composio tool).
+
+`weather.current` and `weather.forecast` keep origin-required `lat` and `lon` and forward optional `q`, `id`, and `zip`. Successful JSON responses are raw OpenWeather JSON under AppCall `data`. Empty 204 responses (`stations.delete`, `stations.measurements.create`) map to `{success: true}`. Map tiles that are not JSON are returned as a string under `data`. Optional query/body fields are omitted when unset.
+
+Source attribution: oomol-lab/open-connector at `33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a` (Apache License 2.0). Official docs: https://openweathermap.org/appid. Fixtures are independently derived and do not represent live provider access. Live smoke remains unverified.

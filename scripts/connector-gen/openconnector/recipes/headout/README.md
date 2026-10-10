@@ -1,16 +1,10 @@
 # Headout
 
-Read-only international **Headout public API v1** recipe. Sign up on the official affiliate platform to receive a production API key by email and store it as `apiKey`. Requests send `Headout-Auth` and `Accept: application/json` to `https://www.headout.com/api/public/v1`.
+International **Headout public API v1** recipe (v0.2.0). Sign up on the official affiliate platform to receive a production API key by email and store it as `apiKey`. Requests send `Headout-Auth` and `Accept: application/json` to `https://www.headout.com/api/public/v1`.
 
 ## Operations
 
-- `healthcheck`: `GET /booking?limit=1` with empty input (cheap authenticated probe; pinned credential validator).
-- `bookings.list`: `GET /booking` with optional `offset` (non-empty string) and `limit` (≥1).
-- `bookings.get`: `GET /booking/{bookingId}`; `bookingId` is required.
-- `cities.list`: `GET /city` with optional `offset` and `limit`.
-- `products.get`: `GET /product/get/{productId}` with required `productId` and optional `currencyCode`, `language`, and `fetchVariants` (query `fetch-variants`).
-
-Successful responses are raw provider JSON under AppCall `data`. Booking writes are omitted.
+16 HTTP actions covering bookings (list/get/create/cancel), cities, categories, collections, subcategories, product listings, inventory, and reviews. Successful responses are raw provider JSON under AppCall `data`. Headout does not publish a partner webhook catalog, so EventOnly triggers are omitted.
 
 ## Adaptations
 
