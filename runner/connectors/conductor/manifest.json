@@ -5,7 +5,7 @@
       "fields": [
         {
           "key": "apiKey",
-          "label": "Conductor Monitoring Reporting API token",
+          "label": "Conductor API key",
           "required": true,
           "secret": true
         }
@@ -15,7 +15,7 @@
     "type": "api_key"
   },
   "categories": [
-    "ads"
+    "dev-tools"
   ],
   "evidence": {
     "fixture": {
@@ -30,12 +30,13 @@
       "field": "apiKey",
       "in": "header",
       "name": "Authorization",
-      "value": "token {{apiKey}}"
+      "value": "Bearer {{apiKey}}"
     },
-    "baseUrl": "https://api.cm.conductor.com",
+    "baseUrl": "https://api.conductor.build",
     "errors": {
       "defaultRetryAfterSeconds": 60,
       "messagePaths": [
+        "userMessage",
         "message",
         "error",
         "code",
@@ -47,50 +48,50 @@
       "retryAfterHeader": "retry-after"
     },
     "headers": {
-      "Accept": "application/json",
-      "Content-Type": "application/json"
+      "Accept": "application/json"
     }
   },
   "key": "conductor",
   "models": [
-    "website",
-    "segment",
-    "statistics",
-    "issue"
+    "project",
+    "workspace",
+    "session",
+    "message",
+    "transcript"
   ],
   "name": "Conductor",
   "network": {
     "allowedHosts": [
-      "api.cm.conductor.com"
+      "api.conductor.build"
     ]
   },
   "operations": {
     "healthcheck": {
-      "description": "Validate the Conductor Monitoring Reporting API token by listing websites.",
+      "description": "Validate the Conductor API key with GET /me.",
       "enforceOutputSchema": true,
       "inputSchema": {
+        "type": "object",
         "additionalProperties": false,
-        "properties": {},
-        "type": "object"
+        "properties": {}
       },
       "kind": "action",
       "maxInputBytes": 4096,
-      "maxResponseBytes": 65536,
+      "maxResponseBytes": 5242880,
       "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "additionalProperties": false,
         "properties": {
           "data": {
             "type": "object"
           }
-        },
-        "required": [
-          "data"
-        ],
-        "type": "object"
+        }
       },
       "request": {
         "method": "GET",
-        "path": "/v2/entities/websites",
+        "path": "/me",
         "success": [
           200
         ]
@@ -101,54 +102,32 @@
       "title": "Healthcheck",
       "validationMode": "strict-generated"
     },
-    "issues.list": {
-      "description": "List Conductor Monitoring issues for a website or segment scope.",
+    "me.get": {
+      "description": "Get the authenticated Conductor identity and organization via GET /me. Maps to CONDUCTOR_GET_CURRENT_USER.",
       "enforceOutputSchema": true,
       "inputSchema": {
+        "type": "object",
         "additionalProperties": false,
-        "properties": {
-          "captured_at": {
-            "minLength": 1,
-            "type": "string"
-          },
-          "scope": {
-            "minLength": 1,
-            "type": "string"
-          },
-          "website_id": {
-            "minLength": 1,
-            "type": "string"
-          }
-        },
-        "required": [
-          "website_id",
-          "scope"
-        ],
-        "type": "object"
+        "properties": {}
       },
       "kind": "action",
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
       "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "additionalProperties": false,
         "properties": {
           "data": {
             "type": "object"
           }
-        },
-        "required": [
-          "data"
-        ],
-        "type": "object"
+        }
       },
       "request": {
         "method": "GET",
-        "path": "/v2/data/issues",
-        "query": {
-          "captured_at": "{{captured_at}}",
-          "scope": "{{scope}}",
-          "website_id": "{{website_id}}"
-        },
+        "path": "/me",
         "success": [
           200
         ]
@@ -156,104 +135,95 @@
       "responseFormat": "json",
       "sideEffect": "read",
       "timeoutMs": 15000,
-      "title": "List issues",
+      "title": "Get current user",
       "validationMode": "strict-generated"
     },
-    "segments.list": {
-      "description": "List Conductor Monitoring segments for one website.",
+    "projects.list": {
+      "description": "List repositories the caller can create workspaces in via GET /v0/projects. Maps to CONDUCTOR_LIST_PROJECTS.",
       "enforceOutputSchema": true,
       "inputSchema": {
+        "type": "object",
         "additionalProperties": false,
         "properties": {
-          "website_id": {
-            "minLength": 1,
-            "type": "string"
+          "limit": {
+            "type": "integer",
+            "description": "Maximum rows to return.",
+            "minimum": 1
+          },
+          "offset": {
+            "type": "integer",
+            "description": "Number of rows to skip.",
+            "minimum": 0
           }
-        },
-        "required": [
-          "website_id"
-        ],
-        "type": "object"
+        }
       },
       "kind": "action",
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
       "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "additionalProperties": false,
         "properties": {
           "data": {
             "type": "object"
           }
-        },
-        "required": [
-          "data"
-        ],
-        "type": "object"
+        }
       },
       "request": {
         "method": "GET",
-        "path": "/v2/entities/segments",
-        "query": {
-          "website_id": "{{website_id}}"
-        },
+        "path": "/v0/projects",
         "success": [
           200
-        ]
+        ],
+        "query": {
+          "limit": "{{limit}}",
+          "offset": "{{offset}}"
+        }
       },
       "responseFormat": "json",
       "sideEffect": "read",
       "timeoutMs": 15000,
-      "title": "List segments",
+      "title": "List projects",
       "validationMode": "strict-generated"
     },
-    "statistics.get": {
-      "description": "Retrieve Conductor Monitoring statistics for a website or segment scope.",
+    "projects.get": {
+      "description": "Get one Conductor project by id via GET /v0/projects/{projectId}. Maps to CONDUCTOR_GET_PROJECT.",
       "enforceOutputSchema": true,
       "inputSchema": {
+        "type": "object",
         "additionalProperties": false,
         "properties": {
-          "captured_at": {
+          "projectId": {
+            "type": "string",
             "minLength": 1,
-            "type": "string"
-          },
-          "scope": {
-            "minLength": 1,
-            "type": "string"
-          },
-          "website_id": {
-            "minLength": 1,
-            "type": "string"
+            "description": "Project id from List projects."
           }
         },
         "required": [
-          "website_id",
-          "scope"
-        ],
-        "type": "object"
+          "projectId"
+        ]
       },
       "kind": "action",
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
       "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "additionalProperties": false,
         "properties": {
           "data": {
             "type": "object"
           }
-        },
-        "required": [
-          "data"
-        ],
-        "type": "object"
+        }
       },
       "request": {
         "method": "GET",
-        "path": "/v2/data/statistics",
-        "query": {
-          "captured_at": "{{captured_at}}",
-          "scope": "{{scope}}",
-          "website_id": "{{website_id}}"
-        },
+        "path": "/v0/projects/{{projectId}}",
         "success": [
           200
         ]
@@ -261,35 +231,916 @@
       "responseFormat": "json",
       "sideEffect": "read",
       "timeoutMs": 15000,
-      "title": "Get statistics",
+      "title": "Get project",
       "validationMode": "strict-generated"
     },
-    "websites.list": {
-      "description": "List websites available in the connected Conductor Monitoring account.",
+    "workspaces.list": {
+      "description": "List cloud workspaces visible to the caller via GET /v0/workspaces. Maps to CONDUCTOR_LIST_WORKSPACES.",
       "enforceOutputSchema": true,
       "inputSchema": {
+        "type": "object",
         "additionalProperties": false,
-        "properties": {},
-        "type": "object"
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "description": "Maximum rows to return.",
+            "minimum": 1
+          },
+          "offset": {
+            "type": "integer",
+            "description": "Number of rows to skip.",
+            "minimum": 0
+          },
+          "channel": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Desktop-app channel the returned deepLink should open.",
+            "enum": [
+              "prod",
+              "alpha",
+              "alpha-chromium",
+              "beta",
+              "patch",
+              "dev"
+            ]
+          },
+          "creator": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by creator user id."
+          },
+          "state": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by workspace state. Repeat or pass comma-separated values."
+          },
+          "repo": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Repository URL substring or repository id."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by workspace name substring."
+          },
+          "since": {
+            "type": "string",
+            "minLength": 1,
+            "description": "ISO-8601 lower bound on lastActivityAt."
+          },
+          "includeArchived": {
+            "type": "boolean",
+            "description": "Include archived workspaces. Defaults to false."
+          }
+        }
       },
       "kind": "action",
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
       "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "additionalProperties": false,
         "properties": {
           "data": {
             "type": "object"
           }
-        },
-        "required": [
-          "data"
-        ],
-        "type": "object"
+        }
       },
       "request": {
         "method": "GET",
-        "path": "/v2/entities/websites",
+        "path": "/v0/workspaces",
+        "success": [
+          200
+        ],
+        "query": {
+          "limit": "{{limit}}",
+          "offset": "{{offset}}",
+          "channel": "{{channel}}",
+          "creator": "{{creator}}",
+          "state": "{{state}}",
+          "repo": "{{repo}}",
+          "name": "{{name}}",
+          "since": "{{since}}",
+          "includeArchived": "{{includeArchived}}"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List workspaces",
+      "validationMode": "strict-generated"
+    },
+    "workspaces.get": {
+      "description": "Get one cloud workspace via GET /v0/workspaces/{workspaceId}. Maps to CONDUCTOR_GET_WORKSPACE.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "workspaceId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Workspace id."
+          },
+          "channel": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Desktop-app channel the returned deepLink should open.",
+            "enum": [
+              "prod",
+              "alpha",
+              "alpha-chromium",
+              "beta",
+              "patch",
+              "dev"
+            ]
+          }
+        },
+        "required": [
+          "workspaceId"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v0/workspaces/{{workspaceId}}",
+        "success": [
+          200
+        ],
+        "query": {
+          "channel": "{{channel}}"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get workspace",
+      "validationMode": "strict-generated"
+    },
+    "workspaces.create": {
+      "description": "Create a cloud workspace and its first session via POST /v0/workspaces. Pass projectId or repositoryUrl. Maps to CONDUCTOR_CREATE_WORKSPACE.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "projectId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Project id from List projects. Required unless repositoryUrl is set."
+          },
+          "repositoryUrl": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Git remote URL when creating from a repository instead of a project id."
+          },
+          "branch": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Git branch to check out."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Workspace name. Also names the git branch when unset on the agent side."
+          },
+          "sessionName": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Name of the first session."
+          },
+          "agent": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Coding agent that runs the session.",
+            "enum": [
+              "claude",
+              "codex",
+              "cursor",
+              "acp"
+            ]
+          },
+          "model": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Model id accepted by the chosen agent. Invalid agent/model pairs return 400."
+          },
+          "effort": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Thinking effort for claude and codex sessions.",
+            "enum": [
+              "none",
+              "low",
+              "medium",
+              "high",
+              "xhigh",
+              "max",
+              "ultra"
+            ]
+          },
+          "fastMode": {
+            "type": "boolean",
+            "description": "Enable fast mode for models that support it."
+          },
+          "message": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Optional first prompt queued on the new session."
+          },
+          "channel": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Desktop-app channel the returned deepLink should open.",
+            "enum": [
+              "prod",
+              "alpha",
+              "alpha-chromium",
+              "beta",
+              "patch",
+              "dev"
+            ]
+          }
+        }
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v0/workspaces",
+        "success": [
+          201
+        ],
+        "query": {
+          "channel": "{{channel}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "projectId": "{{projectId}}",
+          "repositoryUrl": "{{repositoryUrl}}",
+          "branch": "{{branch}}",
+          "name": "{{name}}",
+          "sessionName": "{{sessionName}}",
+          "agent": "{{agent}}",
+          "model": "{{model}}",
+          "effort": "{{effort}}",
+          "fastMode": "{{fastMode}}",
+          "message": "{{message}}"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Create workspace",
+      "validationMode": "strict-generated"
+    },
+    "workspaces.rename": {
+      "description": "Rename a cloud workspace via POST /v0/workspaces/{workspaceId}/rename. Maps to CONDUCTOR_RENAME_WORKSPACE.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "workspaceId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Workspace id to rename."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "New workspace name."
+          },
+          "channel": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Desktop-app channel the returned deepLink should open.",
+            "enum": [
+              "prod",
+              "alpha",
+              "alpha-chromium",
+              "beta",
+              "patch",
+              "dev"
+            ]
+          }
+        },
+        "required": [
+          "workspaceId",
+          "name"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v0/workspaces/{{workspaceId}}/rename",
+        "success": [
+          200,
+          201
+        ],
+        "query": {
+          "channel": "{{channel}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "name": "{{name}}"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Rename workspace",
+      "validationMode": "strict-generated"
+    },
+    "workspaces.change_state": {
+      "description": "Archive, unarchive, or sleep a workspace via POST /v0/workspaces/{workspaceId}/{state}. Maps to CONDUCTOR_CHANGE_WORKSPACE_STATE.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "workspaceId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Workspace id."
+          },
+          "state": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Lifecycle action. archive hides the workspace, unarchive restores it, sleep keeps it visible and resumable.",
+            "enum": [
+              "archive",
+              "unarchive",
+              "sleep"
+            ]
+          }
+        },
+        "required": [
+          "workspaceId",
+          "state"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v0/workspaces/{{workspaceId}}/{{state}}",
+        "success": [
+          200,
+          201
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Change workspace state",
+      "validationMode": "strict-generated"
+    },
+    "sessions.list": {
+      "description": "List agent sessions in a workspace via GET /v0/workspaces/{workspaceId}/sessions. Maps to CONDUCTOR_LIST_SESSIONS.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "workspaceId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Workspace id whose sessions to list."
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Maximum rows to return.",
+            "minimum": 1
+          },
+          "offset": {
+            "type": "integer",
+            "description": "Number of rows to skip.",
+            "minimum": 0
+          },
+          "channel": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Desktop-app channel the returned deepLink should open.",
+            "enum": [
+              "prod",
+              "alpha",
+              "alpha-chromium",
+              "beta",
+              "patch",
+              "dev"
+            ]
+          },
+          "includeArchived": {
+            "type": "boolean",
+            "description": "Include archived sessions. Defaults to false."
+          }
+        },
+        "required": [
+          "workspaceId"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v0/workspaces/{{workspaceId}}/sessions",
+        "success": [
+          200
+        ],
+        "query": {
+          "limit": "{{limit}}",
+          "offset": "{{offset}}",
+          "channel": "{{channel}}",
+          "includeArchived": "{{includeArchived}}"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List sessions",
+      "validationMode": "strict-generated"
+    },
+    "sessions.create": {
+      "description": "Add another agent chat to an existing workspace via POST /v0/sessions. Maps to CONDUCTOR_CREATE_SESSION.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "workspaceId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Workspace that owns the new session."
+          },
+          "agent": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Coding agent that runs the session.",
+            "enum": [
+              "claude",
+              "codex",
+              "cursor",
+              "acp"
+            ]
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Session display name."
+          },
+          "model": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Model id accepted by the chosen agent. Invalid agent/model pairs return 400."
+          },
+          "effort": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Thinking effort for claude and codex sessions.",
+            "enum": [
+              "none",
+              "low",
+              "medium",
+              "high",
+              "xhigh",
+              "max",
+              "ultra"
+            ]
+          },
+          "fastMode": {
+            "type": "boolean",
+            "description": "Enable fast mode for models that support it."
+          },
+          "message": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Optional first prompt queued on the new session."
+          },
+          "sessionId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Optional client-supplied session id."
+          },
+          "channel": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Desktop-app channel the returned deepLink should open.",
+            "enum": [
+              "prod",
+              "alpha",
+              "alpha-chromium",
+              "beta",
+              "patch",
+              "dev"
+            ]
+          }
+        },
+        "required": [
+          "workspaceId",
+          "agent"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v0/sessions",
+        "success": [
+          201
+        ],
+        "query": {
+          "channel": "{{channel}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "workspaceId": "{{workspaceId}}",
+          "agent": "{{agent}}",
+          "name": "{{name}}",
+          "model": "{{model}}",
+          "effort": "{{effort}}",
+          "fastMode": "{{fastMode}}",
+          "message": "{{message}}",
+          "sessionId": "{{sessionId}}"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Create session",
+      "validationMode": "strict-generated"
+    },
+    "sessions.get": {
+      "description": "Get one agent session via GET /v0/sessions/{sessionId}. Maps to CONDUCTOR_GET_SESSION.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "sessionId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Session id."
+          },
+          "channel": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Desktop-app channel the returned deepLink should open.",
+            "enum": [
+              "prod",
+              "alpha",
+              "alpha-chromium",
+              "beta",
+              "patch",
+              "dev"
+            ]
+          }
+        },
+        "required": [
+          "sessionId"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v0/sessions/{{sessionId}}",
+        "success": [
+          200
+        ],
+        "query": {
+          "channel": "{{channel}}"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get session",
+      "validationMode": "strict-generated"
+    },
+    "sessions.rename": {
+      "description": "Rename an agent session via POST /v0/sessions/{sessionId}/rename. Maps to CONDUCTOR_RENAME_SESSION.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "sessionId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Session id to rename."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "New session name."
+          },
+          "channel": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Desktop-app channel the returned deepLink should open.",
+            "enum": [
+              "prod",
+              "alpha",
+              "alpha-chromium",
+              "beta",
+              "patch",
+              "dev"
+            ]
+          }
+        },
+        "required": [
+          "sessionId",
+          "name"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v0/sessions/{{sessionId}}/rename",
+        "success": [
+          200,
+          201
+        ],
+        "query": {
+          "channel": "{{channel}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "name": "{{name}}"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Rename session",
+      "validationMode": "strict-generated"
+    },
+    "sessions.cancel": {
+      "description": "Stop the agent's current turn and drop queued messages via POST /v0/sessions/{sessionId}/cancel. Maps to CONDUCTOR_STOP_SESSION.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "sessionId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Session id to cancel."
+          }
+        },
+        "required": [
+          "sessionId"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v0/sessions/{{sessionId}}/cancel",
+        "success": [
+          200,
+          201
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Stop session",
+      "validationMode": "strict-generated"
+    },
+    "messages.list": {
+      "description": "Read a session transcript via GET /v0/sessions/{sessionId}/messages. Prefer after over offset when polling. Maps to CONDUCTOR_LIST_MESSAGES.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "sessionId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Session whose transcript to read."
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Maximum rows to return.",
+            "minimum": 1
+          },
+          "offset": {
+            "type": "integer",
+            "description": "Number of rows to skip.",
+            "minimum": 0
+          },
+          "after": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Return only messages after this message id (exclusive). Cannot be combined with offset."
+          }
+        },
+        "required": [
+          "sessionId"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v0/sessions/{{sessionId}}/messages",
+        "success": [
+          200
+        ],
+        "query": {
+          "limit": "{{limit}}",
+          "offset": "{{offset}}",
+          "after": "{{after}}"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List messages",
+      "validationMode": "strict-generated"
+    },
+    "messages.get": {
+      "description": "Get one transcript message via GET /v0/messages/{messageId}. Maps to CONDUCTOR_GET_MESSAGE.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "messageId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Transcript message id."
+          }
+        },
+        "required": [
+          "messageId"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v0/messages/{{messageId}}",
         "success": [
           200
         ]
@@ -297,17 +1148,148 @@
       "responseFormat": "json",
       "sideEffect": "read",
       "timeoutMs": 15000,
-      "title": "List websites",
+      "title": "Get message",
+      "validationMode": "strict-generated"
+    },
+    "messages.create": {
+      "description": "Send or queue a prompt on a session via POST /v0/sessions/{sessionId}/messages. Maps to CONDUCTOR_SEND_MESSAGE.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "sessionId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Session that receives the prompt."
+          },
+          "message": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Prompt text sent to the coding agent."
+          },
+          "messageId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Optional client-supplied message id (UUID)."
+          },
+          "channel": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Desktop-app channel the returned deepLink should open.",
+            "enum": [
+              "prod",
+              "alpha",
+              "alpha-chromium",
+              "beta",
+              "patch",
+              "dev"
+            ]
+          }
+        },
+        "required": [
+          "sessionId",
+          "message"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v0/sessions/{{sessionId}}/messages",
+        "success": [
+          201
+        ],
+        "query": {
+          "channel": "{{channel}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "message": "{{message}}",
+          "messageId": "{{messageId}}"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Send message",
+      "validationMode": "strict-generated"
+    },
+    "transcripts.query": {
+      "description": "Run a read-only SQL SELECT over session_transcripts_view via POST /v0/sql. Maps to CONDUCTOR_QUERY_TRANSCRIPTS.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "query": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Read-only SQL SELECT against session_transcripts_view only."
+          }
+        },
+        "required": [
+          "query"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v0/sql",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "query": "{{query}}"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Query transcripts",
       "validationMode": "strict-generated"
     }
   },
   "provenance": {
     "source": {
-      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
-      "url": "https://github.com/oomol-lab/open-connector"
+      "url": "https://www.conductor.build/docs/api",
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"
     }
   },
   "runtime": "bun",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "visibility": "public"
 }
