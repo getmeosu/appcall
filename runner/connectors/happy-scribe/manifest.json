@@ -1,1 +1,2276 @@
-{"auth":{"scopes":[],"setup":{"fields":[{"key":"apiKey","label":"Happy Scribe API key","required":true,"secret":true}],"mode":"api_key"},"type":"api_key"},"categories":["productivity"],"evidence":{"fixture":{"status":"supplied"},"live":{"status":"unverified"}},"http":{"auth":{"field":"apiKey","in":"header","name":"Authorization","value":"Bearer {{apiKey}}"},"baseUrl":"https://www.happyscribe.com/api/v1","errors":{"defaultRetryAfterSeconds":30,"messagePaths":["error","message","detail","errors.0"],"rateLimitStatuses":[429],"retryAfterHeader":"retry-after"},"headers":{"Accept":"application/json"}},"key":"happy-scribe","models":["organization","transcription","order"],"name":"Happy Scribe","network":{"allowedHosts":["www.happyscribe.com"]},"operations":{"healthcheck":{"description":"Validate the Happy Scribe API key with GET /organizations.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{},"type":"object"},"kind":"action","maxInputBytes":4096,"maxResponseBytes":65536,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/organizations","success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":5000,"title":"Healthcheck","validationMode":"strict-generated"},"orders.get":{"description":"Get the current state of a Happy Scribe order.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{"orderId":{"minLength":1,"type":"string"}},"required":["orderId"],"type":"object"},"kind":"action","maxInputBytes":65536,"maxResponseBytes":5242880,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/orders/{{orderId}}","success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":15000,"title":"Get order","validationMode":"strict-generated"},"organizations.list":{"description":"List Happy Scribe organizations available to the API key.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{},"type":"object"},"kind":"action","maxInputBytes":65536,"maxResponseBytes":5242880,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/organizations","success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":15000,"title":"List organizations","validationMode":"strict-generated"},"transcriptions.get":{"description":"Get one Happy Scribe transcription by ID.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{"transcriptionId":{"minLength":1,"type":"string"}},"required":["transcriptionId"],"type":"object"},"kind":"action","maxInputBytes":65536,"maxResponseBytes":5242880,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/transcriptions/{{transcriptionId}}","success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":15000,"title":"Get transcription","validationMode":"strict-generated"},"transcriptions.list":{"description":"List Happy Scribe transcriptions in an organization.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{"folderId":{"minimum":1,"type":"integer"},"organizationId":{"minimum":1,"type":"integer"},"page":{"minimum":0,"type":"integer"},"perPage":{"maximum":100,"minimum":1,"type":"integer"}},"required":["organizationId"],"type":"object"},"kind":"action","maxInputBytes":65536,"maxResponseBytes":5242880,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/transcriptions","query":{"folder_id":"{{folderId}}","organization_id":"{{organizationId}}","page":"{{page}}","per_page":"{{perPage}}"},"success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":15000,"title":"List transcriptions","validationMode":"strict-generated"}},"provenance":{"source":{"revision":"33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a","url":"https://github.com/oomol-lab/open-connector"}},"runtime":"bun","version":"0.1.0","visibility":"public"}
+{
+  "auth": {
+    "scopes": [],
+    "setup": {
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "Happy Scribe API key",
+          "required": true,
+          "secret": true
+        }
+      ],
+      "mode": "api_key"
+    },
+    "type": "api_key"
+  },
+  "categories": [
+    "productivity"
+  ],
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
+    }
+  },
+  "http": {
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "Authorization",
+      "value": "Bearer {{apiKey}}"
+    },
+    "baseUrl": "https://www.happyscribe.com/api/v1",
+    "errors": {
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "error",
+        "message",
+        "detail",
+        "errors.0"
+      ],
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after"
+    },
+    "headers": {
+      "Accept": "application/json"
+    }
+  },
+  "key": "happy-scribe",
+  "models": [
+    "organization",
+    "transcription",
+    "order",
+    "export",
+    "translation_task",
+    "upload",
+    "membership"
+  ],
+  "name": "Happy Scribe",
+  "network": {
+    "allowedHosts": [
+      "www.happyscribe.com"
+    ]
+  },
+  "operations": {
+    "exports.create": {
+      "description": "Create an asynchronous Happy Scribe export for one or more transcriptions (txt, srt, vtt, json, and other documented formats). Maps to HAPPY_SCRIBE_HS_EXPORT_TRANSCRIPTION.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "format": {
+            "description": "Export format such as txt, docx, pdf, srt, vtt, json, csv, or docx.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "transcriptionIds": {
+            "description": "Transcription identifiers included in the export.",
+            "items": {
+              "minLength": 1,
+              "type": "string",
+              "description": "One transcription ID."
+            },
+            "type": "array",
+            "minItems": 1
+          },
+          "showTimestamps": {
+            "description": "Include timestamps (txt, docx, pdf).",
+            "type": "boolean"
+          },
+          "showSpeakers": {
+            "description": "Include speaker labels (txt, docx, pdf).",
+            "type": "boolean"
+          },
+          "showComments": {
+            "description": "Include comments (txt, docx, pdf).",
+            "type": "boolean"
+          },
+          "showHighlights": {
+            "description": "Include highlights (docx, pdf).",
+            "type": "boolean"
+          },
+          "showHighlightsOnly": {
+            "description": "Export only highlighted sections (docx, pdf).",
+            "type": "boolean"
+          },
+          "timestampsFrequency": {
+            "description": "Inline timestamp interval when showTimestamps is true.",
+            "enum": [
+              "5s",
+              "10s",
+              "15s",
+              "20s",
+              "30s",
+              "60s"
+            ],
+            "type": "string"
+          }
+        },
+        "type": "object",
+        "required": [
+          "format",
+          "transcriptionIds"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "body": {
+          "export": {
+            "format": "{{format}}",
+            "transcription_ids": "{{transcriptionIds}}",
+            "show_timestamps": "{{showTimestamps}}",
+            "show_speakers": "{{showSpeakers}}",
+            "show_comments": "{{showComments}}",
+            "show_highlights": "{{showHighlights}}",
+            "show_highlights_only": "{{showHighlightsOnly}}",
+            "timestamps_frequency": "{{timestampsFrequency}}"
+          }
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "method": "POST",
+        "path": "/exports",
+        "success": [
+          200,
+          201,
+          202
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Create export",
+      "validationMode": "strict-generated"
+    },
+    "exports.get": {
+      "description": "Get a Happy Scribe export, including the download link when state is ready. Maps to HAPPY_SCRIBE_HS_RETRIEVE_EXPORT.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "exportId": {
+            "description": "Export identifier returned by create export.",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "type": "object",
+        "required": [
+          "exportId"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/exports/{{exportId}}",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get export",
+      "validationMode": "strict-generated"
+    },
+    "healthcheck": {
+      "description": "Validate the Happy Scribe API key with GET /organizations.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {},
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/organizations",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 5000,
+      "title": "Healthcheck",
+      "validationMode": "strict-generated"
+    },
+    "orders.confirm": {
+      "description": "Confirm a previously created Happy Scribe order that is still incomplete. Maps to HAPPY_SCRIBE_HS_CONFIRM_ORDER.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "orderId": {
+            "description": "Order identifier to confirm.",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "type": "object",
+        "required": [
+          "orderId"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "confirmed": {
+            "type": "boolean"
+          },
+          "orderId": {
+            "type": "string"
+          }
+        },
+        "type": "object",
+        "required": [
+          "confirmed",
+          "orderId"
+        ]
+      },
+      "request": {
+        "method": "POST",
+        "path": "/orders/{{orderId}}/confirm",
+        "result": {
+          "confirmed": true,
+          "orderId": "{{input.orderId}}"
+        },
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Confirm order",
+      "validationMode": "strict-generated"
+    },
+    "orders.create": {
+      "description": "Create a Happy Scribe transcription or subtitling order from a public media URL. Set isSubtitle true for subtitles. Maps to HAPPY_SCRIBE_CREATE_SUBTITLE.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "url": {
+            "description": "Public media URL Happy Scribe can fetch during ingestion.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "language": {
+            "description": "BCP-47 language code such as en-US.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "organizationId": {
+            "description": "Workspace/organization identifier.",
+            "minimum": 1,
+            "type": "integer"
+          },
+          "service": {
+            "description": "auto for machine or pro for human transcription/subtitles.",
+            "enum": [
+              "auto",
+              "pro"
+            ],
+            "type": "string"
+          },
+          "confirm": {
+            "description": "Submit immediately. When false the order stays incomplete until confirmed.",
+            "type": "boolean"
+          },
+          "name": {
+            "description": "Display name of the resulting transcription.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "folder": {
+            "description": "Destination folder path such as path/to/folder.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "folderId": {
+            "description": "Destination folder identifier.",
+            "minimum": 1,
+            "type": "integer"
+          },
+          "boost": {
+            "description": "Boost turnaround for pro orders.",
+            "type": "boolean"
+          },
+          "isSubtitle": {
+            "description": "When true, produce subtitles instead of a plain transcript.",
+            "type": "boolean"
+          },
+          "webhookUrl": {
+            "description": "HTTPS URL notified when the order changes state.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "tags": {
+            "description": "Tags attached to the resulting transcription.",
+            "items": {
+              "minLength": 1,
+              "type": "string",
+              "description": "One tag."
+            },
+            "type": "array"
+          },
+          "glossaryIds": {
+            "description": "Glossary identifiers applied to the order.",
+            "items": {
+              "description": "One glossary ID.",
+              "minimum": 1,
+              "type": "integer"
+            },
+            "type": "array"
+          },
+          "styleGuideId": {
+            "description": "Style guide identifier applied to the order.",
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "type": "object",
+        "required": [
+          "url",
+          "language",
+          "organizationId"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "body": {
+          "order": {
+            "url": "{{url}}",
+            "language": "{{language}}",
+            "organization_id": "{{organizationId}}",
+            "service": "{{service}}",
+            "confirm": "{{confirm}}",
+            "name": "{{name}}",
+            "folder": "{{folder}}",
+            "folder_id": "{{folderId}}",
+            "boost": "{{boost}}",
+            "is_subtitle": "{{isSubtitle}}",
+            "webhook_url": "{{webhookUrl}}",
+            "tags": "{{tags}}",
+            "glossary_ids": "{{glossaryIds}}",
+            "style_guide_id": "{{styleGuideId}}"
+          }
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "method": "POST",
+        "path": "/orders",
+        "success": [
+          200,
+          201,
+          202
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Create transcription or subtitle order",
+      "validationMode": "strict-generated"
+    },
+    "orders.createTranslation": {
+      "description": "Create a Happy Scribe translation order from an existing transcription into one or more languages. Maps to HAPPY_SCRIBE_HS_CREATE_TRANSLATION_ORDER.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "sourceTranscriptionId": {
+            "description": "Source transcription identifier. Must be complete.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "targetLanguages": {
+            "description": "Target language codes such as es or pt-BR.",
+            "items": {
+              "minLength": 1,
+              "type": "string",
+              "description": "One target language code."
+            },
+            "type": "array",
+            "minItems": 1
+          },
+          "service": {
+            "description": "auto for machine or pro for human translation.",
+            "enum": [
+              "auto",
+              "pro"
+            ],
+            "type": "string"
+          },
+          "confirm": {
+            "description": "Submit immediately. When false the order stays incomplete until confirmed.",
+            "type": "boolean"
+          },
+          "boost": {
+            "description": "Boost turnaround for pro orders.",
+            "type": "boolean"
+          },
+          "webhookUrl": {
+            "description": "HTTPS URL notified when the order changes state.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "tags": {
+            "description": "Tags attached to the order.",
+            "items": {
+              "minLength": 1,
+              "type": "string",
+              "description": "One tag."
+            },
+            "type": "array"
+          }
+        },
+        "type": "object",
+        "required": [
+          "sourceTranscriptionId",
+          "targetLanguages"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "body": {
+          "order": {
+            "source_transcription_id": "{{sourceTranscriptionId}}",
+            "target_languages": "{{targetLanguages}}",
+            "service": "{{service}}",
+            "confirm": "{{confirm}}",
+            "boost": "{{boost}}",
+            "webhook_url": "{{webhookUrl}}",
+            "tags": "{{tags}}"
+          }
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "method": "POST",
+        "path": "/orders/translation",
+        "success": [
+          200,
+          201,
+          202
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Create translation order",
+      "validationMode": "strict-generated"
+    },
+    "orders.get": {
+      "description": "Get the current state of a Happy Scribe order by ID. Maps to HAPPY_SCRIBE_RETRIEVE_ORDER.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "orderId": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "orderId"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/orders/{{orderId}}",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get order",
+      "validationMode": "strict-generated"
+    },
+    "organizations.list": {
+      "description": "List Happy Scribe organizations available to the API key.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {},
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/organizations",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List organizations",
+      "validationMode": "strict-generated"
+    },
+    "transcriptions.delete": {
+      "description": "Delete a Happy Scribe transcription. Unfinished jobs are cancelled when the pipeline allows it. Maps to HAPPY_SCRIBE_DELETE_TRANSCRIPTION.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "transcriptionId": {
+            "description": "Transcription identifier to delete.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "permanent": {
+            "description": "When true, delete irreversibly instead of moving to Trash.",
+            "type": "boolean"
+          }
+        },
+        "type": "object",
+        "required": [
+          "transcriptionId"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "deleted": {
+            "type": "boolean"
+          },
+          "transcriptionId": {
+            "type": "string"
+          }
+        },
+        "type": "object",
+        "required": [
+          "deleted",
+          "transcriptionId"
+        ]
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/transcriptions/{{transcriptionId}}",
+        "query": {
+          "permanent": "{{permanent}}"
+        },
+        "result": {
+          "deleted": true,
+          "transcriptionId": "{{input.transcriptionId}}"
+        },
+        "success": [
+          200,
+          204
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "title": "Delete transcription",
+      "validationMode": "strict-generated"
+    },
+    "transcriptions.get": {
+      "description": "Get one Happy Scribe transcription by ID. Maps to HAPPY_SCRIBE_HS_GET_TRANSCRIPTION.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "transcriptionId": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "transcriptionId"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/transcriptions/{{transcriptionId}}",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get transcription",
+      "validationMode": "strict-generated"
+    },
+    "transcriptions.list": {
+      "description": "List Happy Scribe transcriptions in an organization. Maps to HAPPY_SCRIBE_LIST_TRANSCRIPTIONS.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "folderId": {
+            "minimum": 1,
+            "type": "integer"
+          },
+          "organizationId": {
+            "minimum": 1,
+            "type": "integer"
+          },
+          "page": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "perPage": {
+            "maximum": 100,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "tags": {
+            "description": "Filter to transcriptions that match every listed tag.",
+            "items": {
+              "minLength": 1,
+              "type": "string",
+              "description": "One tag."
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "organizationId"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/transcriptions",
+        "query": {
+          "folder_id": "{{folderId}}",
+          "organization_id": "{{organizationId}}",
+          "page": "{{page}}",
+          "per_page": "{{perPage}}",
+          "tags": "{{tags}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List transcriptions",
+      "validationMode": "strict-generated"
+    },
+    "translationTasks.create": {
+      "description": "Deprecated Product API: create an AI translation task for a completed transcription. Prefer orders.createTranslation. Maps to HAPPY_SCRIBE_CREATE_TRANSLATION_TASK.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "sourceTranscriptionId": {
+            "description": "Source transcription identifier. Must be in automatic_done state.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "targetLanguage": {
+            "description": "ISO 639-1 target language code such as es or de.",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "type": "object",
+        "required": [
+          "sourceTranscriptionId",
+          "targetLanguage"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "body": {
+          "source_transcription_id": "{{sourceTranscriptionId}}",
+          "target_language": "{{targetLanguage}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "method": "POST",
+        "path": "/task/transcription_translation",
+        "success": [
+          200,
+          201,
+          202
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Create translation task",
+      "validationMode": "strict-generated"
+    },
+    "translationTasks.get": {
+      "description": "Deprecated Product API: get a translation task, including translatedTranscriptionId when done. Maps to HAPPY_SCRIBE_HS_RETRIEVE_TRANSLATION_TASK.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "translationTaskId": {
+            "description": "Translation task identifier returned by create translation task.",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "type": "object",
+        "required": [
+          "translationTaskId"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/task/transcription_translation/{{translationTaskId}}",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get translation task",
+      "validationMode": "strict-generated"
+    },
+    "uploads.new": {
+      "description": "Get a signed S3 URL for uploading media into Happy Scribe storage. Use the same URL as tmp_url/url when creating a transcription or order. Maps to HAPPY_SCRIBE_GET_SIGNED_UPLOAD_URL.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "filename": {
+            "description": "Upload filename including extension, such as interview.mp4.",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "type": "object",
+        "required": [
+          "filename"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/uploads/new",
+        "query": {
+          "filename": "{{filename}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get signed upload URL",
+      "validationMode": "strict-generated"
+    },
+    "api.version": {
+      "enforceOutputSchema": true,
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "validationMode": "strict-generated",
+      "description": "Infer the Happy Scribe Product API version from GET /organizations. Maps to HAPPY_SCRIBE_HS_GET_API_VERSION. Happy Scribe does not publish a /version endpoint; the public base path is /api/v1.",
+      "title": "Get API version",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "organizationId": {
+            "description": "Optional organization id accepted for Composio compatibility. The version probe does not send it.",
+            "minimum": 1,
+            "type": "integer"
+          },
+          "endpointPreference": {
+            "description": "Composio probe preference. This connector always uses GET /organizations.",
+            "enum": [
+              "version",
+              "transcriptions",
+              "auto"
+            ],
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "apiVersion": {
+            "type": "string"
+          },
+          "baseUrl": {
+            "type": "string"
+          },
+          "httpStatus": {
+            "type": "integer"
+          },
+          "inferredFrom": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "apiVersion",
+          "baseUrl",
+          "httpStatus",
+          "inferredFrom"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/organizations",
+        "result": {
+          "apiVersion": "v1",
+          "baseUrl": "https://www.happyscribe.com/api/v1",
+          "inferredFrom": "base_url",
+          "httpStatus": "{{status}}"
+        },
+        "success": [
+          200
+        ]
+      }
+    },
+    "errorCodes.list": {
+      "enforceOutputSchema": true,
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "validationMode": "strict-generated",
+      "description": "Return the documented Happy Scribe HTTP error codes after authenticating with GET /organizations. Maps to HAPPY_SCRIBE_HS_GET_ERROR_CODES. There is no /errors endpoint.",
+      "title": "Get error codes",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {},
+        "type": "object"
+      },
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "documentationUrl": {
+            "type": "string"
+          },
+          "errorCodes": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "meaning": {
+                  "type": "string"
+                },
+                "status": {
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "status",
+                "meaning"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "errorCodes",
+          "documentationUrl"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/organizations",
+        "result": {
+          "documentationUrl": "https://dev.happyscribe.com/sections/general/#errors",
+          "errorCodes": [
+            {
+              "status": 400,
+              "meaning": "Bad Request -- Your request is invalid."
+            },
+            {
+              "status": 401,
+              "meaning": "Unauthorized -- Your API key is wrong or you don't have permission to access that resource."
+            },
+            {
+              "status": 403,
+              "meaning": "Forbidden -- The resource requested is hidden for administrators only."
+            },
+            {
+              "status": 404,
+              "meaning": "Not Found -- The specified resource could not be found."
+            },
+            {
+              "status": 405,
+              "meaning": "Method Not Allowed -- You tried to access a resource with an invalid method."
+            },
+            {
+              "status": 406,
+              "meaning": "Not Acceptable -- You requested a format that isn't json."
+            },
+            {
+              "status": 409,
+              "meaning": "Conflict -- The resource is in a state that does not allow the requested action."
+            },
+            {
+              "status": 410,
+              "meaning": "Gone -- The resource requested has been removed from our servers."
+            },
+            {
+              "status": 418,
+              "meaning": "I'm a teapot."
+            },
+            {
+              "status": 422,
+              "meaning": "Unprocessable Entity -- There was an error processing your request."
+            },
+            {
+              "status": 429,
+              "meaning": "Too Many Requests -- You're requesting too many resources! Slow down!"
+            },
+            {
+              "status": 500,
+              "meaning": "Internal Server Error -- We had a problem with our server. Try again later."
+            },
+            {
+              "status": 503,
+              "meaning": "Service Unavailable -- We're temporarily offline for maintenance. Please try again later."
+            }
+          ]
+        },
+        "success": [
+          200
+        ]
+      }
+    },
+    "formats.list": {
+      "enforceOutputSchema": true,
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "validationMode": "strict-generated",
+      "description": "Return documented Happy Scribe export formats after authenticating with GET /organizations. Maps to HAPPY_SCRIBE_HS_GET_SUPPORTED_FORMATS. There is no /formats endpoint.",
+      "title": "Get supported formats",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "limit": {
+            "description": "Composio limit on formats returned. This connector returns the full official export chart.",
+            "minimum": 1,
+            "type": "integer"
+          },
+          "testNote": {
+            "description": "Optional Composio test note. Not sent upstream.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "includeAudio": {
+            "description": "Composio audio-input flag. Official docs list mp3 as an export of source audio.",
+            "type": "boolean"
+          },
+          "includeVideo": {
+            "description": "Composio video-input flag. Official docs list mp4 as an export of source video.",
+            "type": "boolean"
+          },
+          "exportCategory": {
+            "description": "Composio category filter. This connector returns the full official export chart.",
+            "enum": [
+              "subtitles",
+              "transcripts",
+              "all"
+            ],
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "documentationUrl": {
+            "type": "string"
+          },
+          "exportFormats": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "category": {
+                  "type": "string"
+                },
+                "description": {
+                  "type": "string"
+                },
+                "value": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "value",
+                "description",
+                "category"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "exportFormats",
+          "documentationUrl"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/organizations",
+        "result": {
+          "documentationUrl": "https://dev.happyscribe.com/sections/product/#exports",
+          "exportFormats": [
+            {
+              "value": "txt",
+              "description": "Text Document (.txt)",
+              "category": "transcripts"
+            },
+            {
+              "value": "docx",
+              "description": "Word Document (.docx)",
+              "category": "transcripts"
+            },
+            {
+              "value": "pdf",
+              "description": "PDF Document (.pdf)",
+              "category": "transcripts"
+            },
+            {
+              "value": "srt",
+              "description": "Subtitles (SubRip .srt)",
+              "category": "subtitles"
+            },
+            {
+              "value": "vtt",
+              "description": "Subtitles (WebVTT .vtt)",
+              "category": "subtitles"
+            },
+            {
+              "value": "stl",
+              "description": "Subtitles (EBU-STL .stl)",
+              "category": "subtitles"
+            },
+            {
+              "value": "avid",
+              "description": "Avid Markers (.txt)",
+              "category": "video_editing"
+            },
+            {
+              "value": "avid_script",
+              "description": "Avid ScriptSync (Beta) (.txt)",
+              "category": "video_editing"
+            },
+            {
+              "value": "avid_ds_subtitles",
+              "description": "Avid DS Subtitles (.txt)",
+              "category": "video_editing"
+            },
+            {
+              "value": "avid_edl",
+              "description": "Avid Edit Decision List (.edl)",
+              "category": "video_editing"
+            },
+            {
+              "value": "facebook_srt",
+              "description": "Facebook Subtitles (.srt)",
+              "category": "subtitles"
+            },
+            {
+              "value": "html",
+              "description": "Interactive Transcript (.html)",
+              "category": "transcripts"
+            },
+            {
+              "value": "premiere",
+              "description": "Premiere Pro (Beta) (.xml)",
+              "category": "video_editing"
+            },
+            {
+              "value": "maxqda",
+              "description": "Maxqda (.txt)",
+              "category": "transcripts"
+            },
+            {
+              "value": "json",
+              "description": "JSON (.json)",
+              "category": "transcripts"
+            },
+            {
+              "value": "fcp",
+              "description": "Final Cut Pro (.fcpxml)",
+              "category": "video_editing"
+            },
+            {
+              "value": "edl",
+              "description": "DaVinci Resolve Markers (.edl)",
+              "category": "video_editing"
+            },
+            {
+              "value": "csv",
+              "description": "Excel (.csv)",
+              "category": "transcripts"
+            },
+            {
+              "value": "xlsx",
+              "description": "Excel (.xlsx)",
+              "category": "transcripts"
+            },
+            {
+              "value": "mp3",
+              "description": "Source audio (.mp3)",
+              "category": "media"
+            },
+            {
+              "value": "mp4",
+              "description": "Source video (.mp4)",
+              "category": "media"
+            }
+          ]
+        },
+        "success": [
+          200
+        ]
+      }
+    },
+    "languages.list": {
+      "enforceOutputSchema": true,
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "validationMode": "strict-generated",
+      "description": "Return documented Happy Scribe BCP-47 language codes after authenticating with GET /organizations. Maps to HAPPY_SCRIBE_GET_LANGUAGE_LIST. There is no /languages endpoint.",
+      "title": "Get supported languages",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "filterHumanService": {
+            "description": "Composio human-service filter. This connector returns the full documented catalog; filter client-side using humanService.",
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "documentationUrl": {
+            "type": "string"
+          },
+          "languages": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "humanService": {
+                  "type": "boolean"
+                },
+                "name": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "name",
+                "humanService"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "languages",
+          "documentationUrl"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/organizations",
+        "result": {
+          "documentationUrl": "https://dev.happyscribe.com/sections/general/#languages",
+          "languages": [
+            {
+              "code": "af-ZA",
+              "name": "Afrikaans (South Africa)",
+              "humanService": true
+            },
+            {
+              "code": "am-ET",
+              "name": "Amharic (Ethiopia)",
+              "humanService": false
+            },
+            {
+              "code": "ar-DZ",
+              "name": "Arabic (Algeria)",
+              "humanService": true
+            },
+            {
+              "code": "ar-BH",
+              "name": "Arabic (Bahrain)",
+              "humanService": true
+            },
+            {
+              "code": "ar-EG",
+              "name": "Arabic (Egypt)",
+              "humanService": true
+            },
+            {
+              "code": "ar-IQ",
+              "name": "Arabic (Iraq)",
+              "humanService": true
+            },
+            {
+              "code": "ar-IL",
+              "name": "Arabic (Israel)",
+              "humanService": true
+            },
+            {
+              "code": "ar-JO",
+              "name": "Arabic (Jordan)",
+              "humanService": true
+            },
+            {
+              "code": "ar-KW",
+              "name": "Arabic (Kuwait)",
+              "humanService": true
+            },
+            {
+              "code": "ar-LB",
+              "name": "Arabic (Lebanon)",
+              "humanService": true
+            },
+            {
+              "code": "ar-MA",
+              "name": "Arabic (Morocco)",
+              "humanService": true
+            },
+            {
+              "code": "ar-OM",
+              "name": "Arabic (Oman)",
+              "humanService": true
+            },
+            {
+              "code": "ar-QA",
+              "name": "Arabic (Qatar)",
+              "humanService": true
+            },
+            {
+              "code": "ar-SA",
+              "name": "Arabic (Saudi Arabia)",
+              "humanService": true
+            },
+            {
+              "code": "ar-PS",
+              "name": "Arabic (State of Palestine)",
+              "humanService": true
+            },
+            {
+              "code": "ar-TN",
+              "name": "Arabic (Tunisia)",
+              "humanService": true
+            },
+            {
+              "code": "ar-AE",
+              "name": "Arabic (United Arab Emirates)",
+              "humanService": true
+            },
+            {
+              "code": "ar-YE",
+              "name": "Arabic (Yemen)",
+              "humanService": true
+            },
+            {
+              "code": "hy-AM",
+              "name": "Armenian (Armenia)",
+              "humanService": false
+            },
+            {
+              "code": "az-AZ",
+              "name": "Azerbaijani (Azerbaijan)",
+              "humanService": true
+            },
+            {
+              "code": "eu-ES",
+              "name": "Basque (Spain)",
+              "humanService": false
+            },
+            {
+              "code": "be-BY",
+              "name": "Belarusian (Belarus)",
+              "humanService": false
+            },
+            {
+              "code": "bn-BD",
+              "name": "Bengali (Bangladesh)",
+              "humanService": true
+            },
+            {
+              "code": "bn-IN",
+              "name": "Bengali (India)",
+              "humanService": true
+            },
+            {
+              "code": "bg-BG",
+              "name": "Bulgarian (Bulgaria)",
+              "humanService": true
+            },
+            {
+              "code": "ca-ES",
+              "name": "Catalan (Spain)",
+              "humanService": true
+            },
+            {
+              "code": "yue-Hant-HK",
+              "name": "Chinese, Cantonese (Traditional, Hong Kong)",
+              "humanService": true
+            },
+            {
+              "code": "cmn-Hans-CN",
+              "name": "Chinese, Mandarin (Simplified, China)",
+              "humanService": true
+            },
+            {
+              "code": "cmn-Hans-HK",
+              "name": "Chinese, Mandarin (Simplified, Hong Kong)",
+              "humanService": true
+            },
+            {
+              "code": "cmn-Hant-TW",
+              "name": "Chinese, Mandarin (Traditional, Taiwan)",
+              "humanService": true
+            },
+            {
+              "code": "hr-HR",
+              "name": "Croatian (Croatia)",
+              "humanService": true
+            },
+            {
+              "code": "cs-CZ",
+              "name": "Czech (Czech Republic)",
+              "humanService": true
+            },
+            {
+              "code": "da-DK",
+              "name": "Danish (Denmark)",
+              "humanService": true
+            },
+            {
+              "code": "nl-NL",
+              "name": "Dutch (Netherlands)",
+              "humanService": true
+            },
+            {
+              "code": "nl-BE",
+              "name": "Dutch (Belgium)",
+              "humanService": true
+            },
+            {
+              "code": "en-AU",
+              "name": "English (Australia)",
+              "humanService": true
+            },
+            {
+              "code": "en-CA",
+              "name": "English (Canada)",
+              "humanService": true
+            },
+            {
+              "code": "en-GH",
+              "name": "English (Ghana)",
+              "humanService": true
+            },
+            {
+              "code": "en-IN",
+              "name": "English (India)",
+              "humanService": true
+            },
+            {
+              "code": "en-IE",
+              "name": "English (Ireland)",
+              "humanService": true
+            },
+            {
+              "code": "en-KE",
+              "name": "English (Kenya)",
+              "humanService": true
+            },
+            {
+              "code": "en-NZ",
+              "name": "English (New Zealand)",
+              "humanService": true
+            },
+            {
+              "code": "en-NG",
+              "name": "English (Nigeria)",
+              "humanService": true
+            },
+            {
+              "code": "en-PH",
+              "name": "English (Philippines)",
+              "humanService": true
+            },
+            {
+              "code": "en-ZA",
+              "name": "English (South Africa)",
+              "humanService": true
+            },
+            {
+              "code": "en-TZ",
+              "name": "English (Tanzania)",
+              "humanService": true
+            },
+            {
+              "code": "en-HK",
+              "name": "English (Hong Kong)",
+              "humanService": true
+            },
+            {
+              "code": "en-PK",
+              "name": "English (Pakistan)",
+              "humanService": true
+            },
+            {
+              "code": "en-SG",
+              "name": "English (Singapore)",
+              "humanService": true
+            },
+            {
+              "code": "en-GB",
+              "name": "English (United Kingdom)",
+              "humanService": true
+            },
+            {
+              "code": "en-US",
+              "name": "English (United States)",
+              "humanService": true
+            },
+            {
+              "code": "fil-PH",
+              "name": "Filipino (Philippines)",
+              "humanService": true
+            },
+            {
+              "code": "fi-FI",
+              "name": "Finnish (Finland)",
+              "humanService": true
+            },
+            {
+              "code": "fr-CA",
+              "name": "French (Canada)",
+              "humanService": true
+            },
+            {
+              "code": "fr-FR",
+              "name": "French (France)",
+              "humanService": true
+            },
+            {
+              "code": "fr-BE",
+              "name": "French (Belgium)",
+              "humanService": true
+            },
+            {
+              "code": "fr-CH",
+              "name": "French (Switzerland)",
+              "humanService": true
+            },
+            {
+              "code": "gl-ES",
+              "name": "Galician (Spain)",
+              "humanService": false
+            },
+            {
+              "code": "ka-GE",
+              "name": "Georgian (Georgia)",
+              "humanService": false
+            },
+            {
+              "code": "de-DE",
+              "name": "German (Germany)",
+              "humanService": true
+            },
+            {
+              "code": "de-AT",
+              "name": "German (Austria)",
+              "humanService": true
+            },
+            {
+              "code": "el-GR",
+              "name": "Greek (Greece)",
+              "humanService": true
+            },
+            {
+              "code": "gu-IN",
+              "name": "Gujarati (India)",
+              "humanService": true
+            },
+            {
+              "code": "ht-HT",
+              "name": "Haitian Creole (Haiti)",
+              "humanService": false
+            },
+            {
+              "code": "he-IL",
+              "name": "Hebrew (Israel)",
+              "humanService": true
+            },
+            {
+              "code": "hi-IN",
+              "name": "Hindi (India)",
+              "humanService": true
+            },
+            {
+              "code": "hu-HU",
+              "name": "Hungarian (Hungary)",
+              "humanService": true
+            },
+            {
+              "code": "is-IS",
+              "name": "Icelandic (Iceland)",
+              "humanService": true
+            },
+            {
+              "code": "id-ID",
+              "name": "Indonesian (Indonesia)",
+              "humanService": true
+            },
+            {
+              "code": "it-IT",
+              "name": "Italian (Italy)",
+              "humanService": true
+            },
+            {
+              "code": "it-CH",
+              "name": "Italian (Switzerland)",
+              "humanService": true
+            },
+            {
+              "code": "ja-JP",
+              "name": "Japanese (Japan)",
+              "humanService": true
+            },
+            {
+              "code": "jv-ID",
+              "name": "Javanese (Indonesia)",
+              "humanService": false
+            },
+            {
+              "code": "kn-IN",
+              "name": "Kannada (India)",
+              "humanService": false
+            },
+            {
+              "code": "km-KH",
+              "name": "Khmer (Cambodia)",
+              "humanService": true
+            },
+            {
+              "code": "ko-KR",
+              "name": "Korean (South Korea)",
+              "humanService": true
+            },
+            {
+              "code": "lo-LA",
+              "name": "Lao (Laos)",
+              "humanService": true
+            },
+            {
+              "code": "lv-LV",
+              "name": "Latvian (Latvia)",
+              "humanService": true
+            },
+            {
+              "code": "lt-LT",
+              "name": "Lithuanian (Lithuania)",
+              "humanService": true
+            },
+            {
+              "code": "ms-MY",
+              "name": "Malay (Malaysia)",
+              "humanService": true
+            },
+            {
+              "code": "ml-IN",
+              "name": "Malayalam (India)",
+              "humanService": false
+            },
+            {
+              "code": "mr-IN",
+              "name": "Marathi (India)",
+              "humanService": false
+            },
+            {
+              "code": "ne-NP",
+              "name": "Nepali (Nepal)",
+              "humanService": true
+            },
+            {
+              "code": "nb-NO",
+              "name": "Norwegian Bokm\u00e5l (Norway)",
+              "humanService": true
+            },
+            {
+              "code": "fa-IR",
+              "name": "Persian (Iran)",
+              "humanService": true
+            },
+            {
+              "code": "pl-PL",
+              "name": "Polish (Poland)",
+              "humanService": true
+            },
+            {
+              "code": "pt-BR",
+              "name": "Portuguese (Brazil)",
+              "humanService": true
+            },
+            {
+              "code": "pt-PT",
+              "name": "Portuguese (Portugal)",
+              "humanService": true
+            },
+            {
+              "code": "ro-RO",
+              "name": "Romanian (Romania)",
+              "humanService": true
+            },
+            {
+              "code": "ru-RU",
+              "name": "Russian (Russia)",
+              "humanService": true
+            },
+            {
+              "code": "sr-Latn-RS",
+              "name": "Serbian (Latin, Serbia)",
+              "humanService": false
+            },
+            {
+              "code": "sr-RS",
+              "name": "Serbian (Serbia)",
+              "humanService": true
+            },
+            {
+              "code": "si-LK",
+              "name": "Sinhala (Srilanka)",
+              "humanService": false
+            },
+            {
+              "code": "sk-SK",
+              "name": "Slovak (Slovakia)",
+              "humanService": true
+            },
+            {
+              "code": "sl-SI",
+              "name": "Slovenian (Slovenia)",
+              "humanService": true
+            },
+            {
+              "code": "es-AR",
+              "name": "Spanish (Argentina)",
+              "humanService": true
+            },
+            {
+              "code": "es-BO",
+              "name": "Spanish (Bolivia)",
+              "humanService": true
+            },
+            {
+              "code": "es-CL",
+              "name": "Spanish (Chile)",
+              "humanService": true
+            },
+            {
+              "code": "es-CO",
+              "name": "Spanish (Colombia)",
+              "humanService": true
+            },
+            {
+              "code": "es-CR",
+              "name": "Spanish (Costa Rica)",
+              "humanService": true
+            },
+            {
+              "code": "es-DO",
+              "name": "Spanish (Dominican Republic)",
+              "humanService": true
+            },
+            {
+              "code": "es-EC",
+              "name": "Spanish (Ecuador)",
+              "humanService": true
+            },
+            {
+              "code": "es-SV",
+              "name": "Spanish (El Salvador)",
+              "humanService": true
+            },
+            {
+              "code": "es-GT",
+              "name": "Spanish (Guatemala)",
+              "humanService": true
+            },
+            {
+              "code": "es-HN",
+              "name": "Spanish (Honduras)",
+              "humanService": true
+            },
+            {
+              "code": "es-MX",
+              "name": "Spanish (Mexico)",
+              "humanService": true
+            },
+            {
+              "code": "es-NI",
+              "name": "Spanish (Nicaragua)",
+              "humanService": true
+            },
+            {
+              "code": "es-PA",
+              "name": "Spanish (Panama)",
+              "humanService": true
+            },
+            {
+              "code": "es-PY",
+              "name": "Spanish (Paraguay)",
+              "humanService": true
+            },
+            {
+              "code": "es-PE",
+              "name": "Spanish (Peru)",
+              "humanService": true
+            },
+            {
+              "code": "es-PR",
+              "name": "Spanish (Puerto Rico)",
+              "humanService": true
+            },
+            {
+              "code": "es-ES",
+              "name": "Spanish (Spain)",
+              "humanService": true
+            },
+            {
+              "code": "es-US",
+              "name": "Spanish (United States)",
+              "humanService": true
+            },
+            {
+              "code": "es-UY",
+              "name": "Spanish (Uruguay)",
+              "humanService": true
+            },
+            {
+              "code": "es-VE",
+              "name": "Spanish (Venezuela)",
+              "humanService": true
+            },
+            {
+              "code": "su-ID",
+              "name": "Sundanese (Indonesia)",
+              "humanService": false
+            },
+            {
+              "code": "sw-CD",
+              "name": "Swahili (Congo)",
+              "humanService": false
+            },
+            {
+              "code": "sw-KE",
+              "name": "Swahili (Kenya)",
+              "humanService": true
+            },
+            {
+              "code": "sw-TZ",
+              "name": "Swahili (Tanzania)",
+              "humanService": true
+            },
+            {
+              "code": "sv-SE",
+              "name": "Swedish (Sweden)",
+              "humanService": true
+            },
+            {
+              "code": "gsw-CH",
+              "name": "Swiss German (Switzerland)",
+              "humanService": true
+            },
+            {
+              "code": "ta-IN",
+              "name": "Tamil (India)",
+              "humanService": true
+            },
+            {
+              "code": "ta-MY",
+              "name": "Tamil (Malaysia)",
+              "humanService": true
+            },
+            {
+              "code": "ta-SG",
+              "name": "Tamil (Singapore)",
+              "humanService": true
+            },
+            {
+              "code": "ta-LK",
+              "name": "Tamil (Sri Lanka)",
+              "humanService": true
+            },
+            {
+              "code": "te-IN",
+              "name": "Telugu (India)",
+              "humanService": false
+            },
+            {
+              "code": "th-TH",
+              "name": "Thai (Thailand)",
+              "humanService": true
+            },
+            {
+              "code": "tr-TR",
+              "name": "Turkish (Turkey)",
+              "humanService": true
+            },
+            {
+              "code": "uk-UA",
+              "name": "Ukrainian (Ukraine)",
+              "humanService": true
+            },
+            {
+              "code": "ur-IN",
+              "name": "Urdu (India)",
+              "humanService": true
+            },
+            {
+              "code": "ur-PK",
+              "name": "Urdu (Pakistan)",
+              "humanService": true
+            },
+            {
+              "code": "vi-VN",
+              "name": "Vietnamese (Vietnam)",
+              "humanService": true
+            },
+            {
+              "code": "zu-ZA",
+              "name": "Zulu (South Africa)",
+              "humanService": false
+            },
+            {
+              "code": "sq-AL",
+              "name": "Albanian (Albania)",
+              "humanService": true
+            },
+            {
+              "code": "bs-BA",
+              "name": "Bosnian (Bosnia and Herzegovina)",
+              "humanService": true
+            },
+            {
+              "code": "my-MM",
+              "name": "Burmese (Myanmar)",
+              "humanService": true
+            },
+            {
+              "code": "et-EE",
+              "name": "Estonian (Estonia)",
+              "humanService": true
+            },
+            {
+              "code": "mk-MK",
+              "name": "Macedonian (North Macedonia)",
+              "humanService": true
+            },
+            {
+              "code": "mn-MN",
+              "name": "Mongolian (Mongolia)",
+              "humanService": true
+            },
+            {
+              "code": "pa-Guru-IN",
+              "name": "Punjabi (Gurmukhi India)",
+              "humanService": true
+            },
+            {
+              "code": "uz-UZ",
+              "name": "Uzbek (Uzbekistan)",
+              "humanService": false
+            }
+          ]
+        },
+        "success": [
+          200
+        ]
+      }
+    },
+    "memberships.list": {
+      "enforceOutputSchema": true,
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "validationMode": "strict-generated",
+      "description": "List Happy Scribe organization memberships for the API key, including email, name, and role. Maps to HAPPY_SCRIBE_GET_ACCOUNT_DETAILS. Regular members see only their own row.",
+      "title": "Get account details",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "organizationId": {
+            "description": "Restrict memberships to one organization. Omit to list memberships across organizations the caller belongs to.",
+            "minimum": 1,
+            "type": "integer"
+          },
+          "role": {
+            "description": "Filter by exact role.",
+            "enum": [
+              "owner",
+              "admin",
+              "member",
+              "guest"
+            ],
+            "type": "string"
+          },
+          "email": {
+            "description": "Case-insensitive partial match on the member email.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "name": {
+            "description": "Case-insensitive partial match on the member full name.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "page": {
+            "description": "Page number to fetch. Official default is 1, 25 rows per page.",
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/organization_memberships",
+        "query": {
+          "organization_id": "{{organizationId}}",
+          "role": "{{role}}",
+          "email": "{{email}}",
+          "name": "{{name}}",
+          "page": "{{page}}"
+        },
+        "success": [
+          200
+        ]
+      }
+    },
+    "rateLimits.get": {
+      "enforceOutputSchema": true,
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "validationMode": "strict-generated",
+      "description": "Return the documented Happy Scribe transcription-creation rate limit after authenticating with GET /organizations. Maps to HAPPY_SCRIBE_GET_RATE_LIMIT. Happy Scribe does not expose rate-limit headers.",
+      "title": "Get API rate limit",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {},
+        "type": "object"
+      },
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "appliesTo": {
+            "type": "string"
+          },
+          "documentationUrl": {
+            "type": "string"
+          },
+          "higherLimitContact": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "integer"
+          },
+          "retryInSecondsField": {
+            "type": "string"
+          },
+          "tooManyRequestsStatus": {
+            "type": "integer"
+          },
+          "window": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "limit",
+          "window",
+          "appliesTo",
+          "tooManyRequestsStatus",
+          "retryInSecondsField",
+          "higherLimitContact",
+          "documentationUrl"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/organizations",
+        "result": {
+          "appliesTo": "transcription creation endpoint",
+          "documentationUrl": "https://dev.happyscribe.com/sections/general/#rate-limit",
+          "higherLimitContact": "sales@happyscribe.co",
+          "limit": 200,
+          "retryInSecondsField": "retry_in_seconds",
+          "tooManyRequestsStatus": 429,
+          "window": "hour"
+        },
+        "success": [
+          200
+        ]
+      }
+    }
+  },
+  "provenance": {
+    "source": {
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
+      "url": "https://github.com/oomol-lab/open-connector"
+    }
+  },
+  "runtime": "bun",
+  "version": "0.2.0",
+  "visibility": "public"
+}
