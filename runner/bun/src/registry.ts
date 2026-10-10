@@ -1318,8 +1318,11 @@ import {
 } from "../../connectors/microsoft-365/src/actions";
 
 import { createField as lapostaCreateField, createMember as lapostaCreateMember, updateMember as lapostaUpdateMember } from "../../connectors/laposta/src/actions";
+import { getMeetingAnalysis as avomaGetMeetingAnalysis } from "../../connectors/avoma/src/handlers";
 import { createConnectorHttpClient, type ConnectorHttpClient } from "./http";
 import { withDeclarativeConnectors } from "./declarative/loader";
+import { heyzineWriteHandlers } from "../../connectors/heyzine/src/writes";
+import { parseWebhook as heyzineParseWebhook } from "../../connectors/heyzine/src/webhook";
 
 type Manifest = {
   key: string;
@@ -1468,10 +1471,14 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
     fake: {
       "messages.send": (input) => ({ input }),
     },
+    heyzine: heyzineWriteHandlers,
     laposta: {
       "fields.create": lapostaCreateField,
       "members.create": lapostaCreateMember,
       "members.update": lapostaUpdateMember,
+    },
+    avoma: {
+      "meetings.analysis.get": avomaGetMeetingAnalysis,
     },
     notion: {
       "credentials.validate": validateNotionCredentials,
@@ -3117,6 +3124,7 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
     },
   },
   webhooks: {
+    heyzine: { parse: heyzineParseWebhook },
     rb2b: { parse: rb2bParseWebhook, verify: rb2bVerifyWebhook },
     // Apollo does not sign its phone-reveal callbacks, so it registers only a
     // parser. The registry treats a connector with no verifier as verified.
