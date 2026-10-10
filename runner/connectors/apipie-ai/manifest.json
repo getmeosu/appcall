@@ -1,7 +1,17 @@
 {
+  "key": "apipie-ai",
+  "name": "APIpie AI",
+  "version": "0.2.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "dev-tools"
+  ],
   "auth": {
+    "type": "api_key",
     "scopes": [],
     "setup": {
+      "mode": "api_key",
       "fields": [
         {
           "key": "apiKey",
@@ -9,79 +19,71 @@
           "required": true,
           "secret": true
         }
-      ],
-      "mode": "api_key"
-    },
-    "type": "api_key"
-  },
-  "categories": [
-    "dev-tools"
-  ],
-  "evidence": {
-    "fixture": {
-      "status": "supplied"
-    },
-    "live": {
-      "status": "unverified"
+      ]
     }
   },
+  "network": {
+    "allowedHosts": [
+      "apipie.ai"
+    ]
+  },
+  "models": [
+    "model",
+    "completion",
+    "embedding",
+    "image",
+    "vector",
+    "state"
+  ],
   "http": {
+    "baseUrl": "https://apipie.ai",
     "auth": {
       "field": "apiKey",
       "in": "header",
       "name": "Authorization",
       "value": "Bearer {{apiKey}}"
     },
-    "baseUrl": "https://apipie.ai",
     "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after",
       "defaultRetryAfterSeconds": 30,
       "messagePaths": [
         "error.message",
         "message",
         "error"
-      ],
-      "rateLimitStatuses": [
-        429
-      ],
-      "retryAfterHeader": "retry-after"
+      ]
     },
     "headers": {
       "Accept": "application/json"
     }
   },
-  "key": "apipie-ai",
-  "models": [
-    "model"
-  ],
-  "name": "APIpie AI",
-  "network": {
-    "allowedHosts": [
-      "apipie.ai"
-    ]
-  },
   "operations": {
     "healthcheck": {
-      "description": "Validate the APIpie AI API key by listing models.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {},
-        "type": "object"
-      },
-      "kind": "action",
+      "timeoutMs": 5000,
       "maxInputBytes": 4096,
       "maxResponseBytes": 65536,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Healthcheck",
+      "description": "Validate the APIpie AI API key by listing models.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
       "outputSchema": {
-        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "required": [
-          "data"
-        ],
-        "type": "object"
+        "additionalProperties": false
       },
       "request": {
         "method": "GET",
@@ -90,34 +92,70 @@
           200
         ]
       },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 5000,
-      "title": "Healthcheck",
-      "validationMode": "strict-generated"
-    },
-    "models.details": {
-      "description": "List detailed APIpie AI model metadata available to the current API key.",
       "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {},
-        "type": "object"
-      },
-      "kind": "action",
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "models.list": {
+      "timeoutMs": 15000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List models",
+      "description": "List APIpie AI models available to the current API key.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
       "outputSchema": {
-        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/models",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "models.details": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List detailed models",
+      "description": "List detailed APIpie AI model metadata available to the current API key.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
         "required": [
           "data"
         ],
-        "type": "object"
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
       },
       "request": {
         "method": "GET",
@@ -126,56 +164,966 @@
           200
         ]
       },
-      "responseFormat": "json",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "models.get": {
+      "kind": "action",
       "sideEffect": "read",
       "timeoutMs": 15000,
-      "title": "List detailed models",
-      "validationMode": "strict-generated"
-    },
-    "models.list": {
-      "description": "List APIpie AI models available to the current API key.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {},
-        "type": "object"
-      },
-      "kind": "action",
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
-      "outputSchema": {
+      "title": "Get model",
+      "description": "Get a single APIpie AI model by ID via GET /v1/models/{modelId}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "modelId": {
+            "type": "string",
+            "description": "Model ID.",
+            "minLength": 1
+          }
+        },
         "additionalProperties": false,
+        "required": [
+          "modelId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "required": [
-          "data"
-        ],
-        "type": "object"
+        "additionalProperties": false
       },
       "request": {
         "method": "GET",
-        "path": "/v1/models",
+        "path": "/v1/models/{{modelId}}",
         "success": [
           200
         ]
       },
-      "responseFormat": "json",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "chat.completions": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create chat completion",
+      "description": "Create an OpenAI-compatible chat completion via POST /v1/chat/completions.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "model": {
+            "type": "string",
+            "description": "Model ID.",
+            "minLength": 1
+          },
+          "messages": {
+            "type": "array",
+            "minItems": 1,
+            "description": "Chat messages.",
+            "items": {
+              "type": "object"
+            }
+          },
+          "temperature": {
+            "type": "number",
+            "description": "Sampling temperature."
+          },
+          "max_tokens": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Maximum completion tokens."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "model",
+          "messages"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/chat/completions",
+        "success": [
+          200,
+          201
+        ],
+        "body": {
+          "model": "{{model}}",
+          "messages": "{{messages}}",
+          "temperature": "{{temperature}}",
+          "max_tokens": "{{max_tokens}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "completions.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create completion",
+      "description": "Create an OpenAI-compatible text completion via POST /v1/completions.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "model": {
+            "type": "string",
+            "description": "Model ID.",
+            "minLength": 1
+          },
+          "prompt": {
+            "type": "string",
+            "description": "Prompt text.",
+            "minLength": 1
+          },
+          "max_tokens": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Maximum completion tokens."
+          },
+          "temperature": {
+            "type": "number",
+            "description": "Sampling temperature."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "model",
+          "prompt"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/completions",
+        "success": [
+          200,
+          201
+        ],
+        "body": {
+          "model": "{{model}}",
+          "prompt": "{{prompt}}",
+          "max_tokens": "{{max_tokens}}",
+          "temperature": "{{temperature}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "embeddings.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create embeddings",
+      "description": "Generate embeddings via POST /v1/embeddings.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "model": {
+            "type": "string",
+            "description": "Embedding model ID.",
+            "minLength": 1
+          },
+          "input": {
+            "type": "string",
+            "description": "Text to embed.",
+            "minLength": 1
+          },
+          "encoding_format": {
+            "type": "string",
+            "description": "float or np.",
+            "minLength": 1
+          },
+          "dimensions": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Output dimensions."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "model",
+          "input"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/embeddings",
+        "success": [
+          200,
+          201
+        ],
+        "body": {
+          "model": "{{model}}",
+          "input": "{{input}}",
+          "encoding_format": "{{encoding_format}}",
+          "dimensions": "{{dimensions}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "images.generations": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Generate image",
+      "description": "Generate an image via POST /v1/images/generations.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "prompt": {
+            "type": "string",
+            "description": "Image prompt.",
+            "minLength": 1
+          },
+          "model": {
+            "type": "string",
+            "description": "Image model ID.",
+            "minLength": 1
+          },
+          "n": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 4,
+            "description": "Number of images."
+          },
+          "size": {
+            "type": "string",
+            "description": "Image size.",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "prompt"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/images/generations",
+        "success": [
+          200,
+          201
+        ],
+        "body": {
+          "prompt": "{{prompt}}",
+          "model": "{{model}}",
+          "n": "{{n}}",
+          "size": "{{size}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "moderations.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create moderation",
+      "description": "Classify text for policy violations via POST /v1/moderations.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "input": {
+            "type": "string",
+            "description": "Text to classify.",
+            "minLength": 1
+          },
+          "model": {
+            "type": "string",
+            "description": "Moderation model ID.",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "input"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/moderations",
+        "success": [
+          200,
+          201
+        ],
+        "body": {
+          "input": "{{input}}",
+          "model": "{{model}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "vectors.createCollection": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create vector collection",
+      "description": "Create a vector collection via POST /vectors.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "collection_name": {
+            "type": "string",
+            "description": "Collection name.",
+            "minLength": 1
+          },
+          "dimension": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Embedding dimension."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "collection_name",
+          "dimension"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/vectors",
+        "success": [
+          200,
+          201
+        ],
+        "body": {
+          "collection_name": "{{collection_name}}",
+          "dimension": "{{dimension}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "vectors.listCollections": {
+      "kind": "action",
       "sideEffect": "read",
       "timeoutMs": 15000,
-      "title": "List models",
-      "validationMode": "strict-generated"
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List vector collections",
+      "description": "List vector collections via POST /vectors/listcollections.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/vectors/listcollections",
+        "success": [
+          200,
+          201
+        ],
+        "body": {},
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "vectors.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List vector IDs",
+      "description": "List vector IDs in a collection via POST /vectors/list.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "collection_name": {
+            "type": "string",
+            "description": "Collection name.",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "collection_name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/vectors/list",
+        "success": [
+          200,
+          201
+        ],
+        "body": {
+          "collection_name": "{{collection_name}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "vectors.upsert": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Upsert vector",
+      "description": "Upsert a vector into a collection via PUT /vectors/upsert.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "collection_name": {
+            "type": "string",
+            "description": "Collection name.",
+            "minLength": 1
+          },
+          "id": {
+            "type": "string",
+            "description": "Vector ID.",
+            "minLength": 1
+          },
+          "values": {
+            "type": "array",
+            "minItems": 1,
+            "description": "Embedding values.",
+            "items": {
+              "type": "number"
+            }
+          },
+          "metadata": {
+            "type": "object",
+            "description": "Optional metadata."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "collection_name",
+          "id",
+          "values"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/vectors/upsert",
+        "success": [
+          200,
+          201
+        ],
+        "body": {
+          "collection_name": "{{collection_name}}",
+          "id": "{{id}}",
+          "values": "{{values}}",
+          "metadata": "{{metadata}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "vectors.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Delete vectors",
+      "description": "Delete a vector collection or specific vector IDs via POST /vectors/delete.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "collection_name": {
+            "type": "string",
+            "description": "Collection name.",
+            "minLength": 1
+          },
+          "ids": {
+            "type": "array",
+            "description": "Vector IDs to delete.",
+            "items": {
+              "type": "string"
+            }
+          },
+          "delete_all": {
+            "type": "boolean",
+            "description": "Delete the entire collection."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "collection_name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/vectors/delete",
+        "success": [
+          200,
+          201
+        ],
+        "body": {
+          "collection_name": "{{collection_name}}",
+          "ids": "{{ids}}",
+          "delete_all": "{{delete_all}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "ragtune.listCollections": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List RAG collections",
+      "description": "List RAG-tune collections via POST /ragtune/listcollections.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/ragtune/listcollections",
+        "success": [
+          200,
+          201
+        ],
+        "body": {},
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "ragtune.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Delete RAG collection",
+      "description": "Delete a RAG-tune collection via POST /ragtune/delete.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "collection_name": {
+            "type": "string",
+            "description": "Collection name.",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "collection_name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/ragtune/delete",
+        "success": [
+          200,
+          201
+        ],
+        "body": {
+          "collection_name": "{{collection_name}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "state.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get state",
+      "description": "Get APIpie application or user state via GET /v1/state.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "user": {
+            "type": "string",
+            "description": "Optional user ID.",
+            "minLength": 1
+          },
+          "app_name": {
+            "type": "string",
+            "description": "Optional enterprise app name.",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/state",
+        "success": [
+          200
+        ],
+        "query": {
+          "user": "{{user}}",
+          "app_name": "{{app_name}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "state.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Update state",
+      "description": "Create or merge APIpie state via POST /v1/state.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "settings": {
+            "type": "object",
+            "description": "State settings to merge."
+          },
+          "user": {
+            "type": "string",
+            "description": "Optional user ID.",
+            "minLength": 1
+          },
+          "app_name": {
+            "type": "string",
+            "description": "Optional enterprise app name.",
+            "minLength": 1
+          },
+          "delete": {
+            "type": "array",
+            "description": "Keys to remove.",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/state",
+        "success": [
+          200,
+          201
+        ],
+        "body": {
+          "settings": "{{settings}}",
+          "user": "{{user}}",
+          "app_name": "{{app_name}}",
+          "delete": "{{delete}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "state.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Delete state",
+      "description": "Delete APIpie application or user state via DELETE /v1/state.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "user": {
+            "type": "string",
+            "description": "Optional user ID.",
+            "minLength": 1
+          },
+          "app_name": {
+            "type": "string",
+            "description": "Optional enterprise app name.",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/v1/state",
+        "success": [
+          200,
+          204
+        ],
+        "query": {
+          "user": "{{user}}",
+          "app_name": "{{app_name}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
     }
   },
   "provenance": {
     "source": {
-      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
-      "url": "https://github.com/oomol-lab/open-connector"
+      "url": "https://github.com/oomol-lab/open-connector",
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"
     }
   },
-  "runtime": "bun",
-  "version": "0.1.0",
-  "visibility": "public"
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
+    }
+  }
 }

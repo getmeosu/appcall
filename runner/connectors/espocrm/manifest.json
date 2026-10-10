@@ -1,7 +1,17 @@
 {
+  "key": "espocrm",
+  "name": "EspoCRM",
+  "version": "0.2.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "crm"
+  ],
   "auth": {
+    "type": "api_key",
     "scopes": [],
     "setup": {
+      "mode": "api_key",
       "fields": [
         {
           "key": "apiKey",
@@ -15,123 +25,119 @@
           "required": true,
           "secret": false
         }
-      ],
-      "mode": "api_key"
-    },
-    "type": "api_key"
-  },
-  "categories": [
-    "crm"
-  ],
-  "evidence": {
-    "fixture": {
-      "status": "supplied"
-    },
-    "live": {
-      "status": "unverified"
+      ]
     }
   },
+  "network": {
+    "allowedHosts": [
+      "*.espocloud.com"
+    ]
+  },
+  "models": [
+    "user",
+    "metadata",
+    "record",
+    "related",
+    "stream",
+    "attachment",
+    "webhook",
+    "team",
+    "currencyRate"
+  ],
   "http": {
+    "baseUrl": "https://{{instance}}.espocloud.com",
     "auth": {
       "field": "apiKey",
       "in": "header",
       "name": "X-Api-Key",
       "value": "{{apiKey}}"
     },
-    "baseUrl": "https://{{instance}}.espocloud.com",
+    "headers": {
+      "Accept": "application/json"
+    },
     "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after",
       "defaultRetryAfterSeconds": 30,
       "messagePaths": [
         "message",
         "error",
         "errorMessage"
-      ],
-      "rateLimitStatuses": [
-        429
-      ],
-      "retryAfterHeader": "retry-after"
-    },
-    "headers": {
-      "Accept": "application/json"
+      ]
     }
-  },
-  "key": "espocrm",
-  "models": [
-    "user",
-    "metadata",
-    "record"
-  ],
-  "name": "EspoCRM",
-  "network": {
-    "allowedHosts": [
-      "*.espocloud.com"
-    ]
   },
   "operations": {
     "healthcheck": {
-      "description": "Validate EspoCRM Cloud credentials by reading the current API user.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {},
-        "type": "object"
-      },
-      "kind": "action",
+      "timeoutMs": 15000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Healthcheck",
+      "description": "Validate EspoCRM Cloud credentials by reading the current API user.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
       "outputSchema": {
-        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "required": [
-          "data"
-        ],
-        "type": "object"
+        "additionalProperties": false
       },
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated",
       "request": {
         "method": "GET",
         "path": "/api/v1/App/user",
         "success": [
           200
         ]
-      },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "title": "Healthcheck",
-      "validationMode": "strict-generated"
+      }
     },
     "metadata.get": {
-      "description": "Get EspoCRM application metadata, optionally narrowed to one path.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "key": {
-            "minLength": 1,
-            "type": "string"
-          }
-        },
-        "type": "object"
-      },
-      "kind": "action",
+      "timeoutMs": 15000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Get metadata",
+      "description": "Get EspoCRM application metadata, optionally narrowed to one path.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      },
       "outputSchema": {
-        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "required": [
-          "data"
-        ],
-        "type": "object"
+        "additionalProperties": false
       },
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated",
       "request": {
         "method": "GET",
         "path": "/api/v1/Metadata",
@@ -141,98 +147,49 @@
         "success": [
           200
         ]
-      },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "title": "Get metadata",
-      "validationMode": "strict-generated"
-    },
-    "records.get": {
-      "description": "Get one EspoCRM record by entity type and identifier.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "entityType": {
-            "minLength": 1,
-            "type": "string"
-          },
-          "recordId": {
-            "minLength": 1,
-            "type": "string"
-          }
-        },
-        "required": [
-          "entityType",
-          "recordId"
-        ],
-        "type": "object"
-      },
-      "kind": "action",
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 1048576,
-      "outputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "type": "object"
-      },
-      "request": {
-        "method": "GET",
-        "path": "/api/v1/{{entityType}}/{{recordId}}",
-        "success": [
-          200
-        ]
-      },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "title": "Get record",
-      "validationMode": "strict-generated"
+      }
     },
     "records.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List records",
       "description": "List EspoCRM records for one entity type.",
-      "enforceOutputSchema": true,
       "inputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "entityType": {
-            "minLength": 1,
-            "type": "string"
-          },
-          "maxSize": {
-            "maximum": 200,
-            "minimum": 1,
-            "type": "integer"
-          }
-        },
+        "type": "object",
         "required": [
           "entityType"
         ],
-        "type": "object"
+        "properties": {
+          "entityType": {
+            "type": "string",
+            "minLength": 1
+          },
+          "maxSize": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 200
+          }
+        },
+        "additionalProperties": false
       },
-      "kind": "action",
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 1048576,
       "outputSchema": {
-        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "required": [
-          "data"
-        ],
-        "type": "object"
+        "additionalProperties": false
       },
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated",
       "request": {
         "method": "GET",
         "path": "/api/v1/{{entityType}}",
@@ -242,21 +199,951 @@
         "success": [
           200
         ]
-      },
-      "responseFormat": "json",
-      "sideEffect": "read",
+      }
+    },
+    "records.get": {
       "timeoutMs": 15000,
-      "title": "List records",
-      "validationMode": "strict-generated"
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Get record",
+      "description": "Get one EspoCRM record by entity type and identifier.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "entityType",
+          "recordId"
+        ],
+        "properties": {
+          "entityType": {
+            "type": "string",
+            "minLength": 1
+          },
+          "recordId": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/{{entityType}}/{{recordId}}",
+        "success": [
+          200
+        ]
+      }
+    },
+    "i18n.get": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Get i18n",
+      "description": "Get EspoCRM internationalization labels for the current user language.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/I18n",
+        "success": [
+          200
+        ]
+      }
+    },
+    "settings.get": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Get settings",
+      "description": "Get EspoCRM application settings visible to the current API user.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/App/settings",
+        "success": [
+          200
+        ]
+      }
+    },
+    "records.create": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Create record",
+      "description": "Create one EspoCRM record of the given entity type.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "entityType": {
+            "type": "string",
+            "minLength": 1,
+            "description": "EspoCRM entity type, for example Account or Contact."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Record name or title."
+          },
+          "emailAddress": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Email address."
+          },
+          "type": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Entity-specific type, for example Account type."
+          },
+          "assignedUserId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Assigned user identifier."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "entityType"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/{{entityType}}",
+        "success": [
+          200,
+          201
+        ],
+        "body": {
+          "name": "{{name}}",
+          "emailAddress": "{{emailAddress}}",
+          "type": "{{type}}",
+          "assignedUserId": "{{assignedUserId}}"
+        },
+        "headers": {
+          "Accept": "application/json",
+          "Content-Type": "application/json"
+        }
+      }
+    },
+    "records.update": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Update record",
+      "description": "Update one EspoCRM record by entity type and identifier.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "entityType": {
+            "type": "string",
+            "minLength": 1,
+            "description": "EspoCRM entity type, for example Account or Contact."
+          },
+          "recordId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "EspoCRM record identifier."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Updated name."
+          },
+          "emailAddress": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Updated email address."
+          },
+          "assignedUserId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Updated assigned user identifier."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "entityType",
+          "recordId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated",
+      "request": {
+        "method": "PUT",
+        "path": "/api/v1/{{entityType}}/{{recordId}}",
+        "success": [
+          200,
+          201
+        ],
+        "body": {
+          "name": "{{name}}",
+          "emailAddress": "{{emailAddress}}",
+          "assignedUserId": "{{assignedUserId}}"
+        },
+        "headers": {
+          "Accept": "application/json",
+          "Content-Type": "application/json"
+        }
+      }
+    },
+    "records.delete": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "destructive",
+      "title": "Delete record",
+      "description": "Delete one EspoCRM record by entity type and identifier.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "entityType": {
+            "type": "string",
+            "minLength": 1,
+            "description": "EspoCRM entity type, for example Account or Contact."
+          },
+          "recordId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "EspoCRM record identifier."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "entityType",
+          "recordId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "boolean",
+              "object"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated",
+      "request": {
+        "method": "DELETE",
+        "path": "/api/v1/{{entityType}}/{{recordId}}",
+        "success": [
+          200,
+          204
+        ]
+      }
+    },
+    "related.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List related records",
+      "description": "List records related to one EspoCRM record over a named link.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "entityType": {
+            "type": "string",
+            "minLength": 1,
+            "description": "EspoCRM entity type, for example Account or Contact."
+          },
+          "recordId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "EspoCRM record identifier."
+          },
+          "link": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Relationship link name, for example contacts or opportunities."
+          },
+          "maxSize": {
+            "type": "integer",
+            "description": "Page size.",
+            "minimum": 1,
+            "maximum": 200
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "entityType",
+          "recordId",
+          "link"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/{{entityType}}/{{recordId}}/{{link}}",
+        "success": [
+          200
+        ],
+        "query": {
+          "maxSize": "{{maxSize}}"
+        }
+      }
+    },
+    "related.link": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Link related record",
+      "description": "Relate two EspoCRM records over a named link.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "entityType": {
+            "type": "string",
+            "minLength": 1,
+            "description": "EspoCRM entity type, for example Account or Contact."
+          },
+          "recordId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "EspoCRM record identifier."
+          },
+          "link": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Relationship link name."
+          },
+          "relatedId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Identifier of the record to relate."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "entityType",
+          "recordId",
+          "link",
+          "relatedId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "boolean",
+              "object"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/{{entityType}}/{{recordId}}/{{link}}",
+        "success": [
+          200,
+          201
+        ],
+        "body": {
+          "id": "{{relatedId}}"
+        },
+        "headers": {
+          "Accept": "application/json",
+          "Content-Type": "application/json"
+        }
+      }
+    },
+    "related.unlink": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "destructive",
+      "title": "Unlink related record",
+      "description": "Unrelate two EspoCRM records over a named link.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "entityType": {
+            "type": "string",
+            "minLength": 1,
+            "description": "EspoCRM entity type, for example Account or Contact."
+          },
+          "recordId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "EspoCRM record identifier."
+          },
+          "link": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Relationship link name."
+          },
+          "relatedId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Identifier of the related record to remove."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "entityType",
+          "recordId",
+          "link",
+          "relatedId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "boolean",
+              "object"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated",
+      "request": {
+        "method": "DELETE",
+        "path": "/api/v1/{{entityType}}/{{recordId}}/{{link}}",
+        "success": [
+          200,
+          204
+        ],
+        "body": {
+          "id": "{{relatedId}}"
+        },
+        "headers": {
+          "Accept": "application/json",
+          "Content-Type": "application/json"
+        }
+      }
+    },
+    "stream.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List stream",
+      "description": "List Stream notes for one EspoCRM record.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "entityType": {
+            "type": "string",
+            "minLength": 1,
+            "description": "EspoCRM entity type, for example Account or Contact."
+          },
+          "recordId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "EspoCRM record identifier."
+          },
+          "maxSize": {
+            "type": "integer",
+            "description": "Page size.",
+            "minimum": 1,
+            "maximum": 200
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "entityType",
+          "recordId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/{{entityType}}/{{recordId}}/stream",
+        "success": [
+          200
+        ],
+        "query": {
+          "maxSize": "{{maxSize}}"
+        }
+      }
+    },
+    "users.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List users",
+      "description": "List EspoCRM User records.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "maxSize": {
+            "type": "integer",
+            "description": "Page size.",
+            "minimum": 1,
+            "maximum": 200
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/User",
+        "success": [
+          200
+        ],
+        "query": {
+          "maxSize": "{{maxSize}}"
+        }
+      }
+    },
+    "teams.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List teams",
+      "description": "List EspoCRM Team records.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "maxSize": {
+            "type": "integer",
+            "description": "Page size.",
+            "minimum": 1,
+            "maximum": 200
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/Team",
+        "success": [
+          200
+        ],
+        "query": {
+          "maxSize": "{{maxSize}}"
+        }
+      }
+    },
+    "attachments.get": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Get attachment",
+      "description": "Get one EspoCRM Attachment record by identifier.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "recordId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "EspoCRM record identifier."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "recordId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/Attachment/{{recordId}}",
+        "success": [
+          200
+        ]
+      }
+    },
+    "webhooks.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List webhooks",
+      "description": "List EspoCRM webhook subscriptions.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "maxSize": {
+            "type": "integer",
+            "description": "Page size.",
+            "minimum": 1,
+            "maximum": 200
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/Webhook",
+        "success": [
+          200
+        ],
+        "query": {
+          "maxSize": "{{maxSize}}"
+        }
+      }
+    },
+    "webhooks.create": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Create webhook",
+      "description": "Create an EspoCRM webhook subscription for an entity event.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "event": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Webhook event, for example Account.create."
+          },
+          "url": {
+            "type": "string",
+            "minLength": 1,
+            "description": "HTTPS callback URL."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "event",
+          "url"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/Webhook",
+        "success": [
+          200,
+          201
+        ],
+        "body": {
+          "event": "{{event}}",
+          "url": "{{url}}"
+        },
+        "headers": {
+          "Accept": "application/json",
+          "Content-Type": "application/json"
+        }
+      }
+    },
+    "webhooks.delete": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "destructive",
+      "title": "Delete webhook",
+      "description": "Delete one EspoCRM webhook subscription.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "recordId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "EspoCRM record identifier."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "recordId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "boolean",
+              "object"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated",
+      "request": {
+        "method": "DELETE",
+        "path": "/api/v1/Webhook/{{recordId}}",
+        "success": [
+          200,
+          204
+        ]
+      }
+    },
+    "currencyRates.get": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Get currency rates",
+      "description": "Get EspoCRM currency conversion rates.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/CurrencyRate",
+        "success": [
+          200
+        ]
+      }
     }
   },
   "provenance": {
     "source": {
-      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
-      "url": "https://github.com/oomol-lab/open-connector"
+      "url": "https://github.com/oomol-lab/open-connector",
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"
     }
   },
-  "runtime": "bun",
-  "version": "0.1.0",
-  "visibility": "public"
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
+    }
+  }
 }

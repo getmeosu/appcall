@@ -1,7 +1,17 @@
 {
+  "key": "nasdaq",
+  "name": "Nasdaq Data Link",
+  "version": "0.2.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "banking-data"
+  ],
   "auth": {
+    "type": "api_key",
     "scopes": [],
     "setup": {
+      "mode": "api_key",
       "fields": [
         {
           "key": "apiKey",
@@ -9,269 +19,77 @@
           "required": true,
           "secret": true
         }
-      ],
-      "mode": "api_key"
-    },
-    "type": "api_key"
-  },
-  "categories": [
-    "banking-data"
-  ],
-  "evidence": {
-    "fixture": {
-      "status": "supplied"
-    },
-    "live": {
-      "status": "unverified"
+      ]
     }
   },
+  "network": {
+    "allowedHosts": [
+      "data.nasdaq.com"
+    ]
+  },
+  "models": [
+    "datatable",
+    "quote",
+    "dividend",
+    "ticker",
+    "action",
+    "fundamental",
+    "dataset",
+    "database"
+  ],
   "http": {
+    "baseUrl": "https://data.nasdaq.com/api/v3",
     "auth": {
       "field": "apiKey",
       "in": "query",
       "name": "api_key",
       "value": "{{apiKey}}"
     },
-    "baseUrl": "https://data.nasdaq.com/api/v3",
+    "headers": {
+      "Accept": "application/json",
+      "X-Api-Token": "{{apiKey}}"
+    },
     "errors": {
-      "bodyErrorPaths": [
-        "quandl_error"
+      "rateLimitStatuses": [
+        429
       ],
+      "retryAfterHeader": "retry-after",
       "defaultRetryAfterSeconds": 30,
       "messagePaths": [
         "quandl_error.message",
         "message",
         "error"
       ],
-      "rateLimitStatuses": [
-        429
-      ],
-      "retryAfterHeader": "retry-after"
-    },
-    "headers": {
-      "Accept": "application/json",
-      "X-Api-Token": "{{apiKey}}"
+      "bodyErrorPaths": [
+        "quandl_error"
+      ]
     }
   },
-  "key": "nasdaq",
-  "models": [
-    "datatable",
-    "quote",
-    "dividend"
-  ],
-  "name": "Nasdaq Data Link",
-  "network": {
-    "allowedHosts": [
-      "data.nasdaq.com"
-    ]
-  },
   "operations": {
-    "datatables.metadata": {
-      "description": "Retrieve schema and refresh metadata for a Nasdaq Data Link datatable.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "tableCode": {
-            "minLength": 1,
-            "type": "string"
-          },
-          "vendorCode": {
-            "minLength": 1,
-            "type": "string"
-          }
-        },
-        "required": [
-          "vendorCode",
-          "tableCode"
-        ],
-        "type": "object"
-      },
-      "kind": "action",
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "outputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "type": "object"
-      },
-      "request": {
-        "method": "GET",
-        "path": "/datatables/{{vendorCode}}/{{tableCode}}/metadata.json",
-        "success": [
-          200
-        ]
-      },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "title": "Get datatable metadata",
-      "validationMode": "strict-generated"
-    },
-    "datatables.query": {
-      "description": "Return one page of Nasdaq Data Link datatable rows.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "columns": {
-            "minLength": 1,
-            "type": "string"
-          },
-          "cursorId": {
-            "minLength": 1,
-            "type": "string"
-          },
-          "perPage": {
-            "minimum": 1,
-            "type": "integer"
-          },
-          "tableCode": {
-            "minLength": 1,
-            "type": "string"
-          },
-          "ticker": {
-            "minLength": 1,
-            "type": "string"
-          },
-          "vendorCode": {
-            "minLength": 1,
-            "type": "string"
-          }
-        },
-        "required": [
-          "vendorCode",
-          "tableCode"
-        ],
-        "type": "object"
-      },
-      "kind": "action",
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "outputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "type": "object"
-      },
-      "request": {
-        "method": "GET",
-        "path": "/datatables/{{vendorCode}}/{{tableCode}}.json",
-        "query": {
-          "qopts.columns": "{{columns}}",
-          "qopts.cursor_id": "{{cursorId}}",
-          "qopts.per_page": "{{perPage}}",
-          "ticker": "{{ticker}}"
-        },
-        "success": [
-          200
-        ]
-      },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "title": "Query datatable",
-      "validationMode": "strict-generated"
-    },
-    "dividends.history": {
-      "description": "Retrieve quarterly SHARADAR/SF1 dividend fundamentals for a ticker.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "cursorId": {
-            "minLength": 1,
-            "type": "string"
-          },
-          "date": {
-            "minLength": 1,
-            "type": "string"
-          },
-          "perPage": {
-            "minimum": 1,
-            "type": "integer"
-          },
-          "ticker": {
-            "minLength": 1,
-            "type": "string"
-          }
-        },
-        "required": [
-          "ticker"
-        ],
-        "type": "object"
-      },
-      "kind": "action",
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "outputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "type": "object"
-      },
-      "request": {
-        "method": "GET",
-        "path": "/datatables/SHARADAR/SF1.json",
-        "query": {
-          "datekey": "{{date}}",
-          "dimension": "ARQ",
-          "qopts.columns": "ticker,dimension,calendardate,datekey,dps,divyield,payoutratio,ncfdiv",
-          "qopts.cursor_id": "{{cursorId}}",
-          "qopts.per_page": "{{perPage}}",
-          "ticker": "{{ticker}}"
-        },
-        "success": [
-          200
-        ]
-      },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "title": "Get dividend history",
-      "validationMode": "strict-generated"
-    },
     "healthcheck": {
-      "description": "Validate the Nasdaq Data Link API key with SHARADAR/TICKERS metadata.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {},
-        "type": "object"
-      },
-      "kind": "action",
+      "timeoutMs": 5000,
       "maxInputBytes": 4096,
       "maxResponseBytes": 65536,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Healthcheck",
+      "description": "Validate the Nasdaq Data Link API key with SHARADAR/TICKERS metadata.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
       "outputSchema": {
-        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "required": [
-          "data"
-        ],
-        "type": "object"
+        "additionalProperties": false
       },
       "request": {
         "method": "GET",
@@ -280,88 +98,1011 @@
           200
         ]
       },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 5000,
-      "title": "Healthcheck",
-      "validationMode": "strict-generated"
-    },
-    "quotes.eod": {
-      "description": "Retrieve QuoteMedia end-of-day prices for a ticker.",
       "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "cursorId": {
-            "minLength": 1,
-            "type": "string"
-          },
-          "dateGte": {
-            "minLength": 1,
-            "type": "string"
-          },
-          "dateLte": {
-            "minLength": 1,
-            "type": "string"
-          },
-          "perPage": {
-            "minimum": 1,
-            "type": "integer"
-          },
-          "ticker": {
-            "minLength": 1,
-            "type": "string"
-          }
-        },
-        "required": [
-          "ticker"
-        ],
-        "type": "object"
-      },
-      "kind": "action",
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "datatables.metadata": {
+      "timeoutMs": 15000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
-      "outputSchema": {
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Get datatable metadata",
+      "description": "Retrieve schema and refresh metadata for a Nasdaq Data Link datatable.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "vendorCode": {
+            "type": "string",
+            "minLength": 1
+          },
+          "tableCode": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
         "additionalProperties": false,
+        "required": [
+          "vendorCode",
+          "tableCode"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "required": [
-          "data"
-        ],
-        "type": "object"
+        "additionalProperties": false
       },
       "request": {
         "method": "GET",
-        "path": "/datatables/QUOTEMEDIA/PRICES.json",
-        "query": {
-          "date.gte": "{{dateGte}}",
-          "date.lte": "{{dateLte}}",
-          "qopts.columns": "ticker,date,open,high,low,close,volume,dividend,split",
-          "qopts.cursor_id": "{{cursorId}}",
-          "qopts.per_page": "{{perPage}}",
-          "ticker": "{{ticker}}"
-        },
+        "path": "/datatables/{{vendorCode}}/{{tableCode}}/metadata.json",
         "success": [
           200
         ]
       },
-      "responseFormat": "json",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "datatables.query": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Query datatable",
+      "description": "Return one page of Nasdaq Data Link datatable rows.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "vendorCode": {
+            "type": "string",
+            "minLength": 1
+          },
+          "tableCode": {
+            "type": "string",
+            "minLength": 1
+          },
+          "ticker": {
+            "type": "string",
+            "minLength": 1
+          },
+          "columns": {
+            "type": "string",
+            "minLength": 1
+          },
+          "perPage": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "cursorId": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "vendorCode",
+          "tableCode"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/datatables/{{vendorCode}}/{{tableCode}}.json",
+        "success": [
+          200
+        ],
+        "query": {
+          "ticker": "{{ticker}}",
+          "qopts.columns": "{{columns}}",
+          "qopts.per_page": "{{perPage}}",
+          "qopts.cursor_id": "{{cursorId}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "datatables.export": {
+      "kind": "action",
       "sideEffect": "read",
       "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Export datatable",
+      "description": "Request a Nasdaq Data Link datatable bulk export file.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "vendorCode": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Publisher / vendor code."
+          },
+          "tableCode": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Table code."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "vendorCode",
+          "tableCode"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/datatables/{{vendorCode}}/{{tableCode}}.json",
+        "success": [
+          200
+        ],
+        "query": {
+          "qopts.export": "true"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "tickers.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List tickers",
+      "description": "Return one page of SHARADAR ticker metadata.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "ticker": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Optional ticker filter."
+          },
+          "perPage": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Rows per page."
+          },
+          "cursorId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Pagination cursor."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/datatables/SHARADAR/TICKERS.json",
+        "success": [
+          200
+        ],
+        "query": {
+          "ticker": "{{ticker}}",
+          "qopts.columns": "ticker,name,exchange,category",
+          "qopts.per_page": "{{perPage}}",
+          "qopts.cursor_id": "{{cursorId}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "actions.history": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get corporate actions",
+      "description": "Retrieve SHARADAR corporate actions such as dividends and splits.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "ticker": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Ticker symbol."
+          },
+          "perPage": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Rows per page."
+          },
+          "cursorId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Pagination cursor."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "ticker"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/datatables/SHARADAR/ACTIONS.json",
+        "success": [
+          200
+        ],
+        "query": {
+          "ticker": "{{ticker}}",
+          "qopts.columns": "ticker,date,action,value",
+          "qopts.per_page": "{{perPage}}",
+          "qopts.cursor_id": "{{cursorId}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "fundamentals.daily": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get daily fundamentals",
+      "description": "Retrieve SHARADAR daily valuation metrics for a ticker.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "ticker": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Ticker symbol."
+          },
+          "perPage": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Rows per page."
+          },
+          "cursorId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Pagination cursor."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "ticker"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/datatables/SHARADAR/DAILY.json",
+        "success": [
+          200
+        ],
+        "query": {
+          "ticker": "{{ticker}}",
+          "qopts.columns": "ticker,date,ev,evebit,evebitda,marketcap,pe,ps,pb",
+          "qopts.per_page": "{{perPage}}",
+          "qopts.cursor_id": "{{cursorId}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "quotes.eod": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
       "title": "Get end-of-day quotes",
-      "validationMode": "strict-generated"
+      "description": "Retrieve QuoteMedia end-of-day prices for a ticker.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "ticker": {
+            "type": "string",
+            "minLength": 1
+          },
+          "dateGte": {
+            "type": "string",
+            "minLength": 1
+          },
+          "dateLte": {
+            "type": "string",
+            "minLength": 1
+          },
+          "perPage": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "cursorId": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "ticker"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/datatables/QUOTEMEDIA/PRICES.json",
+        "success": [
+          200
+        ],
+        "query": {
+          "ticker": "{{ticker}}",
+          "date.gte": "{{dateGte}}",
+          "date.lte": "{{dateLte}}",
+          "qopts.columns": "ticker,date,open,high,low,close,volume,dividend,split",
+          "qopts.per_page": "{{perPage}}",
+          "qopts.cursor_id": "{{cursorId}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "dividends.history": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Get dividend history",
+      "description": "Retrieve quarterly SHARADAR/SF1 dividend fundamentals for a ticker.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "ticker": {
+            "type": "string",
+            "minLength": 1
+          },
+          "date": {
+            "type": "string",
+            "minLength": 1
+          },
+          "perPage": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "cursorId": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "ticker"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/datatables/SHARADAR/SF1.json",
+        "success": [
+          200
+        ],
+        "query": {
+          "ticker": "{{ticker}}",
+          "dimension": "ARQ",
+          "datekey": "{{date}}",
+          "qopts.columns": "ticker,dimension,calendardate,datekey,dps,divyield,payoutratio,ncfdiv",
+          "qopts.per_page": "{{perPage}}",
+          "qopts.cursor_id": "{{cursorId}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "datasets.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get dataset",
+      "description": "Retrieve a Nasdaq Data Link time-series dataset including metadata and data rows.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "databaseCode": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Database code, for example FRED."
+          },
+          "datasetCode": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Dataset code, for example GDP."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Maximum number of rows."
+          },
+          "startDate": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Inclusive start date."
+          },
+          "endDate": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Inclusive end date."
+          },
+          "order": {
+            "type": "string",
+            "enum": [
+              "asc",
+              "desc"
+            ],
+            "description": "Row order."
+          },
+          "collapse": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Frequency collapse."
+          },
+          "transform": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Transformation."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "databaseCode",
+          "datasetCode"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/datasets/{{databaseCode}}/{{datasetCode}}.json",
+        "success": [
+          200
+        ],
+        "query": {
+          "limit": "{{limit}}",
+          "start_date": "{{startDate}}",
+          "end_date": "{{endDate}}",
+          "order": "{{order}}",
+          "collapse": "{{collapse}}",
+          "transform": "{{transform}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "datasets.data": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get dataset data",
+      "description": "Retrieve only the data rows for a Nasdaq Data Link time-series dataset.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "databaseCode": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Database code."
+          },
+          "datasetCode": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Dataset code."
+          },
+          "rows": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Number of rows."
+          },
+          "startDate": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Inclusive start date."
+          },
+          "endDate": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Inclusive end date."
+          },
+          "order": {
+            "type": "string",
+            "enum": [
+              "asc",
+              "desc"
+            ],
+            "description": "Row order."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "databaseCode",
+          "datasetCode"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/datasets/{{databaseCode}}/{{datasetCode}}/data.json",
+        "success": [
+          200
+        ],
+        "query": {
+          "rows": "{{rows}}",
+          "start_date": "{{startDate}}",
+          "end_date": "{{endDate}}",
+          "order": "{{order}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "datasets.metadata": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get dataset metadata",
+      "description": "Retrieve metadata for a Nasdaq Data Link time-series dataset without downloading rows.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "databaseCode": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Database code."
+          },
+          "datasetCode": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Dataset code."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "databaseCode",
+          "datasetCode"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/datasets/{{databaseCode}}/{{datasetCode}}/metadata.json",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "datasets.search": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Search datasets",
+      "description": "Search Nasdaq Data Link time-series datasets by query string.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Search query."
+          },
+          "databaseCode": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Optional database filter."
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Result page."
+          },
+          "perPage": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Results per page."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "query"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/datasets.json",
+        "success": [
+          200
+        ],
+        "query": {
+          "query": "{{query}}",
+          "database_code": "{{databaseCode}}",
+          "page": "{{page}}",
+          "per_page": "{{perPage}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "datasets.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List datasets",
+      "description": "List Nasdaq Data Link time-series datasets, optionally filtered by database.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "databaseCode": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Optional database filter."
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Result page."
+          },
+          "perPage": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Results per page."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/datasets.json",
+        "success": [
+          200
+        ],
+        "query": {
+          "database_code": "{{databaseCode}}",
+          "page": "{{page}}",
+          "per_page": "{{perPage}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "databases.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List databases",
+      "description": "List Nasdaq Data Link databases.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Result page."
+          },
+          "perPage": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Results per page."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/databases.json",
+        "success": [
+          200
+        ],
+        "query": {
+          "page": "{{page}}",
+          "per_page": "{{perPage}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "databases.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get database",
+      "description": "Retrieve metadata for one Nasdaq Data Link database.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "databaseCode": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Database code."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "databaseCode"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/databases/{{databaseCode}}.json",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "databases.search": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Search databases",
+      "description": "Search Nasdaq Data Link databases by query string.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Search query."
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Result page."
+          },
+          "perPage": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Results per page."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "query"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/databases.json",
+        "success": [
+          200
+        ],
+        "query": {
+          "query": "{{query}}",
+          "page": "{{page}}",
+          "per_page": "{{perPage}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
     }
   },
   "provenance": {
     "source": {
-      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
-      "url": "https://github.com/oomol-lab/open-connector"
+      "url": "https://github.com/oomol-lab/open-connector",
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"
     }
   },
-  "runtime": "bun",
-  "version": "0.1.0",
-  "visibility": "public"
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
+    }
+  }
 }
