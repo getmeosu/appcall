@@ -38,4 +38,22 @@ describe("xero connector manifest", () => {
       expect(typeof s.maxResponseBytes).toBe("number");
     }
   });
+
+  test("deepens to 53 Composio tools plus the original four operations", () => {
+    const operations = manifest.operations as Record<string, { kind: string; request?: unknown }>;
+    expect(Object.keys(operations)).toHaveLength(57);
+    expect(Object.keys(operations).filter((key) => key.startsWith("xero."))).toHaveLength(53);
+    expect(manifest.version).toBe("0.2.0");
+    expect(manifest.http.baseUrl).toBe("https://api.xero.com/api.xro/2.0");
+    expect(manifest.auth.scopes).toContain("accounting.settings");
+    expect(manifest.auth.scopes).toContain("accounting.reports.read");
+    expect(manifest.auth.scopes).toContain("assets");
+    expect(manifest.auth.scopes).toContain("projects");
+    expect(manifest.auth.scopes).toContain("files");
+    for (const [key, spec] of Object.entries(operations)) {
+      if (!key.startsWith("xero.")) continue;
+      expect(spec.kind).toBe("action");
+      expect(spec.request).toBeDefined();
+    }
+  });
 });

@@ -80,6 +80,31 @@
         "path": "src/providers/chargeblast/executors.ts",
         "startLine": 14,
         "endLine": 16
+      },
+      "action-update-alert": {
+        "path": "src/providers/chargeblast/actions.ts",
+        "startLine": 114,
+        "endLine": 146
+      },
+      "action-create-credit-request": {
+        "path": "src/providers/chargeblast/actions.ts",
+        "startLine": 147,
+        "endLine": 164
+      },
+      "handler-update-alert": {
+        "path": "src/providers/chargeblast/executors.ts",
+        "startLine": 57,
+        "endLine": 80
+      },
+      "handler-create-credit-request": {
+        "path": "src/providers/chargeblast/executors.ts",
+        "startLine": 81,
+        "endLine": 90
+      },
+      "handler-list-deflection-logs": {
+        "path": "src/providers/chargeblast/executors.ts",
+        "startLine": 141,
+        "endLine": 170
       }
     }
   },
@@ -94,7 +119,24 @@
       "alerts.list",
       "alerts.get",
       "orders.list",
-      "orders.get"
+      "orders.get",
+      "merchants.get",
+      "merchants.enroll",
+      "merchants.unenroll",
+      "alerts.update",
+      "alerts.listV3",
+      "orders.upload",
+      "creditRequests.create",
+      "deflections.logs",
+      "disputes.list",
+      "descriptors.list",
+      "enrollment.status",
+      "track.create",
+      "webhook.alert_created",
+      "webhook.alert_updated",
+      "webhook.alert_refunded",
+      "webhook.deflection_created",
+      "webhook.deflection_updated"
     ],
     "upstreamSha": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
     "marketFocus": "international",
@@ -262,12 +304,247 @@
       "adaptations": [
         "id is a required path segment on documented GET /api/v2/orders/{id}. Receipt info is included on this endpoint."
       ]
+    },
+    "merchants.get": {
+      "upstreamActionId": "list_merchants",
+      "sourceRefs": [
+        "action-list-merchants",
+        "request-auth"
+      ],
+      "documentationUrls": [
+        "https://docs.chargeblast.com/api-reference/enrollment/fetch-merchant"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Maps to official GET /api/merchant with optional merchant_id query."
+      ]
+    },
+    "merchants.enroll": {
+      "upstreamActionId": "list_merchants",
+      "sourceRefs": [
+        "request-auth",
+        "api-base"
+      ],
+      "documentationUrls": [
+        "https://docs.chargeblast.com/api-reference/enrollment/enroll-merchant"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Maps to official POST /api/enroll_merchant. Nested program-specific Amex/Discover legal fields are omitted."
+      ]
+    },
+    "merchants.unenroll": {
+      "upstreamActionId": "list_merchants",
+      "sourceRefs": [
+        "request-auth",
+        "api-base"
+      ],
+      "documentationUrls": [
+        "https://docs.chargeblast.com/api-reference/enrollment/unenroll-merchant"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Maps to official POST /api/unenroll with a single descriptor_ids value."
+      ]
+    },
+    "alerts.update": {
+      "upstreamActionId": "update_alert",
+      "sourceRefs": [
+        "action-update-alert",
+        "handler-update-alert",
+        "request-auth"
+      ],
+      "documentationUrls": [
+        "https://docs.chargeblast.com/api-reference/alerts/update-alert"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Maps to official POST /api/v2/alerts/update/{id} with result and optional action_at_expiration."
+      ]
+    },
+    "alerts.listV3": {
+      "upstreamActionId": "list_alerts",
+      "sourceRefs": [
+        "action-list-alerts",
+        "request-auth"
+      ],
+      "documentationUrls": [
+        "https://docs.chargeblast.com/api-reference/alerts/fetch-alerts"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Maps to official GET /api/v3/alerts. Bracketed filter[type] query is omitted; existing alerts.list keeps v2."
+      ]
+    },
+    "orders.upload": {
+      "upstreamActionId": "list_orders",
+      "sourceRefs": [
+        "request-auth",
+        "api-base"
+      ],
+      "documentationUrls": [
+        "https://docs.chargeblast.com/api-reference/sync-data/upload-orders"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Maps to official POST /api/v2/orders/upload with a one-order array. Receipt nested objects are omitted."
+      ]
+    },
+    "creditRequests.create": {
+      "upstreamActionId": "create_credit_request",
+      "sourceRefs": [
+        "action-create-credit-request",
+        "handler-create-credit-request",
+        "request-auth"
+      ],
+      "documentationUrls": [
+        "https://docs.chargeblast.com/api-reference/credit-requests/create"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Maps to official POST /api/v2/credit-request/create with alert_id."
+      ]
+    },
+    "deflections.logs": {
+      "upstreamActionId": "list_deflection_logs",
+      "sourceRefs": [
+        "handler-list-deflection-logs",
+        "request-auth"
+      ],
+      "documentationUrls": [
+        "https://docs.chargeblast.com/api-reference/deflections/logs"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Maps to official GET /api/v3/deflections/logs. GET-with-JSON-body filter is omitted."
+      ]
+    },
+    "disputes.list": {
+      "upstreamActionId": "list_orders",
+      "sourceRefs": [
+        "request-auth",
+        "api-base"
+      ],
+      "documentationUrls": [
+        "https://docs.chargeblast.com/api-reference/disputes/fetch-disputes"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Maps to official GET /api/v2/disputes with optional startDate, endDate, and managedByChargeblast."
+      ]
+    },
+    "descriptors.list": {
+      "upstreamActionId": "list_merchants",
+      "sourceRefs": [
+        "request-auth",
+        "api-base"
+      ],
+      "documentationUrls": [
+        "https://docs.chargeblast.com/api-reference/enrollment/fetch-descriptors"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Maps to official GET /api/v2/descriptors."
+      ]
+    },
+    "enrollment.status": {
+      "upstreamActionId": "list_merchants",
+      "sourceRefs": [
+        "request-auth",
+        "api-base"
+      ],
+      "documentationUrls": [
+        "https://docs.chargeblast.com/api-reference/enrollment/enrollment-status"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Maps to official GET /api/enrollment_status."
+      ]
+    },
+    "track.create": {
+      "upstreamActionId": "list_orders",
+      "sourceRefs": [
+        "request-auth",
+        "api-base"
+      ],
+      "documentationUrls": [
+        "https://docs.chargeblast.com/api-reference/sync-data/track"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Maps to official POST /api/v2/track for IP data used with compelling evidence."
+      ]
+    },
+    "webhook.alert_created": {
+      "upstreamActionId": "list_alerts",
+      "sourceRefs": [
+        "request-auth"
+      ],
+      "documentationUrls": [
+        "https://docs.chargeblast.com/api-reference/webhooks/setup"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "EventOnly vendor webhook for alert.created. No HTTP request."
+      ]
+    },
+    "webhook.alert_updated": {
+      "upstreamActionId": "list_alerts",
+      "sourceRefs": [
+        "request-auth"
+      ],
+      "documentationUrls": [
+        "https://docs.chargeblast.com/api-reference/webhooks/setup"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "EventOnly vendor webhook for alert.updated. No HTTP request."
+      ]
+    },
+    "webhook.alert_refunded": {
+      "upstreamActionId": "list_alerts",
+      "sourceRefs": [
+        "request-auth"
+      ],
+      "documentationUrls": [
+        "https://docs.chargeblast.com/api-reference/webhooks/setup"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "EventOnly vendor webhook for alert.refunded. No HTTP request."
+      ]
+    },
+    "webhook.deflection_created": {
+      "upstreamActionId": "list_deflection_logs",
+      "sourceRefs": [
+        "request-auth"
+      ],
+      "documentationUrls": [
+        "https://docs.chargeblast.com/api-reference/webhooks/setup"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "EventOnly vendor webhook for deflection.created. No HTTP request."
+      ]
+    },
+    "webhook.deflection_updated": {
+      "upstreamActionId": "list_deflection_logs",
+      "sourceRefs": [
+        "request-auth"
+      ],
+      "documentationUrls": [
+        "https://docs.chargeblast.com/api-reference/webhooks/setup"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "EventOnly vendor webhook for deflection.updated. No HTTP request."
+      ]
     }
   },
   "manifest": {
     "key": "chargeblast",
     "name": "Chargeblast",
-    "version": "0.1.0",
+    "version": "0.2.0",
     "runtime": "bun",
     "visibility": "public",
     "categories": [
@@ -296,7 +573,11 @@
     "models": [
       "merchant",
       "alert",
-      "order"
+      "order",
+      "dispute",
+      "descriptor",
+      "deflection",
+      "credit_request"
     ],
     "http": {
       "baseUrl": "https://api.chargeblast.com",
@@ -600,6 +881,676 @@
           "success": [
             200
           ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "merchants.get": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
+        "kind": "action",
+        "sideEffect": "read",
+        "title": "Get merchant",
+        "description": "Get one Chargeblast merchant by optional merchant_id.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "merchant_id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Chargeblast merchant id."
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/api/merchant",
+          "success": [
+            200
+          ],
+          "query": {
+            "merchant_id": "{{merchant_id}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "merchants.enroll": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
+        "kind": "action",
+        "sideEffect": "write",
+        "title": "Enroll merchant",
+        "description": "Enroll a Chargeblast merchant in an alert or refund program.",
+        "inputSchema": {
+          "type": "object",
+          "required": [
+            "program",
+            "descriptor"
+          ],
+          "properties": {
+            "program": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Program discriminator such as ethoca."
+            },
+            "descriptor": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Billing descriptor to enroll."
+            },
+            "merchantId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Existing merchant id, if any."
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "POST",
+          "path": "/api/enroll_merchant",
+          "success": [
+            200,
+            201
+          ],
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "program": "{{program}}",
+            "descriptors": [
+              "{{descriptor}}"
+            ],
+            "merchant_id": "{{merchantId}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "merchants.unenroll": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
+        "kind": "action",
+        "sideEffect": "destructive",
+        "title": "Unenroll merchant",
+        "description": "Unenroll one Chargeblast descriptor.",
+        "inputSchema": {
+          "type": "object",
+          "required": [
+            "descriptorId"
+          ],
+          "properties": {
+            "descriptorId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Descriptor id from GET /api/v2/descriptors."
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "POST",
+          "path": "/api/unenroll",
+          "success": [
+            200,
+            201
+          ],
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "descriptor_ids": [
+              "{{descriptorId}}"
+            ]
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "alerts.update": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
+        "kind": "action",
+        "sideEffect": "write",
+        "title": "Update alert",
+        "description": "Action a Chargeblast alert with an official reason code.",
+        "inputSchema": {
+          "type": "object",
+          "required": [
+            "id",
+            "result"
+          ],
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Chargeblast alert id."
+            },
+            "result": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Reason code such as Resolved."
+            },
+            "actionAtExpiration": {
+              "type": "boolean",
+              "description": "Action the alert at expiration instead of immediately."
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "POST",
+          "path": "/api/v2/alerts/update/{{id}}",
+          "success": [
+            200
+          ],
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "result": "{{result}}",
+            "action_at_expiration": "{{actionAtExpiration}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "alerts.listV3": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "read",
+        "title": "List alerts v3",
+        "description": "List Chargeblast alerts from the v3 endpoint with pagination.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "page": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "per": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/api/v3/alerts",
+          "success": [
+            200
+          ],
+          "query": {
+            "page": "{{page}}",
+            "per": "{{per}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "orders.upload": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
+        "kind": "action",
+        "sideEffect": "write",
+        "title": "Upload orders",
+        "description": "Upload Chargeblast orders for alert matching. Amount is in cents.",
+        "inputSchema": {
+          "type": "object",
+          "required": [
+            "orderId",
+            "amount",
+            "currency",
+            "transactionDate"
+          ],
+          "properties": {
+            "orderId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Internal order id."
+            },
+            "amount": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Amount in cents."
+            },
+            "currency": {
+              "type": "string",
+              "minLength": 1,
+              "description": "ISO currency code."
+            },
+            "transactionDate": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Charge date."
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "POST",
+          "path": "/api/v2/orders/upload",
+          "success": [
+            200
+          ],
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "orders": [
+              {
+                "id": "{{orderId}}",
+                "amount": "{{amount}}",
+                "currency": "{{currency}}",
+                "transactionDate": "{{transactionDate}}"
+              }
+            ]
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "creditRequests.create": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
+        "kind": "action",
+        "sideEffect": "write",
+        "title": "Create credit request",
+        "description": "Create a Chargeblast credit request for a rejected alert.",
+        "inputSchema": {
+          "type": "object",
+          "required": [
+            "alertId"
+          ],
+          "properties": {
+            "alertId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Rejected alert id."
+            },
+            "comments": {
+              "type": "string",
+              "description": "Optional comments."
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "POST",
+          "path": "/api/v2/credit-request/create",
+          "success": [
+            200
+          ],
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "alert_id": "{{alertId}}",
+            "comments": "{{comments}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "deflections.logs": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "read",
+        "title": "List deflection logs",
+        "description": "List Chargeblast digital-receipt and deflection lookup logs.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "page": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "per": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/api/v3/deflections/logs",
+          "success": [
+            200
+          ],
+          "query": {
+            "page": "{{page}}",
+            "per": "{{per}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "disputes.list": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "read",
+        "title": "List disputes",
+        "description": "List Chargeblast chargeback disputes with optional date filters.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "page": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "per": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            },
+            "startDate": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Inclusive start date."
+            },
+            "endDate": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Inclusive end date."
+            },
+            "managedByChargeblast": {
+              "type": "boolean",
+              "description": "Only Chargeblast-managed disputes."
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/api/v2/disputes",
+          "success": [
+            200
+          ],
+          "query": {
+            "page": "{{page}}",
+            "per": "{{per}}",
+            "startDate": "{{startDate}}",
+            "endDate": "{{endDate}}",
+            "managedByChargeblast": "{{managedByChargeblast}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "descriptors.list": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "read",
+        "title": "List descriptors",
+        "description": "List Chargeblast enrollment descriptors.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "page": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "per": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/api/v2/descriptors",
+          "success": [
+            200
+          ],
+          "query": {
+            "page": "{{page}}",
+            "per": "{{per}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "enrollment.status": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
+        "kind": "action",
+        "sideEffect": "read",
+        "title": "Get enrollment status",
+        "description": "Report Chargeblast enrollment status for every program.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/api/enrollment_status",
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "track.create": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
+        "kind": "action",
+        "sideEffect": "write",
+        "title": "Upload IP data",
+        "description": "Upload Chargeblast IP data for compelling evidence.",
+        "inputSchema": {
+          "type": "object",
+          "required": [
+            "ip"
+          ],
+          "properties": {
+            "ip": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Customer IP address."
+            },
+            "chargeId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Related charge id."
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "POST",
+          "path": "/api/v2/track",
+          "success": [
+            200
+          ],
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "ip": "{{ip}}",
+            "chargeId": "{{chargeId}}"
+          }
         },
         "enforceOutputSchema": true,
         "validationMode": "strict-generated",

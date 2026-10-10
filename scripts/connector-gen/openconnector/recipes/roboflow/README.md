@@ -1,14 +1,10 @@
 # Roboflow
 
-Read-only international **Roboflow management REST API** recipe. Create a private workspace API key at [app.roboflow.com/settings/api](https://app.roboflow.com/settings/api). Store it as `apiKey`. Requests send `Accept: application/json` to `https://api.roboflow.com` with the key as query `api_key`.
+International **Roboflow management REST API** recipe (v0.2.0). Create a private workspace API key at [app.roboflow.com/settings/api](https://app.roboflow.com/settings/api). Store it as `apiKey`. Requests send `Accept: application/json` to `https://api.roboflow.com` with the key as query `api_key`.
 
 ## Operations
 
-- `healthcheck`: `GET /?api_key=` with empty input (official root identity check and pinned credential validator).
-- `projects.get`: `GET /{{workspace}}/{{project}}` for one project and its versions.
-- `versions.get`: `GET /{{workspace}}/{{project}}/{{version}}` for one dataset version.
-
-Successful responses are raw provider JSON under AppCall `data`. Hosted inference (`detect.roboflow.com` / `serverless.roboflow.com`), workflow run/validate POSTs, object detection, Prometheus metrics text, and dataset downloads are omitted.
+20 HTTP actions covering workspace, project, version, training jobs, workflows, folders, and trash, plus EventOnly webhooks `webhook.batch_job_completed` and `webhook.workflow_result`. Hosted inference (`detect.roboflow.com` / `serverless.roboflow.com`) stays omitted.
 
 ## Adaptations
 
