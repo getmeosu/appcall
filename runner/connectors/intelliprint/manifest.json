@@ -1,1 +1,1601 @@
-{"auth":{"scopes":[],"setup":{"fields":[{"key":"apiKey","label":"Intelliprint API key","required":true,"secret":true}],"mode":"api_key"},"type":"api_key"},"categories":["productivity"],"evidence":{"fixture":{"status":"supplied"},"live":{"status":"unverified"}},"http":{"auth":{"field":"apiKey","in":"header","name":"Authorization","value":"Bearer {{apiKey}}"},"baseUrl":"https://api.intelliprint.net/v1","errors":{"defaultRetryAfterSeconds":30,"messagePaths":["error.message","message","error"],"rateLimitStatuses":[429],"retryAfterHeader":"retry-after"},"headers":{"Accept":"application/json"}},"key":"intelliprint","models":["print","background","mailingList"],"name":"Intelliprint","network":{"allowedHosts":["api.intelliprint.net"]},"operations":{"backgrounds.list":{"description":"List Intelliprint reusable backgrounds with optional pagination and team filter.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{"limit":{"maximum":1000,"minimum":1,"type":"integer"},"skip":{"minimum":0,"type":"integer"},"team":{"minLength":1,"type":"string"}},"type":"object"},"kind":"action","maxInputBytes":65536,"maxResponseBytes":5242880,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/backgrounds","query":{"limit":"{{limit}}","skip":"{{skip}}","team":"{{team}}"},"success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":15000,"title":"List backgrounds","validationMode":"strict-generated"},"healthcheck":{"description":"Validate the Intelliprint API key with GET /prints?limit=1.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{},"type":"object"},"kind":"action","maxInputBytes":4096,"maxResponseBytes":65536,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/prints","query":{"limit":1},"success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":5000,"title":"Healthcheck","validationMode":"strict-generated"},"mailingLists.list":{"description":"List Intelliprint mailing lists with optional pagination.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{"limit":{"maximum":1000,"minimum":1,"type":"integer"},"skip":{"minimum":0,"type":"integer"}},"type":"object"},"kind":"action","maxInputBytes":65536,"maxResponseBytes":5242880,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/mailing_lists","query":{"limit":"{{limit}}","skip":"{{skip}}"},"success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":15000,"title":"List mailing lists","validationMode":"strict-generated"},"prints.get":{"description":"Retrieve one Intelliprint print job by ID.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{"id":{"minLength":1,"type":"string"}},"required":["id"],"type":"object"},"kind":"action","maxInputBytes":65536,"maxResponseBytes":5242880,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/prints/{{id}}","success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":15000,"title":"Get print job","validationMode":"strict-generated"},"prints.list":{"description":"List Intelliprint print jobs with optional pagination, sort, and type filter.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{"limit":{"maximum":1000,"minimum":1,"type":"integer"},"skip":{"minimum":0,"type":"integer"},"sortField":{"enum":["created","confirmed_at","reference","type","letters","pages","sheets","letters.returned.date","cost.after_tax","cost.amount"],"type":"string"},"sortOrder":{"enum":["asc","desc"],"type":"string"},"type":{"enum":["letter","postcard"],"type":"string"}},"type":"object"},"kind":"action","maxInputBytes":65536,"maxResponseBytes":5242880,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/prints","query":{"limit":"{{limit}}","skip":"{{skip}}","sort_field":"{{sortField}}","sort_order":"{{sortOrder}}","type":"{{type}}"},"success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":15000,"title":"List print jobs","validationMode":"strict-generated"}},"provenance":{"source":{"revision":"33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a","url":"https://github.com/oomol-lab/open-connector"}},"runtime":"bun","version":"0.1.0","visibility":"public"}
+{
+  "auth": {
+    "scopes": [],
+    "setup": {
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "Intelliprint API key",
+          "required": true,
+          "secret": true
+        }
+      ],
+      "mode": "api_key"
+    },
+    "type": "api_key"
+  },
+  "categories": [
+    "productivity"
+  ],
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
+    }
+  },
+  "http": {
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "Authorization",
+      "value": "Bearer {{apiKey}}"
+    },
+    "baseUrl": "https://api.intelliprint.net/v1",
+    "errors": {
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "error.message",
+        "message",
+        "error"
+      ],
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after"
+    },
+    "headers": {
+      "Accept": "application/json"
+    }
+  },
+  "key": "intelliprint",
+  "models": [
+    "print",
+    "background",
+    "mailingList",
+    "mailingListRecipient",
+    "template"
+  ],
+  "name": "Intelliprint",
+  "network": {
+    "allowedHosts": [
+      "api.intelliprint.net"
+    ]
+  },
+  "operations": {
+    "backgrounds.list": {
+      "description": "List Intelliprint reusable backgrounds with optional pagination and team filter.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "limit": {
+            "maximum": 1000,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "skip": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "team": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/backgrounds",
+        "query": {
+          "limit": "{{limit}}",
+          "skip": "{{skip}}",
+          "team": "{{team}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List backgrounds",
+      "validationMode": "strict-generated"
+    },
+    "healthcheck": {
+      "description": "Validate the Intelliprint API key with GET /prints?limit=1.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {},
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/prints",
+        "query": {
+          "limit": 1
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 5000,
+      "title": "Healthcheck",
+      "validationMode": "strict-generated"
+    },
+    "mailingLists.list": {
+      "description": "List Intelliprint mailing lists with optional pagination, sort, and field projection.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "limit": {
+            "maximum": 1000,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "skip": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "fields": {
+            "description": "Optional field names to return.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "sortField": {
+            "enum": [
+              "created",
+              "name",
+              "recipients"
+            ],
+            "type": "string"
+          },
+          "sortOrder": {
+            "enum": [
+              "asc",
+              "desc"
+            ],
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/mailing_lists",
+        "query": {
+          "limit": "{{limit}}",
+          "skip": "{{skip}}",
+          "fields": "{{fields}}",
+          "sort_field": "{{sortField}}",
+          "sort_order": "{{sortOrder}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List mailing lists",
+      "validationMode": "strict-generated"
+    },
+    "prints.get": {
+      "description": "Retrieve one Intelliprint print job by ID.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/prints/{{id}}",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get print job",
+      "validationMode": "strict-generated"
+    },
+    "prints.list": {
+      "description": "List Intelliprint print jobs with optional pagination, sort, type, testmode, confirmed, and letter-status filters.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "limit": {
+            "maximum": 1000,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "skip": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "sortField": {
+            "enum": [
+              "created",
+              "confirmed_at",
+              "reference",
+              "type",
+              "letters",
+              "pages",
+              "sheets",
+              "letters.returned.date",
+              "cost.after_tax",
+              "cost.amount"
+            ],
+            "type": "string"
+          },
+          "sortOrder": {
+            "enum": [
+              "asc",
+              "desc"
+            ],
+            "type": "string"
+          },
+          "type": {
+            "enum": [
+              "letter",
+              "postcard"
+            ],
+            "type": "string"
+          },
+          "confirmed": {
+            "description": "When true, only confirmed jobs; when false, only drafts.",
+            "type": "boolean"
+          },
+          "lettersStatus": {
+            "description": "Comma-separated letter statuses sent as letters.status.",
+            "type": "string"
+          },
+          "testmode": {
+            "description": "When true, list testmode jobs instead of live jobs.",
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/prints",
+        "query": {
+          "limit": "{{limit}}",
+          "skip": "{{skip}}",
+          "sort_field": "{{sortField}}",
+          "sort_order": "{{sortOrder}}",
+          "type": "{{type}}",
+          "confirmed": "{{confirmed}}",
+          "letters.status": "{{lettersStatus}}",
+          "testmode": "{{testmode}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List print jobs",
+      "validationMode": "strict-generated"
+    },
+    "prints.create": {
+      "description": "Create an Intelliprint print job from a file, HTML/text content, or template.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "confirmed": {
+            "description": "Confirm immediately for printing.",
+            "type": "boolean"
+          },
+          "content": {
+            "description": "Text or HTML letter content when not sending a file or template.",
+            "type": "string"
+          },
+          "file": {
+            "description": "File as a remote URL or Base64 {content, name} object.",
+            "properties": {
+              "content": {
+                "description": "Base64-encoded file contents.",
+                "minLength": 1,
+                "type": "string"
+              },
+              "name": {
+                "description": "Filename including extension.",
+                "minLength": 1,
+                "type": "string"
+              },
+              "url": {
+                "description": "HTTPS URL of the file.",
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "type": "object"
+          },
+          "mailing_list": {
+            "description": "Mailing list ID to send one copy to each recipient.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "metadata": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Arbitrary string key-value metadata.",
+            "type": "object"
+          },
+          "recipients": {
+            "description": "Inline recipients when not using mailing_list.",
+            "items": {
+              "properties": {
+                "address": {
+                  "description": "Recipient postal address.",
+                  "properties": {
+                    "country": {
+                      "description": "ISO 3166-1 alpha-2 country code.",
+                      "type": "string"
+                    },
+                    "line": {
+                      "description": "Complete address line.",
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "name": {
+                      "description": "Recipient name.",
+                      "type": "string"
+                    },
+                    "postcode": {
+                      "description": "Postal code.",
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                },
+                "variables": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "description": "Template personalisation fields (string keys and values).",
+                  "type": "object"
+                }
+              },
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "reference": {
+            "description": "Dashboard/API reference string.",
+            "type": "string"
+          },
+          "splitting_method": {
+            "description": "File splitting method (maps to splitting.method).",
+            "enum": [
+              "none",
+              "split_on_phrase",
+              "split_on_pages"
+            ],
+            "type": "string"
+          },
+          "template": {
+            "description": "Pre-designed template ID.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "testmode": {
+            "description": "Create an uncharged test job.",
+            "type": "boolean"
+          },
+          "type": {
+            "description": "Mailing type.",
+            "enum": [
+              "letter",
+              "postcard"
+            ],
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 5242880,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "POST",
+        "path": "/prints",
+        "success": [
+          200
+        ],
+        "body": {
+          "confirmed": "{{confirmed}}",
+          "content": "{{content}}",
+          "file": "{{file}}",
+          "mailing_list": "{{mailing_list}}",
+          "metadata": "{{metadata}}",
+          "recipients": "{{recipients}}",
+          "reference": "{{reference}}",
+          "splitting": {
+            "method": "{{splitting_method}}"
+          },
+          "template": "{{template}}",
+          "testmode": "{{testmode}}",
+          "type": "{{type}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Create print job",
+      "validationMode": "strict-generated"
+    },
+    "prints.delete": {
+      "description": "Delete an unconfirmed print job, or cancel a confirmed job that has not shipped.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "print_id": {
+            "description": "Print job ID (print_...). Testmode jobs cannot be cancelled.",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "type": "object",
+        "required": [
+          "print_id"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/prints/{{print_id}}",
+        "success": [
+          200,
+          202
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "title": "Cancel or delete print job",
+      "validationMode": "strict-generated"
+    },
+    "backgrounds.create": {
+      "description": "Create a reusable background (letterhead) by uploading a PDF or Word file.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "file": {
+            "description": "File as a remote URL or Base64 {content, name} object.",
+            "properties": {
+              "content": {
+                "description": "Base64-encoded file contents.",
+                "minLength": 1,
+                "type": "string"
+              },
+              "name": {
+                "description": "Filename including extension.",
+                "minLength": 1,
+                "type": "string"
+              },
+              "url": {
+                "description": "HTTPS URL of the file.",
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "type": "object"
+          },
+          "name": {
+            "description": "Display name; defaults to the filename.",
+            "type": "string"
+          },
+          "team": {
+            "description": "Optional team ID to restrict dashboard use.",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 5242880,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "POST",
+        "path": "/backgrounds",
+        "success": [
+          200
+        ],
+        "body": {
+          "file": "{{file}}",
+          "name": "{{name}}",
+          "team": "{{team}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Create background",
+      "validationMode": "strict-generated"
+    },
+    "backgrounds.get": {
+      "description": "Retrieve one Intelliprint background by ID.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "background_id": {
+            "description": "Background ID (bg_...).",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "type": "object",
+        "required": [
+          "background_id"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/backgrounds/{{background_id}}",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Retrieve background",
+      "validationMode": "strict-generated"
+    },
+    "backgrounds.update": {
+      "description": "Update an existing background's name or team assignment.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "background_id": {
+            "description": "Background ID (bg_...).",
+            "minLength": 1,
+            "type": "string"
+          },
+          "name": {
+            "description": "New display name.",
+            "type": "string"
+          },
+          "team": {
+            "description": "Team ID to assign, or empty to share with the account.",
+            "type": "string"
+          }
+        },
+        "type": "object",
+        "required": [
+          "background_id"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "POST",
+        "path": "/backgrounds/{{background_id}}",
+        "success": [
+          200
+        ],
+        "body": {
+          "name": "{{name}}",
+          "team": "{{team}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Update background",
+      "validationMode": "strict-generated"
+    },
+    "backgrounds.delete": {
+      "description": "Delete a background by ID. Fails if any print job used it in the last 90 days.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "background_id": {
+            "description": "Background ID (bg_...).",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "type": "object",
+        "required": [
+          "background_id"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/backgrounds/{{background_id}}",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "title": "Delete background",
+      "validationMode": "strict-generated"
+    },
+    "mailingLists.create": {
+      "description": "Create a mailing list, optionally seeding it with recipients.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "address_validation": {
+            "description": "Address validation settings.",
+            "properties": {
+              "requested": {
+                "type": "boolean"
+              }
+            },
+            "type": "object"
+          },
+          "name": {
+            "description": "Dashboard name for the mailing list.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "recipients": {
+            "description": "Optional recipients to add during creation.",
+            "items": {
+              "properties": {
+                "address": {
+                  "description": "Recipient postal address.",
+                  "properties": {
+                    "country": {
+                      "description": "ISO 3166-1 alpha-2 country code.",
+                      "type": "string"
+                    },
+                    "line": {
+                      "description": "Complete address line.",
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "name": {
+                      "description": "Recipient name.",
+                      "type": "string"
+                    },
+                    "postcode": {
+                      "description": "Postal code.",
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                },
+                "variables": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "description": "Template personalisation fields (string keys and values).",
+                  "type": "object"
+                }
+              },
+              "type": "object"
+            },
+            "type": "array"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "POST",
+        "path": "/mailing_lists",
+        "success": [
+          200
+        ],
+        "body": {
+          "address_validation": "{{address_validation}}",
+          "name": "{{name}}",
+          "recipients": "{{recipients}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Create mailing list",
+      "validationMode": "strict-generated"
+    },
+    "mailingLists.get": {
+      "description": "Retrieve one mailing list by ID, including recipient count and validation status.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "description": "Mailing list ID (mal_...).",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/mailing_lists/{{id}}",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get mailing list",
+      "validationMode": "strict-generated"
+    },
+    "mailingLists.update": {
+      "description": "Update a mailing list name, bulk-add recipients, or replace recipients.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "delete_old_recipients": {
+            "description": "When true, replace existing recipients with the supplied list.",
+            "type": "boolean"
+          },
+          "id": {
+            "description": "Mailing list ID (mal_...).",
+            "minLength": 1,
+            "type": "string"
+          },
+          "name": {
+            "description": "New dashboard name.",
+            "type": "string"
+          },
+          "recipients": {
+            "description": "Recipients to add or replace.",
+            "items": {
+              "properties": {
+                "address": {
+                  "description": "Recipient postal address.",
+                  "properties": {
+                    "country": {
+                      "description": "ISO 3166-1 alpha-2 country code.",
+                      "type": "string"
+                    },
+                    "line": {
+                      "description": "Complete address line.",
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "name": {
+                      "description": "Recipient name.",
+                      "type": "string"
+                    },
+                    "postcode": {
+                      "description": "Postal code.",
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                },
+                "variables": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "description": "Template personalisation fields (string keys and values).",
+                  "type": "object"
+                }
+              },
+              "type": "object"
+            },
+            "type": "array"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "POST",
+        "path": "/mailing_lists/{{id}}",
+        "success": [
+          200
+        ],
+        "body": {
+          "delete_old_recipients": "{{delete_old_recipients}}",
+          "name": "{{name}}",
+          "recipients": "{{recipients}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Update mailing list",
+      "validationMode": "strict-generated"
+    },
+    "mailingLists.delete": {
+      "description": "Delete a mailing list and all of its recipients.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "description": "Mailing list ID (mal_...).",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/mailing_lists/{{id}}",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "title": "Delete mailing list",
+      "validationMode": "strict-generated"
+    },
+    "mailingListRecipients.create": {
+      "description": "Add a recipient to a mailing list. Address line is required; name, postcode, and country are optional.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "address": {
+            "description": "Recipient postal address.",
+            "properties": {
+              "country": {
+                "description": "ISO 3166-1 alpha-2 country code.",
+                "type": "string"
+              },
+              "line": {
+                "description": "Complete address line.",
+                "minLength": 1,
+                "type": "string"
+              },
+              "name": {
+                "description": "Recipient name.",
+                "type": "string"
+              },
+              "postcode": {
+                "description": "Postal code.",
+                "type": "string"
+              }
+            },
+            "type": "object",
+            "required": [
+              "line"
+            ]
+          },
+          "mailing_list": {
+            "description": "Mailing list ID (mal_...).",
+            "minLength": 1,
+            "type": "string"
+          },
+          "variables": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Template personalisation fields.",
+            "type": "object"
+          }
+        },
+        "type": "object",
+        "required": [
+          "mailing_list",
+          "address"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "POST",
+        "path": "/mailing_lists/{{mailing_list}}/recipients",
+        "success": [
+          200
+        ],
+        "body": {
+          "address": "{{address}}",
+          "variables": "{{variables}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Create mailing list recipient",
+      "validationMode": "strict-generated"
+    },
+    "mailingListRecipients.list": {
+      "description": "List recipients in a mailing list with optional pagination, sort, and field projection.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "limit": {
+            "description": "Number of objects to return (1-1000).",
+            "maximum": 1000,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "skip": {
+            "description": "Number of objects to skip.",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "fields": {
+            "description": "Optional field names to return.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "mailing_list": {
+            "description": "Mailing list ID (mal_...).",
+            "minLength": 1,
+            "type": "string"
+          },
+          "sort_field": {
+            "enum": [
+              "created",
+              "name"
+            ],
+            "type": "string"
+          },
+          "sort_order": {
+            "enum": [
+              "asc",
+              "desc"
+            ],
+            "type": "string"
+          }
+        },
+        "type": "object",
+        "required": [
+          "mailing_list"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/mailing_lists/{{mailing_list}}/recipients",
+        "success": [
+          200
+        ],
+        "query": {
+          "fields": "{{fields}}",
+          "limit": "{{limit}}",
+          "skip": "{{skip}}",
+          "sort_field": "{{sort_field}}",
+          "sort_order": "{{sort_order}}"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List mailing list recipients",
+      "validationMode": "strict-generated"
+    },
+    "mailingListRecipients.get": {
+      "description": "Retrieve one recipient by ID within a mailing list.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "description": "Recipient ID (malrcp_... / mal_rcp_...).",
+            "minLength": 1,
+            "type": "string"
+          },
+          "mailing_list": {
+            "description": "Mailing list ID (mal_...).",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "mailing_list"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/mailing_lists/{{mailing_list}}/recipients/{{id}}",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get mailing list recipient",
+      "validationMode": "strict-generated"
+    },
+    "mailingListRecipients.update": {
+      "description": "Update a recipient's address or template variables.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "address": {
+            "description": "Recipient postal address.",
+            "properties": {
+              "country": {
+                "description": "ISO 3166-1 alpha-2 country code.",
+                "type": "string"
+              },
+              "line": {
+                "description": "Complete address line.",
+                "minLength": 1,
+                "type": "string"
+              },
+              "name": {
+                "description": "Recipient name.",
+                "type": "string"
+              },
+              "postcode": {
+                "description": "Postal code.",
+                "type": "string"
+              }
+            },
+            "type": "object"
+          },
+          "id": {
+            "description": "Recipient ID.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "mailing_list": {
+            "description": "Mailing list ID (mal_...).",
+            "minLength": 1,
+            "type": "string"
+          },
+          "variables": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Template personalisation fields.",
+            "type": "object"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "mailing_list"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "POST",
+        "path": "/mailing_lists/{{mailing_list}}/recipients/{{id}}",
+        "success": [
+          200
+        ],
+        "body": {
+          "address": "{{address}}",
+          "variables": "{{variables}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Update mailing list recipient",
+      "validationMode": "strict-generated"
+    },
+    "mailingListRecipients.delete": {
+      "description": "Delete a recipient from a mailing list.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "description": "Recipient ID.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "mailing_list": {
+            "description": "Mailing list ID (mal_...).",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "mailing_list"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/mailing_lists/{{mailing_list}}/recipients/{{id}}",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "title": "Delete mailing list recipient",
+      "validationMode": "strict-generated"
+    },
+    "templates.list": {
+      "description": "List available Intelliprint letter/postcard templates.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "limit": {
+            "description": "Number of objects to return (1-1000).",
+            "maximum": 1000,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "skip": {
+            "description": "Number of objects to skip.",
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/templates",
+        "success": [
+          200
+        ],
+        "query": {
+          "limit": "{{limit}}",
+          "skip": "{{skip}}"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List templates",
+      "validationMode": "strict-generated"
+    },
+    "files.merge": {
+      "description": "Merge two or more PDF, RTF, or Word documents into a single PDF. The download link expires in about one hour.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "files": {
+            "description": "Files to merge in order. Minimum two PDF, RTF, or Word documents.",
+            "items": {
+              "description": "File as a remote URL or Base64 {content, name} object.",
+              "properties": {
+                "content": {
+                  "description": "Base64-encoded file contents.",
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "name": {
+                  "description": "Filename including extension.",
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "url": {
+                  "description": "HTTPS URL of the file.",
+                  "minLength": 1,
+                  "type": "string"
+                }
+              },
+              "type": "object"
+            },
+            "minItems": 2,
+            "type": "array"
+          }
+        },
+        "type": "object",
+        "required": [
+          "files"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 5242880,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "POST",
+        "path": "/tools/merge",
+        "success": [
+          200
+        ],
+        "body": {
+          "files": "{{files}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Merge files",
+      "validationMode": "strict-generated"
+    }
+  },
+  "provenance": {
+    "source": {
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
+      "url": "https://github.com/oomol-lab/open-connector"
+    }
+  },
+  "runtime": "bun",
+  "version": "0.2.0",
+  "visibility": "public"
+}
