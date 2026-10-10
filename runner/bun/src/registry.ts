@@ -1348,6 +1348,8 @@ import {
   getTeamsMeetingByJoinUrl as msGetTeamsByJoinUrl, createCalendarTeamsEvent as msCreateCalendarTeamsEvent,
 } from "../../connectors/microsoft-365/src/actions";
 
+import { uploadInvoicePdf as uploadChaserInvoicePdf } from "../../connectors/chaserhq/src/upload";
+
 import { createField as lapostaCreateField, createMember as lapostaCreateMember, updateMember as lapostaUpdateMember } from "../../connectors/laposta/src/actions";
 import { getMeetingAnalysis as avomaGetMeetingAnalysis } from "../../connectors/avoma/src/handlers";
 import { createConnectorHttpClient, type ConnectorHttpClient } from "./http";
@@ -1499,6 +1501,9 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
     googlemeet: googlemeetHealthcheck,
   },
   actions: {
+    chaserhq: {
+      "invoices.uploadPdf": uploadChaserInvoicePdf,
+    },
     fake: {
       "messages.send": (input) => ({ input }),
     },
