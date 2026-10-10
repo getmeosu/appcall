@@ -1,21 +1,21 @@
 # HeyReach
 
-Read-only international **HeyReach Public API** recipe. Create an API key in HeyReach Settings → Integrations / API and store it as `apiKey`. Requests send `X-API-KEY` and `Accept`/`Content-Type: application/json` to `https://api.heyreach.io/api/public`.
+International **HeyReach Public API** recipe covering origin healthcheck plus every Composio `HEYREACH_*` HTTP tool (19 tools, 21 operations). Healthcheck is an authenticated `POST /campaign/GetAll` probe (offset=0, limit=1) because official `GET /auth/CheckApiKey` returns an empty 200 body; `auth.check` maps that endpoint with a static `{data:{valid:true}}` envelope. `campaigns.get` is kept from origin and is not a Composio slug.
+
+Create an API key in HeyReach Settings → Integrations / API and store it as `apiKey`. Requests send `X-API-KEY` and `Accept`/`Content-Type: application/json` to `https://api.heyreach.io/api/public`.
 
 ## Operations
 
-- `healthcheck`: `POST /campaign/GetAll` with hardcoded `offset=0` and `limit=1` (cheap authenticated read). Official `GET /auth/CheckApiKey` is documented with an empty 200 body, which native JSON `responseFormat` cannot accept.
-- `campaigns.list`: `POST /campaign/GetAll` with optional JSON `offset`, `limit` (1–100), and `keyword`.
-- `campaigns.get`: `GET /campaign/GetById?campaignId=`; `campaignId` is a required positive integer.
-- `lists.list`: `POST /list/GetAll` with optional JSON `offset` and `limit` (1–100).
-- `accounts.list`: `POST /li_account/GetAll` with optional JSON `offset` and `limit` (1–100).
+- Auth: `healthcheck` (`POST /campaign/GetAll`), `auth.check` (`GET /auth/CheckApiKey`).
+- Campaigns: `campaigns.list`, `campaigns.get`.
+- Lists: `lists.list`, `lists.create`, `lists.leads.list`, `lists.leads.add`, `lists.companies.list`, `lists.for_lead`.
+- Leads / tags: `leads.get`, `tags.create`.
+- Accounts / network: `accounts.list`, `network.list`.
+- Inbox / stats: `conversations.list`, `stats.get`.
+- Webhooks: `webhooks.list`, `webhooks.get`, `webhooks.create`, `webhooks.update`, `webhooks.delete` (outbound registration; Composio triggers = 0).
 
-Successful responses are raw provider JSON under AppCall `data`. Writes, lead mutations, and stats endpoints are omitted.
-
-## Adaptations
-
-Pinned source and official Postman docs agree on `https://api.heyreach.io/api/public` and `X-API-KEY`. Native category is `crm` (source Marketing is not in the Rust CATEGORIES allowlist). List reads use POST JSON bodies as documented.
+Successful JSON responses are raw HeyReach JSON under AppCall `data`. Empty 200 bodies (`auth.check`, webhook create/update/delete) use a static result envelope. `stats.get` maps Composio `dateFrom`/`dateTo` to official `startDate`/`endDate`. Optional JSON fields are omitted when unset. List reads use POST JSON bodies as documented. Native category is `crm`.
 
 ## License and evidence
 
-Upstream definitions are attributed to [oomol-lab/open-connector](https://github.com/oomol-lab/open-connector) (Apache-2.0) at `33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a`. Fixtures are independently derived from official docs plus pinned source and are fixture-only; live smoke is unverified.
+Upstream definitions are attributed to [oomol-lab/open-connector](https://github.com/oomol-lab/open-connector) (Apache-2.0) at `33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a`. Official API: https://docs.heyreach.io and https://documenter.getpostman.com/view/23808049/2sA2xb5F75. Fixtures are independently derived and fixture-only; live smoke is unverified.

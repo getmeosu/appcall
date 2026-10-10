@@ -1,6 +1,6 @@
 # Raindrop.io
 
-Read-only international **Raindrop.io REST API v1** recipe. Raindrop.io is a global bookmark manager operated by Rustem Mussabekov.
+International **Raindrop.io REST API v1** recipe. Raindrop.io is a global bookmark manager operated by Rustem Mussabekov.
 
 ## Setup
 
@@ -8,17 +8,9 @@ Register an integration at https://app.raindrop.io/settings/integrations and cop
 
 ## Operations
 
-- `healthcheck`: `GET /user` with empty input (cheap authenticated profile probe; pinned credential validator).
-- `collections.list`: `GET /collections` (root collections only).
-- `collections.get`: `GET /collection/{collectionId}`; `collectionId` is a required integer.
-- `raindrops.list`: `GET /raindrops/{collectionId}` with required `collectionId` (`0` = all except Trash) and optional `search`, `sort`, `page`, `perPage` (wire name `perpage`, 1–50), and `nested`.
-- `tags.list`: `GET /tags` across all collections.
+HTTP actions cover collections, raindrops, tags, highlights, filters, import helpers, and the authenticated user. Raindrop.io does not publish HTTP webhooks.
 
-Successful responses are raw provider JSON under AppCall `data`. Writes, nested-collection fan-out (`includeChildren` → `/collections/childrens`), and collection-scoped tag paths are omitted.
-
-## Adaptations
-
-Pinned source and official docs agree on `https://api.raindrop.io/rest/v1` and Bearer auth. Native GET requests omit the source executor's always-on `Content-Type`. Native category is `productivity`. Healthcheck uses GET `/user` rather than a billable search.
+Successful responses are raw provider JSON under AppCall `data`. Nested optional objects such as `parent.$id` are omitted so unresolved templates do not render as `{}`.
 
 ## License and evidence
 

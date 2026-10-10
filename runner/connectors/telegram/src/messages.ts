@@ -484,6 +484,238 @@ export async function pinTelegramMessage(input: PinChatMessageClientInput): Prom
   return { pinned: body.result === true };
 }
 
+// ─── SendLocation ─────────────────────────────────────────────────────────────
+
+export type SendLocationInput = {
+  chatId: string;
+  latitude: number;
+  longitude: number;
+  heading?: number;
+  livePeriod?: number;
+  horizontalAccuracy?: number;
+  proximityAlertRadius?: number;
+  replyMarkup?: unknown;
+  replyToMessageId?: number;
+  disableNotification?: boolean;
+};
+
+export type SendLocationClientInput = SendLocationInput & {
+  botToken: string;
+  fetch?: typeof fetch;
+  httpClient?: ConnectorHttpClient;
+};
+
+export type SendLocationResult = {
+  providerMessageId: string;
+  channelId: string;
+  raw: Record<string, unknown>;
+};
+
+export function validateSendLocationInput(input: unknown): SendLocationInput {
+  if (!isRecord(input)) throw new Error("sendLocation input must be an object");
+  const chatId = requireString(input.chatId, "chatId").trim();
+  if (chatId.length === 0) throw new Error("chatId is required");
+  const latitude = requireFiniteNumber(input.latitude, "latitude");
+  if (latitude < -90 || latitude > 90) throw new Error("latitude must be between -90 and 90");
+  const longitude = requireFiniteNumber(input.longitude, "longitude");
+  if (longitude < -180 || longitude > 180) throw new Error("longitude must be between -180 and 180");
+  const heading = optionalIntegerInRange(input.heading, "heading", 1, 360);
+  const livePeriod = optionalIntegerInRange(input.livePeriod, "livePeriod", 60, 86400);
+  const horizontalAccuracy = optionalFiniteNumber(input.horizontalAccuracy, "horizontalAccuracy");
+  if (horizontalAccuracy !== undefined && (horizontalAccuracy < 0 || horizontalAccuracy > 1500)) {
+    throw new Error("horizontalAccuracy must be between 0 and 1500");
+  }
+  const proximityAlertRadius = optionalIntegerInRange(input.proximityAlertRadius, "proximityAlertRadius", 1, 100000);
+  const replyToMessageId = optionalInteger(input.replyToMessageId, "replyToMessageId");
+  const disableNotification = optionalBoolean(input.disableNotification, "disableNotification");
+  const replyMarkup = input.replyMarkup === undefined ? undefined : normalizeJsonLike(input.replyMarkup, "replyMarkup");
+  return {
+    chatId,
+    latitude,
+    longitude,
+    heading,
+    livePeriod,
+    horizontalAccuracy,
+    proximityAlertRadius,
+    replyMarkup,
+    replyToMessageId,
+    disableNotification,
+  };
+}
+
+export async function sendTelegramLocation(input: SendLocationClientInput): Promise<SendLocationResult> {
+  const validated = validateSendLocationInput(input);
+  const token = requireString(input.botToken, "botToken").trim();
+  if (token.length === 0) throw new Error("botToken is required");
+  const httpClient = input.httpClient ?? createConnectorHttpClient({
+    allowedHosts: manifest.network.allowedHosts,
+    maxResponseBytes: manifest.operations["messages.sendLocation"].maxResponseBytes,
+    fetch: input.fetch,
+  });
+  const response = await httpClient.fetchText(`https://api.telegram.org/bot${token}/sendLocation`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(compactBody({
+      chat_id: validated.chatId,
+      latitude: validated.latitude,
+      longitude: validated.longitude,
+      heading: validated.heading,
+      live_period: validated.livePeriod,
+      horizontal_accuracy: validated.horizontalAccuracy,
+      proximity_alert_radius: validated.proximityAlertRadius,
+      reply_markup: validated.replyMarkup,
+      reply_to_message_id: validated.replyToMessageId,
+      disable_notification: validated.disableNotification,
+    })),
+  });
+  const body = readJsonObject(response.body);
+  if (response.status < 200 || response.status >= 300) {
+    throw mapTelegramError(response, body);
+  }
+  const result = requireRecord(body.result, "result");
+  const messageID = String(requireNumberLike(result.message_id, "result.message_id"));
+  const chat = requireRecord(result.chat, "result.chat");
+  const channelId = String(requireNumberLike(chat.id, "result.chat.id"));
+  return { providerMessageId: messageID, channelId, raw: result };
+}
+
+// ─── SendPoll ─────────────────────────────────────────────────────────────────
+
+export type SendPollInput = {
+  chatId: string;
+  question: string;
+  options: string[];
+  type?: "regular" | "quiz";
+  isClosed?: boolean;
+  closeDate?: number;
+  explanation?: string;
+  openPeriod?: number;
+  isAnonymous?: boolean;
+  replyMarkup?: unknown;
+  correctOptionId?: number;
+  replyToMessageId?: number;
+  disableNotification?: boolean;
+  explanationParseMode?: string;
+  allowsMultipleAnswers?: boolean;
+};
+
+export type SendPollClientInput = SendPollInput & {
+  botToken: string;
+  fetch?: typeof fetch;
+  httpClient?: ConnectorHttpClient;
+};
+
+export type SendPollResult = {
+  providerMessageId: string;
+  channelId: string;
+  raw: Record<string, unknown>;
+};
+
+const PARSE_MODES = new Set(["Markdown", "MarkdownV2", "HTML"]);
+
+export function validateSendPollInput(input: unknown): SendPollInput {
+  if (!isRecord(input)) throw new Error("sendPoll input must be an object");
+  const chatId = requireString(input.chatId, "chatId").trim();
+  if (chatId.length === 0) throw new Error("chatId is required");
+  const question = requireString(input.question, "question").trim();
+  if (question.length === 0) throw new Error("question is required");
+  if (question.length > 300) throw new Error("question exceeds Telegram poll limit");
+  if (!Array.isArray(input.options)) throw new Error("options is required");
+  if (input.options.length < 2 || input.options.length > 10) {
+    throw new Error("options must contain between 2 and 10 entries");
+  }
+  const options = input.options.map((option, index) => {
+    if (typeof option !== "string") throw new Error(`options[${index}] must be a string`);
+    const text = option.trim();
+    if (text.length < 1 || text.length > 100) {
+      throw new Error(`options[${index}] must be 1-100 characters`);
+    }
+    return text;
+  });
+  const type = optionalString(input.type, "type");
+  if (type !== undefined && type !== "regular" && type !== "quiz") {
+    throw new Error("type must be regular or quiz");
+  }
+  const correctOptionId = optionalInteger(input.correctOptionId, "correctOptionId");
+  if (type === "quiz" && correctOptionId === undefined) {
+    throw new Error("correctOptionId is required for quiz polls");
+  }
+  if (correctOptionId !== undefined && (correctOptionId < 0 || correctOptionId >= options.length)) {
+    throw new Error("correctOptionId must be a valid option index");
+  }
+  const openPeriod = optionalIntegerInRange(input.openPeriod, "openPeriod", 5, 600);
+  const closeDate = optionalInteger(input.closeDate, "closeDate");
+  if (openPeriod !== undefined && closeDate !== undefined) {
+    throw new Error("openPeriod and closeDate cannot be used together");
+  }
+  const explanation = optionalString(input.explanation, "explanation");
+  if (explanation !== undefined && explanation.length > 200) {
+    throw new Error("explanation exceeds Telegram poll limit");
+  }
+  const explanationParseMode = optionalString(input.explanationParseMode, "explanationParseMode");
+  if (explanationParseMode !== undefined && !PARSE_MODES.has(explanationParseMode)) {
+    throw new Error("explanationParseMode must be Markdown, MarkdownV2, or HTML");
+  }
+  return {
+    chatId,
+    question,
+    options,
+    type,
+    isClosed: optionalBoolean(input.isClosed, "isClosed"),
+    closeDate,
+    explanation,
+    openPeriod,
+    isAnonymous: optionalBoolean(input.isAnonymous, "isAnonymous"),
+    replyMarkup: input.replyMarkup === undefined ? undefined : normalizeJsonLike(input.replyMarkup, "replyMarkup"),
+    correctOptionId,
+    replyToMessageId: optionalInteger(input.replyToMessageId, "replyToMessageId"),
+    disableNotification: optionalBoolean(input.disableNotification, "disableNotification"),
+    explanationParseMode,
+    allowsMultipleAnswers: optionalBoolean(input.allowsMultipleAnswers, "allowsMultipleAnswers"),
+  };
+}
+
+export async function sendTelegramPoll(input: SendPollClientInput): Promise<SendPollResult> {
+  const validated = validateSendPollInput(input);
+  const token = requireString(input.botToken, "botToken").trim();
+  if (token.length === 0) throw new Error("botToken is required");
+  const httpClient = input.httpClient ?? createConnectorHttpClient({
+    allowedHosts: manifest.network.allowedHosts,
+    maxResponseBytes: manifest.operations["messages.sendPoll"].maxResponseBytes,
+    fetch: input.fetch,
+  });
+  const response = await httpClient.fetchText(`https://api.telegram.org/bot${token}/sendPoll`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(compactBody({
+      chat_id: validated.chatId,
+      question: validated.question,
+      options: validated.options.map((text) => ({ text })),
+      type: validated.type,
+      is_closed: validated.isClosed,
+      close_date: validated.closeDate,
+      explanation: validated.explanation,
+      open_period: validated.openPeriod,
+      is_anonymous: validated.isAnonymous,
+      reply_markup: validated.replyMarkup,
+      correct_option_id: validated.correctOptionId,
+      reply_to_message_id: validated.replyToMessageId,
+      disable_notification: validated.disableNotification,
+      explanation_parse_mode: validated.explanationParseMode,
+      allows_multiple_answers: validated.allowsMultipleAnswers,
+    })),
+  });
+  const body = readJsonObject(response.body);
+  if (response.status < 200 || response.status >= 300) {
+    throw mapTelegramError(response, body);
+  }
+  const result = requireRecord(body.result, "result");
+  const messageID = String(requireNumberLike(result.message_id, "result.message_id"));
+  const chat = requireRecord(result.chat, "result.chat");
+  const channelId = String(requireNumberLike(chat.id, "result.chat.id"));
+  return { providerMessageId: messageID, channelId, raw: result };
+}
+
 export function mapTelegramError(response: Response | { status: number }, body: Record<string, unknown>): TelegramProviderError {
   const description = typeof body.description === "string" && body.description.length > 0
     ? body.description
@@ -543,4 +775,66 @@ function requireString(value: unknown, field: string): string {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function compactBody(body: Record<string, unknown>): Record<string, unknown> {
+  const compacted: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(body)) {
+    if (value !== undefined) compacted[key] = value;
+  }
+  return compacted;
+}
+
+export function normalizeJsonLike(value: unknown, field: string): unknown {
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (trimmed.length === 0) throw new Error(`${field} is required`);
+    try {
+      return JSON.parse(trimmed);
+    } catch {
+      throw new Error(`${field} must be valid JSON`);
+    }
+  }
+  if (typeof value === "object" && value !== null) return value;
+  throw new Error(`${field} must be an object or JSON string`);
+}
+
+function requireFiniteNumber(value: unknown, field: string): number {
+  if (typeof value !== "number" || !Number.isFinite(value)) throw new Error(`${field} is required`);
+  return value;
+}
+
+function optionalFiniteNumber(value: unknown, field: string): number | undefined {
+  if (value === undefined) return undefined;
+  return requireFiniteNumber(value, field);
+}
+
+function requireInteger(value: unknown, field: string): number {
+  if (typeof value !== "number" || !Number.isInteger(value)) throw new Error(`${field} is required`);
+  return value;
+}
+
+function optionalInteger(value: unknown, field: string): number | undefined {
+  if (value === undefined) return undefined;
+  return requireInteger(value, field);
+}
+
+function optionalIntegerInRange(value: unknown, field: string, min: number, max: number): number | undefined {
+  const parsed = optionalInteger(value, field);
+  if (parsed !== undefined && (parsed < min || parsed > max)) {
+    throw new Error(`${field} must be between ${min} and ${max}`);
+  }
+  return parsed;
+}
+
+function optionalBoolean(value: unknown, field: string): boolean | undefined {
+  if (value === undefined) return undefined;
+  if (typeof value !== "boolean") throw new Error(`${field} must be a boolean`);
+  return value;
+}
+
+function optionalString(value: unknown, field: string): string | undefined {
+  if (value === undefined) return undefined;
+  if (typeof value !== "string") throw new Error(`${field} must be a string`);
+  return value;
 }

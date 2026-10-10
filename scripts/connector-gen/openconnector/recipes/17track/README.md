@@ -1,8 +1,8 @@
 # 17TRACK
 
-Read-only international 17TRACK Tracking API v2.4 recipe at `https://api.17track.net/track/v2.4`. Configure the API key from 17TRACK API Settings (`https://api.17track.net/admin/settings`). The runner sends it as the official `17token` header with `Accept` and `Content-Type: application/json`.
+International 17TRACK Tracking API v2.4 recipe at `https://api.17track.net/track/v2.4`. Configure the API key from 17TRACK API Settings (`https://api.17track.net/admin/settings`). The runner sends it as the official `17token` header with `Accept` and `Content-Type: application/json`.
 
-Covered operations: credential-only `healthcheck` and `quota.get` (`POST /getquota`), `trackings.list` (`POST /gettracklist`), and `trackings.get` (`POST /gettrackinfo`). Register, retrack, stop, delete, carrier change, and real-time lookup are omitted as writes or billed tracking actions. `gettracklist` does not initiate tracking.
+Covered HTTP operations: `healthcheck` and `quota.get` (`POST /getquota`), `trackings.list` (`POST /gettracklist`), `trackings.get` (`POST /gettrackinfo`), `trackings.register`, `trackings.changeinfo`, `trackings.changecarrier`, `trackings.stop`, `trackings.retrack`, `trackings.delete`, and `trackings.realtime`. EventOnly webhooks: `webhook.tracking_updated`, `webhook.tracking_stopped`.
 
 HTTP 200 illegal-parameter envelopes `{code:0,data.errors:[...]}` are demoted via `bodyErrorPaths: ["data.errors"]`. `code` is not used as a body-error path because success `0` would trip a numeric path.
 

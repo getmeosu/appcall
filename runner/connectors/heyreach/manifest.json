@@ -1,1 +1,1459 @@
-{"auth":{"scopes":[],"setup":{"fields":[{"key":"apiKey","label":"HeyReach API key","required":true,"secret":true}],"mode":"api_key"},"type":"api_key"},"categories":["crm"],"evidence":{"fixture":{"status":"supplied"},"live":{"status":"unverified"}},"http":{"auth":{"field":"apiKey","in":"header","name":"X-API-KEY","value":"{{apiKey}}"},"baseUrl":"https://api.heyreach.io/api/public","errors":{"defaultRetryAfterSeconds":30,"messagePaths":["message","error","title","detail","errors.0"],"rateLimitStatuses":[429],"retryAfterHeader":"retry-after"},"headers":{"Accept":"application/json","Content-Type":"application/json"}},"key":"heyreach","models":["campaign","list","linkedin-account"],"name":"HeyReach","network":{"allowedHosts":["api.heyreach.io"]},"operations":{"accounts.list":{"description":"List HeyReach LinkedIn sender accounts with optional offset and limit.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{"limit":{"maximum":100,"minimum":1,"type":"integer"},"offset":{"minimum":0,"type":"integer"}},"type":"object"},"kind":"action","maxInputBytes":65536,"maxResponseBytes":5242880,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"body":{"limit":"{{limit}}","offset":"{{offset}}"},"method":"POST","path":"/li_account/GetAll","success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":15000,"title":"List HeyReach sender accounts","validationMode":"strict-generated"},"campaigns.get":{"description":"Retrieve one HeyReach campaign by ID.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{"campaignId":{"minimum":1,"type":"integer"}},"required":["campaignId"],"type":"object"},"kind":"action","maxInputBytes":65536,"maxResponseBytes":5242880,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/campaign/GetById","query":{"campaignId":"{{campaignId}}"},"success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":15000,"title":"Get campaign","validationMode":"strict-generated"},"campaigns.list":{"description":"List HeyReach campaigns with optional offset, limit, and keyword.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{"keyword":{"minLength":1,"type":"string"},"limit":{"maximum":100,"minimum":1,"type":"integer"},"offset":{"minimum":0,"type":"integer"}},"type":"object"},"kind":"action","maxInputBytes":65536,"maxResponseBytes":5242880,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"body":{"keyword":"{{keyword}}","limit":"{{limit}}","offset":"{{offset}}"},"method":"POST","path":"/campaign/GetAll","success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":15000,"title":"List campaigns","validationMode":"strict-generated"},"healthcheck":{"description":"Validate the HeyReach API key by listing one campaign.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{},"type":"object"},"kind":"action","maxInputBytes":4096,"maxResponseBytes":65536,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"body":{"limit":1,"offset":0},"method":"POST","path":"/campaign/GetAll","success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":5000,"title":"Healthcheck","validationMode":"strict-generated"},"lists.list":{"description":"List HeyReach lead and company lists with optional offset and limit.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{"limit":{"maximum":100,"minimum":1,"type":"integer"},"offset":{"minimum":0,"type":"integer"}},"type":"object"},"kind":"action","maxInputBytes":65536,"maxResponseBytes":5242880,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"body":{"limit":"{{limit}}","offset":"{{offset}}"},"method":"POST","path":"/list/GetAll","success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":15000,"title":"List lists","validationMode":"strict-generated"}},"provenance":{"source":{"revision":"33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a","url":"https://github.com/oomol-lab/open-connector"}},"runtime":"bun","version":"0.1.0","visibility":"public"}
+{
+  "auth": {
+    "scopes": [],
+    "setup": {
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "HeyReach API key",
+          "required": true,
+          "secret": true
+        }
+      ],
+      "mode": "api_key"
+    },
+    "type": "api_key"
+  },
+  "categories": [
+    "crm"
+  ],
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
+    }
+  },
+  "http": {
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "X-API-KEY",
+      "value": "{{apiKey}}"
+    },
+    "baseUrl": "https://api.heyreach.io/api/public",
+    "errors": {
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "message",
+        "error",
+        "title",
+        "detail",
+        "errors.0"
+      ],
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after"
+    },
+    "headers": {
+      "Accept": "application/json",
+      "Content-Type": "application/json"
+    }
+  },
+  "key": "heyreach",
+  "models": [
+    "campaign",
+    "conversation",
+    "lead",
+    "linkedin-account",
+    "list",
+    "network",
+    "stats",
+    "tag",
+    "webhook"
+  ],
+  "name": "HeyReach",
+  "network": {
+    "allowedHosts": [
+      "api.heyreach.io"
+    ]
+  },
+  "operations": {
+    "accounts.list": {
+      "description": "List HeyReach LinkedIn sender accounts with optional offset, limit, and keyword.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "keyword": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "limit": {
+            "maximum": 100,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "offset": {
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "body": {
+          "keyword": "{{keyword}}",
+          "limit": "{{limit}}",
+          "offset": "{{offset}}"
+        },
+        "method": "POST",
+        "path": "/li_account/GetAll",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List HeyReach sender accounts",
+      "validationMode": "strict-generated"
+    },
+    "auth.check": {
+      "description": "Check whether the HeyReach API key is valid via GET /auth/CheckApiKey.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {},
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/auth/CheckApiKey",
+        "result": {
+          "data": {
+            "valid": true
+          }
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 5000,
+      "title": "Check API key",
+      "validationMode": "strict-generated"
+    },
+    "campaigns.get": {
+      "description": "Retrieve one HeyReach campaign by ID.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "campaignId": {
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "campaignId"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/campaign/GetById",
+        "query": {
+          "campaignId": "{{campaignId}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get campaign",
+      "validationMode": "strict-generated"
+    },
+    "campaigns.list": {
+      "description": "List HeyReach campaigns with optional offset, limit, keyword, statuses, and account IDs.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "accountIds": {
+            "items": {
+              "minimum": 1,
+              "type": "integer"
+            },
+            "type": "array"
+          },
+          "keyword": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "limit": {
+            "maximum": 100,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "offset": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "statuses": {
+            "items": {
+              "enum": [
+                "DRAFT",
+                "IN_PROGRESS",
+                "PAUSED",
+                "FINISHED",
+                "CANCELED",
+                "FAILED",
+                "STARTING",
+                "SCHEDULED"
+              ],
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "body": {
+          "accountIds": "{{accountIds}}",
+          "keyword": "{{keyword}}",
+          "limit": "{{limit}}",
+          "offset": "{{offset}}",
+          "statuses": "{{statuses}}"
+        },
+        "method": "POST",
+        "path": "/campaign/GetAll",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List campaigns",
+      "validationMode": "strict-generated"
+    },
+    "conversations.list": {
+      "description": "List paginated LinkedIn conversations with HeyReach inbox filters.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "filters": {
+            "additionalProperties": true,
+            "properties": {
+              "campaignIds": {
+                "items": {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "type": "array"
+              },
+              "leadLinkedInId": {
+                "type": "string"
+              },
+              "leadProfileUrl": {
+                "type": "string"
+              },
+              "linkedInAccountIds": {
+                "items": {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "type": "array"
+              },
+              "searchString": {
+                "type": "string"
+              },
+              "seen": {
+                "type": "boolean"
+              },
+              "tags": {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              }
+            },
+            "type": "object"
+          },
+          "limit": {
+            "maximum": 100,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "offset": {
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "filters"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "body": {
+          "filters": "{{filters}}",
+          "limit": "{{limit}}",
+          "offset": "{{offset}}"
+        },
+        "method": "POST",
+        "path": "/inbox/GetConversationsV2",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List conversations",
+      "validationMode": "strict-generated"
+    },
+    "healthcheck": {
+      "description": "Validate the HeyReach API key by listing one campaign.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {},
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "body": {
+          "limit": 1,
+          "offset": 0
+        },
+        "method": "POST",
+        "path": "/campaign/GetAll",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 5000,
+      "title": "Healthcheck",
+      "validationMode": "strict-generated"
+    },
+    "leads.get": {
+      "description": "Retrieve HeyReach lead details by LinkedIn profile URL.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "profileUrl": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "profileUrl"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "body": {
+          "profileUrl": "{{profileUrl}}"
+        },
+        "method": "POST",
+        "path": "/lead/GetLead",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get lead",
+      "validationMode": "strict-generated"
+    },
+    "lists.companies.list": {
+      "description": "List companies from a HeyReach company list with optional keyword and pagination.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "keyword": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "limit": {
+            "maximum": 100,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "listId": {
+            "minimum": 1,
+            "type": "integer"
+          },
+          "offset": {
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "listId"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "body": {
+          "keyword": "{{keyword}}",
+          "limit": "{{limit}}",
+          "listId": "{{listId}}",
+          "offset": "{{offset}}"
+        },
+        "method": "POST",
+        "path": "/list/GetCompaniesFromList",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List companies from a list",
+      "validationMode": "strict-generated"
+    },
+    "lists.create": {
+      "description": "Create an empty HeyReach lead or company list.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "type": {
+            "enum": [
+              "COMPANY_LIST",
+              "USER_LIST"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "body": {
+          "name": "{{name}}",
+          "type": "{{type}}"
+        },
+        "method": "POST",
+        "path": "/list/CreateEmptyList",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Create empty list",
+      "validationMode": "strict-generated"
+    },
+    "lists.for_lead": {
+      "description": "List HeyReach lists that contain a lead identified by LinkedIn profile URL.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "email": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "limit": {
+            "maximum": 100,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "linkedinId": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "offset": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "profileUrl": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "profileUrl"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "body": {
+          "email": "{{email}}",
+          "limit": "{{limit}}",
+          "linkedinId": "{{linkedinId}}",
+          "offset": "{{offset}}",
+          "profileUrl": "{{profileUrl}}"
+        },
+        "method": "POST",
+        "path": "/list/GetListsForLead",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get lists for a lead",
+      "validationMode": "strict-generated"
+    },
+    "lists.leads.add": {
+      "description": "Add up to 100 leads to a HeyReach lead list and return added, updated, and failed counts.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "leads": {
+            "items": {
+              "additionalProperties": true,
+              "properties": {
+                "about": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "companyName": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "customUserFields": {
+                  "items": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "name": {
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "value": {
+                        "minLength": 1,
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "name",
+                      "value"
+                    ],
+                    "type": "object"
+                  },
+                  "type": "array"
+                },
+                "emailAddress": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "firstName": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "lastName": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "location": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "position": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "profileUrl": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "summary": {
+                  "minLength": 1,
+                  "type": "string"
+                }
+              },
+              "required": [
+                "profileUrl"
+              ],
+              "type": "object"
+            },
+            "minItems": 1,
+            "type": "array"
+          },
+          "listId": {
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "leads",
+          "listId"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "body": {
+          "leads": "{{leads}}",
+          "listId": "{{listId}}"
+        },
+        "method": "POST",
+        "path": "/list/AddLeadsToListV2",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Add leads to list",
+      "validationMode": "strict-generated"
+    },
+    "lists.leads.list": {
+      "description": "List leads from a HeyReach list with optional filters and pagination.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "createdFrom": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "createdTo": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "keyword": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "leadLinkedInId": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "leadProfileUrl": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "limit": {
+            "maximum": 1000,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "listId": {
+            "minimum": 1,
+            "type": "integer"
+          },
+          "offset": {
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "listId"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "body": {
+          "createdFrom": "{{createdFrom}}",
+          "createdTo": "{{createdTo}}",
+          "keyword": "{{keyword}}",
+          "leadLinkedInId": "{{leadLinkedInId}}",
+          "leadProfileUrl": "{{leadProfileUrl}}",
+          "limit": "{{limit}}",
+          "listId": "{{listId}}",
+          "offset": "{{offset}}"
+        },
+        "method": "POST",
+        "path": "/list/GetLeadsFromList",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List leads from a list",
+      "validationMode": "strict-generated"
+    },
+    "lists.list": {
+      "description": "List HeyReach lead and company lists with optional offset and limit.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "limit": {
+            "maximum": 100,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "offset": {
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "body": {
+          "limit": "{{limit}}",
+          "offset": "{{offset}}"
+        },
+        "method": "POST",
+        "path": "/list/GetAll",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List lists",
+      "validationMode": "strict-generated"
+    },
+    "network.list": {
+      "description": "List LinkedIn connections for a HeyReach sender account.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "pageNumber": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "pageSize": {
+            "maximum": 100,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "senderId": {
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "pageNumber",
+          "pageSize",
+          "senderId"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "body": {
+          "pageNumber": "{{pageNumber}}",
+          "pageSize": "{{pageSize}}",
+          "senderId": "{{senderId}}"
+        },
+        "method": "POST",
+        "path": "/MyNetwork/GetMyNetworkForSender",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get sender network",
+      "validationMode": "strict-generated"
+    },
+    "stats.get": {
+      "description": "Get HeyReach outreach stats for optional account, campaign, and date filters.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "accountIds": {
+            "items": {
+              "minimum": 1,
+              "type": "integer"
+            },
+            "type": "array"
+          },
+          "campaignIds": {
+            "items": {
+              "minimum": 1,
+              "type": "integer"
+            },
+            "type": "array"
+          },
+          "dateFrom": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "dateTo": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "body": {
+          "accountIds": "{{accountIds}}",
+          "campaignIds": "{{campaignIds}}",
+          "endDate": "{{dateTo}}",
+          "startDate": "{{dateFrom}}"
+        },
+        "method": "POST",
+        "path": "/stats/GetOverallStats",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get overall stats",
+      "validationMode": "strict-generated"
+    },
+    "tags.create": {
+      "description": "Create one or more HeyReach workspace tags with a display name and color.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "tags": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "color": {
+                  "enum": [
+                    "Blue",
+                    "Green",
+                    "Purple",
+                    "Pink",
+                    "Red",
+                    "Cyan",
+                    "Yellow",
+                    "Orange"
+                  ],
+                  "type": "string"
+                },
+                "displayName": {
+                  "minLength": 1,
+                  "type": "string"
+                }
+              },
+              "required": [
+                "displayName",
+                "color"
+              ],
+              "type": "object"
+            },
+            "minItems": 1,
+            "type": "array"
+          }
+        },
+        "required": [
+          "tags"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "array"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "body": {
+          "tags": "{{tags}}"
+        },
+        "method": "POST",
+        "path": "/lead_tags/CreateTags",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Create tags",
+      "validationMode": "strict-generated"
+    },
+    "webhooks.create": {
+      "description": "Create a HeyReach webhook that POSTs campaign events to a destination URL.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "campaignIds": {
+            "items": {
+              "minimum": 1,
+              "type": "integer"
+            },
+            "type": "array"
+          },
+          "eventType": {
+            "enum": [
+              "CONNECTION_REQUEST_SENT",
+              "CONNECTION_REQUEST_ACCEPTED",
+              "MESSAGE_SENT",
+              "MESSAGE_REPLY_RECEIVED",
+              "INMAIL_SENT",
+              "INMAIL_REPLY_RECEIVED",
+              "FOLLOW_SENT",
+              "LIKED_POST",
+              "VIEWED_PROFILE",
+              "CAMPAIGN_COMPLETED",
+              "LEAD_TAG_UPDATED",
+              "EVERY_MESSAGE_REPLY_RECEIVED"
+            ],
+            "type": "string"
+          },
+          "webhookName": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "webhookUrl": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "eventType",
+          "webhookName",
+          "webhookUrl"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "body": {
+          "campaignIds": "{{campaignIds}}",
+          "eventType": "{{eventType}}",
+          "webhookName": "{{webhookName}}",
+          "webhookUrl": "{{webhookUrl}}"
+        },
+        "method": "POST",
+        "path": "/webhooks/CreateWebhook",
+        "result": {
+          "data": {
+            "success": true
+          }
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Create webhook",
+      "validationMode": "strict-generated"
+    },
+    "webhooks.delete": {
+      "description": "Delete a HeyReach webhook by ID.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "webhookId": {
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "webhookId"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/webhooks/DeleteWebhook",
+        "query": {
+          "webhookId": "{{webhookId}}"
+        },
+        "result": {
+          "data": {
+            "success": true
+          }
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "title": "Delete webhook",
+      "validationMode": "strict-generated"
+    },
+    "webhooks.get": {
+      "description": "Retrieve one HeyReach webhook by ID.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "includeCustomHeaders": {
+            "type": "boolean"
+          },
+          "webhookId": {
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "webhookId"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/webhooks/GetWebhookById",
+        "query": {
+          "includeCustomHeaders": "{{includeCustomHeaders}}",
+          "webhookId": "{{webhookId}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get webhook",
+      "validationMode": "strict-generated"
+    },
+    "webhooks.list": {
+      "description": "List HeyReach webhooks with optional offset, limit, and custom-header inclusion.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "includeCustomHeaders": {
+            "type": "boolean"
+          },
+          "limit": {
+            "maximum": 100,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "offset": {
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "body": {
+          "includeCustomHeaders": "{{includeCustomHeaders}}",
+          "limit": "{{limit}}",
+          "offset": "{{offset}}"
+        },
+        "method": "POST",
+        "path": "/webhooks/GetAllWebhooks",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List webhooks",
+      "validationMode": "strict-generated"
+    },
+    "webhooks.update": {
+      "description": "Update a HeyReach webhook name, URL, event type, campaigns, or active flag.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "campaignIds": {
+            "items": {
+              "minimum": 1,
+              "type": "integer"
+            },
+            "type": "array"
+          },
+          "eventType": {
+            "enum": [
+              "CONNECTION_REQUEST_SENT",
+              "CONNECTION_REQUEST_ACCEPTED",
+              "MESSAGE_SENT",
+              "MESSAGE_REPLY_RECEIVED",
+              "INMAIL_SENT",
+              "INMAIL_REPLY_RECEIVED",
+              "FOLLOW_SENT",
+              "LIKED_POST",
+              "VIEWED_PROFILE",
+              "CAMPAIGN_COMPLETED",
+              "LEAD_TAG_UPDATED",
+              "EVERY_MESSAGE_REPLY_RECEIVED"
+            ],
+            "type": "string"
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "webhookId": {
+            "minimum": 1,
+            "type": "integer"
+          },
+          "webhookName": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "webhookUrl": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "webhookId"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "body": {
+          "campaignIds": "{{campaignIds}}",
+          "eventType": "{{eventType}}",
+          "isActive": "{{isActive}}",
+          "webhookName": "{{webhookName}}",
+          "webhookUrl": "{{webhookUrl}}"
+        },
+        "method": "PATCH",
+        "path": "/webhooks/UpdateWebhook",
+        "query": {
+          "webhookId": "{{webhookId}}"
+        },
+        "result": {
+          "data": {
+            "success": true
+          }
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Update webhook",
+      "validationMode": "strict-generated"
+    }
+  },
+  "provenance": {
+    "source": {
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
+      "url": "https://github.com/oomol-lab/open-connector"
+    }
+  },
+  "runtime": "bun",
+  "version": "0.2.0",
+  "visibility": "public"
+}

@@ -1,19 +1,23 @@
 # EspoCRM
 
-Read-only international **EspoCRM Cloud** REST API recipe. Create an API User (Administration → API Users, API Key method) and store the API key as `apiKey` plus the Cloud instance subdomain as `instance` (the `{name}` in `{name}.espocloud.com`). Requests send `X-Api-Key` to `https://<instance>.espocloud.com`. Self-hosted EspoCRM, caller-supplied Site URLs, and custom-domain Ultimate hosts are not admitted.
+International **EspoCRM Cloud** REST API recipe. Create an API User (Administration → API Users, API Key method) and store the API key as `apiKey` plus the Cloud instance subdomain as `instance` (the `{name}` in `{name}.espocloud.com`). Requests send `X-Api-Key` to `https://<instance>.espocloud.com`. Self-hosted EspoCRM, caller-supplied Site URLs, and custom-domain Ultimate hosts are not admitted.
 
 ## Operations
 
-- `healthcheck`: `GET /api/v1/App/user` (cheap authenticated current-user read).
+- `healthcheck`: `GET /api/v1/App/user`.
 - `metadata.get`: `GET /api/v1/Metadata` with optional `key`.
-- `records.list`: `GET /api/v1/{entityType}` with required `entityType` and optional `maxSize` (1–200).
-- `records.get`: `GET /api/v1/{entityType}/{recordId}`.
+- `i18n.get`: `GET /api/v1/I18n`.
+- `settings.get`: `GET /api/v1/App/settings`.
+- `records.list` / `records.get` / `records.create` / `records.update` / `records.delete`: entity CRUD on `/api/v1/{entityType}`.
+- `related.list` / `related.link` / `related.unlink`: relationship reads and writes.
+- `stream.list`: Stream notes for one record.
+- `users.list` / `teams.list`: User and Team lists.
+- `attachments.get`: attachment metadata.
+- `webhooks.list` / `webhooks.create` / `webhooks.delete`: webhook subscriptions.
+- `currencyRates.get`: `GET /api/v1/CurrencyRate`.
+- EventOnly webhooks: `webhook.record_created`, `webhook.record_updated`, `webhook.record_deleted`, `webhook.record_related`, `webhook.record_unrelated`.
 
-Successful responses are raw EspoCRM JSON under AppCall `data`. Writes, HMAC signing, JSON `where` clauses, and offset/order query params are omitted.
-
-## Adaptations
-
-Pinned source accepted any HTTPS `baseUrl`. Native pins EspoCRM Cloud `*.espocloud.com` hosts via required stored `instance` (Algolia/Grafana-style). Native category is `crm` (source Marketing is not in the Rust CATEGORIES allowlist).
+Successful responses are raw EspoCRM JSON under AppCall `data`.
 
 ## License and evidence
 

@@ -15,11 +15,15 @@ export function validateCreateListInput(input: unknown): CreateListInput {
 
 // ─── lists.get ────────────────────────────────────────────────────────────────
 
-export type GetListInput = { listId: number };
+export type GetListInput = { listId: number; startDate?: string; endDate?: string };
 
 export function validateGetListInput(input: unknown): GetListInput {
   if (!isRecord(input)) throw new Error("input must be an object");
-  return { listId: requireNumber(input.listId, "listId") };
+  const listId = requireNumber(input.listId ?? input.list_id, "listId");
+  const startDate = typeof input.startDate === "string" ? input.startDate : typeof input.start_date === "string" ? input.start_date : undefined;
+  const endDate = typeof input.endDate === "string" ? input.endDate : typeof input.end_date === "string" ? input.end_date : undefined;
+  if ((startDate && !endDate) || (!startDate && endDate)) throw new Error("start_date and end_date must be provided together");
+  return { listId, ...(startDate ? { startDate } : {}), ...(endDate ? { endDate } : {}) };
 }
 
 // ─── contacts.addToList ───────────────────────────────────────────────────────
@@ -72,7 +76,9 @@ export function createListsOpsClient(options: { apiKey: string; fetch?: typeof f
     async getList(input: unknown) {
       const payload = validateGetListInput(input);
       const client = createBrevoClient({ apiKey: options.apiKey, fetch: options.fetch, operation: "lists.get" });
-      const result = await client.fetchJSON(`/contacts/lists/${payload.listId}`);
+      const result = await client.fetchJSON(`/contacts/lists/${payload.listId}`, {
+        query: payload.startDate || payload.endDate ? { startDate: payload.startDate, endDate: payload.endDate } : undefined,
+      });
       if (result.status === 200) {
         return { ok: true as const, list: normalizeList(result.body as Record<string, unknown>) };
       }
