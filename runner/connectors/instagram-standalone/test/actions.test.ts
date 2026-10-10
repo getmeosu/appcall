@@ -2,7 +2,9 @@ import { expect, it } from "bun:test";
 import { compileDeclarativeConnector } from "../../../bun/src/declarative/compile";
 import cases from "../fixtures/contracts.json";
 import errors from "../fixtures/errors.json";
+import tools from "../fixtures/composio-tools.json";
 const credentials = { accessToken: "test-secret", instagramUserId: "17841400000000001" };
+const originOps = ["healthcheck", "users.get", "media.list", "media.get", "containers.createImage", "containers.createReel", "containers.get", "media.publish", "publishing.limit"];
 async function load() {
   const file = Bun.file(new URL("../manifest.json", import.meta.url));
   expect(await file.exists()).toBe(true);
@@ -34,7 +36,7 @@ for (const c of cases) {
     expect(JSON.stringify(output)).not.toContain("test-secret");
     const op = manifest.operations[c.op];
     expect(op.kind).toBe("action");
-    expect(op.sideEffect).toBe(c.method === "GET" ? "read" : "write");
+    expect(op.sideEffect).toBe(c.method === "GET" ? "read" : c.method === "DELETE" ? "destructive" : "write");
     expect(op.inputSchema.type).toBe("object");
     expect(op.outputSchema.type).toBe("object");
     expect(op.description.length).toBeGreaterThan(10);
@@ -44,20 +46,40 @@ for (const c of cases) {
 }
 it("declares complete manual token contracts and bound account ID", async () => {
   const { manifest, actions } = await load();
-  expect(Object.keys(actions).sort()).toEqual(cases.map(c => c.op).sort());
+  expect(cases.map((c: { op: string }) => c.op)).toEqual(originOps);
+  for (const op of originOps) expect(actions[op]).toBeDefined();
+  expect(Object.keys(actions).sort()).toEqual([...originOps, ...tools.map((row: { operation: string }) => row.operation)].sort());
   expect(manifest.auth.type).toBe("oauth2");
   expect(manifest.auth.setup.mode).toBe("api_key");
   expect(manifest.auth.oauth).toBeUndefined();
-  expect(manifest.auth.scopes).toEqual(["instagram_business_basic", "instagram_business_content_publish"]);
+  expect(manifest.auth.scopes).toEqual([
+    "instagram_business_basic",
+    "instagram_business_content_publish",
+    "instagram_business_manage_comments",
+    "instagram_business_manage_messages",
+    "instagram_business_manage_insights",
+  ]);
   expect(manifest.auth.setup.fields).toEqual(expect.arrayContaining([
     expect.objectContaining({ key: "accessToken", secret: true, required: true }),
     expect.objectContaining({ key: "instagramUserId", secret: false, required: true }),
   ]));
   expect(manifest.network.allowedHosts).toEqual(["graph.instagram.com"]);
+  expect(manifest.http.baseUrl).toBe("https://graph.instagram.com/v26.0");
+});
+it("maps every current Composio INSTAGRAM tool to a request-backed operation", async () => {
+  const { manifest, actions } = await load();
+  expect(tools).toHaveLength(40);
+  expect(new Set(tools.map((row: { tool: string }) => row.tool)).size).toBe(40);
+  for (const row of tools) {
+    const op = manifest.operations[row.operation];
+    expect(op?.request).toBeDefined();
+    expect(op.kind).toBe("action");
+    expect(typeof actions[row.operation]).toBe("function");
+  }
 });
 it("rejects missing required action inputs before network", async () => {
   const { actions } = await load();
-  for (const op of ["media.get", "containers.createImage", "containers.createReel", "containers.get", "media.publish"]) {
+  for (const op of ["media.get", "containers.createImage", "containers.createReel", "containers.get", "media.publish", "get_ig_media", "delete_comment", "send_text_message", "create_post", "list_all_messages", "set_media_comment_enabled", "get_multiple_nodes"]) {
     let calls = 0;
     await expect(actions[op]!({ ...credentials, fetch: async () => { calls++; return Response.json({}); } })).rejects.toMatchObject({ code: "INVALID_ACTION_INPUT" });
     expect(calls).toBe(0);
