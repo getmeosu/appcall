@@ -71,6 +71,46 @@
         "path": "src/providers/laposta/executors.ts",
         "startLine": 10,
         "endLine": 19
+      },
+      "action-create-list": {
+        "path": "src/providers/laposta/actions.ts",
+        "startLine": 87,
+        "endLine": 92
+      },
+      "action-update-list": {
+        "path": "src/providers/laposta/actions.ts",
+        "startLine": 93,
+        "endLine": 105
+      },
+      "action-create-member": {
+        "path": "src/providers/laposta/actions.ts",
+        "startLine": 135,
+        "endLine": 166
+      },
+      "action-update-member": {
+        "path": "src/providers/laposta/actions.ts",
+        "startLine": 167,
+        "endLine": 180
+      },
+      "handler-create-list": {
+        "path": "src/providers/laposta/runtime.ts",
+        "startLine": 28,
+        "endLine": 30
+      },
+      "handler-update-list": {
+        "path": "src/providers/laposta/runtime.ts",
+        "startLine": 31,
+        "endLine": 34
+      },
+      "handler-create-member": {
+        "path": "src/providers/laposta/runtime.ts",
+        "startLine": 44,
+        "endLine": 46
+      },
+      "handler-update-member": {
+        "path": "src/providers/laposta/runtime.ts",
+        "startLine": 47,
+        "endLine": 50
       }
     }
   },
@@ -81,10 +121,31 @@
     "edition": "international Laposta v2 API",
     "operations": [
       "healthcheck",
-      "lists.list",
       "lists.get",
+      "lists.list",
+      "members.get",
       "members.list",
-      "members.get"
+      "lists.create",
+      "lists.update",
+      "lists.delete",
+      "lists.members.clear",
+      "members.create",
+      "members.update",
+      "members.delete",
+      "fields.list",
+      "fields.get",
+      "fields.create",
+      "fields.update",
+      "fields.delete",
+      "segments.list",
+      "segments.get",
+      "webhooks.list",
+      "webhooks.get",
+      "webhooks.create",
+      "webhooks.update",
+      "webhooks.delete",
+      "campaigns.list",
+      "reports.list"
     ],
     "upstreamSha": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
     "marketFocus": "international",
@@ -228,22 +289,293 @@
         "Official GET /v2/member/{member_id}?list_id={list_id}. member_id may be a member ID or email.",
         "Pinned source double-encodes '+' in member emails as %252B. Native encodeURIComponent encodes '+' once as %2B; plus-address emails are therefore an explicit encoding adaptation."
       ]
+    },
+    "lists.create": {
+      "upstreamActionId": "create_list",
+      "sourceRefs": [
+        "action-create-list",
+        "handler-create-list",
+        "request-auth"
+      ],
+      "documentationUrls": [
+        "https://api.laposta.nl/doc/index.en.php"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Official POST /v2/list as application/x-www-form-urlencoded. Pinned source create_list is included."
+      ]
+    },
+    "lists.update": {
+      "upstreamActionId": "update_list",
+      "sourceRefs": [
+        "action-update-list",
+        "handler-update-list",
+        "request-auth"
+      ],
+      "documentationUrls": [
+        "https://api.laposta.nl/doc/index.en.php"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Official POST /v2/list/{list_id}. Omitted fields keep their current values."
+      ]
+    },
+    "lists.delete": {
+      "upstreamActionId": "delete_list",
+      "sourceRefs": [
+        "request-auth"
+      ],
+      "documentationUrls": [
+        "https://api.laposta.nl/doc/index.en.php"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Official DELETE /v2/list/{list_id}. Not present in the pinned open-connector selection."
+      ]
+    },
+    "lists.members.clear": {
+      "upstreamActionId": "clear_list_members",
+      "sourceRefs": [
+        "request-auth"
+      ],
+      "documentationUrls": [
+        "https://api.laposta.nl/doc/index.en.php"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Official DELETE /v2/list/{list_id}/members. Not present in the pinned open-connector selection."
+      ]
+    },
+    "members.create": {
+      "upstreamActionId": "create_member",
+      "sourceRefs": [
+        "action-create-member",
+        "handler-create-member",
+        "request-auth"
+      ],
+      "documentationUrls": [
+        "https://api.laposta.nl/doc/index.en.php"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Official POST /v2/member. Nested custom_fields and options are flattened by a handwritten form encoder because declarative form bodies reject objects and arrays."
+      ]
+    },
+    "members.update": {
+      "upstreamActionId": "update_member",
+      "sourceRefs": [
+        "action-update-member",
+        "handler-update-member",
+        "request-auth"
+      ],
+      "documentationUrls": [
+        "https://api.laposta.nl/doc/index.en.php"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Official POST /v2/member/{member_id}. Nested custom_fields are flattened by the handwritten form encoder."
+      ]
+    },
+    "members.delete": {
+      "upstreamActionId": "delete_member",
+      "sourceRefs": [
+        "request-auth"
+      ],
+      "documentationUrls": [
+        "https://api.laposta.nl/doc/index.en.php"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Official DELETE /v2/member/{member_id}?list_id=. Plus-address emails use encodeURIComponent (%2B), not the pinned %252B double-encode."
+      ]
+    },
+    "fields.list": {
+      "upstreamActionId": "list_fields",
+      "sourceRefs": [
+        "request-auth"
+      ],
+      "documentationUrls": [
+        "https://api.laposta.nl/doc/index.en.php"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Official GET /v2/field?list_id=."
+      ]
+    },
+    "fields.get": {
+      "upstreamActionId": "get_field",
+      "sourceRefs": [
+        "request-auth"
+      ],
+      "documentationUrls": [
+        "https://api.laposta.nl/doc/index.en.php"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Official GET /v2/field/{field_id}?list_id=."
+      ]
+    },
+    "fields.create": {
+      "upstreamActionId": "create_field",
+      "sourceRefs": [
+        "request-auth"
+      ],
+      "documentationUrls": [
+        "https://api.laposta.nl/doc/index.en.php"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Official POST /v2/field. options[] is flattened by the handwritten form encoder."
+      ]
+    },
+    "fields.update": {
+      "upstreamActionId": "update_field",
+      "sourceRefs": [
+        "request-auth"
+      ],
+      "documentationUrls": [
+        "https://api.laposta.nl/doc/index.en.php"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Official POST /v2/field/{field_id} with JSON body so Composio options_full arrays are sent as documented."
+      ]
+    },
+    "fields.delete": {
+      "upstreamActionId": "delete_field",
+      "sourceRefs": [
+        "request-auth"
+      ],
+      "documentationUrls": [
+        "https://api.laposta.nl/doc/index.en.php"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Official DELETE /v2/field/{field_id}?list_id=."
+      ]
+    },
+    "segments.list": {
+      "upstreamActionId": "list_segments",
+      "sourceRefs": [
+        "request-auth"
+      ],
+      "documentationUrls": [
+        "https://api.laposta.nl/doc/index.en.php"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Official GET /v2/segment?list_id=."
+      ]
+    },
+    "segments.get": {
+      "upstreamActionId": "get_segment",
+      "sourceRefs": [
+        "request-auth"
+      ],
+      "documentationUrls": [
+        "https://api.laposta.nl/doc/index.en.php"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Official GET /v2/segment/{segment_id}?list_id=."
+      ]
+    },
+    "webhooks.list": {
+      "upstreamActionId": "list_webhooks",
+      "sourceRefs": [
+        "request-auth"
+      ],
+      "documentationUrls": [
+        "https://api.laposta.nl/doc/index.en.php"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Official GET /v2/webhook?list_id=."
+      ]
+    },
+    "webhooks.get": {
+      "upstreamActionId": "get_webhook",
+      "sourceRefs": [
+        "request-auth"
+      ],
+      "documentationUrls": [
+        "https://api.laposta.nl/doc/index.en.php"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Official GET /v2/webhook/{webhook_id}?list_id=."
+      ]
+    },
+    "webhooks.create": {
+      "upstreamActionId": "create_webhook",
+      "sourceRefs": [
+        "request-auth"
+      ],
+      "documentationUrls": [
+        "https://api.laposta.nl/doc/index.en.php"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Official POST /v2/webhook. This is webhook subscription CRUD (sideEffect write), not an inbound AppCall trigger."
+      ]
+    },
+    "webhooks.update": {
+      "upstreamActionId": "update_webhook",
+      "sourceRefs": [
+        "request-auth"
+      ],
+      "documentationUrls": [
+        "https://api.laposta.nl/doc/index.en.php"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Official POST /v2/webhook/{webhook_id}. Webhook subscription CRUD, not an inbound trigger."
+      ]
+    },
+    "webhooks.delete": {
+      "upstreamActionId": "delete_webhook",
+      "sourceRefs": [
+        "request-auth"
+      ],
+      "documentationUrls": [
+        "https://api.laposta.nl/doc/index.en.php"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Official DELETE /v2/webhook/{webhook_id}?list_id=. Webhook subscription CRUD, not an inbound trigger."
+      ]
+    },
+    "campaigns.list": {
+      "upstreamActionId": "list_campaigns",
+      "sourceRefs": [
+        "request-auth"
+      ],
+      "documentationUrls": [
+        "https://api.laposta.nl/doc/index.en.php"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Official GET /v2/campaign. No input parameters."
+      ]
+    },
+    "reports.list": {
+      "upstreamActionId": "list_reports",
+      "sourceRefs": [
+        "request-auth"
+      ],
+      "documentationUrls": [
+        "https://api.laposta.nl/doc/index.en.php"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Official GET /v2/report. No input parameters."
+      ]
     }
   },
   "manifest": {
-    "key": "laposta",
-    "name": "Laposta",
-    "version": "0.1.0",
-    "runtime": "bun",
-    "visibility": "public",
-    "categories": [
-      "email-marketing"
-    ],
     "auth": {
-      "type": "api_key",
       "scopes": [],
       "setup": {
-        "mode": "api_key",
         "fields": [
           {
             "key": "apiKey",
@@ -251,150 +583,132 @@
             "required": true,
             "secret": true
           }
-        ]
+        ],
+        "mode": "api_key"
+      },
+      "type": "api_key"
+    },
+    "categories": [
+      "email-marketing"
+    ],
+    "evidence": {
+      "fixture": {
+        "status": "supplied"
+      },
+      "live": {
+        "status": "unverified"
       }
     },
-    "network": {
-      "allowedHosts": [
-        "api.laposta.org"
-      ]
-    },
-    "models": [
-      "list",
-      "member"
-    ],
     "http": {
-      "baseUrl": "https://api.laposta.org",
       "auth": {
+        "basic": {
+          "password": "",
+          "username": "{{apiKey}}"
+        },
         "field": "apiKey",
         "in": "header",
-        "name": "Authorization",
-        "basic": {
-          "username": "{{apiKey}}",
-          "password": ""
-        }
+        "name": "Authorization"
       },
-      "headers": {
-        "Accept": "application/json"
-      },
+      "baseUrl": "https://api.laposta.org",
       "errors": {
-        "rateLimitStatuses": [
-          429
-        ],
-        "retryAfterHeader": "Retry-After",
         "defaultRetryAfterSeconds": 30,
         "messagePaths": [
           "error.message",
           "error",
           "message"
-        ]
+        ],
+        "rateLimitStatuses": [
+          429
+        ],
+        "retryAfterHeader": "Retry-After"
+      },
+      "headers": {
+        "Accept": "application/json"
       }
+    },
+    "key": "laposta",
+    "models": [
+      "list",
+      "member",
+      "field",
+      "segment",
+      "webhook",
+      "campaign",
+      "report"
+    ],
+    "name": "Laposta",
+    "network": {
+      "allowedHosts": [
+        "api.laposta.org"
+      ]
     },
     "operations": {
       "healthcheck": {
-        "timeoutMs": 5000,
+        "description": "Validate the Laposta API key by listing mailing lists.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {},
+          "type": "object"
+        },
+        "kind": "action",
         "maxInputBytes": 4096,
         "maxResponseBytes": 65536,
-        "kind": "action",
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        },
+        "request": {
+          "method": "GET",
+          "path": "/v2/list",
+          "success": [
+            200
+          ]
+        },
+        "responseFormat": "json",
         "sideEffect": "read",
+        "timeoutMs": 5000,
         "title": "Healthcheck",
-        "description": "Validate the Laposta API key by listing mailing lists.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {},
-          "additionalProperties": false
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "GET",
-          "path": "/v2/list",
-          "success": [
-            200
-          ]
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "lists.list": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
-        "sideEffect": "read",
-        "title": "List lists",
-        "description": "List all mailing lists available to the authenticated Laposta account.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {},
-          "additionalProperties": false
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "GET",
-          "path": "/v2/list",
-          "success": [
-            200
-          ]
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
+        "validationMode": "strict-generated"
       },
       "lists.get": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
-        "sideEffect": "read",
-        "title": "Get list",
         "description": "Get one Laposta mailing list by ID.",
+        "enforceOutputSchema": true,
         "inputSchema": {
-          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "list_id": {
+              "minLength": 1,
+              "type": "string"
+            }
+          },
           "required": [
             "list_id"
           ],
-          "properties": {
-            "list_id": {
-              "type": "string",
-              "minLength": 1
-            }
-          },
-          "additionalProperties": false
+          "type": "object"
         },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
         "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
+          "additionalProperties": false,
           "properties": {
             "data": {
               "type": "object"
             }
           },
-          "additionalProperties": false
+          "required": [
+            "data"
+          ],
+          "type": "object"
         },
         "request": {
           "method": "GET",
@@ -403,50 +717,138 @@
             200
           ]
         },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "members.list": {
+        "responseFormat": "json",
+        "sideEffect": "read",
         "timeoutMs": 15000,
+        "title": "Get list",
+        "validationMode": "strict-generated"
+      },
+      "lists.list": {
+        "description": "List all mailing lists available to the authenticated Laposta account.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {},
+          "type": "object"
+        },
+        "kind": "action",
         "maxInputBytes": 65536,
         "maxResponseBytes": 5242880,
-        "kind": "action",
-        "sideEffect": "read",
-        "title": "List members",
-        "description": "List members of a Laposta mailing list, optionally filtered by state.",
-        "inputSchema": {
-          "type": "object",
-          "required": [
-            "list_id"
-          ],
-          "properties": {
-            "list_id": {
-              "type": "string",
-              "minLength": 1
-            },
-            "state": {
-              "type": "string",
-              "enum": [
-                "active",
-                "unsubscribed",
-                "cleaned"
-              ]
-            }
-          },
-          "additionalProperties": false
-        },
         "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
+          "additionalProperties": false,
           "properties": {
             "data": {
               "type": "object"
             }
           },
-          "additionalProperties": false
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        },
+        "request": {
+          "method": "GET",
+          "path": "/v2/list",
+          "success": [
+            200
+          ]
+        },
+        "responseFormat": "json",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "title": "List lists",
+        "validationMode": "strict-generated"
+      },
+      "members.get": {
+        "description": "Get one Laposta member by member ID or email address.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "list_id": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "member_id": {
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "list_id",
+            "member_id"
+          ],
+          "type": "object"
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        },
+        "request": {
+          "method": "GET",
+          "path": "/v2/member/{{member_id}}",
+          "query": {
+            "list_id": "{{list_id}}"
+          },
+          "success": [
+            200
+          ]
+        },
+        "responseFormat": "json",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "title": "Get member",
+        "validationMode": "strict-generated"
+      },
+      "members.list": {
+        "description": "List members of a Laposta mailing list, optionally filtered by state.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "list_id": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "state": {
+              "enum": [
+                "active",
+                "unsubscribed",
+                "cleaned"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "list_id"
+          ],
+          "type": "object"
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
         },
         "request": {
           "method": "GET",
@@ -459,35 +861,515 @@
             200
           ]
         },
+        "responseFormat": "json",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "title": "List members",
+        "validationMode": "strict-generated"
+      },
+      "lists.create": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "write",
+        "title": "Create list",
+        "description": "Create a new Laposta mailing list with zero members.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Name of the mailing list."
+            },
+            "locked": {
+              "type": "boolean",
+              "description": "If true, application users cannot modify the list."
+            },
+            "remarks": {
+              "type": "string",
+              "description": "Optional notes about the list."
+            },
+            "subscribe_notification_email": {
+              "type": "string",
+              "description": "Email notified when someone subscribes."
+            },
+            "unsubscribe_notification_email": {
+              "type": "string",
+              "description": "Email notified when someone unsubscribes."
+            }
+          },
+          "required": [
+            "name"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "POST",
+          "path": "/v2/list",
+          "success": [
+            200,
+            201
+          ],
+          "headers": {
+            "Content-Type": "application/x-www-form-urlencoded"
+          },
+          "bodyEncoding": "form",
+          "body": {
+            "name": "{{name}}",
+            "locked": "{{locked}}",
+            "remarks": "{{remarks}}",
+            "subscribe_notification_email": "{{subscribe_notification_email}}",
+            "unsubscribe_notification_email": "{{unsubscribe_notification_email}}"
+          }
+        },
         "enforceOutputSchema": true,
         "validationMode": "strict-generated",
         "responseFormat": "json"
       },
-      "members.get": {
+      "lists.update": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "write",
+        "title": "Update list",
+        "description": "Modify list properties such as name, remarks, or notification emails.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "list_id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "List ID to modify."
+            },
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Name of the mailing list."
+            },
+            "locked": {
+              "type": "boolean",
+              "description": "If true, application users cannot modify the list."
+            },
+            "remarks": {
+              "type": "string",
+              "description": "Optional notes about the list."
+            },
+            "subscribe_notification_email": {
+              "type": "string",
+              "description": "Email notified when someone subscribes."
+            },
+            "unsubscribe_notification_email": {
+              "type": "string",
+              "description": "Email notified when someone unsubscribes."
+            }
+          },
+          "required": [
+            "list_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "POST",
+          "path": "/v2/list/{{list_id}}",
+          "success": [
+            200,
+            201
+          ],
+          "headers": {
+            "Content-Type": "application/x-www-form-urlencoded"
+          },
+          "bodyEncoding": "form",
+          "body": {
+            "name": "{{name}}",
+            "locked": "{{locked}}",
+            "remarks": "{{remarks}}",
+            "subscribe_notification_email": "{{subscribe_notification_email}}",
+            "unsubscribe_notification_email": "{{unsubscribe_notification_email}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "lists.delete": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "destructive",
+        "title": "Delete list",
+        "description": "Permanently delete a mailing list. Members are not deleted.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "list_id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "List ID to delete."
+            }
+          },
+          "required": [
+            "list_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "DELETE",
+          "path": "/v2/list/{{list_id}}",
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "lists.members.clear": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "destructive",
+        "title": "Clear list members",
+        "description": "Permanently remove all active members from a list without deleting the list.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "list_id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "List ID to clear."
+            }
+          },
+          "required": [
+            "list_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "DELETE",
+          "path": "/v2/list/{{list_id}}/members",
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "members.create": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "write",
+        "title": "Create member",
+        "description": "Add a subscriber to a list, optionally upserting and setting custom fields.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "list_id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "List ID to add the member to."
+            },
+            "ip": {
+              "type": "string",
+              "minLength": 1,
+              "description": "IP address from which the member signed up."
+            },
+            "email": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Member email address."
+            },
+            "source_url": {
+              "type": "string",
+              "description": "URL from which the member signed up."
+            },
+            "custom_fields": {
+              "type": "object",
+              "description": "Extra field values keyed by the field custom_name.",
+              "additionalProperties": true
+            },
+            "options": {
+              "type": "object",
+              "description": "Member creation options.",
+              "additionalProperties": false,
+              "properties": {
+                "upsert": {
+                  "type": "boolean",
+                  "description": "Update an existing active member with the same email."
+                },
+                "suppress_reactivation": {
+                  "type": "boolean",
+                  "description": "Do not reactivate an unsubscribed member during upsert."
+                },
+                "suppress_email_notification": {
+                  "type": "boolean",
+                  "description": "Do not send the API subscription notification email."
+                },
+                "ignore_doubleoptin": {
+                  "type": "boolean",
+                  "description": "Activate immediately without a double opt-in email."
+                },
+                "spam_check": {
+                  "type": "boolean",
+                  "description": "Treat the request as a public signup form and run the spam check."
+                }
+              }
+            },
+            "user_agent": {
+              "type": "string",
+              "description": "Browser User-Agent used only by the spam check."
+            }
+          },
+          "required": [
+            "list_id",
+            "ip",
+            "email"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "POST",
+          "path": "/v2/member",
+          "success": [
+            200,
+            201
+          ],
+          "headers": {
+            "Content-Type": "application/x-www-form-urlencoded"
+          },
+          "bodyEncoding": "form",
+          "body": {
+            "list_id": "{{list_id}}",
+            "ip": "{{ip}}",
+            "email": "{{email}}",
+            "source_url": "{{source_url}}",
+            "user_agent": "{{user_agent}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "members.update": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "write",
+        "title": "Update member",
+        "description": "Modify member email, subscription state, or custom fields.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "list_id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "List ID containing the member."
+            },
+            "member_id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Member ID or email address."
+            },
+            "email": {
+              "type": "string",
+              "description": "Updated email address."
+            },
+            "state": {
+              "type": "string",
+              "enum": [
+                "active",
+                "unsubscribed"
+              ],
+              "description": "New member status."
+            },
+            "custom_fields": {
+              "type": "object",
+              "description": "Extra field values keyed by the field custom_name.",
+              "additionalProperties": true
+            }
+          },
+          "required": [
+            "list_id",
+            "member_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "POST",
+          "path": "/v2/member/{{member_id}}",
+          "success": [
+            200,
+            201
+          ],
+          "headers": {
+            "Content-Type": "application/x-www-form-urlencoded"
+          },
+          "bodyEncoding": "form",
+          "body": {
+            "list_id": "{{list_id}}",
+            "email": "{{email}}",
+            "state": "{{state}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "members.delete": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "destructive",
+        "title": "Delete member",
+        "description": "Permanently remove a member from a list by member ID or email.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "list_id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "List ID containing the member."
+            },
+            "member_id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Member ID or email address."
+            }
+          },
+          "required": [
+            "list_id",
+            "member_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "DELETE",
+          "path": "/v2/member/{{member_id}}",
+          "success": [
+            200
+          ],
+          "query": {
+            "list_id": "{{list_id}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "fields.list": {
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
         "maxResponseBytes": 5242880,
         "kind": "action",
         "sideEffect": "read",
-        "title": "Get member",
-        "description": "Get one Laposta member by member ID or email address.",
+        "title": "List fields",
+        "description": "Retrieve all fields for a mailing list.",
         "inputSchema": {
           "type": "object",
-          "required": [
-            "list_id",
-            "member_id"
-          ],
+          "additionalProperties": false,
           "properties": {
             "list_id": {
               "type": "string",
-              "minLength": 1
-            },
-            "member_id": {
-              "type": "string",
-              "minLength": 1
+              "minLength": 1,
+              "description": "List ID whose fields to retrieve."
             }
           },
-          "additionalProperties": false
+          "required": [
+            "list_id"
+          ]
         },
         "outputSchema": {
           "type": "object",
@@ -503,10 +1385,838 @@
         },
         "request": {
           "method": "GET",
-          "path": "/v2/member/{{member_id}}",
+          "path": "/v2/field",
+          "success": [
+            200
+          ],
           "query": {
             "list_id": "{{list_id}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "fields.get": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "read",
+        "title": "Get field",
+        "description": "Retrieve one custom field by field ID.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "list_id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "List ID containing the field."
+            },
+            "field_id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Field ID to retrieve."
+            }
           },
+          "required": [
+            "list_id",
+            "field_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/v2/field/{{field_id}}",
+          "success": [
+            200
+          ],
+          "query": {
+            "list_id": "{{list_id}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "fields.create": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "write",
+        "title": "Create field",
+        "description": "Create a custom field on a mailing list. Select fields require options.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "list_id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "List ID that owns the field."
+            },
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Display name for the field."
+            },
+            "defaultvalue": {
+              "type": "string",
+              "description": "Default value when the field is absent."
+            },
+            "datatype": {
+              "type": "string",
+              "enum": [
+                "text",
+                "numeric",
+                "date",
+                "select_single",
+                "select_multiple"
+              ],
+              "description": "Field data type."
+            },
+            "datatype_display": {
+              "type": "string",
+              "enum": [
+                "select",
+                "radio"
+              ],
+              "description": "For select_single, display as select or radio."
+            },
+            "options": {
+              "type": "array",
+              "description": "Choice values. Required for select_single and select_multiple.",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": {
+              "type": "boolean",
+              "description": "Whether the field is mandatory."
+            },
+            "in_form": {
+              "type": "boolean",
+              "description": "Whether to show the field on the signup form."
+            },
+            "in_list": {
+              "type": "boolean",
+              "description": "Whether to show the field in the list overview."
+            }
+          },
+          "required": [
+            "list_id",
+            "name",
+            "datatype",
+            "required",
+            "in_form",
+            "in_list"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "POST",
+          "path": "/v2/field",
+          "success": [
+            200,
+            201
+          ],
+          "headers": {
+            "Content-Type": "application/x-www-form-urlencoded"
+          },
+          "bodyEncoding": "form",
+          "body": {
+            "list_id": "{{list_id}}",
+            "name": "{{name}}",
+            "defaultvalue": "{{defaultvalue}}",
+            "datatype": "{{datatype}}",
+            "datatype_display": "{{datatype_display}}",
+            "required": "{{required}}",
+            "in_form": "{{in_form}}",
+            "in_list": "{{in_list}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "fields.update": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "write",
+        "title": "Update field",
+        "description": "Modify field configuration. Changing datatype removes existing values. options_full is sent as JSON.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "list_id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "List ID containing the field."
+            },
+            "field_id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Field ID to modify."
+            },
+            "name": {
+              "type": "string",
+              "description": "Display name for the field."
+            },
+            "datatype": {
+              "type": "string",
+              "enum": [
+                "text",
+                "numeric",
+                "date",
+                "select_single",
+                "select_multiple"
+              ],
+              "description": "Field data type. Changing this removes existing values."
+            },
+            "datatype_display": {
+              "type": "string",
+              "enum": [
+                "select",
+                "radio"
+              ],
+              "description": "For select_single, display as select or radio."
+            },
+            "options_full": {
+              "type": "array",
+              "description": "Replacement options as {id, value} objects. Omit an id to delete it.",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "id": {
+                    "description": "Existing numeric id or a new non-numeric key."
+                  },
+                  "value": {
+                    "type": "string",
+                    "description": "Option label."
+                  }
+                }
+              }
+            },
+            "defaultvalue": {
+              "type": "string",
+              "description": "Default value when the field is absent."
+            },
+            "required": {
+              "type": "boolean",
+              "description": "Whether the field is mandatory."
+            },
+            "in_form": {
+              "type": "boolean",
+              "description": "Whether to show the field on the signup form."
+            },
+            "in_list": {
+              "type": "boolean",
+              "description": "Whether to show the field in the list overview."
+            }
+          },
+          "required": [
+            "list_id",
+            "field_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "POST",
+          "path": "/v2/field/{{field_id}}",
+          "success": [
+            200,
+            201
+          ],
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "list_id": "{{list_id}}",
+            "name": "{{name}}",
+            "datatype": "{{datatype}}",
+            "datatype_display": "{{datatype_display}}",
+            "options_full": "{{options_full}}",
+            "defaultvalue": "{{defaultvalue}}",
+            "required": "{{required}}",
+            "in_form": "{{in_form}}",
+            "in_list": "{{in_list}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "fields.delete": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "destructive",
+        "title": "Delete field",
+        "description": "Permanently delete a custom field from a mailing list.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "list_id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "List ID containing the field."
+            },
+            "field_id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Field ID to delete."
+            }
+          },
+          "required": [
+            "list_id",
+            "field_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "DELETE",
+          "path": "/v2/field/{{field_id}}",
+          "success": [
+            200
+          ],
+          "query": {
+            "list_id": "{{list_id}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "segments.list": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "read",
+        "title": "List segments",
+        "description": "Retrieve all segments for a mailing list.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "list_id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "List ID whose segments to retrieve."
+            }
+          },
+          "required": [
+            "list_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/v2/segment",
+          "success": [
+            200
+          ],
+          "query": {
+            "list_id": "{{list_id}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "segments.get": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "read",
+        "title": "Get segment",
+        "description": "Retrieve one segment including its name and definition.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "list_id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "List ID containing the segment."
+            },
+            "segment_id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Segment ID to retrieve."
+            }
+          },
+          "required": [
+            "list_id",
+            "segment_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/v2/segment/{{segment_id}}",
+          "success": [
+            200
+          ],
+          "query": {
+            "list_id": "{{list_id}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "webhooks.list": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "read",
+        "title": "List webhooks",
+        "description": "Retrieve all webhooks configured for a mailing list.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "list_id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "List ID whose webhooks to retrieve."
+            }
+          },
+          "required": [
+            "list_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/v2/webhook",
+          "success": [
+            200
+          ],
+          "query": {
+            "list_id": "{{list_id}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "webhooks.get": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "read",
+        "title": "Get webhook",
+        "description": "Retrieve one webhook including event, URL, and blocked status.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "list_id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "List ID containing the webhook."
+            },
+            "webhook_id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Webhook ID to retrieve."
+            }
+          },
+          "required": [
+            "list_id",
+            "webhook_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/v2/webhook/{{webhook_id}}",
+          "success": [
+            200
+          ],
+          "query": {
+            "list_id": "{{list_id}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "webhooks.create": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "write",
+        "title": "Create webhook",
+        "description": "Register a webhook URL for subscribed, modified, or deactivated list events.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "list_id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "List ID that owns the webhook."
+            },
+            "event": {
+              "type": "string",
+              "enum": [
+                "subscribed",
+                "modified",
+                "deactivated"
+              ],
+              "description": "Trigger event."
+            },
+            "url": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Endpoint URL that receives webhook POST notifications."
+            },
+            "blocked": {
+              "type": "boolean",
+              "description": "Temporarily block webhook delivery. Defaults to false when omitted."
+            }
+          },
+          "required": [
+            "list_id",
+            "event",
+            "url"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "POST",
+          "path": "/v2/webhook",
+          "success": [
+            200,
+            201
+          ],
+          "headers": {
+            "Content-Type": "application/x-www-form-urlencoded"
+          },
+          "bodyEncoding": "form",
+          "body": {
+            "list_id": "{{list_id}}",
+            "event": "{{event}}",
+            "url": "{{url}}",
+            "blocked": "{{blocked}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "webhooks.update": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "write",
+        "title": "Update webhook",
+        "description": "Modify webhook URL, event type, or blocked status.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "list_id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "List ID containing the webhook."
+            },
+            "webhook_id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Webhook ID to modify."
+            },
+            "event": {
+              "type": "string",
+              "enum": [
+                "subscribed",
+                "modified",
+                "deactivated"
+              ],
+              "description": "Trigger event."
+            },
+            "url": {
+              "type": "string",
+              "description": "Endpoint URL that receives webhook POST notifications."
+            },
+            "blocked": {
+              "type": "boolean",
+              "description": "Temporarily block webhook delivery."
+            }
+          },
+          "required": [
+            "list_id",
+            "webhook_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "POST",
+          "path": "/v2/webhook/{{webhook_id}}",
+          "success": [
+            200,
+            201
+          ],
+          "headers": {
+            "Content-Type": "application/x-www-form-urlencoded"
+          },
+          "bodyEncoding": "form",
+          "body": {
+            "list_id": "{{list_id}}",
+            "event": "{{event}}",
+            "url": "{{url}}",
+            "blocked": "{{blocked}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "webhooks.delete": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "destructive",
+        "title": "Delete webhook",
+        "description": "Permanently delete a webhook. Pending deliveries still complete.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "list_id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "List ID containing the webhook."
+            },
+            "webhook_id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Webhook ID to delete."
+            }
+          },
+          "required": [
+            "list_id",
+            "webhook_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "DELETE",
+          "path": "/v2/webhook/{{webhook_id}}",
+          "success": [
+            200
+          ],
+          "query": {
+            "list_id": "{{list_id}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "campaigns.list": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "read",
+        "title": "List campaigns",
+        "description": "Retrieve all email campaigns for the authenticated account.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {}
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/v2/campaign",
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "reports.list": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "read",
+        "title": "List reports",
+        "description": "Retrieve performance metrics for all campaigns.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {}
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/v2/report",
           "success": [
             200
           ]
@@ -518,17 +2228,12 @@
     },
     "provenance": {
       "source": {
-        "url": "https://github.com/oomol-lab/open-connector",
-        "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"
+        "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
+        "url": "https://github.com/oomol-lab/open-connector"
       }
     },
-    "evidence": {
-      "fixture": {
-        "status": "supplied"
-      },
-      "live": {
-        "status": "unverified"
-      }
-    }
+    "runtime": "bun",
+    "version": "0.2.0",
+    "visibility": "public"
   }
 }
