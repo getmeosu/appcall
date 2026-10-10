@@ -1,24 +1,14 @@
 # Gem
 
-Read-only international **Gem CRM API v0** recipe. This is the recruiting CRM at [gem.com](https://www.gem.com), not Greenhouse and not the unrelated Gem.co crypto API. Gem also publishes ATS and Job Board APIs; those editions are out of scope.
+International **Gem** recruiting CRM API v0 at [api.gem.com](https://api.gem.com/v0/reference). This is Gem recruiting CRM, not Greenhouse and not Gem.co crypto.
 
 ## Setup
 
-Team admins provision a 40-character team API key from Gem Team Settings. Store it as `apiKey`. Requests send `X-API-Key` and `Accept: application/json` to `https://api.gem.com`.
+Store the team API key as `apiKey`. Requests send `X-API-Key` to `https://api.gem.com`. Hosts are bounded to `api.gem.com`.
 
 ## Operations
 
-- `healthcheck`: `GET /v0/users?page_size=1` with empty input (cheap authenticated list probe).
-- `users.list`: `GET /v0/users` with optional `email`, 1-indexed `page`, and `page_size` (1–100).
-- `candidates.list`: `GET /v0/candidates` with the same optional filters.
-- `candidates.get`: `GET /v0/candidates/{candidate_id}`; the ID is percent-encoded as one path segment.
-- `projects.list`: `GET /v0/projects` with optional page filters.
-
-Successful responses are raw provider JSON under AppCall `data`. Gem list endpoints return JSON arrays. The `X-Pagination` header is not mapped. Writes, sequence/custom-field operations, and `candidate_ids` comma-join are omitted.
-
-## Adaptations
-
-Pinned source and official docs agree on host, `X-API-Key`, and `/v0` paths. Healthcheck uses the pinned credential-validator probe rather than a billable search.
+HTTP actions cover users, candidates, notes, projects (including membership), sequences, and custom fields. Gem CRM does not expose a first-party outbound webhook catalog, so this recipe has no EventOnly webhook ops.
 
 ## License and evidence
 
