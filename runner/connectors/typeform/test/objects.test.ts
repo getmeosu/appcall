@@ -4,7 +4,15 @@ import {
   parseFormsResponse,
   normalizeResponse,
   parseResponsesResponse,
+  normalizeWorkspace,
+  normalizeTheme,
+  normalizeImage,
+  normalizeUser,
 } from "../src/objects";
+import workspacesList from "../fixtures/workspaces_list.json";
+import themeGet from "../fixtures/theme_get.json";
+import imagesList from "../fixtures/images_list.json";
+import usersMe from "../fixtures/users_me.json";
 import formsList from "../fixtures/forms_list.json";
 import formsListLastPage from "../fixtures/forms_list_last_page.json";
 import responsesList from "../fixtures/responses_list.json";
@@ -105,5 +113,38 @@ describe("parseResponsesResponse", () => {
   it("handles array input", () => {
     const result = parseResponsesResponse([1, 2]);
     expect(result.responses).toHaveLength(0);
+  });
+});
+
+describe("normalizeWorkspace", () => {
+  it("maps workspace fields", () => {
+    const w = normalizeWorkspace(workspacesList.items[0] as Record<string, unknown>);
+    expect(w.id).toBe("tf-workspace:ws_fixture_1");
+    expect(w.name).toBe("My Workspace");
+    expect(w.formCount).toBe(3);
+  });
+});
+
+describe("normalizeTheme", () => {
+  it("maps theme fields", () => {
+    const t = normalizeTheme(themeGet as Record<string, unknown>);
+    expect(t.providerThemeId).toBe("theme_fixture_1");
+    expect(t.name).toBe("Default");
+  });
+});
+
+describe("normalizeImage", () => {
+  it("maps image fields", () => {
+    const i = normalizeImage(imagesList[0] as Record<string, unknown>);
+    expect(i.fileName).toBe("header.png");
+    expect(i.providerImageId).toBe("img_fixture_1");
+  });
+});
+
+describe("normalizeUser", () => {
+  it("maps user fields", () => {
+    const u = normalizeUser(usersMe as Record<string, unknown>);
+    expect(u.email).toBe("operator@example.com");
+    expect(u.alias).toBe("fixture-operator");
   });
 });

@@ -13,6 +13,10 @@ import {
   validateForwardMessageInput,
   pinTelegramMessage,
   validatePinChatMessageInput,
+  sendTelegramLocation,
+  validateSendLocationInput,
+  sendTelegramPoll,
+  validateSendPollInput,
 } from "./messages";
 import {
   getChat,
@@ -21,8 +25,24 @@ import {
   validateGetChatMemberCountInput,
   sendChatAction,
   validateSendChatActionInput,
+  exportChatInviteLink as exportTelegramInviteLink,
+  validateExportChatInviteLinkInput,
+  getChatAdministrators as getTelegramChatAdministrators,
+  validateGetChatAdministratorsInput,
+  getChatMember as getTelegramChatMember,
+  validateGetChatMemberInput,
+  getChatHistory as getTelegramChatHistory,
+  validateGetChatHistoryInput,
 } from "./chats";
-import { getMe } from "./bot";
+import {
+  getMe,
+  getUpdates as getTelegramUpdates,
+  validateGetUpdatesInput,
+  setMyCommands as setTelegramMyCommands,
+  validateSetMyCommandsInput,
+  answerCallbackQuery as answerTelegramCallbackQuery,
+  validateAnswerCallbackQueryInput,
+} from "./bot";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -241,5 +261,158 @@ export function getMeAction(input: unknown): Record<string, unknown> | Promise<R
     action: "bot.getMe",
     source: "connector",
     validated: {},
+  };
+}
+
+export function sendLocation(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.botToken === "string") {
+    return sendTelegramLocation(input as Parameters<typeof sendTelegramLocation>[0]).then((result) => ({
+      connector: "telegram",
+      action: "messages.sendLocation",
+      source: "connector",
+      ...result,
+    }));
+  }
+  return {
+    connector: "telegram",
+    action: "messages.sendLocation",
+    source: "connector",
+    validated: validateSendLocationInput(input),
+  };
+}
+
+export function sendPoll(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.botToken === "string") {
+    return sendTelegramPoll(input as Parameters<typeof sendTelegramPoll>[0]).then((result) => ({
+      connector: "telegram",
+      action: "messages.sendPoll",
+      source: "connector",
+      ...result,
+    }));
+  }
+  return {
+    connector: "telegram",
+    action: "messages.sendPoll",
+    source: "connector",
+    validated: validateSendPollInput(input),
+  };
+}
+
+export function exportChatInviteLink(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.botToken === "string") {
+    return exportTelegramInviteLink(input as Parameters<typeof exportTelegramInviteLink>[0]).then((result) => ({
+      connector: "telegram",
+      action: "chats.exportInviteLink",
+      source: "connector",
+      ...result,
+    }));
+  }
+  return {
+    connector: "telegram",
+    action: "chats.exportInviteLink",
+    source: "connector",
+    validated: validateExportChatInviteLinkInput(input),
+  };
+}
+
+export function getChatAdministrators(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.botToken === "string") {
+    return getTelegramChatAdministrators(input as Parameters<typeof getTelegramChatAdministrators>[0]).then((result) => ({
+      connector: "telegram",
+      action: "chats.getAdministrators",
+      source: "connector",
+      ...result,
+    }));
+  }
+  return {
+    connector: "telegram",
+    action: "chats.getAdministrators",
+    source: "connector",
+    validated: validateGetChatAdministratorsInput(input),
+  };
+}
+
+export function getChatMember(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.botToken === "string") {
+    return getTelegramChatMember(input as Parameters<typeof getTelegramChatMember>[0]).then((result) => ({
+      connector: "telegram",
+      action: "chats.getMember",
+      source: "connector",
+      ...result,
+    }));
+  }
+  return {
+    connector: "telegram",
+    action: "chats.getMember",
+    source: "connector",
+    validated: validateGetChatMemberInput(input),
+  };
+}
+
+export function getChatHistory(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.botToken === "string") {
+    return getTelegramChatHistory(input as Parameters<typeof getTelegramChatHistory>[0]).then((result) => ({
+      connector: "telegram",
+      action: "chats.getHistory",
+      source: "connector",
+      ...result,
+    }));
+  }
+  return {
+    connector: "telegram",
+    action: "chats.getHistory",
+    source: "connector",
+    validated: validateGetChatHistoryInput(input),
+  };
+}
+
+export function getUpdates(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.botToken === "string") {
+    return getTelegramUpdates(input as Parameters<typeof getTelegramUpdates>[0]).then((result) => ({
+      connector: "telegram",
+      action: "bot.getUpdates",
+      source: "connector",
+      ...result,
+    }));
+  }
+  return {
+    connector: "telegram",
+    action: "bot.getUpdates",
+    source: "connector",
+    validated: validateGetUpdatesInput(input),
+  };
+}
+
+export function setMyCommands(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.botToken === "string") {
+    return setTelegramMyCommands(input as Parameters<typeof setTelegramMyCommands>[0]).then((result) => ({
+      connector: "telegram",
+      action: "bot.setMyCommands",
+      source: "connector",
+      ...result,
+    }));
+  }
+  return {
+    connector: "telegram",
+    action: "bot.setMyCommands",
+    source: "connector",
+    validated: validateSetMyCommandsInput(input),
+  };
+}
+
+export function answerCallbackQuery(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.botToken === "string") {
+    return answerTelegramCallbackQuery(input as Parameters<typeof answerTelegramCallbackQuery>[0]).then((result) => ({
+      connector: "telegram",
+      action: "callbacks.answer",
+      source: "connector",
+      ...result,
+    }));
+  }
+  return {
+    connector: "telegram",
+    action: "callbacks.answer",
+    source: "connector",
+    validated: validateAnswerCallbackQueryInput(input),
   };
 }
