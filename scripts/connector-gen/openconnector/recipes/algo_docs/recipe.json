@@ -94,7 +94,11 @@
       "extractors.list",
       "folders.list",
       "extracted-data.get",
-      "extracted-data.list"
+      "extracted-data.list",
+      "documents.upload_url",
+      "documents.upload_base64",
+      "media.json",
+      "webhook.extracted_data"
     ],
     "upstreamSha": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
     "marketFocus": "international",
@@ -236,12 +240,64 @@
         "Official docs use query folderId; pinned source sent folder_id. Native follows the official folderId name (MailerLite-style docs-over-source).",
         "Upload-from-URL is omitted because it is multipart FormData."
       ]
+    },
+    "documents.upload_url": {
+      "upstreamActionId": "documents_upload_url",
+      "sourceRefs": [
+        "actions.ts"
+      ],
+      "documentationUrls": [
+        "https://api.algodocs.com/"
+      ],
+      "responseContract": "preserve-existing",
+      "adaptations": [
+        "First-party deepening toward Composio parity."
+      ]
+    },
+    "documents.upload_base64": {
+      "upstreamActionId": "documents_upload_base64",
+      "sourceRefs": [
+        "actions.ts"
+      ],
+      "documentationUrls": [
+        "https://api.algodocs.com/"
+      ],
+      "responseContract": "preserve-existing",
+      "adaptations": [
+        "First-party deepening toward Composio parity."
+      ]
+    },
+    "media.json": {
+      "upstreamActionId": "media_json",
+      "sourceRefs": [
+        "actions.ts"
+      ],
+      "documentationUrls": [
+        "https://api.algodocs.com/"
+      ],
+      "responseContract": "preserve-existing",
+      "adaptations": [
+        "First-party deepening toward Composio parity."
+      ]
+    },
+    "webhook.extracted_data": {
+      "upstreamActionId": "webhook_extracted_data",
+      "sourceRefs": [
+        "actions.ts"
+      ],
+      "documentationUrls": [
+        "https://api.algodocs.com/"
+      ],
+      "responseContract": "preserve-existing",
+      "adaptations": [
+        "First-party deepening toward Composio parity."
+      ]
     }
   },
   "manifest": {
     "key": "algo-docs",
     "name": "AlgoDocs",
-    "version": "0.1.0",
+    "version": "0.2.0",
     "runtime": "bun",
     "visibility": "public",
     "categories": [
@@ -277,7 +333,8 @@
       "account",
       "extractor",
       "folder",
-      "extracted-record"
+      "extracted-record",
+      "document"
     ],
     "http": {
       "baseUrl": "https://api.algodocs.com",
@@ -522,6 +579,190 @@
             "limit": "{{limit}}",
             "date": "{{date}}"
           },
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "documents.upload_url": {
+        "kind": "action",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Upload document from URL",
+        "description": "Tell AlgoDocs to fetch and process a document from a publicly accessible URL.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "extractorId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Extractor ID from GET /v1/extractors."
+            },
+            "folderId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Folder ID from GET /v1/folders."
+            },
+            "url": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Public URL of the document to fetch."
+            }
+          },
+          "required": [
+            "extractorId",
+            "folderId",
+            "url"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {}
+          }
+        },
+        "request": {
+          "method": "POST",
+          "path": "/v1/document/upload_url/{{extractorId}}/{{folderId}}",
+          "success": [
+            200,
+            201
+          ],
+          "headers": {
+            "Accept": "application/json",
+            "Content-Type": "application/x-www-form-urlencoded"
+          },
+          "body": {
+            "url": "{{url}}"
+          },
+          "bodyEncoding": "form"
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "documents.upload_base64": {
+        "kind": "action",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Upload document from base64",
+        "description": "Upload a base64-encoded document to AlgoDocs for extraction.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "extractorId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Extractor ID from GET /v1/extractors."
+            },
+            "folderId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Folder ID from GET /v1/folders."
+            },
+            "fileBase64": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Base64-encoded file content."
+            },
+            "filename": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Name to store the document under."
+            }
+          },
+          "required": [
+            "extractorId",
+            "folderId",
+            "fileBase64",
+            "filename"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {}
+          }
+        },
+        "request": {
+          "method": "POST",
+          "path": "/v1/document/upload_base64/{{extractorId}}/{{folderId}}",
+          "success": [
+            200,
+            201
+          ],
+          "headers": {
+            "Accept": "application/json",
+            "Content-Type": "application/x-www-form-urlencoded"
+          },
+          "body": {
+            "file_base64": "{{fileBase64}}",
+            "filename": "{{filename}}"
+          },
+          "bodyEncoding": "form"
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "media.json": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Get extracted JSON media",
+        "description": "Download the JSON export for an extracted AlgoDocs document page.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "token": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Media token from an extracted-data record."
+            },
+            "pageNumber": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "1-based page number."
+            }
+          },
+          "required": [
+            "token",
+            "pageNumber"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {}
+          }
+        },
+        "request": {
+          "method": "GET",
+          "path": "/v1/media/{{token}}/{{pageNumber}}/json",
           "success": [
             200
           ]
