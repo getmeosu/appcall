@@ -1,7 +1,17 @@
 {
+  "key": "buildium",
+  "name": "Buildium",
+  "version": "0.2.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "productivity"
+  ],
   "auth": {
+    "type": "api_key",
     "scopes": [],
     "setup": {
+      "mode": "api_key",
       "fields": [
         {
           "key": "apiKey",
@@ -15,31 +25,42 @@
           "required": true,
           "secret": false
         }
-      ],
-      "mode": "api_key"
-    },
-    "type": "api_key"
-  },
-  "categories": [
-    "productivity"
-  ],
-  "evidence": {
-    "fixture": {
-      "status": "supplied"
-    },
-    "live": {
-      "status": "unverified"
+      ]
     }
   },
+  "network": {
+    "allowedHosts": [
+      "api.buildium.com"
+    ]
+  },
+  "models": [
+    "property",
+    "unit",
+    "owner",
+    "tenant",
+    "lease",
+    "vendor",
+    "bill",
+    "bankaccount",
+    "task"
+  ],
   "http": {
+    "baseUrl": "https://api.buildium.com",
     "auth": {
       "field": "apiKey",
       "in": "header",
       "name": "x-buildium-client-secret",
       "value": "{{apiKey}}"
     },
-    "baseUrl": "https://api.buildium.com",
+    "headers": {
+      "Accept": "application/json",
+      "x-buildium-client-id": "{{clientId}}"
+    },
     "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after",
       "defaultRetryAfterSeconds": 30,
       "messagePaths": [
         "Message",
@@ -48,53 +69,38 @@
         "detail",
         "Error",
         "error"
-      ],
-      "rateLimitStatuses": [
-        429
-      ],
-      "retryAfterHeader": "retry-after"
-    },
-    "headers": {
-      "Accept": "application/json",
-      "x-buildium-client-id": "{{clientId}}"
+      ]
     }
-  },
-  "key": "buildium",
-  "models": [
-    "property",
-    "unit",
-    "owner"
-  ],
-  "name": "Buildium",
-  "network": {
-    "allowedHosts": [
-      "api.buildium.com"
-    ]
   },
   "operations": {
     "healthcheck": {
-      "description": "Validate Buildium credentials with GET /v1/rentals?limit=1.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {},
-        "type": "object"
-      },
-      "kind": "action",
+      "timeoutMs": 5000,
       "maxInputBytes": 4096,
       "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Healthcheck",
+      "description": "Validate Buildium credentials with GET /v1/rentals?limit=1.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
       "outputSchema": {
-        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "array"
           }
         },
-        "required": [
-          "data"
-        ],
-        "type": "object"
+        "additionalProperties": false
       },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
       "request": {
         "method": "GET",
         "path": "/v1/rentals",
@@ -104,149 +110,50 @@
         "success": [
           200
         ]
-      },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 5000,
-      "title": "Healthcheck",
-      "validationMode": "strict-generated"
-    },
-    "owners.list": {
-      "description": "List Buildium rental owners.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "limit": {
-            "maximum": 1000,
-            "minimum": 1,
-            "type": "integer"
-          },
-          "offset": {
-            "minimum": 0,
-            "type": "integer"
-          },
-          "orderBy": {
-            "minLength": 1,
-            "type": "string"
-          }
-        },
-        "type": "object"
-      },
-      "kind": "action",
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 1048576,
-      "outputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "data": {
-            "type": "array"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "type": "object"
-      },
-      "request": {
-        "method": "GET",
-        "path": "/v1/rentals/owners",
-        "query": {
-          "limit": "{{limit}}",
-          "offset": "{{offset}}",
-          "orderby": "{{orderBy}}"
-        },
-        "success": [
-          200
-        ]
-      },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "title": "List owners",
-      "validationMode": "strict-generated"
-    },
-    "properties.get": {
-      "description": "Retrieve one Buildium rental property by identifier.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "propertyId": {
-            "minimum": 1,
-            "type": "integer"
-          }
-        },
-        "required": [
-          "propertyId"
-        ],
-        "type": "object"
-      },
-      "kind": "action",
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 1048576,
-      "outputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "type": "object"
-      },
-      "request": {
-        "method": "GET",
-        "path": "/v1/rentals/{{propertyId}}",
-        "success": [
-          200
-        ]
-      },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "title": "Get property",
-      "validationMode": "strict-generated"
+      }
     },
     "properties.list": {
-      "description": "List Buildium rental properties.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "limit": {
-            "maximum": 1000,
-            "minimum": 1,
-            "type": "integer"
-          },
-          "offset": {
-            "minimum": 0,
-            "type": "integer"
-          },
-          "orderBy": {
-            "minLength": 1,
-            "type": "string"
-          }
-        },
-        "type": "object"
-      },
-      "kind": "action",
+      "timeoutMs": 15000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List properties",
+      "description": "List Buildium rental properties.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "orderBy": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      },
       "outputSchema": {
-        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "array"
           }
         },
-        "required": [
-          "data"
-        ],
-        "type": "object"
+        "additionalProperties": false
       },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
       "request": {
         "method": "GET",
         "path": "/v1/rentals",
@@ -258,94 +165,94 @@
         "success": [
           200
         ]
-      },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "title": "List properties",
-      "validationMode": "strict-generated"
+      }
     },
-    "units.get": {
-      "description": "Retrieve one Buildium rental unit by identifier.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "unitId": {
-            "minimum": 1,
-            "type": "integer"
-          }
-        },
-        "required": [
-          "unitId"
-        ],
-        "type": "object"
-      },
-      "kind": "action",
+    "properties.get": {
+      "timeoutMs": 15000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Get property",
+      "description": "Retrieve one Buildium rental property by identifier.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "propertyId"
+        ],
+        "properties": {
+          "propertyId": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": false
+      },
       "outputSchema": {
-        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "required": [
-          "data"
-        ],
-        "type": "object"
+        "additionalProperties": false
       },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
       "request": {
         "method": "GET",
-        "path": "/v1/rentals/units/{{unitId}}",
+        "path": "/v1/rentals/{{propertyId}}",
         "success": [
           200
         ]
-      },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "title": "Get unit",
-      "validationMode": "strict-generated"
+      }
     },
     "units.list": {
-      "description": "List Buildium rental units.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "limit": {
-            "maximum": 1000,
-            "minimum": 1,
-            "type": "integer"
-          },
-          "offset": {
-            "minimum": 0,
-            "type": "integer"
-          },
-          "orderBy": {
-            "minLength": 1,
-            "type": "string"
-          }
-        },
-        "type": "object"
-      },
-      "kind": "action",
+      "timeoutMs": 15000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List units",
+      "description": "List Buildium rental units.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "orderBy": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      },
       "outputSchema": {
-        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "array"
           }
         },
-        "required": [
-          "data"
-        ],
-        "type": "object"
+        "additionalProperties": false
       },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
       "request": {
         "method": "GET",
         "path": "/v1/rentals/units",
@@ -357,21 +264,920 @@
         "success": [
           200
         ]
+      }
+    },
+    "units.get": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Get unit",
+      "description": "Retrieve one Buildium rental unit by identifier.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "unitId"
+        ],
+        "properties": {
+          "unitId": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": false
       },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
       "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/v1/rentals/units/{{unitId}}",
+        "success": [
+          200
+        ]
+      }
+    },
+    "owners.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List owners",
+      "description": "List Buildium rental owners.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "orderBy": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/v1/rentals/owners",
+        "query": {
+          "limit": "{{limit}}",
+          "offset": "{{offset}}",
+          "orderby": "{{orderBy}}"
+        },
+        "success": [
+          200
+        ]
+      }
+    },
+    "properties.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Create property",
+      "description": "Create a Buildium rental property.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Property name.",
+            "minLength": 1
+          },
+          "addressLine1": {
+            "type": "string",
+            "description": "Street address.",
+            "minLength": 1
+          },
+          "city": {
+            "type": "string",
+            "description": "City.",
+            "minLength": 1
+          },
+          "state": {
+            "type": "string",
+            "description": "State.",
+            "minLength": 1
+          },
+          "postalCode": {
+            "type": "string",
+            "description": "Postal code.",
+            "minLength": 1
+          },
+          "country": {
+            "type": "string",
+            "description": "Country.",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "addressLine1",
+          "city",
+          "state",
+          "postalCode"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "POST",
+        "path": "/v1/rentals",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "Name": "{{name}}",
+          "Address": {
+            "AddressLine1": "{{addressLine1}}",
+            "City": "{{city}}",
+            "State": "{{state}}",
+            "PostalCode": "{{postalCode}}",
+            "Country": "{{country}}"
+          }
+        }
+      }
+    },
+    "properties.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Update property",
+      "description": "Update a Buildium rental property.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "propertyId": {
+            "type": "integer",
+            "description": "Property identifier.",
+            "minimum": 1
+          },
+          "name": {
+            "type": "string",
+            "description": "Property name.",
+            "minLength": 1
+          },
+          "isActive": {
+            "type": "boolean",
+            "description": "Whether the property is active."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "propertyId",
+          "name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "PUT",
+        "path": "/v1/rentals/{{propertyId}}",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "Name": "{{name}}",
+          "IsActive": "{{isActive}}"
+        }
+      }
+    },
+    "owners.get": {
+      "kind": "action",
       "sideEffect": "read",
       "timeoutMs": 15000,
-      "title": "List units",
-      "validationMode": "strict-generated"
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get owner",
+      "description": "Retrieve one Buildium rental owner.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "ownerId": {
+            "type": "integer",
+            "description": "Owner identifier.",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "ownerId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/v1/rentals/owners/{{ownerId}}",
+        "success": [
+          200
+        ]
+      }
+    },
+    "tenants.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "List tenants",
+      "description": "List Buildium lease tenants.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "description": "Max results.",
+            "minimum": 1,
+            "maximum": 1000
+          },
+          "offset": {
+            "type": "integer",
+            "description": "Zero-based offset.",
+            "minimum": 0
+          },
+          "orderBy": {
+            "type": "string",
+            "description": "Sort expression.",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/v1/leases/tenants",
+        "success": [
+          200
+        ],
+        "query": {
+          "limit": "{{limit}}",
+          "offset": "{{offset}}",
+          "orderby": "{{orderBy}}"
+        }
+      }
+    },
+    "tenants.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get tenant",
+      "description": "Retrieve one Buildium lease tenant.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "tenantId": {
+            "type": "integer",
+            "description": "Tenant identifier.",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "tenantId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/v1/leases/tenants/{{tenantId}}",
+        "success": [
+          200
+        ]
+      }
+    },
+    "leases.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "List leases",
+      "description": "List Buildium leases.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "description": "Max results.",
+            "minimum": 1,
+            "maximum": 1000
+          },
+          "offset": {
+            "type": "integer",
+            "description": "Zero-based offset.",
+            "minimum": 0
+          },
+          "orderBy": {
+            "type": "string",
+            "description": "Sort expression.",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/v1/leases",
+        "success": [
+          200
+        ],
+        "query": {
+          "limit": "{{limit}}",
+          "offset": "{{offset}}",
+          "orderby": "{{orderBy}}"
+        }
+      }
+    },
+    "leases.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get lease",
+      "description": "Retrieve one Buildium lease.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "leaseId": {
+            "type": "integer",
+            "description": "Lease identifier.",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "leaseId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/v1/leases/{{leaseId}}",
+        "success": [
+          200
+        ]
+      }
+    },
+    "leases.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Create lease",
+      "description": "Create a Buildium lease.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "leaseType": {
+            "type": "string",
+            "description": "Lease type.",
+            "enum": [
+              "Fixed",
+              "FixedWithRollover",
+              "AtWill"
+            ]
+          },
+          "unitId": {
+            "type": "integer",
+            "description": "Unit identifier.",
+            "minimum": 1
+          },
+          "startDate": {
+            "type": "string",
+            "description": "Lease start date (YYYY-MM-DD).",
+            "minLength": 1
+          },
+          "endDate": {
+            "type": "string",
+            "description": "Lease end date (YYYY-MM-DD).",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "leaseType",
+          "unitId",
+          "startDate"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "POST",
+        "path": "/v1/leases",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "LeaseType": "{{leaseType}}",
+          "UnitId": "{{unitId}}",
+          "LeaseFromDate": "{{startDate}}",
+          "LeaseToDate": "{{endDate}}"
+        }
+      }
+    },
+    "vendors.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "List vendors",
+      "description": "List Buildium vendors.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "description": "Max results.",
+            "minimum": 1,
+            "maximum": 1000
+          },
+          "offset": {
+            "type": "integer",
+            "description": "Zero-based offset.",
+            "minimum": 0
+          },
+          "orderBy": {
+            "type": "string",
+            "description": "Sort expression.",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/v1/vendors",
+        "success": [
+          200
+        ],
+        "query": {
+          "limit": "{{limit}}",
+          "offset": "{{offset}}",
+          "orderby": "{{orderBy}}"
+        }
+      }
+    },
+    "vendors.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get vendor",
+      "description": "Retrieve one Buildium vendor.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "vendorId": {
+            "type": "integer",
+            "description": "Vendor identifier.",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "vendorId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/v1/vendors/{{vendorId}}",
+        "success": [
+          200
+        ]
+      }
+    },
+    "bills.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "List bills",
+      "description": "List Buildium vendor bills.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "description": "Max results.",
+            "minimum": 1,
+            "maximum": 1000
+          },
+          "offset": {
+            "type": "integer",
+            "description": "Zero-based offset.",
+            "minimum": 0
+          },
+          "orderBy": {
+            "type": "string",
+            "description": "Sort expression.",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/v1/bills",
+        "success": [
+          200
+        ],
+        "query": {
+          "limit": "{{limit}}",
+          "offset": "{{offset}}",
+          "orderby": "{{orderBy}}"
+        }
+      }
+    },
+    "bills.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get bill",
+      "description": "Retrieve one Buildium vendor bill.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "billId": {
+            "type": "integer",
+            "description": "Bill identifier.",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "billId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/v1/bills/{{billId}}",
+        "success": [
+          200
+        ]
+      }
+    },
+    "bankaccounts.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "List bank accounts",
+      "description": "List Buildium bank accounts.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "description": "Max results.",
+            "minimum": 1,
+            "maximum": 1000
+          },
+          "offset": {
+            "type": "integer",
+            "description": "Zero-based offset.",
+            "minimum": 0
+          },
+          "orderBy": {
+            "type": "string",
+            "description": "Sort expression.",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/v1/bankaccounts",
+        "success": [
+          200
+        ],
+        "query": {
+          "limit": "{{limit}}",
+          "offset": "{{offset}}",
+          "orderby": "{{orderBy}}"
+        }
+      }
+    },
+    "tasks.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "List tasks",
+      "description": "List Buildium tasks and resident requests.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "description": "Max results.",
+            "minimum": 1,
+            "maximum": 1000
+          },
+          "offset": {
+            "type": "integer",
+            "description": "Zero-based offset.",
+            "minimum": 0
+          },
+          "orderBy": {
+            "type": "string",
+            "description": "Sort expression.",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/v1/tasks",
+        "success": [
+          200
+        ],
+        "query": {
+          "limit": "{{limit}}",
+          "offset": "{{offset}}",
+          "orderby": "{{orderBy}}"
+        }
+      }
     }
   },
   "provenance": {
     "source": {
-      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
-      "url": "https://github.com/oomol-lab/open-connector"
+      "url": "https://github.com/oomol-lab/open-connector",
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"
     }
   },
-  "runtime": "bun",
-  "version": "0.1.0",
-  "visibility": "public"
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
+    }
+  }
 }

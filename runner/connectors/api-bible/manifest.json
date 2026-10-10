@@ -1,1 +1,1309 @@
-{"auth":{"scopes":[],"setup":{"fields":[{"key":"apiKey","label":"API.Bible API key","required":true,"secret":true}],"mode":"api_key"},"type":"api_key"},"categories":["utility"],"evidence":{"fixture":{"status":"supplied"},"live":{"status":"unverified"}},"http":{"auth":{"field":"apiKey","in":"header","name":"api-key","value":"{{apiKey}}"},"baseUrl":"https://api.scripture.api.bible","errors":{"defaultRetryAfterSeconds":30,"messagePaths":["message","error"],"rateLimitStatuses":[429],"retryAfterHeader":"retry-after"},"headers":{"Accept":"application/json"}},"key":"api-bible","models":["bible","book","chapter","verse"],"name":"API.Bible","network":{"allowedHosts":["api.scripture.api.bible"]},"operations":{"bibles.list":{"description":"List Bible versions with optional language, abbreviation, or name filters.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{"abbreviation":{"minLength":1,"type":"string"},"language":{"minLength":1,"type":"string"},"name":{"minLength":1,"type":"string"}},"type":"object"},"kind":"action","maxInputBytes":65536,"maxResponseBytes":5242880,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/v1/bibles","query":{"abbreviation":"{{abbreviation}}","language":"{{language}}","name":"{{name}}"},"success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":15000,"title":"List Bibles","validationMode":"strict-generated"},"books.list":{"description":"List books for one Bible version.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{"bibleId":{"minLength":1,"type":"string"}},"required":["bibleId"],"type":"object"},"kind":"action","maxInputBytes":65536,"maxResponseBytes":5242880,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/v1/bibles/{{bibleId}}/books","success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":15000,"title":"List books","validationMode":"strict-generated"},"chapters.list":{"description":"List chapters for one book in one Bible version.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{"bibleId":{"minLength":1,"type":"string"},"bookId":{"minLength":1,"type":"string"}},"required":["bibleId","bookId"],"type":"object"},"kind":"action","maxInputBytes":65536,"maxResponseBytes":5242880,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/v1/bibles/{{bibleId}}/books/{{bookId}}/chapters","success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":15000,"title":"List chapters","validationMode":"strict-generated"},"healthcheck":{"description":"Validate the API.Bible API key by listing Bible versions.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{},"type":"object"},"kind":"action","maxInputBytes":4096,"maxResponseBytes":65536,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/v1/bibles","success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":5000,"title":"Healthcheck","validationMode":"strict-generated"},"verses.list":{"description":"List verses for one chapter in one Bible version.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{"bibleId":{"minLength":1,"type":"string"},"chapterId":{"minLength":1,"type":"string"}},"required":["bibleId","chapterId"],"type":"object"},"kind":"action","maxInputBytes":65536,"maxResponseBytes":5242880,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/v1/bibles/{{bibleId}}/chapters/{{chapterId}}/verses","success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":15000,"title":"List verses","validationMode":"strict-generated"}},"provenance":{"source":{"revision":"33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a","url":"https://github.com/oomol-lab/open-connector"}},"runtime":"bun","version":"0.1.0","visibility":"public"}
+{
+  "auth": {
+    "scopes": [],
+    "setup": {
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "API.Bible API key",
+          "required": true,
+          "secret": true
+        }
+      ],
+      "mode": "api_key"
+    },
+    "type": "api_key"
+  },
+  "categories": [
+    "utility"
+  ],
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
+    }
+  },
+  "http": {
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "api-key",
+      "value": "{{apiKey}}"
+    },
+    "baseUrl": "https://api.scripture.api.bible",
+    "errors": {
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "message",
+        "error"
+      ],
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after"
+    },
+    "headers": {
+      "Accept": "application/json"
+    }
+  },
+  "key": "api-bible",
+  "models": [
+    "bible",
+    "book",
+    "chapter",
+    "verse",
+    "passage",
+    "section",
+    "audioBible"
+  ],
+  "name": "API.Bible",
+  "network": {
+    "allowedHosts": [
+      "api.scripture.api.bible"
+    ]
+  },
+  "operations": {
+    "audioBibles.books.get": {
+      "description": "Retrieve a single audio book for an audio Bible, optionally including chapter summaries.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "audioBibleId": {
+            "description": "Unique identifier of the audio Bible (e.g. 52a82b80a85343c5-01).",
+            "minLength": 1,
+            "type": "string"
+          },
+          "bookId": {
+            "description": "USFM book ID (e.g. GEN, MAT, JHN).",
+            "minLength": 1,
+            "type": "string"
+          },
+          "include_chapters": {
+            "description": "When true, include an array of chapter summaries.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "audioBibleId",
+          "bookId"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/audio-bibles/{{audioBibleId}}/books/{{bookId}}",
+        "query": {
+          "include-chapters": "{{include_chapters}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get audio book",
+      "validationMode": "strict-generated"
+    },
+    "audioBibles.books.list": {
+      "description": "List books for an audio Bible version, optionally including chapters and sections.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "audioBibleId": {
+            "description": "Unique identifier of the audio Bible (e.g. 52a82b80a85343c5-01).",
+            "minLength": 1,
+            "type": "string"
+          },
+          "include_chapters": {
+            "description": "When true, include an array of chapter summaries.",
+            "type": "boolean"
+          },
+          "include_chapters_and_sections": {
+            "description": "When true, include chapter summaries and sections.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "audioBibleId"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/audio-bibles/{{audioBibleId}}/books",
+        "query": {
+          "include-chapters": "{{include_chapters}}",
+          "include-chapters-and-sections": "{{include_chapters_and_sections}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List audio books",
+      "validationMode": "strict-generated"
+    },
+    "audioBibles.chapters.get": {
+      "description": "Retrieve a single audio chapter with a temporary mp3 resource URL.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "audioBibleId": {
+            "description": "Unique identifier of the audio Bible (e.g. 52a82b80a85343c5-01).",
+            "minLength": 1,
+            "type": "string"
+          },
+          "chapterId": {
+            "description": "Chapter ID in BOOK.CHAPTER form (e.g. JHN.3).",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "audioBibleId",
+          "chapterId"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/audio-bibles/{{audioBibleId}}/chapters/{{chapterId}}",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get audio chapter",
+      "validationMode": "strict-generated"
+    },
+    "audioBibles.chapters.list": {
+      "description": "List audio chapters for a book in an audio Bible version.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "audioBibleId": {
+            "description": "Unique identifier of the audio Bible (e.g. 52a82b80a85343c5-01).",
+            "minLength": 1,
+            "type": "string"
+          },
+          "bookId": {
+            "description": "USFM book ID (e.g. GEN, MAT, JHN).",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "audioBibleId",
+          "bookId"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/audio-bibles/{{audioBibleId}}/books/{{bookId}}/chapters",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List audio chapters",
+      "validationMode": "strict-generated"
+    },
+    "audioBibles.get": {
+      "description": "Retrieve metadata for a specific audio Bible by ID.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "audioBibleId": {
+            "description": "Unique identifier of the audio Bible (e.g. 52a82b80a85343c5-01).",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "audioBibleId"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/audio-bibles/{{audioBibleId}}",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get audio Bible",
+      "validationMode": "strict-generated"
+    },
+    "audioBibles.list": {
+      "description": "List audio Bible versions authorized for this API key, with optional language, name, abbreviation, ids, related text Bible, or full-detail filters.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "abbreviation": {
+            "description": "Audio Bible abbreviation to search for.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "bibleId": {
+            "description": "Related text Bible ID used to filter audio Bible results.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "ids": {
+            "description": "Comma-separated audio Bible IDs to return.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "include_full_details": {
+            "description": "When true, include copyright, promo, and language script details.",
+            "type": "boolean"
+          },
+          "language": {
+            "description": "ISO 639-3 language code (e.g. eng).",
+            "minLength": 1,
+            "type": "string"
+          },
+          "name": {
+            "description": "Audio Bible name to search for. Partial matches are supported.",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/audio-bibles",
+        "query": {
+          "abbreviation": "{{abbreviation}}",
+          "bibleId": "{{bibleId}}",
+          "ids": "{{ids}}",
+          "include-full-details": "{{include_full_details}}",
+          "language": "{{language}}",
+          "name": "{{name}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List audio Bibles",
+      "validationMode": "strict-generated"
+    },
+    "bibles.get": {
+      "description": "Retrieve details of a specific Bible version by ID.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "bibleId": {
+            "description": "Unique identifier of the Bible version (e.g. de4e12af7f28f599-01).",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "bibleId"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/bibles/{{bibleId}}",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get Bible",
+      "validationMode": "strict-generated"
+    },
+    "bibles.list": {
+      "description": "List Bible versions with optional language, abbreviation, name, or full-detail filters.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "abbreviation": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "include_full_details": {
+            "description": "When true, include copyright information and full language data.",
+            "type": "boolean"
+          },
+          "language": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "name": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/bibles",
+        "query": {
+          "abbreviation": "{{abbreviation}}",
+          "include-full-details": "{{include_full_details}}",
+          "language": "{{language}}",
+          "name": "{{name}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List Bibles",
+      "validationMode": "strict-generated"
+    },
+    "bibles.search": {
+      "description": "Search a Bible version for verses matching keywords or a passage reference.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "bibleId": {
+            "description": "Unique identifier of the Bible version (e.g. de4e12af7f28f599-01).",
+            "minLength": 1,
+            "type": "string"
+          },
+          "limit": {
+            "description": "Maximum number of results to return (1-100). Defaults to 10.",
+            "maximum": 100,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "offset": {
+            "description": "Number of results to skip for pagination (0-based).",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "query": {
+            "description": "Keywords (all must match) or a passage reference such as John 3:16.",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "bibleId",
+          "query"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/bibles/{{bibleId}}/search",
+        "query": {
+          "limit": "{{limit}}",
+          "offset": "{{offset}}",
+          "query": "{{query}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Search Bible verses",
+      "validationMode": "strict-generated"
+    },
+    "books.get": {
+      "description": "Retrieve a single book for a Bible version, optionally including chapter summaries.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "bibleId": {
+            "description": "Unique identifier of the Bible version (e.g. de4e12af7f28f599-01).",
+            "minLength": 1,
+            "type": "string"
+          },
+          "bookId": {
+            "description": "USFM book ID (e.g. GEN, MAT, JHN).",
+            "minLength": 1,
+            "type": "string"
+          },
+          "include_chapters": {
+            "description": "When true, include an array of chapter summaries.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "bibleId",
+          "bookId"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/bibles/{{bibleId}}/books/{{bookId}}",
+        "query": {
+          "include-chapters": "{{include_chapters}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get book",
+      "validationMode": "strict-generated"
+    },
+    "books.list": {
+      "description": "List books for one Bible version.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "bibleId": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "bibleId"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/bibles/{{bibleId}}/books",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List books",
+      "validationMode": "strict-generated"
+    },
+    "books.sections.list": {
+      "description": "List sections for a book in a Bible version. Not every version has sections.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "bibleId": {
+            "description": "Unique identifier of the Bible version (e.g. de4e12af7f28f599-01).",
+            "minLength": 1,
+            "type": "string"
+          },
+          "bookId": {
+            "description": "USFM book ID (e.g. GEN, MAT, JHN).",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "bibleId",
+          "bookId"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/bibles/{{bibleId}}/books/{{bookId}}/sections",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List book sections",
+      "validationMode": "strict-generated"
+    },
+    "chapters.get": {
+      "description": "Retrieve a complete chapter with verse content, adjacent-chapter navigation, and copyright.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "bibleId": {
+            "description": "Unique identifier of the Bible version (e.g. de4e12af7f28f599-01).",
+            "minLength": 1,
+            "type": "string"
+          },
+          "chapterId": {
+            "description": "Chapter ID in BOOK.CHAPTER form (e.g. JHN.3).",
+            "minLength": 1,
+            "type": "string"
+          },
+          "content-type": {
+            "description": "Format of returned content: html (default), json, or text.",
+            "enum": [
+              "html",
+              "json",
+              "text"
+            ],
+            "type": "string"
+          },
+          "include-chapter-numbers": {
+            "description": "Include chapter numbers in content.",
+            "type": "boolean"
+          },
+          "include-notes": {
+            "description": "Include footnotes in content.",
+            "type": "boolean"
+          },
+          "include-titles": {
+            "description": "Include section titles in content.",
+            "type": "boolean"
+          },
+          "include-verse-numbers": {
+            "description": "Include verse numbers in content.",
+            "type": "boolean"
+          },
+          "include-verse-spans": {
+            "description": "Include spans that wrap verse numbers and verse text.",
+            "type": "boolean"
+          },
+          "parallels": {
+            "description": "Comma-separated Bible IDs to include as parallel content.",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "bibleId",
+          "chapterId"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/bibles/{{bibleId}}/chapters/{{chapterId}}",
+        "query": {
+          "content-type": "{{content-type}}",
+          "include-chapter-numbers": "{{include-chapter-numbers}}",
+          "include-notes": "{{include-notes}}",
+          "include-titles": "{{include-titles}}",
+          "include-verse-numbers": "{{include-verse-numbers}}",
+          "include-verse-spans": "{{include-verse-spans}}",
+          "parallels": "{{parallels}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get chapter",
+      "validationMode": "strict-generated"
+    },
+    "chapters.list": {
+      "description": "List chapters for one book in one Bible version.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "bibleId": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "bookId": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "bibleId",
+          "bookId"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/bibles/{{bibleId}}/books/{{bookId}}/chapters",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List chapters",
+      "validationMode": "strict-generated"
+    },
+    "chapters.sections.list": {
+      "description": "List sections for a chapter in a Bible version. Not every version has sections.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "bibleId": {
+            "description": "Unique identifier of the Bible version (e.g. de4e12af7f28f599-01).",
+            "minLength": 1,
+            "type": "string"
+          },
+          "chapterId": {
+            "description": "Chapter ID in BOOK.CHAPTER form (e.g. JHN.3).",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "bibleId",
+          "chapterId"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/bibles/{{bibleId}}/chapters/{{chapterId}}/sections",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List chapter sections",
+      "validationMode": "strict-generated"
+    },
+    "healthcheck": {
+      "description": "Validate the API.Bible API key by listing Bible versions.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {},
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/bibles",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 5000,
+      "title": "Healthcheck",
+      "validationMode": "strict-generated"
+    },
+    "passages.get": {
+      "description": "Retrieve a passage by ID. A passage can be a chapter, verse, or verse range.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "bibleId": {
+            "description": "Unique identifier of the Bible version (e.g. de4e12af7f28f599-01).",
+            "minLength": 1,
+            "type": "string"
+          },
+          "content-type": {
+            "description": "Format of returned content: html (default), json, or text.",
+            "enum": [
+              "html",
+              "json",
+              "text"
+            ],
+            "type": "string"
+          },
+          "include-chapter-numbers": {
+            "description": "Include chapter numbers in content.",
+            "type": "boolean"
+          },
+          "include-notes": {
+            "description": "Include footnotes in content.",
+            "type": "boolean"
+          },
+          "include-titles": {
+            "description": "Include section titles in content.",
+            "type": "boolean"
+          },
+          "include-verse-numbers": {
+            "description": "Include verse numbers in content.",
+            "type": "boolean"
+          },
+          "include-verse-spans": {
+            "description": "Include spans that wrap verse numbers and verse text.",
+            "type": "boolean"
+          },
+          "parallels": {
+            "description": "Comma-separated Bible IDs to include as parallel content.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "passageId": {
+            "description": "Passage ID such as JHN.3.16, MAT.1, or MAT.1.12-MAT.1.20.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "use-org-id": {
+            "description": "Match the supplied id(s) against verseOrgId instead of verseId.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "bibleId",
+          "passageId"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/bibles/{{bibleId}}/passages/{{passageId}}",
+        "query": {
+          "content-type": "{{content-type}}",
+          "include-chapter-numbers": "{{include-chapter-numbers}}",
+          "include-notes": "{{include-notes}}",
+          "include-titles": "{{include-titles}}",
+          "include-verse-numbers": "{{include-verse-numbers}}",
+          "include-verse-spans": "{{include-verse-spans}}",
+          "parallels": "{{parallels}}",
+          "use-org-id": "{{use-org-id}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get passage",
+      "validationMode": "strict-generated"
+    },
+    "sections.get": {
+      "description": "Retrieve detailed content for a Bible section by ID (thematic verse grouping).",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "bibleId": {
+            "description": "Unique identifier of the Bible version (e.g. de4e12af7f28f599-01).",
+            "minLength": 1,
+            "type": "string"
+          },
+          "content-type": {
+            "description": "Format of returned content: html (default), json, or text.",
+            "enum": [
+              "html",
+              "json",
+              "text"
+            ],
+            "type": "string"
+          },
+          "include-chapter-numbers": {
+            "description": "Include chapter numbers in content.",
+            "type": "boolean"
+          },
+          "include-notes": {
+            "description": "Include footnotes in content.",
+            "type": "boolean"
+          },
+          "include-titles": {
+            "description": "Include section titles in content.",
+            "type": "boolean"
+          },
+          "include-verse-numbers": {
+            "description": "Include verse numbers in content.",
+            "type": "boolean"
+          },
+          "include-verse-spans": {
+            "description": "Include spans that wrap verse numbers and verse text.",
+            "type": "boolean"
+          },
+          "parallels": {
+            "description": "Comma-separated Bible IDs to include as parallel content.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "sectionId": {
+            "description": "Section ID such as MAT.S1.",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "bibleId",
+          "sectionId"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/bibles/{{bibleId}}/sections/{{sectionId}}",
+        "query": {
+          "content-type": "{{content-type}}",
+          "include-chapter-numbers": "{{include-chapter-numbers}}",
+          "include-notes": "{{include-notes}}",
+          "include-titles": "{{include-titles}}",
+          "include-verse-numbers": "{{include-verse-numbers}}",
+          "include-verse-spans": "{{include-verse-spans}}",
+          "parallels": "{{parallels}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get section",
+      "validationMode": "strict-generated"
+    },
+    "verses.get": {
+      "description": "Retrieve a specific Bible verse by ID (BOOK.CHAPTER.VERSE, e.g. JHN.3.16).",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "bibleId": {
+            "description": "Unique identifier of the Bible version (e.g. de4e12af7f28f599-01).",
+            "minLength": 1,
+            "type": "string"
+          },
+          "content-type": {
+            "description": "Format of returned content: html (default), json, or text.",
+            "enum": [
+              "html",
+              "json",
+              "text"
+            ],
+            "type": "string"
+          },
+          "include-chapter-numbers": {
+            "description": "Include chapter numbers in content.",
+            "type": "boolean"
+          },
+          "include-notes": {
+            "description": "Include footnotes in content.",
+            "type": "boolean"
+          },
+          "include-titles": {
+            "description": "Include section titles in content.",
+            "type": "boolean"
+          },
+          "include-verse-numbers": {
+            "description": "Include verse numbers in content.",
+            "type": "boolean"
+          },
+          "include-verse-spans": {
+            "description": "Include spans that wrap verse numbers and verse text.",
+            "type": "boolean"
+          },
+          "parallels": {
+            "description": "Comma-separated Bible IDs to include as parallel content.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "use-org-id": {
+            "description": "Match the supplied id(s) against verseOrgId instead of verseId.",
+            "type": "boolean"
+          },
+          "verseId": {
+            "description": "Verse ID such as JHN.3.16.",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "bibleId",
+          "verseId"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/bibles/{{bibleId}}/verses/{{verseId}}",
+        "query": {
+          "content-type": "{{content-type}}",
+          "include-chapter-numbers": "{{include-chapter-numbers}}",
+          "include-notes": "{{include-notes}}",
+          "include-titles": "{{include-titles}}",
+          "include-verse-numbers": "{{include-verse-numbers}}",
+          "include-verse-spans": "{{include-verse-spans}}",
+          "parallels": "{{parallels}}",
+          "use-org-id": "{{use-org-id}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get verse",
+      "validationMode": "strict-generated"
+    },
+    "verses.list": {
+      "description": "List verses for one chapter in one Bible version.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "bibleId": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "chapterId": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "bibleId",
+          "chapterId"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/bibles/{{bibleId}}/chapters/{{chapterId}}/verses",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List verses",
+      "validationMode": "strict-generated"
+    }
+  },
+  "provenance": {
+    "source": {
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
+      "url": "https://github.com/oomol-lab/open-connector"
+    }
+  },
+  "runtime": "bun",
+  "version": "0.2.0",
+  "visibility": "public"
+}

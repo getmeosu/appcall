@@ -1,1 +1,1795 @@
-{"auth":{"scopes":[],"setup":{"fields":[{"key":"apiKey","label":"Nango environment API key","required":true,"secret":true}],"mode":"api_key"},"type":"api_key"},"categories":["dev-tools"],"evidence":{"fixture":{"status":"supplied"},"live":{"status":"unverified"}},"http":{"auth":{"field":"apiKey","in":"header","name":"Authorization","value":"Bearer {{apiKey}}"},"baseUrl":"https://api.nango.dev","errors":{"defaultRetryAfterSeconds":30,"messagePaths":["message","error.message","error"],"rateLimitStatuses":[429],"retryAfterHeader":"retry-after"},"headers":{"Accept":"application/json"}},"key":"nango","models":["provider","integration","connection"],"name":"Nango","network":{"allowedHosts":["api.nango.dev"]},"operations":{"connections.list":{"description":"List Nango connections without credentials.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{"connectionId":{"minLength":1,"type":"string"},"limit":{"minimum":1,"type":"integer"},"page":{"minimum":1,"type":"integer"},"search":{"minLength":1,"type":"string"}},"type":"object"},"kind":"action","maxInputBytes":65536,"maxResponseBytes":5242880,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/connections","query":{"connectionId":"{{connectionId}}","limit":"{{limit}}","page":"{{page}}","search":"{{search}}"},"success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":15000,"title":"List connections","validationMode":"strict-generated"},"healthcheck":{"description":"Validate the Nango environment API key with GET /providers.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{},"type":"object"},"kind":"action","maxInputBytes":4096,"maxResponseBytes":5242880,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/providers","success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":15000,"title":"Healthcheck","validationMode":"strict-generated"},"integrations.list":{"description":"List integrations configured in the Nango environment.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{},"type":"object"},"kind":"action","maxInputBytes":65536,"maxResponseBytes":5242880,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/integrations","success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":15000,"title":"List integrations","validationMode":"strict-generated"},"providers.get":{"description":"Get one Nango provider configuration by name.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{"provider":{"minLength":1,"type":"string"}},"required":["provider"],"type":"object"},"kind":"action","maxInputBytes":65536,"maxResponseBytes":5242880,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/providers/{{provider}}","success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":15000,"title":"Get provider","validationMode":"strict-generated"}},"provenance":{"source":{"revision":"33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a","url":"https://github.com/oomol-lab/open-connector"}},"runtime":"bun","version":"0.1.0","visibility":"public"}
+{
+  "auth": {
+    "scopes": [],
+    "setup": {
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "Nango environment API key",
+          "required": true,
+          "secret": true
+        }
+      ],
+      "mode": "api_key"
+    },
+    "type": "api_key"
+  },
+  "categories": [
+    "dev-tools"
+  ],
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
+    }
+  },
+  "http": {
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "Authorization",
+      "value": "Bearer {{apiKey}}"
+    },
+    "baseUrl": "https://api.nango.dev",
+    "errors": {
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "message",
+        "error.message",
+        "error"
+      ],
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after"
+    },
+    "headers": {
+      "Accept": "application/json"
+    }
+  },
+  "key": "nango",
+  "models": [
+    "provider",
+    "integration",
+    "connection",
+    "connect_session",
+    "sync",
+    "action",
+    "environment_variable",
+    "script"
+  ],
+  "name": "Nango",
+  "network": {
+    "allowedHosts": [
+      "api.nango.dev"
+    ]
+  },
+  "operations": {
+    "actions.trigger": {
+      "description": "Trigger a Nango action for a connection. May have upstream side effects; confirm intent before writes.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "action_name": {
+            "description": "Action name defined in the Nango integration.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "connection_id": {
+            "description": "Connection ID used when the connection was created.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "input": {
+            "additionalProperties": true,
+            "description": "Optional payload for the action exec function.",
+            "type": "object"
+          },
+          "provider_config_key": {
+            "description": "Integration unique key (provider config key).",
+            "minLength": 1,
+            "type": "string"
+          },
+          "x_async": {
+            "description": "If true, run the action asynchronously and return a status URL.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "action_name",
+          "connection_id",
+          "provider_config_key"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {}
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "body": {
+          "action_name": "{{action_name}}",
+          "input": "{{input}}"
+        },
+        "headers": {
+          "Connection-Id": "{{connection_id}}",
+          "Content-Type": "application/json",
+          "Provider-Config-Key": "{{provider_config_key}}",
+          "X-Async": "{{x_async}}"
+        },
+        "method": "POST",
+        "path": "/action/trigger",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Trigger action",
+      "validationMode": "strict-generated"
+    },
+    "connect.sessions.create": {
+      "description": "Create a 30-minute connect session token so an end user can authorize integrations in Connect UI.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "allowed_integrations": {
+            "description": "Integration IDs the end user may interact with in Connect UI.",
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "end_user": {
+            "additionalProperties": false,
+            "description": "Deprecated end-user object; prefer tags.",
+            "properties": {
+              "display_name": {
+                "description": "End user display name.",
+                "minLength": 1,
+                "type": "string"
+              },
+              "email": {
+                "description": "End user email.",
+                "minLength": 1,
+                "type": "string"
+              },
+              "id": {
+                "description": "Uniquely identifies the end user.",
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "required": [
+              "id"
+            ],
+            "type": "object"
+          },
+          "integrations_config_defaults": {
+            "additionalProperties": true,
+            "description": "Default configuration keyed by integration unique name.",
+            "type": "object"
+          },
+          "organization": {
+            "additionalProperties": false,
+            "description": "Deprecated organization object; prefer tags.",
+            "properties": {
+              "display_name": {
+                "description": "Organization display name.",
+                "minLength": 1,
+                "type": "string"
+              },
+              "id": {
+                "description": "Organization id.",
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "required": [
+              "id"
+            ],
+            "type": "object"
+          },
+          "overrides": {
+            "additionalProperties": true,
+            "description": "Per-integration overrides keyed by integration unique name.",
+            "type": "object"
+          },
+          "tags": {
+            "additionalProperties": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "description": "Connection tags as key/value strings. Keys are normalized to lowercase.",
+            "type": "object"
+          },
+          "webhook_url_override": {
+            "description": "Override environment webhook URLs for the connection this session creates.",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "body": {
+          "allowed_integrations": "{{allowed_integrations}}",
+          "end_user": "{{end_user}}",
+          "integrations_config_defaults": "{{integrations_config_defaults}}",
+          "organization": "{{organization}}",
+          "overrides": "{{overrides}}",
+          "tags": "{{tags}}",
+          "webhook_url_override": "{{webhook_url_override}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "method": "POST",
+        "path": "/connect/sessions",
+        "success": [
+          200,
+          201
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Create connect session",
+      "validationMode": "strict-generated"
+    },
+    "connect.sessions.reconnect": {
+      "description": "Create a connect session to reconnect an existing connection. Only connections created via Connect UI work.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "connection_id": {
+            "description": "Connection ID to reconnect.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "end_user": {
+            "additionalProperties": false,
+            "description": "Deprecated end-user object; prefer tags.",
+            "properties": {
+              "display_name": {
+                "description": "End user display name.",
+                "minLength": 1,
+                "type": "string"
+              },
+              "email": {
+                "description": "End user email.",
+                "minLength": 1,
+                "type": "string"
+              },
+              "id": {
+                "description": "Uniquely identifies the end user.",
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "required": [
+              "id"
+            ],
+            "type": "object"
+          },
+          "integration_id": {
+            "description": "Integration ID (provider config key) for the connection.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "integrations_config_defaults": {
+            "additionalProperties": true,
+            "description": "Default configuration keyed by integration unique name.",
+            "type": "object"
+          },
+          "organization": {
+            "additionalProperties": false,
+            "description": "Deprecated organization object; prefer tags.",
+            "properties": {
+              "display_name": {
+                "description": "Organization display name.",
+                "minLength": 1,
+                "type": "string"
+              },
+              "id": {
+                "description": "Organization id.",
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "required": [
+              "id"
+            ],
+            "type": "object"
+          },
+          "overrides": {
+            "additionalProperties": true,
+            "description": "Per-integration overrides keyed by integration unique name.",
+            "type": "object"
+          },
+          "tags": {
+            "additionalProperties": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "description": "Connection tags as key/value strings. Keys are normalized to lowercase.",
+            "type": "object"
+          }
+        },
+        "required": [
+          "connection_id",
+          "integration_id"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "body": {
+          "connection_id": "{{connection_id}}",
+          "end_user": "{{end_user}}",
+          "integration_id": "{{integration_id}}",
+          "integrations_config_defaults": "{{integrations_config_defaults}}",
+          "organization": "{{organization}}",
+          "overrides": "{{overrides}}",
+          "tags": "{{tags}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "method": "POST",
+        "path": "/connect/sessions/reconnect",
+        "success": [
+          200,
+          201
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Reconnect session",
+      "validationMode": "strict-generated"
+    },
+    "connections.create": {
+      "description": "Import or upsert a connection with existing credentials (OAuth, API key, basic, or app).",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "connection_config": {
+            "additionalProperties": true,
+            "description": "Provider-specific connection configuration required by some OAuth APIs.",
+            "type": "object"
+          },
+          "connection_id": {
+            "description": "Connection ID. Nango generates one when omitted.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "credentials": {
+            "additionalProperties": true,
+            "description": "Credentials object. The type field selects OAuth2, API key, basic, app, or other auth.",
+            "type": "object"
+          },
+          "end_user": {
+            "additionalProperties": false,
+            "description": "Deprecated end-user object; prefer tags.",
+            "properties": {
+              "display_name": {
+                "description": "End user display name.",
+                "minLength": 1,
+                "type": "string"
+              },
+              "email": {
+                "description": "End user email.",
+                "minLength": 1,
+                "type": "string"
+              },
+              "id": {
+                "description": "Uniquely identifies the end user.",
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "required": [
+              "id"
+            ],
+            "type": "object"
+          },
+          "metadata": {
+            "additionalProperties": true,
+            "description": "Metadata attached to the connection.",
+            "type": "object"
+          },
+          "provider_config_key": {
+            "description": "Integration ID created in Nango.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "tags": {
+            "additionalProperties": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "description": "Connection tags as key/value strings. Keys are normalized to lowercase.",
+            "type": "object"
+          }
+        },
+        "required": [
+          "provider_config_key",
+          "credentials"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "body": {
+          "connection_config": "{{connection_config}}",
+          "connection_id": "{{connection_id}}",
+          "credentials": "{{credentials}}",
+          "end_user": "{{end_user}}",
+          "metadata": "{{metadata}}",
+          "provider_config_key": "{{provider_config_key}}",
+          "tags": "{{tags}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "method": "POST",
+        "path": "/connections",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Add connection",
+      "validationMode": "strict-generated"
+    },
+    "connections.delete": {
+      "description": "Permanently delete a Nango connection.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "connection_id": {
+            "description": "Connection ID used when the connection was created.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "provider_config_key": {
+            "description": "Integration ID (unique key) for this connection.",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "connection_id",
+          "provider_config_key"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/connections/{{connection_id}}",
+        "query": {
+          "provider_config_key": "{{provider_config_key}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Delete connection",
+      "validationMode": "strict-generated"
+    },
+    "connections.get": {
+      "description": "Retrieve one connection with credentials. Nango refreshes expired access tokens before returning them.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "connection_id": {
+            "description": "Connection ID used when the connection was created.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "force_refresh": {
+            "description": "Refresh the access token even if it has not expired. Defaults to false.",
+            "type": "boolean"
+          },
+          "provider_config_key": {
+            "description": "Integration ID (unique key) for this connection.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "refresh_github_app_jwt_token": {
+            "description": "Refresh the JWT for GitHub App connections.",
+            "type": "boolean"
+          },
+          "refresh_token": {
+            "description": "Include the refresh token in the response. Defaults to false.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "connection_id",
+          "provider_config_key"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/connections/{{connection_id}}",
+        "query": {
+          "force_refresh": "{{force_refresh}}",
+          "provider_config_key": "{{provider_config_key}}",
+          "refresh_github_app_jwt_token": "{{refresh_github_app_jwt_token}}",
+          "refresh_token": "{{refresh_token}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get connection",
+      "validationMode": "strict-generated"
+    },
+    "connections.list": {
+      "description": "List Nango connections without credentials. Covers Composio NANGO_LIST_CONNECTIONS and NANGO_CONNECTION_GET.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "connectionId": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "endUserId": {
+            "description": "Deprecated. Prefer tags[end_user_id].",
+            "minLength": 1,
+            "type": "string"
+          },
+          "endUserOrganizationId": {
+            "description": "Deprecated. Prefer tags[organization_id].",
+            "minLength": 1,
+            "type": "string"
+          },
+          "limit": {
+            "minimum": 1,
+            "type": "integer"
+          },
+          "page": {
+            "minimum": 1,
+            "type": "integer"
+          },
+          "search": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "tags": {
+            "additionalProperties": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "description": "Connection tags as key/value strings. Keys are normalized to lowercase.",
+            "type": "object"
+          }
+        },
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "parameters": [
+          {
+            "allowReserved": false,
+            "explode": true,
+            "in": "query",
+            "inputName": "tags",
+            "style": "deepObject",
+            "wireName": "tags"
+          }
+        ],
+        "path": "/connections",
+        "query": {
+          "connectionId": "{{connectionId}}",
+          "endUserId": "{{endUserId}}",
+          "endUserOrganizationId": "{{endUserOrganizationId}}",
+          "limit": "{{limit}}",
+          "page": "{{page}}",
+          "search": "{{search}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List connections",
+      "validationMode": "strict-generated"
+    },
+    "connections.metadata.set": {
+      "description": "Replace custom metadata for one or more connections. Overrides the entire metadata object.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "connection_id": {
+            "description": "One connection ID, or an array of connection IDs.",
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "minItems": 1,
+            "minLength": 1,
+            "type": [
+              "string",
+              "array"
+            ]
+          },
+          "metadata": {
+            "additionalProperties": true,
+            "description": "Metadata object that replaces existing metadata.",
+            "type": "object"
+          },
+          "provider_config_key": {
+            "description": "Integration ID (unique key) for the connection(s).",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "connection_id",
+          "provider_config_key",
+          "metadata"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "body": {
+          "connection_id": "{{connection_id}}",
+          "metadata": "{{metadata}}",
+          "provider_config_key": "{{provider_config_key}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "method": "POST",
+        "path": "/connections/metadata",
+        "success": [
+          200,
+          201
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Set connection metadata",
+      "validationMode": "strict-generated"
+    },
+    "connections.metadata.update": {
+      "description": "Patch custom metadata for one or more connections. Only listed properties are overwritten.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "connection_id": {
+            "description": "One connection ID, or an array of connection IDs.",
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "minItems": 1,
+            "minLength": 1,
+            "type": [
+              "string",
+              "array"
+            ]
+          },
+          "metadata": {
+            "additionalProperties": true,
+            "description": "Metadata properties to merge into the existing object.",
+            "type": "object"
+          },
+          "provider_config_key": {
+            "description": "Integration ID (unique key) for the connection(s).",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "connection_id",
+          "provider_config_key",
+          "metadata"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "body": {
+          "connection_id": "{{connection_id}}",
+          "metadata": "{{metadata}}",
+          "provider_config_key": "{{provider_config_key}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "method": "PATCH",
+        "path": "/connections/metadata",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Update connection metadata",
+      "validationMode": "strict-generated"
+    },
+    "connections.update": {
+      "description": "Edit a connection's tags or deprecated end-user fields.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "connection_id": {
+            "description": "Connection ID used when the connection was created.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "end_user": {
+            "additionalProperties": false,
+            "description": "Deprecated end-user object; prefer tags.",
+            "properties": {
+              "display_name": {
+                "description": "End user display name.",
+                "minLength": 1,
+                "type": "string"
+              },
+              "email": {
+                "description": "End user email.",
+                "minLength": 1,
+                "type": "string"
+              },
+              "id": {
+                "description": "Uniquely identifies the end user.",
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "required": [
+              "id"
+            ],
+            "type": "object"
+          },
+          "provider_config_key": {
+            "description": "Integration ID (unique key) for this connection.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "tags": {
+            "additionalProperties": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "description": "Connection tags as key/value strings. Keys are normalized to lowercase.",
+            "type": "object"
+          }
+        },
+        "required": [
+          "connection_id",
+          "provider_config_key"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "body": {
+          "end_user": "{{end_user}}",
+          "tags": "{{tags}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "method": "PATCH",
+        "path": "/connections/{{connection_id}}",
+        "query": {
+          "provider_config_key": "{{provider_config_key}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Edit connection",
+      "validationMode": "strict-generated"
+    },
+    "environment.variables.list": {
+      "description": "List environment variables configured in the Nango dashboard.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {},
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {}
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/environment-variables",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get environment variables",
+      "validationMode": "strict-generated"
+    },
+    "healthcheck": {
+      "description": "Validate the Nango environment API key with GET /providers.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {},
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/providers",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Healthcheck",
+      "validationMode": "strict-generated"
+    },
+    "integrations.create": {
+      "description": "Create a Nango integration for a provider. unique_key is used in later API calls.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "credentials": {
+            "additionalProperties": true,
+            "description": "Integration credentials. OAUTH2 needs client_id and client_secret; APP needs app_id, app_link, and private_key.",
+            "type": "object"
+          },
+          "display_name": {
+            "description": "Human-readable integration name. Defaults to the provider name.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "forward_webhooks": {
+            "description": "Whether to forward provider webhooks. Defaults to true.",
+            "type": "boolean"
+          },
+          "provider": {
+            "description": "Provider unique name, e.g. github or slack. Use List providers for valid names.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "unique_key": {
+            "description": "Unique integration ID for later API calls.",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "provider",
+          "unique_key"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "body": {
+          "credentials": "{{credentials}}",
+          "display_name": "{{display_name}}",
+          "forward_webhooks": "{{forward_webhooks}}",
+          "provider": "{{provider}}",
+          "unique_key": "{{unique_key}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "method": "POST",
+        "path": "/integrations",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Create integration",
+      "validationMode": "strict-generated"
+    },
+    "integrations.delete": {
+      "description": "Delete a Nango integration by unique key.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "unique_key": {
+            "description": "Integration ID (unique_key) to delete.",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "unique_key"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/integrations/{{unique_key}}",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Delete integration",
+      "validationMode": "strict-generated"
+    },
+    "integrations.get": {
+      "description": "Retrieve one Nango integration by unique key. Optionally include credentials or webhook URL.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "include": {
+            "description": "Extra sensitive data to include.",
+            "items": {
+              "description": "Include field.",
+              "enum": [
+                "webhook",
+                "credentials"
+              ],
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "unique_key": {
+            "description": "Integration ID (unique_key) created in Nango.",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "unique_key"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/integrations/{{unique_key}}",
+        "query": {
+          "include": "{{include}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get integration",
+      "validationMode": "strict-generated"
+    },
+    "integrations.list": {
+      "description": "List integrations configured in the Nango environment.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {},
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/integrations",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List integrations",
+      "validationMode": "strict-generated"
+    },
+    "integrations.update": {
+      "description": "Update an integration display name, unique key, or credentials.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "credentials": {
+            "additionalProperties": true,
+            "description": "Integration credentials. OAUTH2 needs client_id and client_secret; APP needs app_id, app_link, and private_key.",
+            "type": "object"
+          },
+          "display_name": {
+            "description": "Integration display name.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "forward_webhooks": {
+            "description": "Whether to forward provider webhooks.",
+            "type": "boolean"
+          },
+          "new_unique_key": {
+            "description": "New unique integration ID if renaming the key.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "unique_key": {
+            "description": "Current integration ID (unique_key).",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "unique_key"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "body": {
+          "credentials": "{{credentials}}",
+          "display_name": "{{display_name}}",
+          "forward_webhooks": "{{forward_webhooks}}",
+          "unique_key": "{{new_unique_key}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "method": "PATCH",
+        "path": "/integrations/{{unique_key}}",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Update integration",
+      "validationMode": "strict-generated"
+    },
+    "providers.get": {
+      "description": "Get one Nango provider configuration by name.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "provider": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "provider"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/providers/{{provider}}",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get provider",
+      "validationMode": "strict-generated"
+    },
+    "providers.list": {
+      "description": "List every provider configuration available in Nango. Use the name field as the provider key in other actions.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {},
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/providers",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List providers",
+      "validationMode": "strict-generated"
+    },
+    "proxy.get": {
+      "description": "Forward an authenticated GET through the Nango proxy to an external API.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "any_path": {
+            "description": "External API path without a leading slash, e.g. users or repos/owner/repo.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "base_url_override": {
+            "description": "Override the provider base URL from providers.yaml.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "connection_id": {
+            "description": "Connection ID used when the connection was created.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "decompress": {
+            "description": "Override the decompress option. Defaults to false.",
+            "type": "boolean"
+          },
+          "provider_config_key": {
+            "description": "Integration unique key (provider config key).",
+            "minLength": 1,
+            "type": "string"
+          },
+          "query_params": {
+            "additionalProperties": {
+              "type": [
+                "string",
+                "number",
+                "integer",
+                "boolean"
+              ]
+            },
+            "description": "Query parameters forwarded to the external API.",
+            "type": "object"
+          },
+          "retries": {
+            "description": "Retries with exponential backoff. Defaults to 0.",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "retry_on": {
+            "description": "Comma-separated extra status codes to retry, in addition to 5xx and 429.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "any_path",
+          "connection_id",
+          "provider_config_key"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {}
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "headers": {
+          "Base-Url-Override": "{{base_url_override}}",
+          "Connection-Id": "{{connection_id}}",
+          "Decompress": "{{decompress}}",
+          "Provider-Config-Key": "{{provider_config_key}}",
+          "Retries": "{{retries}}",
+          "Retry-On": "{{retry_on}}"
+        },
+        "method": "GET",
+        "path": "/proxy/{{any_path}}",
+        "query": "{{query_params}}",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Proxy GET request",
+      "validationMode": "strict-generated"
+    },
+    "proxy.put": {
+      "description": "Forward an authenticated PUT through the Nango proxy to an external API.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "any_path": {
+            "description": "External API path without a leading slash, e.g. users or repos/owner/repo.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "base_url_override": {
+            "description": "Override the provider base URL from providers.yaml.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "body": {
+            "additionalProperties": true,
+            "description": "JSON body forwarded to the external API.",
+            "type": "object"
+          },
+          "connection_id": {
+            "description": "Connection ID used when the connection was created.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "decompress": {
+            "description": "Override the decompress option. Defaults to false.",
+            "type": "boolean"
+          },
+          "provider_config_key": {
+            "description": "Integration unique key (provider config key).",
+            "minLength": 1,
+            "type": "string"
+          },
+          "query_params": {
+            "additionalProperties": {
+              "type": [
+                "string",
+                "number",
+                "integer",
+                "boolean"
+              ]
+            },
+            "description": "Query parameters forwarded to the external API.",
+            "type": "object"
+          },
+          "retries": {
+            "description": "Retries with exponential backoff. Defaults to 0.",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "retry_on": {
+            "description": "Comma-separated extra status codes to retry, in addition to 5xx and 429.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "any_path",
+          "connection_id",
+          "provider_config_key"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {}
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "body": "{{body}}",
+        "headers": {
+          "Base-Url-Override": "{{base_url_override}}",
+          "Connection-Id": "{{connection_id}}",
+          "Content-Type": "application/json",
+          "Decompress": "{{decompress}}",
+          "Provider-Config-Key": "{{provider_config_key}}",
+          "Retries": "{{retries}}",
+          "Retry-On": "{{retry_on}}"
+        },
+        "method": "PUT",
+        "path": "/proxy/{{any_path}}",
+        "query": "{{query_params}}",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Proxy PUT request",
+      "validationMode": "strict-generated"
+    },
+    "scripts.config.get": {
+      "description": "Return sync, action, and event function configuration for all integrations.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "format": {
+            "description": "Output format.",
+            "enum": [
+              "nango",
+              "openai"
+            ],
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {}
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/scripts/config",
+        "query": {
+          "format": "{{format}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get integration functions configuration",
+      "validationMode": "strict-generated"
+    },
+    "syncs.status": {
+      "description": "Get status, frequency, and checkpoint for specified syncs on one connection or all connections.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "connection_id": {
+            "description": "Connection ID. Omit to return every connection.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "provider_config_key": {
+            "description": "Integration ID established in Nango.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "syncs": {
+            "description": "Comma-separated sync names, or \"*\" for every sync. Variants use name::variant.",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "provider_config_key",
+          "syncs"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/sync/status",
+        "query": {
+          "connection_id": "{{connection_id}}",
+          "provider_config_key": "{{provider_config_key}}",
+          "syncs": "{{syncs}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get sync status",
+      "validationMode": "strict-generated"
+    },
+    "syncs.trigger": {
+      "description": "Trigger a one-off run of specified syncs for one connection or every connection on the integration.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "connection_id": {
+            "description": "Connection ID. Omit to trigger every relevant connection.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "opts": {
+            "additionalProperties": false,
+            "description": "Trigger options. reset clears the checkpoint; emptyCache must be paired with reset.",
+            "properties": {
+              "emptyCache": {
+                "description": "Delete cached records before triggering. Requires reset=true.",
+                "type": "boolean"
+              },
+              "reset": {
+                "description": "Clear the checkpoint and lastSyncDate so the sync starts fresh.",
+                "type": "boolean"
+              }
+            },
+            "type": "object"
+          },
+          "provider_config_key": {
+            "description": "Integration ID established in Nango.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "syncs": {
+            "description": "Sync names to trigger. Empty list triggers every sync for the integration.",
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "provider_config_key",
+          "syncs"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "body": {
+          "connection_id": "{{connection_id}}",
+          "opts": "{{opts}}",
+          "provider_config_key": "{{provider_config_key}}",
+          "syncs": "{{syncs}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "method": "POST",
+        "path": "/sync/trigger",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Trigger sync",
+      "validationMode": "strict-generated"
+    }
+  },
+  "provenance": {
+    "source": {
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
+      "url": "https://github.com/oomol-lab/open-connector"
+    }
+  },
+  "runtime": "bun",
+  "version": "0.2.0",
+  "visibility": "public"
+}

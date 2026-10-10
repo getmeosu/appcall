@@ -53,7 +53,10 @@
   "models": [
     "project",
     "form",
-    "submission"
+    "submission",
+    "form_webhook",
+    "domain",
+    "form_view"
   ],
   "name": "Basin",
   "network": {
@@ -62,6 +65,882 @@
     ]
   },
   "operations": {
+    "domains.list": {
+      "description": "List custom sending domains for the authenticated Basin account via GET /api/v1/domains. Maps to BASIN_GET_DOMAINS.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "page": {
+            "description": "Page number for pagination. Composio documents this as starting at 0.",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "query": {
+            "description": "Filter domains by ID or name.",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/domains",
+        "query": {
+          "page": "{{page}}",
+          "query": "{{query}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List domains",
+      "validationMode": "strict-generated"
+    },
+    "form_views.list": {
+      "description": "List legacy Form Builder (Form.io) views via GET /api/v1/form_views. Maps to BASIN_LIST_FORM_VIEWS.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "page": {
+            "description": "Page number for pagination (default 1).",
+            "minimum": 1,
+            "type": "integer"
+          },
+          "query": {
+            "description": "Filter form views by id, uuid, form id, or form uuid.",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/form_views",
+        "query": {
+          "page": "{{page}}",
+          "query": "{{query}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List form views",
+      "validationMode": "strict-generated"
+    },
+    "form_webhooks.create": {
+      "description": "Create a form webhook via POST /api/v1/form_webhooks/. Maps to BASIN_CREATE_FORM_WEBHOOK. Basin wraps attributes under form_webhook.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "enabled": {
+            "description": "Whether the webhook is active.",
+            "type": "boolean"
+          },
+          "form_id": {
+            "description": "ID of the form this webhook is attached to.",
+            "minimum": 1,
+            "type": "integer"
+          },
+          "format": {
+            "description": "Payload format. Official values include json, slack, and form_url_encoded; omit for default JSON.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "name": {
+            "description": "Friendly label for this webhook.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "trigger_when_spam": {
+            "description": "If true, fire this webhook even when a submission is flagged as spam.",
+            "type": "boolean"
+          },
+          "url": {
+            "description": "Destination URL where Basin will POST the submission payload.",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "form_id",
+          "name",
+          "url"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "body": {
+          "form_webhook": {
+            "enabled": "{{enabled}}",
+            "form_id": "{{form_id}}",
+            "format": "{{format}}",
+            "name": "{{name}}",
+            "trigger_when_spam": "{{trigger_when_spam}}",
+            "url": "{{url}}"
+          }
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "method": "POST",
+        "path": "/api/v1/form_webhooks/",
+        "success": [
+          200,
+          201
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Create form webhook",
+      "validationMode": "strict-generated"
+    },
+    "form_webhooks.delete": {
+      "description": "Delete a form webhook via DELETE /api/v1/form_webhooks/{webhook_id}. Maps to BASIN_DELETE_WEBHOOK.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "webhook_id": {
+            "description": "ID of the webhook to delete.",
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "webhook_id"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/api/v1/form_webhooks/{{webhook_id}}",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "title": "Delete webhook",
+      "validationMode": "strict-generated"
+    },
+    "form_webhooks.get": {
+      "description": "Retrieve one form webhook via GET /api/v1/form_webhooks/{id}. Maps to BASIN_GET_FORM_WEBHOOK.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "description": "ID of the form webhook to retrieve.",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/form_webhooks/{{id}}",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get form webhook",
+      "validationMode": "strict-generated"
+    },
+    "form_webhooks.list": {
+      "description": "List form webhooks via GET /api/v1/form_webhooks. Maps to BASIN_GET_WEBHOOKS. form_id is required by Composio and is sent as a query filter.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "form_id": {
+            "description": "ID of the form whose webhooks should be listed.",
+            "minimum": 1,
+            "type": "integer"
+          },
+          "page": {
+            "description": "Page number for pagination.",
+            "minimum": 1,
+            "type": "integer"
+          },
+          "query": {
+            "description": "Filter webhooks by name, id, url, or form_id.",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "form_id"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/form_webhooks",
+        "query": {
+          "form_id": "{{form_id}}",
+          "page": "{{page}}",
+          "query": "{{query}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List form webhooks",
+      "validationMode": "strict-generated"
+    },
+    "form_webhooks.update": {
+      "description": "Update a form webhook via PUT /api/v1/form_webhooks/{webhook_id}. Maps to BASIN_UPDATE_WEBHOOK. Basin wraps attributes under form_webhook.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "enabled": {
+            "description": "Whether the webhook is active.",
+            "type": "boolean"
+          },
+          "form_id": {
+            "description": "ID of the form this webhook is attached to.",
+            "minimum": 1,
+            "type": "integer"
+          },
+          "format": {
+            "description": "Payload format. Official values include json, slack, and form_url_encoded; omit for default JSON.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "name": {
+            "description": "Friendly label for this webhook.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "trigger_when_spam": {
+            "description": "If true, fire this webhook even when a submission is flagged as spam.",
+            "type": "boolean"
+          },
+          "url": {
+            "description": "Destination URL where Basin will POST the submission payload.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "webhook_id": {
+            "description": "ID of the webhook to update.",
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "webhook_id"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "body": {
+          "form_webhook": {
+            "enabled": "{{enabled}}",
+            "form_id": "{{form_id}}",
+            "format": "{{format}}",
+            "name": "{{name}}",
+            "trigger_when_spam": "{{trigger_when_spam}}",
+            "url": "{{url}}"
+          }
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "method": "PUT",
+        "path": "/api/v1/form_webhooks/{{webhook_id}}",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Update webhook",
+      "validationMode": "strict-generated"
+    },
+    "forms.create": {
+      "description": "Create a form under a project via POST /api/v1/forms/. Maps to BASIN_CREATE_FORM. Basin wraps attributes under form. Official writable fields are accepted (Composio's nested notifications/spam_settings objects are the same Basin attributes, flattened).",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "allowed_domains": {
+            "description": "Domains allowed to submit the form.",
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "auto_response_mail_template_id": {
+            "description": "ID of the auto-response mail template.",
+            "minimum": 1,
+            "type": "integer"
+          },
+          "autoreply": {
+            "description": "Whether to send auto-reply emails to submitters.",
+            "type": "boolean"
+          },
+          "autoreply_body": {
+            "description": "Body text for auto-reply emails.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "autoreply_custom_template": {
+            "description": "Custom HTML template for auto-reply emails.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "autoreply_email": {
+            "description": "Email address to send auto-replies from.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "autoreply_from_name": {
+            "description": "From name for auto-reply emails.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "autoreply_greeting": {
+            "description": "Greeting text for auto-reply emails.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "autoreply_name": {
+            "description": "Name shown as sender in auto-reply emails.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "autoreply_subject": {
+            "description": "Subject line for auto-reply emails.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "autoreply_title": {
+            "description": "Title for auto-reply emails.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "autoreply_use_custom_template": {
+            "description": "Whether to use a custom auto-reply template.",
+            "type": "boolean"
+          },
+          "blocked_domains": {
+            "description": "Domains blocked from submitting the form.",
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "button_background_color": {
+            "description": "Submit-button background color (hex).",
+            "minLength": 1,
+            "type": "string"
+          },
+          "button_text_color": {
+            "description": "Submit-button text color (hex).",
+            "minLength": 1,
+            "type": "string"
+          },
+          "confirmation_mail_template_id": {
+            "description": "ID of the confirmation mail template.",
+            "minimum": 1,
+            "type": "integer"
+          },
+          "content_blacklist": {
+            "description": "Content patterns to block in submissions.",
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "contribute_to_spam_training": {
+            "description": "Whether submissions contribute to spam training.",
+            "type": "boolean"
+          },
+          "custom_template": {
+            "description": "Custom HTML template for notification emails.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "data_receipt_email": {
+            "description": "Whether to send data receipt emails.",
+            "type": "boolean"
+          },
+          "domain_email": {
+            "description": "Custom domain email address.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "domain_id": {
+            "description": "ID of the custom sending domain.",
+            "minimum": 1,
+            "type": "integer"
+          },
+          "duplicate_filter": {
+            "description": "Whether to filter duplicate submissions.",
+            "type": "boolean"
+          },
+          "exclude_submitter_from_reply": {
+            "description": "Whether to exclude the submitter from reply emails.",
+            "type": "boolean"
+          },
+          "force_hcaptcha": {
+            "description": "Whether to require hCaptcha verification.",
+            "type": "boolean"
+          },
+          "force_recaptcha": {
+            "description": "Whether to require Google reCAPTCHA verification.",
+            "type": "boolean"
+          },
+          "force_turnstile": {
+            "description": "Whether to require Cloudflare Turnstile verification.",
+            "type": "boolean"
+          },
+          "hide_dashboard_button": {
+            "description": "Whether to hide the dashboard button on the success page.",
+            "type": "boolean"
+          },
+          "honeypot_field": {
+            "description": "Name of the honeypot field used to trap spam bots.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "logo": {
+            "description": "URL of the logo image for the form.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "name": {
+            "description": "Name of the form.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "notification_bcc_emails": {
+            "description": "Comma-separated BCC notification recipients.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "notification_cc_emails": {
+            "description": "Comma-separated CC notification recipients.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "notification_emails": {
+            "description": "Comma-separated notification recipients. Empty string clears recipients.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "notification_from_name": {
+            "description": "From name for notification emails.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "notification_mail_template_id": {
+            "description": "ID of the notification mail template.",
+            "minimum": 1,
+            "type": "integer"
+          },
+          "notification_subject": {
+            "description": "Custom subject line for notification emails.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "project_id": {
+            "description": "ID of the project this form belongs to.",
+            "minimum": 1,
+            "type": "integer"
+          },
+          "recaptcha_failed_url": {
+            "description": "URL to redirect to when reCAPTCHA verification fails.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "redirect_button_background_color": {
+            "description": "Redirect-button background color (hex).",
+            "minLength": 1,
+            "type": "string"
+          },
+          "redirect_button_text": {
+            "description": "Button text on the redirect page.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "redirect_button_text_color": {
+            "description": "Redirect-button text color (hex).",
+            "minLength": 1,
+            "type": "string"
+          },
+          "redirect_heading": {
+            "description": "Heading text for the redirect page.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "redirect_message": {
+            "description": "Message text for the redirect page.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "redirect_url": {
+            "description": "URL to redirect after submission.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "retention_days": {
+            "description": "Number of days to retain form submissions.",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "smtp_email_validation": {
+            "description": "Whether to validate email addresses via SMTP.",
+            "type": "boolean"
+          },
+          "timezone": {
+            "description": "IANA timezone used for form timestamps.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "turnstile_secret": {
+            "description": "Cloudflare Turnstile secret key.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "turnstile_site_key": {
+            "description": "Cloudflare Turnstile site key.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "use_ajax": {
+            "description": "Whether the form should submit via AJAX.",
+            "type": "boolean"
+          },
+          "use_custom_template": {
+            "description": "Whether to use a custom notification template.",
+            "type": "boolean"
+          },
+          "whitelist_source_domains": {
+            "description": "Comma-separated whitelisted source domains.",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "project_id",
+          "timezone"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "body": {
+          "form": {
+            "allowed_domains": "{{allowed_domains}}",
+            "auto_response_mail_template_id": "{{auto_response_mail_template_id}}",
+            "autoreply": "{{autoreply}}",
+            "autoreply_body": "{{autoreply_body}}",
+            "autoreply_custom_template": "{{autoreply_custom_template}}",
+            "autoreply_email": "{{autoreply_email}}",
+            "autoreply_from_name": "{{autoreply_from_name}}",
+            "autoreply_greeting": "{{autoreply_greeting}}",
+            "autoreply_name": "{{autoreply_name}}",
+            "autoreply_subject": "{{autoreply_subject}}",
+            "autoreply_title": "{{autoreply_title}}",
+            "autoreply_use_custom_template": "{{autoreply_use_custom_template}}",
+            "blocked_domains": "{{blocked_domains}}",
+            "button_background_color": "{{button_background_color}}",
+            "button_text_color": "{{button_text_color}}",
+            "confirmation_mail_template_id": "{{confirmation_mail_template_id}}",
+            "content_blacklist": "{{content_blacklist}}",
+            "contribute_to_spam_training": "{{contribute_to_spam_training}}",
+            "custom_template": "{{custom_template}}",
+            "data_receipt_email": "{{data_receipt_email}}",
+            "domain_email": "{{domain_email}}",
+            "domain_id": "{{domain_id}}",
+            "duplicate_filter": "{{duplicate_filter}}",
+            "exclude_submitter_from_reply": "{{exclude_submitter_from_reply}}",
+            "force_hcaptcha": "{{force_hcaptcha}}",
+            "force_recaptcha": "{{force_recaptcha}}",
+            "force_turnstile": "{{force_turnstile}}",
+            "hide_dashboard_button": "{{hide_dashboard_button}}",
+            "honeypot_field": "{{honeypot_field}}",
+            "logo": "{{logo}}",
+            "name": "{{name}}",
+            "notification_bcc_emails": "{{notification_bcc_emails}}",
+            "notification_cc_emails": "{{notification_cc_emails}}",
+            "notification_emails": "{{notification_emails}}",
+            "notification_from_name": "{{notification_from_name}}",
+            "notification_mail_template_id": "{{notification_mail_template_id}}",
+            "notification_subject": "{{notification_subject}}",
+            "project_id": "{{project_id}}",
+            "recaptcha_failed_url": "{{recaptcha_failed_url}}",
+            "redirect_button_background_color": "{{redirect_button_background_color}}",
+            "redirect_button_text": "{{redirect_button_text}}",
+            "redirect_button_text_color": "{{redirect_button_text_color}}",
+            "redirect_heading": "{{redirect_heading}}",
+            "redirect_message": "{{redirect_message}}",
+            "redirect_url": "{{redirect_url}}",
+            "retention_days": "{{retention_days}}",
+            "smtp_email_validation": "{{smtp_email_validation}}",
+            "timezone": "{{timezone}}",
+            "turnstile_secret": "{{turnstile_secret}}",
+            "turnstile_site_key": "{{turnstile_site_key}}",
+            "use_ajax": "{{use_ajax}}",
+            "use_custom_template": "{{use_custom_template}}",
+            "whitelist_source_domains": "{{whitelist_source_domains}}"
+          }
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "method": "POST",
+        "path": "/api/v1/forms/",
+        "success": [
+          200,
+          201
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Create form",
+      "validationMode": "strict-generated"
+    },
+    "forms.delete": {
+      "description": "Permanently delete a form via DELETE /api/v1/forms/{form_id}. Maps to BASIN_DELETE_FORM.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "form_id": {
+            "description": "ID of the form to permanently delete.",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "form_id"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/api/v1/forms/{{form_id}}",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "title": "Delete form",
+      "validationMode": "strict-generated"
+    },
+    "forms.get": {
+      "description": "Retrieve one form via GET /api/v1/forms/{form_id}. Maps to BASIN_GET_FORM_DETAILS.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "form_id": {
+            "description": "Numeric form ID as a string (the id field from List forms).",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "form_id"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/forms/{{form_id}}",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get form details",
+      "validationMode": "strict-generated"
+    },
     "forms.list": {
       "description": "List forms available to the current Basin API key.",
       "enforceOutputSchema": true,
@@ -111,6 +990,372 @@
       "title": "List forms",
       "validationMode": "strict-generated"
     },
+    "forms.update": {
+      "description": "Update an existing form via PUT /api/v1/forms/{id}. Maps to BASIN_UPDATE_FORM. Basin wraps attributes under form.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "allowed_domains": {
+            "description": "Domains allowed to submit the form.",
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "auto_response_mail_template_id": {
+            "description": "ID of the auto-response mail template.",
+            "minimum": 1,
+            "type": "integer"
+          },
+          "autoreply": {
+            "description": "Whether to send auto-reply emails to submitters.",
+            "type": "boolean"
+          },
+          "autoreply_body": {
+            "description": "Body text for auto-reply emails.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "autoreply_custom_template": {
+            "description": "Custom HTML template for auto-reply emails.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "autoreply_email": {
+            "description": "Email address to send auto-replies from.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "autoreply_from_name": {
+            "description": "From name for auto-reply emails.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "autoreply_greeting": {
+            "description": "Greeting text for auto-reply emails.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "autoreply_name": {
+            "description": "Name shown as sender in auto-reply emails.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "autoreply_subject": {
+            "description": "Subject line for auto-reply emails.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "autoreply_title": {
+            "description": "Title for auto-reply emails.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "autoreply_use_custom_template": {
+            "description": "Whether to use a custom auto-reply template.",
+            "type": "boolean"
+          },
+          "blocked_domains": {
+            "description": "Domains blocked from submitting the form.",
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "button_background_color": {
+            "description": "Submit-button background color (hex).",
+            "minLength": 1,
+            "type": "string"
+          },
+          "button_text_color": {
+            "description": "Submit-button text color (hex).",
+            "minLength": 1,
+            "type": "string"
+          },
+          "confirmation_mail_template_id": {
+            "description": "ID of the confirmation mail template.",
+            "minimum": 1,
+            "type": "integer"
+          },
+          "content_blacklist": {
+            "description": "Content patterns to block in submissions.",
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "contribute_to_spam_training": {
+            "description": "Whether submissions contribute to spam training.",
+            "type": "boolean"
+          },
+          "custom_template": {
+            "description": "Custom HTML template for notification emails.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "data_receipt_email": {
+            "description": "Whether to send data receipt emails.",
+            "type": "boolean"
+          },
+          "domain_email": {
+            "description": "Custom domain email address.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "domain_id": {
+            "description": "ID of the custom sending domain.",
+            "minimum": 1,
+            "type": "integer"
+          },
+          "duplicate_filter": {
+            "description": "Whether to filter duplicate submissions.",
+            "type": "boolean"
+          },
+          "exclude_submitter_from_reply": {
+            "description": "Whether to exclude the submitter from reply emails.",
+            "type": "boolean"
+          },
+          "force_hcaptcha": {
+            "description": "Whether to require hCaptcha verification.",
+            "type": "boolean"
+          },
+          "force_recaptcha": {
+            "description": "Whether to require Google reCAPTCHA verification.",
+            "type": "boolean"
+          },
+          "force_turnstile": {
+            "description": "Whether to require Cloudflare Turnstile verification.",
+            "type": "boolean"
+          },
+          "hide_dashboard_button": {
+            "description": "Whether to hide the dashboard button on the success page.",
+            "type": "boolean"
+          },
+          "honeypot_field": {
+            "description": "Name of the honeypot field used to trap spam bots.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "id": {
+            "description": "ID of the form to update.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "logo": {
+            "description": "URL of the logo image for the form.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "name": {
+            "description": "Name of the form.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "notification_bcc_emails": {
+            "description": "Comma-separated BCC notification recipients.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "notification_cc_emails": {
+            "description": "Comma-separated CC notification recipients.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "notification_emails": {
+            "description": "Comma-separated notification recipients. Empty string clears recipients.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "notification_from_name": {
+            "description": "From name for notification emails.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "notification_mail_template_id": {
+            "description": "ID of the notification mail template.",
+            "minimum": 1,
+            "type": "integer"
+          },
+          "notification_subject": {
+            "description": "Custom subject line for notification emails.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "project_id": {
+            "description": "ID of the project this form belongs to.",
+            "minimum": 1,
+            "type": "integer"
+          },
+          "recaptcha_failed_url": {
+            "description": "URL to redirect to when reCAPTCHA verification fails.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "redirect_button_background_color": {
+            "description": "Redirect-button background color (hex).",
+            "minLength": 1,
+            "type": "string"
+          },
+          "redirect_button_text": {
+            "description": "Button text on the redirect page.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "redirect_button_text_color": {
+            "description": "Redirect-button text color (hex).",
+            "minLength": 1,
+            "type": "string"
+          },
+          "redirect_heading": {
+            "description": "Heading text for the redirect page.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "redirect_message": {
+            "description": "Message text for the redirect page.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "redirect_url": {
+            "description": "URL to redirect after submission.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "retention_days": {
+            "description": "Number of days to retain form submissions.",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "smtp_email_validation": {
+            "description": "Whether to validate email addresses via SMTP.",
+            "type": "boolean"
+          },
+          "timezone": {
+            "description": "IANA timezone used for form timestamps.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "turnstile_secret": {
+            "description": "Cloudflare Turnstile secret key.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "turnstile_site_key": {
+            "description": "Cloudflare Turnstile site key.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "use_ajax": {
+            "description": "Whether the form should submit via AJAX.",
+            "type": "boolean"
+          },
+          "use_custom_template": {
+            "description": "Whether to use a custom notification template.",
+            "type": "boolean"
+          },
+          "whitelist_source_domains": {
+            "description": "Comma-separated whitelisted source domains.",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "body": {
+          "form": {
+            "allowed_domains": "{{allowed_domains}}",
+            "auto_response_mail_template_id": "{{auto_response_mail_template_id}}",
+            "autoreply": "{{autoreply}}",
+            "autoreply_body": "{{autoreply_body}}",
+            "autoreply_custom_template": "{{autoreply_custom_template}}",
+            "autoreply_email": "{{autoreply_email}}",
+            "autoreply_from_name": "{{autoreply_from_name}}",
+            "autoreply_greeting": "{{autoreply_greeting}}",
+            "autoreply_name": "{{autoreply_name}}",
+            "autoreply_subject": "{{autoreply_subject}}",
+            "autoreply_title": "{{autoreply_title}}",
+            "autoreply_use_custom_template": "{{autoreply_use_custom_template}}",
+            "blocked_domains": "{{blocked_domains}}",
+            "button_background_color": "{{button_background_color}}",
+            "button_text_color": "{{button_text_color}}",
+            "confirmation_mail_template_id": "{{confirmation_mail_template_id}}",
+            "content_blacklist": "{{content_blacklist}}",
+            "contribute_to_spam_training": "{{contribute_to_spam_training}}",
+            "custom_template": "{{custom_template}}",
+            "data_receipt_email": "{{data_receipt_email}}",
+            "domain_email": "{{domain_email}}",
+            "domain_id": "{{domain_id}}",
+            "duplicate_filter": "{{duplicate_filter}}",
+            "exclude_submitter_from_reply": "{{exclude_submitter_from_reply}}",
+            "force_hcaptcha": "{{force_hcaptcha}}",
+            "force_recaptcha": "{{force_recaptcha}}",
+            "force_turnstile": "{{force_turnstile}}",
+            "hide_dashboard_button": "{{hide_dashboard_button}}",
+            "honeypot_field": "{{honeypot_field}}",
+            "logo": "{{logo}}",
+            "name": "{{name}}",
+            "notification_bcc_emails": "{{notification_bcc_emails}}",
+            "notification_cc_emails": "{{notification_cc_emails}}",
+            "notification_emails": "{{notification_emails}}",
+            "notification_from_name": "{{notification_from_name}}",
+            "notification_mail_template_id": "{{notification_mail_template_id}}",
+            "notification_subject": "{{notification_subject}}",
+            "project_id": "{{project_id}}",
+            "recaptcha_failed_url": "{{recaptcha_failed_url}}",
+            "redirect_button_background_color": "{{redirect_button_background_color}}",
+            "redirect_button_text": "{{redirect_button_text}}",
+            "redirect_button_text_color": "{{redirect_button_text_color}}",
+            "redirect_heading": "{{redirect_heading}}",
+            "redirect_message": "{{redirect_message}}",
+            "redirect_url": "{{redirect_url}}",
+            "retention_days": "{{retention_days}}",
+            "smtp_email_validation": "{{smtp_email_validation}}",
+            "timezone": "{{timezone}}",
+            "turnstile_secret": "{{turnstile_secret}}",
+            "turnstile_site_key": "{{turnstile_site_key}}",
+            "use_ajax": "{{use_ajax}}",
+            "use_custom_template": "{{use_custom_template}}",
+            "whitelist_source_domains": "{{whitelist_source_domains}}"
+          }
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "method": "PUT",
+        "path": "/api/v1/forms/{{id}}",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Update form",
+      "validationMode": "strict-generated"
+    },
     "healthcheck": {
       "description": "Validate the Basin API key by listing projects on page 1.",
       "enforceOutputSchema": true,
@@ -148,6 +1393,105 @@
       "sideEffect": "read",
       "timeoutMs": 5000,
       "title": "Healthcheck",
+      "validationMode": "strict-generated"
+    },
+    "projects.create": {
+      "description": "Create a project via POST /api/v1/projects/. Maps to BASIN_CREATE_PROJECT. Basin wraps attributes under project.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "description": "Name of the new project; must be non-empty.",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "body": {
+          "project": {
+            "name": "{{name}}"
+          }
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "method": "POST",
+        "path": "/api/v1/projects/",
+        "success": [
+          200,
+          201
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Create project",
+      "validationMode": "strict-generated"
+    },
+    "projects.delete": {
+      "description": "Delete a project via DELETE /api/v1/projects/{project_id}. Maps to BASIN_DELETE_PROJECT.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "project_id": {
+            "description": "ID of the project to delete.",
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "project_id"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/api/v1/projects/{{project_id}}",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "title": "Delete project",
       "validationMode": "strict-generated"
     },
     "projects.get": {
@@ -243,6 +1587,113 @@
       "title": "List projects",
       "validationMode": "strict-generated"
     },
+    "projects.update": {
+      "description": "Rename a project via PUT /api/v1/projects/{project_id}. Maps to BASIN_UPDATE_PROJECT. Basin wraps attributes under project.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "description": "New name for the project. Must be non-empty and cannot exceed 100 characters.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "project_id": {
+            "description": "ID of the project to update.",
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "name",
+          "project_id"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "body": {
+          "project": {
+            "name": "{{name}}"
+          }
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "method": "PUT",
+        "path": "/api/v1/projects/{{project_id}}",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Update project",
+      "validationMode": "strict-generated"
+    },
+    "submissions.delete": {
+      "description": "Permanently delete a submission via DELETE /api/v1/submissions/{id}. Maps to BASIN_DELETE_SUBMISSION. Official 200 responses may be empty, so the envelope is {success: true}.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "description": "ID of the submission to permanently delete.",
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "success": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "success"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/api/v1/submissions/{{id}}",
+        "result": {
+          "success": true
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "title": "Delete submission",
+      "validationMode": "strict-generated"
+    },
     "submissions.list": {
       "description": "List Basin form submissions with optional filters.",
       "enforceOutputSchema": true,
@@ -325,6 +1776,6 @@
     }
   },
   "runtime": "bun",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "visibility": "public"
 }

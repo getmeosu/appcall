@@ -7,3 +7,5 @@ Operations are bounded reads: `healthcheck` (`GET /groups?limit=1`), `groups.lis
 Official help copy asks for `Content-Type: application/json` on GET; native GET reads omit `Content-Type` because the pinned executor only sets it when a body is present. HTTP 200 bodies with a non-empty `message` are treated as errors because native `bodyErrorPaths` cannot invert Sender's `success` boolean.
 
 Pinned source: `oomol-lab/open-connector@33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a` (Apache-2.0). Fixtures are supplied; live authentication is unverified.
+
+Deepen 0.2.0 covers every live Composio Sender tool. `fields.create` and `subscribers.update` are handwritten so official success `message` strings are not treated as body errors. Origin groups/subscribers/campaigns list ops stay.

@@ -18,6 +18,7 @@ it("declares secure setup, complete action contracts and write effects", () => {
   });
   expect(m.network.allowedHosts).toEqual(["{{host}}"]);
   expect(m.http.baseUrl).toBe("https://{{host}}/wp-json/wp/v2");
+  expect(m.version).toBe("0.2.0");
   expect(Object.keys(m.operations).sort()).toEqual(
     [
       "healthcheck",
@@ -25,8 +26,23 @@ it("declares secure setup, complete action contracts and write effects", () => {
       "post.get",
       "post.create",
       "post.update",
+      "post.delete",
       "page.list",
+      "page.get",
+      "page.create",
+      "page.update",
+      "page.delete",
       "category.list",
+      "category.get",
+      "category.create",
+      "tag.list",
+      "tag.get",
+      "tag.create",
+      "comment.list",
+      "comment.get",
+      "comment.create",
+      "user.list",
+      "media.list",
     ].sort(),
   );
   for (const [key, value] of Object.entries(m.operations)) {
@@ -39,7 +55,9 @@ it("declares secure setup, complete action contracts and write effects", () => {
     expect(op.timeoutMs).toBeGreaterThan(0);
     expect(op.maxInputBytes).toBeGreaterThan(0);
     expect(op.maxResponseBytes).toBeGreaterThan(0);
-    expect(op.sideEffect).toBe(/create|update/.test(key) ? "write" : "read");
+    expect(op.sideEffect).toBe(
+      /delete/.test(key) ? "destructive" : /create|update/.test(key) ? "write" : "read",
+    );
     expect(op.request).toBeDefined();
   }
   const qa = JSON.parse(

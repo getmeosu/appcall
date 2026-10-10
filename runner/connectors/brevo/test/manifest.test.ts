@@ -5,7 +5,7 @@ describe("brevo connector manifest", () => {
   test("declares key, runtime, auth, network, operations, and models", () => {
     expect(manifest.key).toBe("brevo");
     expect(manifest.name).toBe("Brevo");
-    expect(manifest.version).toBe("0.1.0");
+    expect(manifest.version).toBe("0.2.0");
     expect(manifest.runtime).toBe("bun");
   });
 
@@ -45,7 +45,14 @@ describe("brevo connector manifest", () => {
     expect(manifest.operations["emailCampaigns.create"].kind).toBe("action");
     expect(manifest.operations["emailCampaigns.send"].kind).toBe("action");
     expect(manifest.operations["emailCampaigns.get"].kind).toBe("action");
+    expect(manifest.operations["emailCampaigns.update"].kind).toBe("action");
+    expect(manifest.operations["account.get"].kind).toBe("action");
+    expect(manifest.operations["companies.create"].kind).toBe("action");
+    expect(manifest.operations["smtp.templates.createOrUpdate"].kind).toBe("action");
+    expect(manifest.operations["smsCampaigns.create"].kind).toBe("action");
+    expect(manifest.operations["contacts.import"].kind).toBe("action");
     expect(manifest.operations["healthcheck"].kind).toBe("action");
+    expect(Object.keys(manifest.operations)).toHaveLength(38);
   });
 
   test("new action operations have required fields (title, description, object inputSchema, outputSchema)", () => {
@@ -54,7 +61,13 @@ describe("brevo connector manifest", () => {
       "smtp.email.send",
       "lists.create", "lists.get",
       "contacts.addToList", "contacts.removeFromList",
-      "emailCampaigns.create", "emailCampaigns.send", "emailCampaigns.get",
+      "emailCampaigns.create", "emailCampaigns.send", "emailCampaigns.get", "emailCampaigns.update",
+      "account.get", "companies.create", "companies.get", "companies.delete", "companies.list",
+      "smtp.templates.createOrUpdate", "smtp.templates.delete", "smtp.templates.list", "smtp.templates.get",
+      "smsCampaigns.create", "smsCampaigns.delete", "smsCampaigns.get", "smsCampaigns.list",
+      "contacts.campaignStats.get", "contacts.import", "contacts.attributes.list",
+      "crm.notes.list", "crm.objects.records.list",
+      "senders.list", "senders.domains.list", "smtp.events.list",
     ];
     for (const opKey of newOps) {
       const op = manifest.operations[opKey as keyof typeof manifest.operations] as Record<string, unknown>;
@@ -79,10 +92,40 @@ describe("brevo connector manifest", () => {
     expect(healthcheck.maxResponseBytes).toBe(65536);
   });
 
-  test("models include contact, list, and campaign", () => {
+  test("models include contact, list, campaign, and Composio CRM resources", () => {
     expect(manifest.models).toContain("contact");
     expect(manifest.models).toContain("list");
     expect(manifest.models).toContain("campaign");
-    expect(manifest.models).toHaveLength(3);
+    expect(manifest.models).toContain("company");
+    expect(manifest.models).toContain("template");
+    expect(manifest.models).toContain("smsCampaign");
+    expect(manifest.models).toContain("sender");
+    expect(manifest.models).toContain("note");
+    expect(manifest.models).toHaveLength(8);
+  });
+
+  test("new Composio operations have a request-less handwritten handler contract (title, description, object inputSchema)", () => {
+    const readOps = [
+      "account.get", "companies.get", "companies.list",
+      "smtp.templates.list", "smtp.templates.get",
+      "smsCampaigns.get", "smsCampaigns.list",
+      "contacts.campaignStats.get", "contacts.attributes.list",
+      "crm.notes.list", "crm.objects.records.list",
+      "senders.list", "senders.domains.list", "smtp.events.list",
+    ];
+    for (const opKey of readOps) {
+      const op = manifest.operations[opKey as keyof typeof manifest.operations] as Record<string, unknown>;
+      expect(op.sideEffect, `${opKey} sideEffect`).toBe("read");
+    }
+    const writeOps = [
+      "companies.create", "companies.delete",
+      "smtp.templates.createOrUpdate", "smtp.templates.delete",
+      "smsCampaigns.create", "smsCampaigns.delete",
+      "contacts.import", "emailCampaigns.update",
+    ];
+    for (const opKey of writeOps) {
+      const op = manifest.operations[opKey as keyof typeof manifest.operations] as Record<string, unknown>;
+      expect(op.sideEffect, `${opKey} sideEffect`).toBe("write");
+    }
   });
 });

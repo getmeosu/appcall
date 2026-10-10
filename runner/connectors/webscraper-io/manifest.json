@@ -59,7 +59,8 @@
   "models": [
     "account",
     "sitemap",
-    "scraping-job"
+    "scraping-job",
+    "scheduler"
   ],
   "name": "Web Scraper Cloud",
   "network": {
@@ -104,19 +105,63 @@
       "title": "Healthcheck",
       "validationMode": "strict-generated"
     },
-    "scraping-jobs.get": {
-      "description": "Get one Web Scraper Cloud scraping job by numeric job ID.",
+    "sitemaps.list": {
+      "description": "List Web Scraper Cloud sitemaps with optional page pagination.",
       "enforceOutputSchema": true,
       "inputSchema": {
         "additionalProperties": false,
         "properties": {
-          "scraping_job_id": {
+          "page": {
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/sitemaps",
+        "query": {
+          "page": "{{page}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List sitemaps",
+      "validationMode": "strict-generated"
+    },
+    "sitemaps.get": {
+      "description": "Get one Web Scraper Cloud sitemap by numeric sitemap ID.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "sitemap_id": {
             "minimum": 1,
             "type": "integer"
           }
         },
         "required": [
-          "scraping_job_id"
+          "sitemap_id"
         ],
         "type": "object"
       },
@@ -137,7 +182,7 @@
       },
       "request": {
         "method": "GET",
-        "path": "/scraping-job/{{scraping_job_id}}",
+        "path": "/sitemap/{{sitemap_id}}",
         "success": [
           200
         ]
@@ -145,7 +190,7 @@
       "responseFormat": "json",
       "sideEffect": "read",
       "timeoutMs": 15000,
-      "title": "Get scraping job",
+      "title": "Get sitemap",
       "validationMode": "strict-generated"
     },
     "scraping-jobs.list": {
@@ -197,19 +242,19 @@
       "title": "List scraping jobs",
       "validationMode": "strict-generated"
     },
-    "sitemaps.get": {
-      "description": "Get one Web Scraper Cloud sitemap by numeric sitemap ID.",
+    "scraping-jobs.get": {
+      "description": "Get one Web Scraper Cloud scraping job by numeric job ID.",
       "enforceOutputSchema": true,
       "inputSchema": {
         "additionalProperties": false,
         "properties": {
-          "sitemap_id": {
+          "scraping_job_id": {
             "minimum": 1,
             "type": "integer"
           }
         },
         "required": [
-          "sitemap_id"
+          "scraping_job_id"
         ],
         "type": "object"
       },
@@ -230,60 +275,730 @@
       },
       "request": {
         "method": "GET",
+        "path": "/scraping-job/{{scraping_job_id}}",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get scraping job",
+      "validationMode": "strict-generated"
+    },
+    "sitemaps.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create sitemap",
+      "description": "Create a Web Scraper Cloud sitemap from start URLs and selectors.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "sitemap_key": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Sitemap _id key."
+          },
+          "startUrl": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "description": "Start URLs."
+          },
+          "selectors": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            },
+            "minItems": 1,
+            "description": "Selector rules."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "sitemap_key",
+          "startUrl",
+          "selectors"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/sitemap",
+        "success": [
+          200,
+          201
+        ],
+        "body": {
+          "_id": "{{sitemap_key}}",
+          "startUrl": "{{startUrl}}",
+          "selectors": "{{selectors}}"
+        },
+        "headers": {
+          "Accept": "application/json",
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "sitemaps.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Update sitemap",
+      "description": "Replace an existing Web Scraper Cloud sitemap definition.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "sitemap_id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Numeric sitemap id."
+          },
+          "sitemap_key": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Sitemap _id key."
+          },
+          "startUrl": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "description": "Start URLs."
+          },
+          "selectors": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            },
+            "minItems": 1,
+            "description": "Selector rules."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "sitemap_id",
+          "sitemap_key",
+          "startUrl",
+          "selectors"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/sitemap/{{sitemap_id}}",
+        "success": [
+          200
+        ],
+        "body": {
+          "_id": "{{sitemap_key}}",
+          "startUrl": "{{startUrl}}",
+          "selectors": "{{selectors}}"
+        },
+        "headers": {
+          "Accept": "application/json",
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "sitemaps.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Delete sitemap",
+      "description": "Permanently delete a Web Scraper Cloud sitemap.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "sitemap_id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Numeric sitemap id."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "sitemap_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "DELETE",
         "path": "/sitemap/{{sitemap_id}}",
         "success": [
           200
         ]
       },
-      "responseFormat": "json",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "sitemaps.listByTag": {
+      "kind": "action",
       "sideEffect": "read",
       "timeoutMs": 15000,
-      "title": "Get sitemap",
-      "validationMode": "strict-generated"
-    },
-    "sitemaps.list": {
-      "description": "List Web Scraper Cloud sitemaps with optional page pagination.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "page": {
-            "minimum": 1,
-            "type": "integer"
-          }
-        },
-        "type": "object"
-      },
-      "kind": "action",
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
-      "outputSchema": {
+      "title": "List sitemaps by tag",
+      "description": "List Web Scraper Cloud sitemaps filtered by tag.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "tag": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Sitemap tag filter."
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "One-based page number."
+          }
+        },
         "additionalProperties": false,
+        "required": [
+          "tag"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "required": [
-          "data"
-        ],
-        "type": "object"
+        "additionalProperties": false
       },
       "request": {
         "method": "GET",
         "path": "/sitemaps",
+        "success": [
+          200
+        ],
         "query": {
-          "page": "{{page}}"
+          "page": "{{page}}",
+          "tag": "{{tag}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "scraping-jobs.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create scraping job",
+      "description": "Start a Web Scraper Cloud scraping job for a sitemap.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "sitemap_id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Sitemap to scrape."
+          },
+          "driver": {
+            "type": "string",
+            "enum": [
+              "fast",
+              "fulljs"
+            ],
+            "description": "Scraper driver."
+          },
+          "page_load_delay": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Page load delay in milliseconds."
+          },
+          "request_interval": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Request interval in milliseconds."
+          },
+          "proxy": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Proxy flag or proxy id."
+          },
+          "start_urls": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Optional custom start URLs."
+          },
+          "custom_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Optional client job id."
+          },
+          "priority": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Job priority."
+          }
         },
+        "additionalProperties": false,
+        "required": [
+          "sitemap_id",
+          "driver",
+          "page_load_delay",
+          "request_interval",
+          "proxy"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/scraping-job",
+        "success": [
+          200,
+          201
+        ],
+        "body": {
+          "sitemap_id": "{{sitemap_id}}",
+          "driver": "{{driver}}",
+          "page_load_delay": "{{page_load_delay}}",
+          "request_interval": "{{request_interval}}",
+          "proxy": "{{proxy}}",
+          "start_urls": "{{start_urls}}",
+          "custom_id": "{{custom_id}}",
+          "priority": "{{priority}}"
+        },
+        "headers": {
+          "Accept": "application/json",
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "scraping-jobs.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Delete scraping job",
+      "description": "Delete a Web Scraper Cloud scraping job and its stored data.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "scraping_job_id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Numeric scraping job id."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "scraping_job_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/scraping-job/{{scraping_job_id}}",
         "success": [
           200
         ]
       },
-      "responseFormat": "json",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "scraping-jobs.dataQuality": {
+      "kind": "action",
       "sideEffect": "read",
       "timeoutMs": 15000,
-      "title": "List sitemaps",
-      "validationMode": "strict-generated"
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get scraping job data quality",
+      "description": "Read Cloud data-quality results for a scraping job.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "scraping_job_id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Numeric scraping job id."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "scraping_job_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/scraping-job/{{scraping_job_id}}/data-quality",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "scraping-jobs.problematicUrls": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List problematic URLs",
+      "description": "List empty, failed, or no-value URLs for a scraping job.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "scraping_job_id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Numeric scraping job id."
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "One-based page number."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "scraping_job_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/scraping-job/{{scraping_job_id}}/problematic-urls",
+        "success": [
+          200
+        ],
+        "query": {
+          "page": "{{page}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "schedulers.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get sitemap scheduler",
+      "description": "Read scheduler configuration for a sitemap.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "sitemap_id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Numeric sitemap id."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "sitemap_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/sitemap/{{sitemap_id}}/scheduler",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "schedulers.enable": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Enable sitemap scheduler",
+      "description": "Enable and configure automatic scheduling for a sitemap.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "sitemap_id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Numeric sitemap id."
+          },
+          "cron_minute": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Cron minute field."
+          },
+          "cron_hour": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Cron hour field."
+          },
+          "cron_day": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Cron day-of-month field."
+          },
+          "cron_month": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Cron month field."
+          },
+          "cron_weekday": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Cron weekday field."
+          },
+          "cron_timezone": {
+            "type": "string",
+            "minLength": 1,
+            "description": "tz database timezone."
+          },
+          "request_interval": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Request interval in milliseconds."
+          },
+          "page_load_delay": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Page load delay in milliseconds."
+          },
+          "driver": {
+            "type": "string",
+            "enum": [
+              "fast",
+              "fulljs"
+            ],
+            "description": "Scraper driver."
+          },
+          "proxy": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Proxy flag or proxy id."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "sitemap_id",
+          "cron_minute",
+          "cron_hour",
+          "cron_day",
+          "cron_month",
+          "cron_weekday",
+          "request_interval",
+          "page_load_delay",
+          "driver"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/sitemap/{{sitemap_id}}/enable-scheduler",
+        "success": [
+          200,
+          201
+        ],
+        "body": {
+          "cron_minute": "{{cron_minute}}",
+          "cron_hour": "{{cron_hour}}",
+          "cron_day": "{{cron_day}}",
+          "cron_month": "{{cron_month}}",
+          "cron_weekday": "{{cron_weekday}}",
+          "cron_timezone": "{{cron_timezone}}",
+          "request_interval": "{{request_interval}}",
+          "page_load_delay": "{{page_load_delay}}",
+          "driver": "{{driver}}",
+          "proxy": "{{proxy}}"
+        },
+        "headers": {
+          "Accept": "application/json",
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "schedulers.disable": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Disable sitemap scheduler",
+      "description": "Disable automatic scheduling for a sitemap.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "sitemap_id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Numeric sitemap id."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "sitemap_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/sitemap/{{sitemap_id}}/disable-scheduler",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Accept": "application/json",
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
     }
   },
   "provenance": {
@@ -293,6 +1008,6 @@
     }
   },
   "runtime": "bun",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "visibility": "public"
 }

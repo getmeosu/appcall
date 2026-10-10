@@ -1,1 +1,719 @@
-{"auth":{"scopes":[],"setup":{"fields":[{"key":"apiKey","label":"Fluxguard API key","required":true,"secret":true}],"mode":"api_key"},"type":"api_key"},"categories":["dev-tools"],"evidence":{"fixture":{"status":"supplied"},"live":{"status":"unverified"}},"http":{"auth":{"field":"apiKey","in":"header","name":"x-api-key","value":"{{apiKey}}"},"baseUrl":"https://api.fluxguard.com","errors":{"defaultRetryAfterSeconds":30,"messagePaths":["message","error","errorMessage"],"rateLimitStatuses":[429],"retryAfterHeader":"retry-after"},"headers":{"Accept":"application/json"}},"key":"fluxguard","models":["account","webhook","category","page"],"name":"Fluxguard","network":{"allowedHosts":["api.fluxguard.com"]},"operations":{"categories.list":{"description":"List Fluxguard account categories.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{},"type":"object"},"kind":"action","maxInputBytes":65536,"maxResponseBytes":5242880,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/account/category","success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":15000,"title":"List categories","validationMode":"strict-generated"},"healthcheck":{"description":"Validate the Fluxguard API key with GET /account.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{},"type":"object"},"kind":"action","maxInputBytes":4096,"maxResponseBytes":65536,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/account","success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":5000,"title":"Healthcheck","validationMode":"strict-generated"},"pages.get":{"description":"Retrieve Fluxguard data for one monitored page.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{"pageId":{"minLength":1,"type":"string"},"sessionId":{"minLength":1,"type":"string"},"siteId":{"minLength":1,"type":"string"}},"required":["siteId","sessionId","pageId"],"type":"object"},"kind":"action","maxInputBytes":65536,"maxResponseBytes":5242880,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/site/{{siteId}}/session/{{sessionId}}/page/{{pageId}}","success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":15000,"title":"Get page","validationMode":"strict-generated"},"webhooks.list":{"description":"List Fluxguard account webhooks.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{},"type":"object"},"kind":"action","maxInputBytes":65536,"maxResponseBytes":5242880,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":["array","object"]}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/account/webhook","success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":15000,"title":"List webhooks","validationMode":"strict-generated"},"webhooks.sample":{"description":"Fetch a sample Fluxguard webhook payload.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{},"type":"object"},"kind":"action","maxInputBytes":65536,"maxResponseBytes":5242880,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/account/webhook/sample","success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":15000,"title":"Get sample webhook","validationMode":"strict-generated"}},"provenance":{"source":{"revision":"33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a","url":"https://github.com/oomol-lab/open-connector"}},"runtime":"bun","version":"0.1.0","visibility":"public"}
+{
+  "auth": {
+    "scopes": [],
+    "setup": {
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "Fluxguard API key",
+          "required": true,
+          "secret": true
+        }
+      ],
+      "mode": "api_key"
+    },
+    "type": "api_key"
+  },
+  "categories": [
+    "dev-tools"
+  ],
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
+    }
+  },
+  "http": {
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "x-api-key",
+      "value": "{{apiKey}}"
+    },
+    "baseUrl": "https://api.fluxguard.com",
+    "errors": {
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "message",
+        "error",
+        "errorMessage"
+      ],
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after"
+    },
+    "headers": {
+      "Accept": "application/json"
+    }
+  },
+  "key": "fluxguard",
+  "models": [
+    "account",
+    "webhook",
+    "category",
+    "page",
+    "site",
+    "session"
+  ],
+  "name": "Fluxguard",
+  "network": {
+    "allowedHosts": [
+      "api.fluxguard.com"
+    ]
+  },
+  "operations": {
+    "healthcheck": {
+      "description": "Validate the Fluxguard API key with GET /account.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {},
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/account",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 5000,
+      "title": "Healthcheck",
+      "validationMode": "strict-generated"
+    },
+    "account.get": {
+      "description": "Retrieve the authenticated Fluxguard organization account. Official GET /account has no parameters; optional user_id from FLUXGUARD_GET_USER is accepted and ignored.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "user_id": {
+            "description": "Optional Composio user identifier. Use current or me; Fluxguard GET /account always returns the authenticated organization.",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/account",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get account",
+      "validationMode": "strict-generated"
+    },
+    "categories.list": {
+      "description": "List Fluxguard account categories.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {},
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/account/category",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List categories",
+      "validationMode": "strict-generated"
+    },
+    "categories.create": {
+      "description": "Create a Fluxguard site category used to organize monitored sites.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "description": "Name for the new site category.",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "POST",
+        "path": "/account/category",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "name": "{{name}}"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Create category",
+      "validationMode": "strict-generated"
+    },
+    "pages.get": {
+      "description": "Retrieve Fluxguard data for one monitored page.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "pageId": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "sessionId": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "siteId": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "siteId",
+          "sessionId",
+          "pageId"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/site/{{siteId}}/session/{{sessionId}}/page/{{pageId}}",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get page",
+      "validationMode": "strict-generated"
+    },
+    "pages.create": {
+      "description": "Add a URL for Fluxguard monitoring. Omit siteId and sessionId to create a new site and session; provide both to add a page to an existing site.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "url": {
+            "description": "Absolute URL Fluxguard should monitor.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "siteId": {
+            "description": "Existing Fluxguard site ID. Must be sent together with sessionId.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "sessionId": {
+            "description": "Existing Fluxguard session ID. Must be sent together with siteId.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "categories": {
+            "description": "Category IDs to assign when creating a new site.",
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "minItems": 1,
+            "type": "array"
+          },
+          "categoryId": {
+            "description": "Single category ID to assign when creating a new site. Do not send with categories.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "categoryName": {
+            "description": "Existing category name to assign when creating a new site.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "siteNickname": {
+            "description": "Nickname for a newly created site.",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "url"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "POST",
+        "path": "/add-page",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "url": "{{url}}",
+          "siteId": "{{siteId}}",
+          "sessionId": "{{sessionId}}",
+          "categories": "{{categories}}",
+          "categoryId": "{{categoryId}}",
+          "categoryName": "{{categoryName}}",
+          "siteNickname": "{{siteNickname}}"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Add page",
+      "validationMode": "strict-generated"
+    },
+    "pages.delete": {
+      "description": "Permanently delete one monitored Fluxguard page and its captured versions.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "siteId": {
+            "description": "Fluxguard site ID that contains the page.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "sessionId": {
+            "description": "Fluxguard session ID that contains the page.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "pageId": {
+            "description": "Fluxguard page ID to delete.",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "siteId",
+          "sessionId",
+          "pageId"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/site/{{siteId}}/session/{{sessionId}}/page/{{pageId}}",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "title": "Delete page",
+      "validationMode": "strict-generated"
+    },
+    "sites.delete": {
+      "description": "Permanently delete a Fluxguard site and all associated sessions, pages, and captured versions.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "siteId": {
+            "description": "Fluxguard site ID to delete.",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "siteId"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/site/{{siteId}}",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "title": "Delete site",
+      "validationMode": "strict-generated"
+    },
+    "sessions.crawl": {
+      "description": "Initiate a crawl for one Fluxguard site session.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "siteId": {
+            "description": "Fluxguard site ID to crawl.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "sessionId": {
+            "description": "Fluxguard session ID to crawl.",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "siteId",
+          "sessionId"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "POST",
+        "path": "/site/{{siteId}}/session/{{sessionId}}/crawl",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Crawl session",
+      "validationMode": "strict-generated"
+    },
+    "webhooks.list": {
+      "description": "List Fluxguard account webhooks.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {},
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": [
+              "array",
+              "object"
+            ]
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/account/webhook",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List webhooks",
+      "validationMode": "strict-generated"
+    },
+    "webhooks.sample": {
+      "description": "Fetch a sample Fluxguard webhook payload.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {},
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/account/webhook/sample",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get sample webhook",
+      "validationMode": "strict-generated"
+    },
+    "webhooks.create": {
+      "description": "Create or replace the Fluxguard account webhook. Official docs allow one webhook per account; a new URL replaces the previous registration.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "url": {
+            "description": "HTTPS URL Fluxguard should POST change notifications to.",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "url"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/account/webhook",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "url": "{{url}}"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Create webhook",
+      "validationMode": "strict-generated"
+    },
+    "webhooks.delete": {
+      "description": "Delete one Fluxguard account webhook by ID. Official DELETE /account/webhook takes JSON form data {id}.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "description": "Fluxguard webhook ID to delete.",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/account/webhook",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "id": "{{id}}"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "title": "Delete webhook",
+      "validationMode": "strict-generated"
+    }
+  },
+  "provenance": {
+    "source": {
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
+      "url": "https://github.com/oomol-lab/open-connector"
+    }
+  },
+  "runtime": "bun",
+  "version": "0.2.0",
+  "visibility": "public"
+}

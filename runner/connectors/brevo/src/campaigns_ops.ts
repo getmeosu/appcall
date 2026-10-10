@@ -48,11 +48,13 @@ export function validateSendEmailCampaignInput(input: unknown): SendEmailCampaig
 
 // ─── emailCampaigns.get ───────────────────────────────────────────────────────
 
-export type GetEmailCampaignInput = { campaignId: number };
+export type GetEmailCampaignInput = { campaignId: number; statistics?: string };
 
 export function validateGetEmailCampaignInput(input: unknown): GetEmailCampaignInput {
   if (!isRecord(input)) throw new Error("input must be an object");
-  return { campaignId: requireNumber(input.campaignId, "campaignId") };
+  const campaignId = requireNumber(input.campaignId ?? input.campaign_id, "campaignId");
+  const statistics = typeof input.statistics === "string" ? input.statistics : undefined;
+  return { campaignId, ...(statistics ? { statistics } : {}) };
 }
 
 // ─── Client ───────────────────────────────────────────────────────────────────
@@ -104,7 +106,9 @@ export function createCampaignsOpsClient(options: { apiKey: string; fetch?: type
     async getCampaign(input: unknown) {
       const payload = validateGetEmailCampaignInput(input);
       const client = createBrevoClient({ apiKey: options.apiKey, fetch: options.fetch, operation: "emailCampaigns.get" });
-      const result = await client.fetchJSON(`/emailCampaigns/${payload.campaignId}`);
+      const result = await client.fetchJSON(`/emailCampaigns/${payload.campaignId}`, {
+        query: payload.statistics ? { statistics: payload.statistics } : undefined,
+      });
       if (result.status === 200) {
         return { ok: true as const, campaign: normalizeCampaign(isRecord(result.body) ? result.body : {}) };
       }
