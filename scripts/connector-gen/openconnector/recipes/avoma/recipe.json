@@ -78,13 +78,26 @@
     "providerId": "avoma",
     "appcallId": "avoma",
     "disposition": "APPROVED",
-    "edition": "international Avoma REST API v1",
+    "edition": "international Avoma REST API v1, Composio-aligned",
     "operations": [
       "healthcheck",
-      "users.list",
-      "users.get",
+      "calls.create",
+      "calls.get",
+      "calls.list",
+      "configuration.list",
+      "engagement.list",
+      "engagement.summary.get",
+      "meetings.analysis.get",
+      "meetings.get",
       "meetings.list",
-      "meetings.get"
+      "notes.list",
+      "recordings.get",
+      "scorecard_evaluations.list",
+      "snippets.list",
+      "transcriptions.list",
+      "users.get",
+      "users.list",
+      "webhooks.list"
     ],
     "upstreamSha": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
     "marketFocus": "international",
@@ -200,7 +213,9 @@
       ],
       "responseContract": "appcall-provider-json-v1",
       "adaptations": [
-        "fromDate and toDate are sent as from_date and to_date; pageSize as page_size; order as o. CSV attendee and CRM array filters are omitted because the native query template cannot comma-join arrays the way the pinned source does. Returns raw paginated JSON under data."
+        "fromDate and toDate are sent as from_date and to_date; pageSize as page_size; order as o.",
+        "Optional Composio/official filters attendee_emails, CRM id CSVs, is_call, is_internal, include_crm_associations, and recording_duration__gte are omitted when unset.",
+        "Returns raw paginated JSON under data."
       ]
     },
     "meetings.get": {
@@ -217,22 +232,209 @@
       "adaptations": [
         "meetingUuid is URL-encoded as a path segment. includeCrmAssociations is sent as include_crm_associations. Returns raw Avoma JSON under data instead of {meeting}."
       ]
+    },
+    "calls.create": {
+      "upstreamActionId": "calls.create",
+      "sourceRefs": [
+        "request-auth",
+        "api-base"
+      ],
+      "documentationUrls": [
+        "https://dev.avoma.com/",
+        "https://docs.composio.dev/toolkits/avoma"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "POST /v1/calls/ with official required fields external_id, user_email, frm, to, start_at, recording_url, direction, source, and participants.",
+        "Optional end_at, names, answered, is_voicemail, additional_details, and crm_association are omitted when unset."
+      ]
+    },
+    "calls.get": {
+      "upstreamActionId": "calls.get",
+      "sourceRefs": [
+        "request-auth",
+        "api-base"
+      ],
+      "documentationUrls": [
+        "https://dev.avoma.com/",
+        "https://docs.composio.dev/toolkits/avoma"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "GET /v1/calls/{external_id}/. external_id is URL-encoded as a path segment."
+      ]
+    },
+    "calls.list": {
+      "upstreamActionId": "calls.list",
+      "sourceRefs": [
+        "request-auth",
+        "api-base"
+      ],
+      "documentationUrls": [
+        "https://dev.avoma.com/",
+        "https://docs.composio.dev/toolkits/avoma"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "GET /v1/calls/ requires from_date and to_date. Optional direction is inbound or outbound."
+      ]
+    },
+    "recordings.get": {
+      "upstreamActionId": "recordings.get",
+      "sourceRefs": [
+        "request-auth",
+        "api-base"
+      ],
+      "documentationUrls": [
+        "https://dev.avoma.com/",
+        "https://docs.composio.dev/toolkits/avoma"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "GET /v1/recordings/?meeting_uuid= returns time-limited audio_url and video_url. HTTP 202 is treated as success while Avoma finishes packaging the media."
+      ]
+    },
+    "notes.list": {
+      "upstreamActionId": "notes.list",
+      "sourceRefs": [
+        "request-auth",
+        "api-base"
+      ],
+      "documentationUrls": [
+        "https://dev.avoma.com/",
+        "https://docs.composio.dev/toolkits/avoma"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "GET /v1/notes/ requires from_date and to_date. Optional meeting_uuid, custom_category, output_format, page_size, and o are omitted when unset."
+      ]
+    },
+    "transcriptions.list": {
+      "upstreamActionId": "transcriptions.list",
+      "sourceRefs": [
+        "request-auth",
+        "api-base"
+      ],
+      "documentationUrls": [
+        "https://dev.avoma.com/",
+        "https://docs.composio.dev/toolkits/avoma"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "GET /v1/transcriptions/. Either meeting_uuid or from_date+to_date should be provided; the native schema cannot encode that XOR, so dates are optional and Avoma returns 400 when both modes are empty."
+      ]
+    },
+    "snippets.list": {
+      "upstreamActionId": "snippets.list",
+      "sourceRefs": [
+        "request-auth",
+        "api-base"
+      ],
+      "documentationUrls": [
+        "https://dev.avoma.com/",
+        "https://docs.composio.dev/toolkits/avoma"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "GET /v1/snippets/. Either meeting_uuid or from_date+to_date (max 180 days) should be provided; the native schema cannot encode that XOR."
+      ]
+    },
+    "scorecard_evaluations.list": {
+      "upstreamActionId": "scorecard_evaluations.list",
+      "sourceRefs": [
+        "request-auth",
+        "api-base"
+      ],
+      "documentationUrls": [
+        "https://dev.avoma.com/",
+        "https://docs.composio.dev/toolkits/avoma"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "GET /v1/scorecard_evaluations/. Array filters scorecard_uuids and user_emails are repeated as query parameters."
+      ]
+    },
+    "engagement.list": {
+      "upstreamActionId": "engagement.list",
+      "sourceRefs": [
+        "request-auth",
+        "api-base"
+      ],
+      "documentationUrls": [
+        "https://dev.avoma.com/",
+        "https://docs.composio.dev/toolkits/avoma"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "GET /v1/engagement/ requires from_date and to_date. Array filters user_email, meeting_outcome_uuid, and meeting_type_uuid are repeated as query parameters."
+      ]
+    },
+    "engagement.summary.get": {
+      "upstreamActionId": "engagement.summary.get",
+      "sourceRefs": [
+        "request-auth",
+        "api-base"
+      ],
+      "documentationUrls": [
+        "https://dev.avoma.com/",
+        "https://docs.composio.dev/toolkits/avoma"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "GET /v1/engagement/summary/ requires from_date and to_date. Same optional meeting and user filters as engagement.list."
+      ]
+    },
+    "configuration.list": {
+      "upstreamActionId": "configuration.list",
+      "sourceRefs": [
+        "request-auth",
+        "api-base"
+      ],
+      "documentationUrls": [
+        "https://dev.avoma.com/",
+        "https://docs.composio.dev/toolkits/avoma"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "GET /v1/{catalog}/ where catalog is an official path: custom_categories, smart_categories, scorecards, template, meeting_type, or meeting_outcome."
+      ]
+    },
+    "webhooks.list": {
+      "upstreamActionId": "webhooks.list",
+      "sourceRefs": [
+        "request-auth",
+        "api-base"
+      ],
+      "documentationUrls": [
+        "https://dev.avoma.com/",
+        "https://docs.composio.dev/toolkits/avoma"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "GET /v1/webhooks/ lists active subscriptions. Signing-secret endpoints are intentionally not called."
+      ]
+    },
+    "meetings.analysis.get": {
+      "upstreamActionId": "meetings.analysis.get",
+      "sourceRefs": [
+        "request-auth",
+        "api-base"
+      ],
+      "documentationUrls": [
+        "https://dev.avoma.com/",
+        "https://docs.composio.dev/toolkits/avoma"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Handwritten fan-out: GET /v1/meetings/{uuid}/insights/, GET /v1/meeting_segments/?uuid=, GET /v1/meeting_sentiments/?meeting_uuid=.",
+        "Returns {insights, segments, sentiments} under data. Requires a registry overlay so the compiled declarative path is not used."
+      ]
     }
   },
   "manifest": {
-    "key": "avoma",
-    "name": "Avoma",
-    "version": "0.1.0",
-    "runtime": "bun",
-    "visibility": "public",
-    "categories": [
-      "scheduling"
-    ],
     "auth": {
-      "type": "api_key",
       "scopes": [],
       "setup": {
-        "mode": "api_key",
         "fields": [
           {
             "key": "apiKey",
@@ -240,266 +442,136 @@
             "required": true,
             "secret": true
           }
-        ]
+        ],
+        "mode": "api_key"
+      },
+      "type": "api_key"
+    },
+    "categories": [
+      "scheduling"
+    ],
+    "evidence": {
+      "fixture": {
+        "status": "supplied"
+      },
+      "live": {
+        "status": "unverified"
       }
     },
-    "network": {
-      "allowedHosts": [
-        "api.avoma.com"
-      ]
-    },
-    "models": [
-      "user",
-      "meeting"
-    ],
     "http": {
-      "baseUrl": "https://api.avoma.com",
       "auth": {
         "field": "apiKey",
         "in": "header",
         "name": "Authorization",
         "value": "Bearer {{apiKey}}"
       },
+      "baseUrl": "https://api.avoma.com",
       "errors": {
-        "rateLimitStatuses": [
-          429
-        ],
-        "retryAfterHeader": "retry-after",
         "defaultRetryAfterSeconds": 30,
         "messagePaths": [
           "detail",
           "message",
           "error"
-        ]
+        ],
+        "rateLimitStatuses": [
+          429
+        ],
+        "retryAfterHeader": "retry-after"
       },
       "headers": {
         "Accept": "application/json"
       }
     },
+    "key": "avoma",
+    "models": [
+      "user",
+      "meeting",
+      "call",
+      "recording",
+      "note",
+      "transcription",
+      "snippet",
+      "scorecard",
+      "engagement",
+      "webhook",
+      "configuration"
+    ],
+    "name": "Avoma",
+    "network": {
+      "allowedHosts": [
+        "api.avoma.com"
+      ]
+    },
     "operations": {
       "healthcheck": {
-        "timeoutMs": 5000,
+        "description": "Validate the Avoma API key by listing users.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {},
+          "type": "object"
+        },
+        "kind": "action",
         "maxInputBytes": 4096,
         "maxResponseBytes": 65536,
-        "kind": "action",
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "array"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        },
+        "request": {
+          "method": "GET",
+          "path": "/v1/users/",
+          "success": [
+            200
+          ]
+        },
+        "responseFormat": "json",
         "sideEffect": "read",
+        "timeoutMs": 5000,
         "title": "Healthcheck",
-        "description": "Validate the Avoma API key by listing users.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {},
-          "additionalProperties": false
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "array"
-            }
-          },
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "GET",
-          "path": "/v1/users/",
-          "success": [
-            200
-          ]
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "users.list": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
-        "sideEffect": "read",
-        "title": "List users",
-        "description": "List Avoma users visible to the API key.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {},
-          "additionalProperties": false
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "array"
-            }
-          },
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "GET",
-          "path": "/v1/users/",
-          "success": [
-            200
-          ]
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "users.get": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
-        "sideEffect": "read",
-        "title": "Get user",
-        "description": "Retrieve one Avoma user by UUID.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "userUuid": {
-              "type": "string",
-              "minLength": 1
-            }
-          },
-          "required": [
-            "userUuid"
-          ],
-          "additionalProperties": false
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "GET",
-          "path": "/v1/users/{{userUuid}}/",
-          "success": [
-            200
-          ]
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "meetings.list": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
-        "sideEffect": "read",
-        "title": "List meetings",
-        "description": "List Avoma meetings in a UTC date range with optional pagination and order.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "fromDate": {
-              "type": "string",
-              "minLength": 1
-            },
-            "toDate": {
-              "type": "string",
-              "minLength": 1
-            },
-            "page": {
-              "type": "integer",
-              "minimum": 1
-            },
-            "pageSize": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 100
-            },
-            "order": {
-              "type": "string",
-              "enum": [
-                "start_at",
-                "-start_at"
-              ]
-            }
-          },
-          "required": [
-            "fromDate",
-            "toDate"
-          ],
-          "additionalProperties": false
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "GET",
-          "path": "/v1/meetings/",
-          "query": {
-            "from_date": "{{fromDate}}",
-            "to_date": "{{toDate}}",
-            "page": "{{page}}",
-            "page_size": "{{pageSize}}",
-            "o": "{{order}}"
-          },
-          "success": [
-            200
-          ]
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
+        "validationMode": "strict-generated"
       },
       "meetings.get": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
-        "sideEffect": "read",
-        "title": "Get meeting",
         "description": "Retrieve one Avoma meeting by UUID.",
+        "enforceOutputSchema": true,
         "inputSchema": {
-          "type": "object",
+          "additionalProperties": false,
           "properties": {
-            "meetingUuid": {
-              "type": "string",
-              "minLength": 1
-            },
             "includeCrmAssociations": {
               "type": "boolean"
+            },
+            "meetingUuid": {
+              "minLength": 1,
+              "type": "string"
             }
           },
           "required": [
             "meetingUuid"
           ],
-          "additionalProperties": false
+          "type": "object"
         },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
         "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
+          "additionalProperties": false,
           "properties": {
             "data": {
               "type": "object"
             }
           },
-          "additionalProperties": false
+          "required": [
+            "data"
+          ],
+          "type": "object"
         },
         "request": {
           "method": "GET",
@@ -511,24 +583,1288 @@
             200
           ]
         },
+        "responseFormat": "json",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "title": "Get meeting",
+        "validationMode": "strict-generated"
+      },
+      "meetings.list": {
+        "description": "Find meetings visible to the connected Avoma user within a required UTC date range, with optional attendee, CRM, call-type, privacy-context, duration, and ordering filters.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "fromDate": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "order": {
+              "enum": [
+                "start_at",
+                "-start_at"
+              ],
+              "type": "string"
+            },
+            "page": {
+              "minimum": 1,
+              "type": "integer"
+            },
+            "pageSize": {
+              "maximum": 100,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "toDate": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "attendee_emails": {
+              "type": "string",
+              "description": "Comma-separated attendee emails. Meetings matching any attendee are returned."
+            },
+            "crm_account_ids": {
+              "type": "string",
+              "description": "Comma-separated CRM account external IDs."
+            },
+            "crm_opportunity_ids": {
+              "type": "string",
+              "description": "Comma-separated CRM opportunity external IDs."
+            },
+            "crm_contact_ids": {
+              "type": "string",
+              "description": "Comma-separated CRM contact external IDs."
+            },
+            "crm_lead_ids": {
+              "type": "string",
+              "description": "Comma-separated CRM lead external IDs."
+            },
+            "include_crm_associations": {
+              "type": "boolean",
+              "description": "When true, include CRM associations in each meeting."
+            },
+            "is_call": {
+              "type": "boolean",
+              "description": "true for voice-call meetings, false for video meetings."
+            },
+            "is_internal": {
+              "type": "boolean",
+              "description": "true for internal-only meetings, false for meetings with external attendees."
+            },
+            "recording_duration__gte": {
+              "type": "number",
+              "description": "Minimum recording duration in seconds. Excludes meetings without recordings.",
+              "minimum": 0
+            }
+          },
+          "required": [
+            "fromDate",
+            "toDate"
+          ],
+          "type": "object"
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        },
+        "request": {
+          "method": "GET",
+          "path": "/v1/meetings/",
+          "query": {
+            "from_date": "{{fromDate}}",
+            "o": "{{order}}",
+            "page": "{{page}}",
+            "page_size": "{{pageSize}}",
+            "to_date": "{{toDate}}",
+            "attendee_emails": "{{attendee_emails}}",
+            "crm_account_ids": "{{crm_account_ids}}",
+            "crm_opportunity_ids": "{{crm_opportunity_ids}}",
+            "crm_contact_ids": "{{crm_contact_ids}}",
+            "crm_lead_ids": "{{crm_lead_ids}}",
+            "include_crm_associations": "{{include_crm_associations}}",
+            "is_call": "{{is_call}}",
+            "is_internal": "{{is_internal}}",
+            "recording_duration__gte": "{{recording_duration__gte}}"
+          },
+          "success": [
+            200
+          ]
+        },
+        "responseFormat": "json",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "title": "List meetings",
+        "validationMode": "strict-generated"
+      },
+      "users.get": {
+        "description": "Retrieve one Avoma user by UUID.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "userUuid": {
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "userUuid"
+          ],
+          "type": "object"
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        },
+        "request": {
+          "method": "GET",
+          "path": "/v1/users/{{userUuid}}/",
+          "success": [
+            200
+          ]
+        },
+        "responseFormat": "json",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "title": "Get user",
+        "validationMode": "strict-generated"
+      },
+      "users.list": {
+        "description": "List Avoma users visible to the API key.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {},
+          "type": "object"
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "array"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        },
+        "request": {
+          "method": "GET",
+          "path": "/v1/users/",
+          "success": [
+            200
+          ]
+        },
+        "responseFormat": "json",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "title": "List users",
+        "validationMode": "strict-generated"
+      },
+      "calls.create": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "write",
+        "title": "Create call",
+        "description": "Submit an externally hosted call recording to Avoma for asynchronous processing.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "external_id": {
+              "type": "string",
+              "description": "Unique id of the call from the dialer system.",
+              "minLength": 1
+            },
+            "user_email": {
+              "type": "string",
+              "description": "Avoma user email whose license processes the call.",
+              "minLength": 1
+            },
+            "frm": {
+              "type": "string",
+              "description": "Phone number the call was made from.",
+              "minLength": 1
+            },
+            "to": {
+              "type": "string",
+              "description": "Phone number the call was made to.",
+              "minLength": 1
+            },
+            "start_at": {
+              "type": "string",
+              "description": "Call start time in UTC RFC3339.",
+              "minLength": 1
+            },
+            "recording_url": {
+              "type": "string",
+              "description": "Public URL Avoma can download the recording from.",
+              "minLength": 1
+            },
+            "direction": {
+              "type": "string",
+              "description": "Call direction, for example Inbound or Outbound.",
+              "minLength": 1
+            },
+            "source": {
+              "type": "string",
+              "description": "Lowercase dialer source such as zoomphone, twilio, or ringcentral.",
+              "minLength": 1
+            },
+            "participants": {
+              "type": "array",
+              "description": "Call participants. First entry should be the prospect or lead.",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "description": "Participant email. The first entry should be the prospect or lead."
+                  },
+                  "name": {
+                    "type": "string",
+                    "description": "Participant display name."
+                  },
+                  "crm_association": {
+                    "type": "array",
+                    "description": "CRM objects associated with this participant.",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "crm_obj_id": {
+                          "type": "string",
+                          "description": "CRM object identifier."
+                        },
+                        "crm_obj_type": {
+                          "type": "string",
+                          "description": "CRM object type such as contact, account, or oppo."
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  }
+                },
+                "required": [
+                  "email"
+                ],
+                "additionalProperties": false
+              },
+              "minItems": 1
+            },
+            "end_at": {
+              "type": "string",
+              "description": "Call end time in UTC RFC3339."
+            },
+            "frm_name": {
+              "type": "string",
+              "description": "Caller display name."
+            },
+            "to_name": {
+              "type": "string",
+              "description": "Callee display name."
+            },
+            "answered": {
+              "type": "boolean",
+              "description": "Whether the call was answered."
+            },
+            "is_voicemail": {
+              "type": "boolean",
+              "description": "Whether the call is a voicemail."
+            },
+            "additional_details": {
+              "type": "string",
+              "description": "Additional call details as a JSON string."
+            },
+            "crm_association": {
+              "type": "array",
+              "description": "CRM objects associated with the call.",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "crm_obj_id": {
+                    "type": "string",
+                    "description": "CRM object identifier."
+                  },
+                  "crm_obj_type": {
+                    "type": "string",
+                    "description": "CRM object type such as contact, account, or oppo."
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "external_id",
+            "user_email",
+            "frm",
+            "to",
+            "start_at",
+            "recording_url",
+            "direction",
+            "source",
+            "participants"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
         "enforceOutputSchema": true,
         "validationMode": "strict-generated",
-        "responseFormat": "json"
+        "responseFormat": "json",
+        "request": {
+          "method": "POST",
+          "path": "/v1/calls/",
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "external_id": "{{external_id}}",
+            "user_email": "{{user_email}}",
+            "frm": "{{frm}}",
+            "to": "{{to}}",
+            "start_at": "{{start_at}}",
+            "recording_url": "{{recording_url}}",
+            "direction": "{{direction}}",
+            "source": "{{source}}",
+            "participants": "{{participants}}",
+            "end_at": "{{end_at}}",
+            "frm_name": "{{frm_name}}",
+            "to_name": "{{to_name}}",
+            "answered": "{{answered}}",
+            "is_voicemail": "{{is_voicemail}}",
+            "additional_details": "{{additional_details}}",
+            "crm_association": "{{crm_association}}"
+          },
+          "success": [
+            200,
+            201
+          ]
+        }
+      },
+      "calls.get": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "read",
+        "title": "Get call",
+        "description": "Retrieve one externally ingested Avoma call by the dialer system's external ID.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "external_id": {
+              "type": "string",
+              "description": "Unique id of the call from the dialer system.",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "external_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "request": {
+          "method": "GET",
+          "path": "/v1/calls/{{external_id}}/",
+          "success": [
+            200
+          ]
+        }
+      },
+      "calls.list": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "read",
+        "title": "List calls",
+        "description": "List externally ingested calls in a required UTC date range, optionally filtered by inbound or outbound direction.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "from_date": {
+              "type": "string",
+              "description": "Start of the UTC RFC3339 range (calls started at or after).",
+              "minLength": 1
+            },
+            "to_date": {
+              "type": "string",
+              "description": "End of the UTC RFC3339 range (calls started at or before).",
+              "minLength": 1
+            },
+            "direction": {
+              "type": "string",
+              "enum": [
+                "inbound",
+                "outbound"
+              ],
+              "description": "inbound for inbound calls, outbound for outbound calls."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "from_date",
+            "to_date"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "request": {
+          "method": "GET",
+          "path": "/v1/calls/",
+          "success": [
+            200
+          ],
+          "query": {
+            "from_date": "{{from_date}}",
+            "to_date": "{{to_date}}",
+            "direction": "{{direction}}"
+          }
+        }
+      },
+      "recordings.get": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "read",
+        "title": "Get recording",
+        "description": "Get time-limited audio and video URLs for a meeting recording.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "meeting_uuid": {
+              "type": "string",
+              "description": "Meeting UUID whose recording URLs should be returned.",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "meeting_uuid"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "request": {
+          "method": "GET",
+          "path": "/v1/recordings/",
+          "success": [
+            200,
+            202
+          ],
+          "query": {
+            "meeting_uuid": "{{meeting_uuid}}"
+          }
+        }
+      },
+      "notes.list": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "read",
+        "title": "List notes",
+        "description": "Retrieve Avoma notes for meetings in a required UTC date range, optionally narrowed to a meeting or custom category and rendered as JSON, HTML, or Markdown.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "from_date": {
+              "type": "string",
+              "description": "Start of the UTC RFC3339 range.",
+              "minLength": 1
+            },
+            "to_date": {
+              "type": "string",
+              "description": "End of the UTC RFC3339 range.",
+              "minLength": 1
+            },
+            "meeting_uuid": {
+              "type": "string",
+              "description": "Restrict notes to one meeting UUID."
+            },
+            "custom_category": {
+              "type": "string",
+              "description": "Restrict notes to one custom category UUID."
+            },
+            "output_format": {
+              "type": "string",
+              "enum": [
+                "json",
+                "html",
+                "markdown"
+              ],
+              "description": "Note rendering format."
+            },
+            "page_size": {
+              "type": "integer",
+              "description": "Number of notes per page.",
+              "minimum": 1,
+              "maximum": 20
+            },
+            "o": {
+              "type": "string",
+              "enum": [
+                "start_at",
+                "-start_at",
+                "modified",
+                "-modified"
+              ],
+              "description": "Sort field. Prefix with - for descending."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "from_date",
+            "to_date"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "request": {
+          "method": "GET",
+          "path": "/v1/notes/",
+          "success": [
+            200
+          ],
+          "query": {
+            "from_date": "{{from_date}}",
+            "to_date": "{{to_date}}",
+            "meeting_uuid": "{{meeting_uuid}}",
+            "custom_category": "{{custom_category}}",
+            "output_format": "{{output_format}}",
+            "page_size": "{{page_size}}",
+            "o": "{{o}}"
+          }
+        }
+      },
+      "transcriptions.list": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "read",
+        "title": "List transcriptions",
+        "description": "Find full meeting transcriptions by meeting UUID or by a UTC date range, with attendee and CRM filters.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "from_date": {
+              "type": "string",
+              "description": "Start of the UTC RFC3339 range. Required when meeting_uuid is omitted."
+            },
+            "to_date": {
+              "type": "string",
+              "description": "End of the UTC RFC3339 range. Required when meeting_uuid is omitted."
+            },
+            "meeting_uuid": {
+              "type": "string",
+              "description": "Return the transcription for this meeting UUID."
+            },
+            "page": {
+              "type": "integer",
+              "description": "Page number when listing without meeting_uuid.",
+              "minimum": 1
+            },
+            "page_size": {
+              "type": "integer",
+              "description": "Page size when listing without meeting_uuid.",
+              "minimum": 1,
+              "maximum": 100
+            },
+            "attendee_emails": {
+              "type": "string",
+              "description": "Comma-separated attendee emails."
+            },
+            "crm_account_ids": {
+              "type": "string",
+              "description": "Comma-separated CRM account external IDs."
+            },
+            "crm_opportunity_ids": {
+              "type": "string",
+              "description": "Comma-separated CRM opportunity external IDs."
+            },
+            "crm_contact_ids": {
+              "type": "string",
+              "description": "Comma-separated CRM contact external IDs."
+            },
+            "crm_lead_ids": {
+              "type": "string",
+              "description": "Comma-separated CRM lead external IDs."
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "request": {
+          "method": "GET",
+          "path": "/v1/transcriptions/",
+          "success": [
+            200
+          ],
+          "query": {
+            "from_date": "{{from_date}}",
+            "to_date": "{{to_date}}",
+            "meeting_uuid": "{{meeting_uuid}}",
+            "page": "{{page}}",
+            "page_size": "{{page_size}}",
+            "attendee_emails": "{{attendee_emails}}",
+            "crm_account_ids": "{{crm_account_ids}}",
+            "crm_opportunity_ids": "{{crm_opportunity_ids}}",
+            "crm_contact_ids": "{{crm_contact_ids}}",
+            "crm_lead_ids": "{{crm_lead_ids}}"
+          }
+        }
+      },
+      "snippets.list": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "read",
+        "title": "List snippets",
+        "description": "Find user-created or AI-generated meeting snippets by meeting UUID or by a UTC date range of at most 180 days.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "meeting_uuid": {
+              "type": "string",
+              "description": "Return snippets for this meeting UUID."
+            },
+            "from_date": {
+              "type": "string",
+              "description": "Start of the UTC RFC3339 range. Required when meeting_uuid is omitted."
+            },
+            "to_date": {
+              "type": "string",
+              "description": "End of the UTC RFC3339 range. Required when meeting_uuid is omitted."
+            },
+            "is_ai_generated": {
+              "type": "boolean",
+              "description": "true for AI-generated snippets, false for user-created snippets."
+            },
+            "page": {
+              "type": "integer",
+              "description": "Page number.",
+              "minimum": 1,
+              "maximum": 100
+            },
+            "page_size": {
+              "type": "integer",
+              "description": "Number of snippets per page.",
+              "minimum": 1,
+              "maximum": 100
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "request": {
+          "method": "GET",
+          "path": "/v1/snippets/",
+          "success": [
+            200
+          ],
+          "query": {
+            "meeting_uuid": "{{meeting_uuid}}",
+            "from_date": "{{from_date}}",
+            "to_date": "{{to_date}}",
+            "is_ai_generated": "{{is_ai_generated}}",
+            "page": "{{page}}",
+            "page_size": "{{page_size}}"
+          }
+        }
+      },
+      "scorecard_evaluations.list": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "read",
+        "title": "List scorecard evaluations",
+        "description": "List Avoma scorecard evaluations, optionally filtered by UTC date range, scorecard templates, meeting, or evaluated users.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "from_date": {
+              "type": "string",
+              "description": "Start of the UTC RFC3339 range."
+            },
+            "to_date": {
+              "type": "string",
+              "description": "End of the UTC RFC3339 range."
+            },
+            "meeting_uuid": {
+              "type": "string",
+              "description": "Restrict evaluations to one meeting UUID."
+            },
+            "page_size": {
+              "type": "integer",
+              "description": "Number of evaluations per page.",
+              "minimum": 1,
+              "maximum": 100
+            },
+            "scorecard_uuids": {
+              "type": "array",
+              "description": "Scorecard template UUIDs to filter evaluations. Repeated as query params.",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "user_emails": {
+              "type": "array",
+              "description": "Emails of evaluated users. Repeated as query params.",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "request": {
+          "method": "GET",
+          "path": "/v1/scorecard_evaluations/",
+          "success": [
+            200
+          ],
+          "query": {
+            "from_date": "{{from_date}}",
+            "to_date": "{{to_date}}",
+            "meeting_uuid": "{{meeting_uuid}}",
+            "page_size": "{{page_size}}",
+            "scorecard_uuids": "{{scorecard_uuids}}",
+            "user_emails": "{{user_emails}}"
+          }
+        }
+      },
+      "engagement.list": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "read",
+        "title": "List engagement metrics",
+        "description": "List per-user Avoma engagement metrics over a required UTC date range with meeting and user filters.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "from_date": {
+              "type": "string",
+              "description": "Start of the UTC RFC3339 range.",
+              "minLength": 1
+            },
+            "to_date": {
+              "type": "string",
+              "description": "End of the UTC RFC3339 range.",
+              "minLength": 1
+            },
+            "page": {
+              "type": "integer",
+              "description": "Page number.",
+              "minimum": 1
+            },
+            "page_size": {
+              "type": "integer",
+              "description": "Number of users per page.",
+              "minimum": 1,
+              "maximum": 100
+            },
+            "o": {
+              "type": "string",
+              "description": "Sort field. Prefix with - for descending."
+            },
+            "user_email": {
+              "type": "array",
+              "description": "Filter by user email. Repeated as query params.",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "is_call": {
+              "type": "boolean",
+              "description": "true for voice calls, false for video meetings."
+            },
+            "is_internal": {
+              "type": "boolean",
+              "description": "true for internal meetings, false for external meetings."
+            },
+            "meeting_outcome_uuid": {
+              "type": "array",
+              "description": "Filter by meeting outcome UUID. Repeated as query params.",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "meeting_type_uuid": {
+              "type": "array",
+              "description": "Filter by meeting type UUID. Repeated as query params.",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "recording_duration__gte": {
+              "type": "number",
+              "description": "Minimum recording duration in seconds.",
+              "minimum": 0
+            },
+            "recording_duration__lte": {
+              "type": "number",
+              "description": "Maximum recording duration in seconds.",
+              "minimum": 0
+            },
+            "shared_meetings_only": {
+              "type": "boolean",
+              "description": "When true, only include shared meetings."
+            },
+            "is_impromptu": {
+              "type": "boolean",
+              "description": "Filter to impromptu (unscheduled) meetings."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "from_date",
+            "to_date"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "request": {
+          "method": "GET",
+          "path": "/v1/engagement/",
+          "success": [
+            200
+          ],
+          "query": {
+            "from_date": "{{from_date}}",
+            "to_date": "{{to_date}}",
+            "page": "{{page}}",
+            "page_size": "{{page_size}}",
+            "o": "{{o}}",
+            "user_email": "{{user_email}}",
+            "is_call": "{{is_call}}",
+            "is_internal": "{{is_internal}}",
+            "meeting_outcome_uuid": "{{meeting_outcome_uuid}}",
+            "meeting_type_uuid": "{{meeting_type_uuid}}",
+            "recording_duration__gte": "{{recording_duration__gte}}",
+            "recording_duration__lte": "{{recording_duration__lte}}",
+            "shared_meetings_only": "{{shared_meetings_only}}",
+            "is_impromptu": "{{is_impromptu}}"
+          }
+        }
+      },
+      "engagement.summary.get": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "read",
+        "title": "Get engagement summary",
+        "description": "Aggregate Avoma engagement metrics across visible users for a required UTC date range and optional meeting and user filters.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "from_date": {
+              "type": "string",
+              "description": "Start of the UTC RFC3339 range.",
+              "minLength": 1
+            },
+            "to_date": {
+              "type": "string",
+              "description": "End of the UTC RFC3339 range.",
+              "minLength": 1
+            },
+            "user_email": {
+              "type": "array",
+              "description": "Filter by user email. Repeated as query params.",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "is_call": {
+              "type": "boolean",
+              "description": "true for voice calls, false for video meetings."
+            },
+            "is_internal": {
+              "type": "boolean",
+              "description": "true for internal meetings, false for external meetings."
+            },
+            "meeting_outcome_uuid": {
+              "type": "array",
+              "description": "Filter by meeting outcome UUID. Repeated as query params.",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "meeting_type_uuid": {
+              "type": "array",
+              "description": "Filter by meeting type UUID. Repeated as query params.",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "recording_duration__gte": {
+              "type": "number",
+              "description": "Minimum recording duration in seconds.",
+              "minimum": 0
+            },
+            "recording_duration__lte": {
+              "type": "number",
+              "description": "Maximum recording duration in seconds.",
+              "minimum": 0
+            },
+            "shared_meetings_only": {
+              "type": "boolean",
+              "description": "When true, only include shared meetings."
+            },
+            "is_impromptu": {
+              "type": "boolean",
+              "description": "Filter to impromptu (unscheduled) meetings."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "from_date",
+            "to_date"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "request": {
+          "method": "GET",
+          "path": "/v1/engagement/summary/",
+          "success": [
+            200
+          ],
+          "query": {
+            "from_date": "{{from_date}}",
+            "to_date": "{{to_date}}",
+            "user_email": "{{user_email}}",
+            "is_call": "{{is_call}}",
+            "is_internal": "{{is_internal}}",
+            "meeting_outcome_uuid": "{{meeting_outcome_uuid}}",
+            "meeting_type_uuid": "{{meeting_type_uuid}}",
+            "recording_duration__gte": "{{recording_duration__gte}}",
+            "recording_duration__lte": "{{recording_duration__lte}}",
+            "shared_meetings_only": "{{shared_meetings_only}}",
+            "is_impromptu": "{{is_impromptu}}"
+          }
+        }
+      },
+      "configuration.list": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "read",
+        "title": "List configuration resources",
+        "description": "List one Avoma configuration catalog: custom categories, smart categories, scorecards, templates, meeting types, or meeting outcomes.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "catalog": {
+              "type": "string",
+              "enum": [
+                "custom_categories",
+                "smart_categories",
+                "scorecards",
+                "template",
+                "meeting_type",
+                "meeting_outcome"
+              ],
+              "description": "Official catalog path: custom_categories, smart_categories, scorecards, template, meeting_type, or meeting_outcome."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "catalog"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": [
+                "object",
+                "array"
+              ]
+            }
+          },
+          "additionalProperties": false
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "request": {
+          "method": "GET",
+          "path": "/v1/{{catalog}}/",
+          "success": [
+            200
+          ]
+        }
+      },
+      "webhooks.list": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "read",
+        "title": "List webhooks",
+        "description": "Audit the connected organization's active Avoma webhook subscriptions without reading signing secrets.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "request": {
+          "method": "GET",
+          "path": "/v1/webhooks/",
+          "success": [
+            200
+          ]
+        }
+      },
+      "meetings.analysis.get": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "read",
+        "title": "Get meeting analysis",
+        "description": "Return Avoma's AI insights, topical and speaker segments, and sentiment records for one processed meeting in a single read-only invocation.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "meeting_uuid": {
+              "type": "string",
+              "description": "UUID of the processed meeting.",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "meeting_uuid"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "request": {
+          "method": "GET",
+          "path": "/v1/meetings/{{meeting_uuid}}/insights/",
+          "success": [
+            200
+          ]
+        }
       }
     },
     "provenance": {
       "source": {
-        "url": "https://github.com/oomol-lab/open-connector",
-        "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"
+        "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
+        "url": "https://github.com/oomol-lab/open-connector"
       }
     },
-    "evidence": {
-      "fixture": {
-        "status": "supplied"
-      },
-      "live": {
-        "status": "unverified"
-      }
-    }
+    "runtime": "bun",
+    "version": "0.2.0",
+    "visibility": "public"
   }
 }

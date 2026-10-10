@@ -1,7 +1,17 @@
 {
+  "key": "assemblyai",
+  "name": "AssemblyAI",
+  "version": "0.2.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "dev-tools"
+  ],
   "auth": {
+    "type": "api_key",
     "scopes": [],
     "setup": {
+      "mode": "api_key",
       "fields": [
         {
           "key": "apiKey",
@@ -9,79 +19,71 @@
           "required": true,
           "secret": true
         }
-      ],
-      "mode": "api_key"
-    },
-    "type": "api_key"
-  },
-  "categories": [
-    "dev-tools"
-  ],
-  "evidence": {
-    "fixture": {
-      "status": "supplied"
-    },
-    "live": {
-      "status": "unverified"
+      ]
     }
   },
+  "network": {
+    "allowedHosts": [
+      "api.assemblyai.com",
+      "streaming.assemblyai.com",
+      "llm-gateway.assemblyai.com"
+    ]
+  },
+  "models": [
+    "transcript",
+    "lemur",
+    "streaming",
+    "llm"
+  ],
   "http": {
+    "baseUrl": "https://api.assemblyai.com/v2",
     "auth": {
       "field": "apiKey",
       "in": "header",
       "name": "Authorization",
       "value": "{{apiKey}}"
     },
-    "baseUrl": "https://api.assemblyai.com/v2",
+    "headers": {
+      "Accept": "application/json"
+    },
     "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after",
       "defaultRetryAfterSeconds": 30,
       "messagePaths": [
         "error",
         "message",
         "detail"
-      ],
-      "rateLimitStatuses": [
-        429
-      ],
-      "retryAfterHeader": "retry-after"
-    },
-    "headers": {
-      "Accept": "application/json"
+      ]
     }
-  },
-  "key": "assemblyai",
-  "models": [
-    "transcript"
-  ],
-  "name": "AssemblyAI",
-  "network": {
-    "allowedHosts": [
-      "api.assemblyai.com"
-    ]
   },
   "operations": {
     "healthcheck": {
-      "description": "Validate the AssemblyAI API key with GET /v2/transcript?limit=1.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {},
-        "type": "object"
-      },
-      "kind": "action",
+      "timeoutMs": 5000,
       "maxInputBytes": 4096,
       "maxResponseBytes": 65536,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Healthcheck",
+      "description": "Validate the AssemblyAI API key with GET /v2/transcript?limit=1.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
       "outputSchema": {
-        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "required": [
-          "data"
-        ],
-        "type": "object"
+        "additionalProperties": false
       },
       "request": {
         "method": "GET",
@@ -93,42 +95,112 @@
           200
         ]
       },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 5000,
-      "title": "Healthcheck",
-      "validationMode": "strict-generated"
-    },
-    "transcripts.get": {
-      "description": "Get one AssemblyAI transcript by ID.",
       "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "transcripts.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List transcripts",
+      "description": "List AssemblyAI transcripts created by the current API key.",
       "inputSchema": {
-        "additionalProperties": false,
+        "type": "object",
         "properties": {
-          "transcriptId": {
-            "minLength": 1,
-            "type": "string"
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 200
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "queued",
+              "processing",
+              "completed",
+              "error"
+            ]
+          },
+          "createdOn": {
+            "type": "string",
+            "minLength": 1
+          },
+          "beforeId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "afterId": {
+            "type": "string",
+            "minLength": 1
           }
         },
-        "required": [
-          "transcriptId"
-        ],
-        "type": "object"
+        "additionalProperties": false
       },
-      "kind": "action",
-      "maxInputBytes": 16384,
-      "maxResponseBytes": 1048576,
       "outputSchema": {
-        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/transcript",
+        "query": {
+          "limit": "{{limit}}",
+          "status": "{{status}}",
+          "created_on": "{{createdOn}}",
+          "before_id": "{{beforeId}}",
+          "after_id": "{{afterId}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "transcripts.get": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Get transcript",
+      "description": "Get one AssemblyAI transcript by ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "transcriptId": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "transcriptId"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
         "required": [
           "data"
         ],
-        "type": "object"
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
       },
       "request": {
         "method": "GET",
@@ -137,156 +209,42 @@
           200
         ]
       },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "title": "Get transcript",
-      "validationMode": "strict-generated"
-    },
-    "transcripts.list": {
-      "description": "List AssemblyAI transcripts created by the current API key.",
       "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "afterId": {
-            "minLength": 1,
-            "type": "string"
-          },
-          "beforeId": {
-            "minLength": 1,
-            "type": "string"
-          },
-          "createdOn": {
-            "minLength": 1,
-            "type": "string"
-          },
-          "limit": {
-            "maximum": 200,
-            "minimum": 1,
-            "type": "integer"
-          },
-          "status": {
-            "enum": [
-              "queued",
-              "processing",
-              "completed",
-              "error"
-            ],
-            "type": "string"
-          }
-        },
-        "type": "object"
-      },
-      "kind": "action",
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "outputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "type": "object"
-      },
-      "request": {
-        "method": "GET",
-        "path": "/transcript",
-        "query": {
-          "after_id": "{{afterId}}",
-          "before_id": "{{beforeId}}",
-          "created_on": "{{createdOn}}",
-          "limit": "{{limit}}",
-          "status": "{{status}}"
-        },
-        "success": [
-          200
-        ]
-      },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "title": "List transcripts",
-      "validationMode": "strict-generated"
-    },
-    "transcripts.paragraphs": {
-      "description": "Get an AssemblyAI transcript split into paragraphs.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "transcriptId": {
-            "minLength": 1,
-            "type": "string"
-          }
-        },
-        "required": [
-          "transcriptId"
-        ],
-        "type": "object"
-      },
-      "kind": "action",
-      "maxInputBytes": 16384,
-      "maxResponseBytes": 1048576,
-      "outputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "type": "object"
-      },
-      "request": {
-        "method": "GET",
-        "path": "/transcript/{{transcriptId}}/paragraphs",
-        "success": [
-          200
-        ]
-      },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "title": "Get transcript paragraphs",
-      "validationMode": "strict-generated"
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
     },
     "transcripts.sentences": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Get transcript sentences",
       "description": "Get an AssemblyAI transcript split into sentences.",
-      "enforceOutputSchema": true,
       "inputSchema": {
-        "additionalProperties": false,
+        "type": "object",
         "properties": {
           "transcriptId": {
-            "minLength": 1,
-            "type": "string"
+            "type": "string",
+            "minLength": 1
           }
         },
         "required": [
           "transcriptId"
         ],
-        "type": "object"
+        "additionalProperties": false
       },
-      "kind": "action",
-      "maxInputBytes": 16384,
-      "maxResponseBytes": 1048576,
       "outputSchema": {
-        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "required": [
-          "data"
-        ],
-        "type": "object"
+        "additionalProperties": false
       },
       "request": {
         "method": "GET",
@@ -295,20 +253,832 @@
           200
         ]
       },
-      "responseFormat": "json",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "transcripts.paragraphs": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Get transcript paragraphs",
+      "description": "Get an AssemblyAI transcript split into paragraphs.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "transcriptId": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "transcriptId"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/transcript/{{transcriptId}}/paragraphs",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "transcripts.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create transcript",
+      "description": "Submit an AssemblyAI transcription job for a media URL.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "audioUrl": {
+            "type": "string",
+            "description": "Publicly reachable audio or video URL.",
+            "minLength": 1
+          },
+          "languageCode": {
+            "type": "string",
+            "description": "Language code, for example en_us.",
+            "minLength": 1
+          },
+          "speakerLabels": {
+            "type": "boolean",
+            "description": "Enable speaker diarization."
+          },
+          "punctuate": {
+            "type": "boolean",
+            "description": "Enable automatic punctuation."
+          },
+          "formatText": {
+            "type": "boolean",
+            "description": "Enable text formatting."
+          },
+          "webhookUrl": {
+            "type": "string",
+            "description": "HTTPS URL for transcript completed or error webhooks.",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "audioUrl"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/transcript",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Accept": "application/json",
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "audio_url": "{{audioUrl}}",
+          "language_code": "{{languageCode}}",
+          "speaker_labels": "{{speakerLabels}}",
+          "punctuate": "{{punctuate}}",
+          "format_text": "{{formatText}}",
+          "webhook_url": "{{webhookUrl}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "transcripts.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Delete transcript",
+      "description": "Delete an AssemblyAI transcript and any uploaded media attached to it.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "transcriptId": {
+            "type": "string",
+            "description": "Transcript ID.",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "transcriptId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/transcript/{{transcriptId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "transcripts.wordSearch": {
+      "kind": "action",
       "sideEffect": "read",
       "timeoutMs": 15000,
-      "title": "Get transcript sentences",
-      "validationMode": "strict-generated"
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Search transcript words",
+      "description": "Search an AssemblyAI transcript for words or phrases.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "transcriptId": {
+            "type": "string",
+            "description": "Transcript ID.",
+            "minLength": 1
+          },
+          "words": {
+            "type": "string",
+            "description": "Comma-separated words to search.",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "transcriptId",
+          "words"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/transcript/{{transcriptId}}/word-search",
+        "success": [
+          200,
+          201
+        ],
+        "query": {
+          "words": "{{words}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "transcripts.redactedAudio": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get redacted audio",
+      "description": "Retrieve PII-redacted audio for an AssemblyAI transcript.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "transcriptId": {
+            "type": "string",
+            "description": "Transcript ID.",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "transcriptId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/transcript/{{transcriptId}}/redacted-audio",
+        "success": [
+          200,
+          201
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "realtime.createToken": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create streaming token",
+      "description": "Generate a temporary AssemblyAI streaming authentication token.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "expiresInSeconds": {
+            "type": "integer",
+            "description": "Token redemption window in seconds.",
+            "minimum": 1,
+            "maximum": 600
+          },
+          "maxSessionDurationSeconds": {
+            "type": "integer",
+            "description": "Maximum streaming session duration in seconds.",
+            "minimum": 60,
+            "maximum": 10800
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "expiresInSeconds"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v3/token",
+        "success": [
+          200,
+          201
+        ],
+        "query": {
+          "expires_in_seconds": "{{expiresInSeconds}}",
+          "max_session_duration_seconds": "{{maxSessionDurationSeconds}}"
+        },
+        "baseUrl": "https://streaming.assemblyai.com"
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "lemur.task": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "LeMUR task",
+      "description": "Run a custom AssemblyAI LeMUR prompt against one or more transcripts.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "transcriptIds": {
+            "type": "array",
+            "minItems": 1,
+            "description": "Transcript IDs to analyze.",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "prompt": {
+            "type": "string",
+            "description": "LeMUR prompt.",
+            "minLength": 1
+          },
+          "context": {
+            "type": "string",
+            "description": "Optional extra context.",
+            "minLength": 1
+          },
+          "maxOutputSize": {
+            "type": "integer",
+            "description": "Maximum output size.",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "transcriptIds",
+          "prompt"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/lemur/v3/generate/task",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Accept": "application/json",
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "transcript_ids": "{{transcriptIds}}",
+          "prompt": "{{prompt}}",
+          "context": "{{context}}",
+          "max_output_size": "{{maxOutputSize}}"
+        },
+        "baseUrl": "https://api.assemblyai.com"
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "lemur.summary": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "LeMUR summary",
+      "description": "Summarize one or more AssemblyAI transcripts with LeMUR.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "transcriptIds": {
+            "type": "array",
+            "minItems": 1,
+            "description": "Transcript IDs to summarize.",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "context": {
+            "type": "string",
+            "description": "Optional extra context.",
+            "minLength": 1
+          },
+          "answerFormat": {
+            "type": "string",
+            "description": "Optional answer format.",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "transcriptIds"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/lemur/v3/generate/summary",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Accept": "application/json",
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "transcript_ids": "{{transcriptIds}}",
+          "context": "{{context}}",
+          "answer_format": "{{answerFormat}}"
+        },
+        "baseUrl": "https://api.assemblyai.com"
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "lemur.questionAnswer": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "LeMUR question answer",
+      "description": "Ask questions about AssemblyAI transcripts with LeMUR.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "transcriptIds": {
+            "type": "array",
+            "minItems": 1,
+            "description": "Transcript IDs to query.",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "questions": {
+            "type": "array",
+            "minItems": 1,
+            "description": "Questions to ask.",
+            "items": {
+              "type": "object",
+              "properties": {
+                "question": {
+                  "type": "string",
+                  "description": "Question text.",
+                  "minLength": 1
+                },
+                "answer_format": {
+                  "type": "string",
+                  "description": "Optional answer format.",
+                  "minLength": 1
+                }
+              },
+              "additionalProperties": false,
+              "required": [
+                "question"
+              ]
+            }
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "transcriptIds",
+          "questions"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/lemur/v3/generate/question-answer",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Accept": "application/json",
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "transcript_ids": "{{transcriptIds}}",
+          "questions": "{{questions}}"
+        },
+        "baseUrl": "https://api.assemblyai.com"
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "lemur.actionItems": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "LeMUR action items",
+      "description": "Extract action items from AssemblyAI transcripts with LeMUR.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "transcriptIds": {
+            "type": "array",
+            "minItems": 1,
+            "description": "Transcript IDs to analyze.",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "context": {
+            "type": "string",
+            "description": "Optional extra context.",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "transcriptIds"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/lemur/v3/generate/action-items",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Accept": "application/json",
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "transcript_ids": "{{transcriptIds}}",
+          "context": "{{context}}"
+        },
+        "baseUrl": "https://api.assemblyai.com"
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "lemur.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get LeMUR response",
+      "description": "Retrieve a previously generated AssemblyAI LeMUR response.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "description": "LeMUR request ID.",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "requestId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/lemur/v3/{{requestId}}",
+        "success": [
+          200,
+          201
+        ],
+        "baseUrl": "https://api.assemblyai.com"
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "lemur.purge": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Purge LeMUR data",
+      "description": "Delete stored AssemblyAI LeMUR request data.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "description": "LeMUR request ID.",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "requestId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/lemur/v3/{{requestId}}",
+        "success": [
+          200
+        ],
+        "baseUrl": "https://api.assemblyai.com"
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "llm.chat": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "LLM Gateway chat",
+      "description": "Create a chat completion through AssemblyAI LLM Gateway.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "model": {
+            "type": "string",
+            "description": "LLM Gateway model ID.",
+            "minLength": 1
+          },
+          "messages": {
+            "type": "array",
+            "minItems": 1,
+            "description": "Chat messages.",
+            "items": {
+              "type": "object",
+              "properties": {
+                "role": {
+                  "type": "string",
+                  "description": "Message role.",
+                  "minLength": 1
+                },
+                "content": {
+                  "type": "string",
+                  "description": "Message content.",
+                  "minLength": 1
+                }
+              },
+              "additionalProperties": false,
+              "required": [
+                "role",
+                "content"
+              ]
+            }
+          },
+          "maxTokens": {
+            "type": "integer",
+            "description": "Maximum tokens to generate.",
+            "minimum": 1
+          },
+          "transcriptId": {
+            "type": "string",
+            "description": "Optional transcript ID to inject.",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "model",
+          "messages"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/chat/completions",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Accept": "application/json",
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "model": "{{model}}",
+          "messages": "{{messages}}",
+          "max_tokens": "{{maxTokens}}",
+          "transcript_id": "{{transcriptId}}"
+        },
+        "baseUrl": "https://llm-gateway.assemblyai.com"
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
     }
   },
   "provenance": {
     "source": {
-      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
-      "url": "https://github.com/oomol-lab/open-connector"
+      "url": "https://github.com/oomol-lab/open-connector",
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"
     }
   },
-  "runtime": "bun",
-  "version": "0.1.0",
-  "visibility": "public"
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
+    }
+  }
 }
