@@ -1,7 +1,17 @@
 {
+  "key": "appstle-subscriptions",
+  "name": "Appstle Subscriptions",
+  "version": "0.2.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "ecommerce"
+  ],
   "auth": {
+    "type": "api_key",
     "scopes": [],
     "setup": {
+      "mode": "api_key",
       "fields": [
         {
           "key": "apiKey",
@@ -9,231 +19,69 @@
           "required": true,
           "secret": true
         }
-      ],
-      "mode": "api_key"
-    },
-    "type": "api_key"
-  },
-  "categories": [
-    "ecommerce"
-  ],
-  "evidence": {
-    "fixture": {
-      "status": "supplied"
-    },
-    "live": {
-      "status": "unverified"
+      ]
     }
   },
+  "network": {
+    "allowedHosts": [
+      "subscription-admin.appstle.com"
+    ]
+  },
+  "models": [
+    "customer",
+    "subscription-contract",
+    "product-swap",
+    "subscription-group",
+    "billing-attempt"
+  ],
   "http": {
+    "baseUrl": "https://subscription-admin.appstle.com",
     "auth": {
       "field": "apiKey",
       "in": "header",
       "name": "X-API-Key",
       "value": "{{apiKey}}"
     },
-    "baseUrl": "https://subscription-admin.appstle.com",
+    "headers": {
+      "Accept": "application/json"
+    },
     "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after",
       "defaultRetryAfterSeconds": 30,
       "messagePaths": [
         "message",
         "error",
         "detail",
         "title"
-      ],
-      "rateLimitStatuses": [
-        429
-      ],
-      "retryAfterHeader": "retry-after"
-    },
-    "headers": {
-      "Accept": "application/json"
+      ]
     }
   },
-  "key": "appstle-subscriptions",
-  "models": [
-    "customer",
-    "subscription-contract"
-  ],
-  "name": "Appstle Subscriptions",
-  "network": {
-    "allowedHosts": [
-      "subscription-admin.appstle.com"
-    ]
-  },
   "operations": {
-    "contract-ids.get": {
-      "description": "Return valid Appstle subscription contract IDs for a Shopify customer.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "customerId": {
-            "minimum": 1,
-            "type": "integer"
-          }
-        },
-        "required": [
-          "customerId"
-        ],
-        "type": "object"
-      },
-      "kind": "action",
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "outputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "data": {}
-        },
-        "required": [
-          "data"
-        ],
-        "type": "object"
-      },
-      "request": {
-        "method": "GET",
-        "path": "/api/external/v2/subscription-customers/valid/{{customerId}}",
-        "success": [
-          200
-        ]
-      },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "title": "Get valid subscription contract IDs",
-      "validationMode": "strict-generated"
-    },
-    "customers.get": {
-      "description": "Retrieve one Appstle customer including subscription contract information.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "cursor": {
-            "minLength": 1,
-            "type": "string"
-          },
-          "customerId": {
-            "minimum": 1,
-            "type": "integer"
-          }
-        },
-        "required": [
-          "customerId"
-        ],
-        "type": "object"
-      },
-      "kind": "action",
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "outputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "data": {}
-        },
-        "required": [
-          "data"
-        ],
-        "type": "object"
-      },
-      "request": {
-        "method": "GET",
-        "path": "/api/external/v2/subscription-customers/{{customerId}}",
-        "query": {
-          "cursor": "{{cursor}}"
-        },
-        "success": [
-          200
-        ]
-      },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "title": "Get customer with subscriptions",
-      "validationMode": "strict-generated"
-    },
-    "customers.list": {
-      "description": "List Appstle customers who have subscription contracts.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "activeMoreThanOneSubscription": {
-            "type": "boolean"
-          },
-          "email": {
-            "minLength": 1,
-            "type": "string"
-          },
-          "name": {
-            "minLength": 1,
-            "type": "string"
-          },
-          "page": {
-            "minimum": 0,
-            "type": "integer"
-          },
-          "size": {
-            "minimum": 1,
-            "type": "integer"
-          }
-        },
-        "type": "object"
-      },
-      "kind": "action",
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "outputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "data": {}
-        },
-        "required": [
-          "data"
-        ],
-        "type": "object"
-      },
-      "request": {
-        "method": "GET",
-        "path": "/api/external/v2/subscription-contract-details/customers",
-        "query": {
-          "activeMoreThanOneSubscription": "{{activeMoreThanOneSubscription}}",
-          "email": "{{email}}",
-          "name": "{{name}}",
-          "page": "{{page}}",
-          "size": "{{size}}"
-        },
-        "success": [
-          200
-        ]
-      },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "title": "List customers with subscriptions",
-      "validationMode": "strict-generated"
-    },
     "healthcheck": {
-      "description": "Validate the Appstle API key by listing one customer page.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {},
-        "type": "object"
-      },
-      "kind": "action",
+      "timeoutMs": 5000,
       "maxInputBytes": 4096,
       "maxResponseBytes": 65536,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Healthcheck",
+      "description": "Validate the Appstle API key by listing one customer page.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
       "outputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "data": {}
-        },
+        "type": "object",
         "required": [
           "data"
         ],
-        "type": "object"
+        "properties": {
+          "data": {}
+        },
+        "additionalProperties": false
       },
       "request": {
         "method": "GET",
@@ -246,40 +94,192 @@
           200
         ]
       },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 5000,
-      "title": "Healthcheck",
-      "validationMode": "strict-generated"
-    },
-    "subscription-details.list": {
-      "description": "List detailed Appstle subscription contract records for a Shopify customer.",
       "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "customerId": {
-            "minimum": 1,
-            "type": "integer"
-          }
-        },
-        "required": [
-          "customerId"
-        ],
-        "type": "object"
-      },
-      "kind": "action",
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "customers.list": {
+      "timeoutMs": 15000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
-      "outputSchema": {
-        "additionalProperties": false,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List customers with subscriptions",
+      "description": "List Appstle customers who have subscription contracts.",
+      "inputSchema": {
+        "type": "object",
         "properties": {
-          "data": {}
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "email": {
+            "type": "string",
+            "minLength": 1
+          },
+          "activeMoreThanOneSubscription": {
+            "type": "boolean"
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "size": {
+            "type": "integer",
+            "minimum": 1
+          }
         },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
         "required": [
           "data"
         ],
-        "type": "object"
+        "properties": {
+          "data": {}
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/external/v2/subscription-contract-details/customers",
+        "query": {
+          "name": "{{name}}",
+          "email": "{{email}}",
+          "activeMoreThanOneSubscription": "{{activeMoreThanOneSubscription}}",
+          "page": "{{page}}",
+          "size": "{{size}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "customers.get": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Get customer with subscriptions",
+      "description": "Retrieve one Appstle customer including subscription contract information.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "customerId"
+        ],
+        "properties": {
+          "customerId": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "cursor": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/external/v2/subscription-customers/{{customerId}}",
+        "query": {
+          "cursor": "{{cursor}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "contract-ids.get": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Get valid subscription contract IDs",
+      "description": "Return valid Appstle subscription contract IDs for a Shopify customer.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "customerId"
+        ],
+        "properties": {
+          "customerId": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/external/v2/subscription-customers/valid/{{customerId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "subscription-details.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List customer subscription details",
+      "description": "List detailed Appstle subscription contract records for a Shopify customer.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "customerId"
+        ],
+        "properties": {
+          "customerId": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        },
+        "additionalProperties": false
       },
       "request": {
         "method": "GET",
@@ -288,20 +288,815 @@
           200
         ]
       },
-      "responseFormat": "json",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "contracts.list": {
+      "kind": "action",
       "sideEffect": "read",
       "timeoutMs": 15000,
-      "title": "List customer subscription details",
-      "validationMode": "strict-generated"
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "List subscription contracts",
+      "description": "List Appstle subscription contracts with optional status and pagination filters.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Contract status filter, for example ACTIVE."
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Zero-based page number."
+          },
+          "size": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Page size."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/external/v2/subscription-contract-details",
+        "success": [
+          200
+        ],
+        "query": {
+          "status": "{{status}}",
+          "page": "{{page}}",
+          "size": "{{size}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "contracts.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get subscription contract",
+      "description": "Get the raw Shopify GraphQL subscription contract for a contract ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "contractId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Numeric subscription contract ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "contractId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/external/v2/subscription-contracts/contract-external/{{contractId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "contracts.analytics": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get contract analytics",
+      "description": "Get revenue metrics for a subscription contract.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "contractId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Numeric subscription contract ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "contractId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/external/v2/subscription-contract-details/analytics/{{contractId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "contracts.current-cycle": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get current billing cycle",
+      "description": "Get the current billing cycle number for a subscription contract.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "contractId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Numeric subscription contract ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "contractId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/external/v2/subscription-contract-details/current-cycle/{{contractId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "contracts.update-status": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Update contract status",
+      "description": "Update a subscription contract status to ACTIVE, PAUSED, or CANCELLED.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "contractId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Numeric subscription contract ID."
+          },
+          "status": {
+            "type": "string",
+            "minLength": 1,
+            "description": "New status: ACTIVE, PAUSED, or CANCELLED."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "contractId",
+          "status"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/api/external/v2/subscription-contracts-update-status",
+        "success": [
+          200,
+          204
+        ],
+        "query": {
+          "contractId": "{{contractId}}",
+          "status": "{{status}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "contracts.update-billing-date": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Update next billing date",
+      "description": "Reschedule the next billing date for a subscription contract.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "contractId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Numeric subscription contract ID."
+          },
+          "nextBillingDate": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Next billing date in YYYY-MM-DD format."
+          },
+          "rescheduleFutureOrder": {
+            "type": "boolean",
+            "description": "Also reschedule the future order."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "contractId",
+          "nextBillingDate"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/api/external/v2/subscription-contracts-update-billing-date",
+        "success": [
+          200
+        ],
+        "query": {
+          "contractId": "{{contractId}}",
+          "nextBillingDate": "{{nextBillingDate}}",
+          "rescheduleFutureOrder": "{{rescheduleFutureOrder}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "contracts.cancel": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Cancel subscription contract",
+      "description": "Cancel a subscription contract. Terminates future billing and delivery cycles.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Numeric subscription contract ID."
+          },
+          "cancellationNote": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Optional cancellation note."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/api/external/v2/subscription-contracts/{{id}}",
+        "success": [
+          200,
+          204
+        ],
+        "query": {
+          "cancellationNote": "{{cancellationNote}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "billing.skip": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Skip billing attempt",
+      "description": "Skip a specific upcoming subscription order.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Billing attempt ID."
+          },
+          "subscriptionContractId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Related subscription contract ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/api/external/v2/subscription-billing-attempts/skip-order/{{id}}",
+        "success": [
+          200
+        ],
+        "query": {
+          "subscriptionContractId": "{{subscriptionContractId}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "billing.unskip": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Unskip billing attempt",
+      "description": "Unskip a previously skipped subscription order.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Billing attempt ID."
+          },
+          "subscriptionContractId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Related subscription contract ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/api/external/v2/subscription-billing-attempts/unskip-order/{{id}}",
+        "success": [
+          200
+        ],
+        "query": {
+          "subscriptionContractId": "{{subscriptionContractId}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "product-swaps.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "List product swaps",
+      "description": "List product swap automations for the authenticated shop.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/external/v2/product-swaps",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "product-swaps.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get product swap",
+      "description": "Get one product swap automation by ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Product swap automation ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/external/v2/product-swaps/{{id}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "product-swaps.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Create product swap",
+      "description": "Create a product swap automation for the authenticated shop.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "shop": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Shopify shop domain."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Swap rule name."
+          },
+          "sourceVariants": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Source variant IDs."
+          },
+          "destinationVariants": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Destination variant IDs."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "shop"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/api/external/v2/product-swaps",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "shop": "{{shop}}",
+          "name": "{{name}}",
+          "sourceVariants": "{{sourceVariants}}",
+          "destinationVariants": "{{destinationVariants}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "product-swaps.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Delete product swap",
+      "description": "Permanently delete a product swap automation.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Product swap automation ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/api/external/v2/product-swaps/{{id}}",
+        "success": [
+          200,
+          204
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "subscription-groups.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "List subscription groups",
+      "description": "List selling-plan subscription groups for the authenticated shop.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/external/v2/subscription-groups",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "subscription-groups.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get subscription group",
+      "description": "Get one selling-plan subscription group by ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Subscription group ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/external/v2/subscription-groups/{{id}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "selling-plans.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "List selling plans",
+      "description": "List all selling plans across subscription groups.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/external/v2/subscription-groups/all-selling-plans",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "portal-link.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get customer portal link",
+      "description": "Generate a customer portal management link for a Shopify customer.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "customerId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Shopify customer ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "customerId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/external/v2/manage-subscription-link/{{customerId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
     }
   },
   "provenance": {
     "source": {
-      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
-      "url": "https://github.com/oomol-lab/open-connector"
+      "url": "https://github.com/oomol-lab/open-connector",
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"
     }
   },
-  "runtime": "bun",
-  "version": "0.1.0",
-  "visibility": "public"
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
+    }
+  }
 }

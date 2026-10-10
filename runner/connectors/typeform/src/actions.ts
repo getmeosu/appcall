@@ -12,7 +12,40 @@ import {
   createWebhooksClient,
   validateWebhooksCreateInput,
   validateWebhooksListInput,
+  validateWebhooksGetInput,
+  validateWebhooksDeleteInput,
 } from "./webhooks";
+import {
+  createUsersClient,
+  createWorkspacesClient,
+  createThemesClient,
+  createImagesClient,
+  createFormExtrasClient,
+  validateUsersMeInput,
+  validateWorkspacesListInput,
+  validateWorkspacesGetInput,
+  validateWorkspacesCreateInput,
+  validateWorkspacesCreateInAccountInput,
+  validateWorkspacesUpdateInput,
+  validateWorkspacesDeleteInput,
+  validateThemesListInput,
+  validateThemesGetInput,
+  validateThemesCreateInput,
+  validateThemesUpdateInput,
+  validateThemesPatchInput,
+  validateThemesDeleteInput,
+  validateImagesListInput,
+  validateImagesCreateInput,
+  validateImagesDeleteInput,
+  validateImageSizeInput,
+  validateBackgroundSizeInput,
+  validateChoiceSizeInput,
+  validateFormMessagesGetInput,
+  validateFormMessagesUpdateInput,
+  validateFormsPatchInput,
+  validateResponseFilesGetInput,
+  validateVideosUploadInput,
+} from "./depth";
 
 // ─── forms.list ───────────────────────────────────────────────────────────────
 
@@ -167,7 +200,196 @@ export function listWebhooks(input: unknown): Record<string, unknown> | Promise<
   return { connector: "typeform", action: "webhooks.list", source: "connector", validated: validateWebhooksListInput(input) };
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+function wrapTypeformAction(
+  action: string,
+  validate: (input: unknown) => unknown,
+  execute: (input: Record<string, unknown> & { accessToken: string }) => Promise<Record<string, unknown>>,
+) {
+  return (input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> => {
+    if (isRecord(input) && typeof input.accessToken === "string") {
+      return execute(input as Record<string, unknown> & { accessToken: string });
+    }
+    return { connector: "typeform", action, source: "connector", validated: validate(input) };
+  };
+}
+
+function unwrap(
+  result: { ok: boolean; error?: { code: string; message: string; retryAfterSeconds?: number }; [key: string]: unknown },
+  action: string,
+): Record<string, unknown> {
+  if (!result.ok) {
+    throw {
+      ok: false,
+      code: result.error?.code,
+      message: result.error?.message,
+      retryAfterSeconds: result.error?.retryAfterSeconds,
+    };
+  }
+  const rest = { ...result };
+  delete rest.ok;
+  delete rest.error;
+  return { connector: "typeform", action, source: "connector", ...rest };
+}
+
+function fetchFrom(input: Record<string, unknown>): typeof fetch | undefined {
+  return typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
+}
+
+export const getUserMe = wrapTypeformAction("users.me", validateUsersMeInput, (input) =>
+  createUsersClient({ accessToken: input.accessToken, fetch: fetchFrom(input), operation: "users.me" })
+    .me(input)
+    .then((result) => unwrap(result, "users.me")),
+);
+
+export const listWorkspaces = wrapTypeformAction("workspaces.list", validateWorkspacesListInput, (input) =>
+  createWorkspacesClient({ accessToken: input.accessToken, fetch: fetchFrom(input), operation: "workspaces.list" })
+    .list(input)
+    .then((result) => unwrap(result, "workspaces.list")),
+);
+
+export const getWorkspace = wrapTypeformAction("workspaces.get", validateWorkspacesGetInput, (input) =>
+  createWorkspacesClient({ accessToken: input.accessToken, fetch: fetchFrom(input), operation: "workspaces.get" })
+    .get(input)
+    .then((result) => unwrap(result, "workspaces.get")),
+);
+
+export const createWorkspace = wrapTypeformAction("workspaces.create", validateWorkspacesCreateInput, (input) =>
+  createWorkspacesClient({ accessToken: input.accessToken, fetch: fetchFrom(input), operation: "workspaces.create" })
+    .create(input)
+    .then((result) => unwrap(result, "workspaces.create")),
+);
+
+export const createAccountWorkspace = wrapTypeformAction("workspaces.create_in_account", validateWorkspacesCreateInAccountInput, (input) =>
+  createWorkspacesClient({ accessToken: input.accessToken, fetch: fetchFrom(input), operation: "workspaces.create_in_account" })
+    .createInAccount(input)
+    .then((result) => unwrap(result, "workspaces.create_in_account")),
+);
+
+export const updateWorkspace = wrapTypeformAction("workspaces.update", validateWorkspacesUpdateInput, (input) =>
+  createWorkspacesClient({ accessToken: input.accessToken, fetch: fetchFrom(input), operation: "workspaces.update" })
+    .update(input)
+    .then((result) => unwrap(result, "workspaces.update")),
+);
+
+export const deleteWorkspace = wrapTypeformAction("workspaces.delete", validateWorkspacesDeleteInput, (input) =>
+  createWorkspacesClient({ accessToken: input.accessToken, fetch: fetchFrom(input), operation: "workspaces.delete" })
+    .delete(input)
+    .then((result) => unwrap(result, "workspaces.delete")),
+);
+
+export const listThemes = wrapTypeformAction("themes.list", validateThemesListInput, (input) =>
+  createThemesClient({ accessToken: input.accessToken, fetch: fetchFrom(input), operation: "themes.list" })
+    .list(input)
+    .then((result) => unwrap(result, "themes.list")),
+);
+
+export const getTheme = wrapTypeformAction("themes.get", validateThemesGetInput, (input) =>
+  createThemesClient({ accessToken: input.accessToken, fetch: fetchFrom(input), operation: "themes.get" })
+    .get(input)
+    .then((result) => unwrap(result, "themes.get")),
+);
+
+export const createTheme = wrapTypeformAction("themes.create", validateThemesCreateInput, (input) =>
+  createThemesClient({ accessToken: input.accessToken, fetch: fetchFrom(input), operation: "themes.create" })
+    .create(input)
+    .then((result) => unwrap(result, "themes.create")),
+);
+
+export const updateTheme = wrapTypeformAction("themes.update", validateThemesUpdateInput, (input) =>
+  createThemesClient({ accessToken: input.accessToken, fetch: fetchFrom(input), operation: "themes.update" })
+    .update(input)
+    .then((result) => unwrap(result, "themes.update")),
+);
+
+export const patchTheme = wrapTypeformAction("themes.patch", validateThemesPatchInput, (input) =>
+  createThemesClient({ accessToken: input.accessToken, fetch: fetchFrom(input), operation: "themes.patch" })
+    .patch(input)
+    .then((result) => unwrap(result, "themes.patch")),
+);
+
+export const deleteTheme = wrapTypeformAction("themes.delete", validateThemesDeleteInput, (input) =>
+  createThemesClient({ accessToken: input.accessToken, fetch: fetchFrom(input), operation: "themes.delete" })
+    .delete(input)
+    .then((result) => unwrap(result, "themes.delete")),
+);
+
+export const listImages = wrapTypeformAction("images.list", validateImagesListInput, (input) =>
+  createImagesClient({ accessToken: input.accessToken, fetch: fetchFrom(input), operation: "images.list" })
+    .list(input)
+    .then((result) => unwrap(result, "images.list")),
+);
+
+export const createImage = wrapTypeformAction("images.create", validateImagesCreateInput, (input) =>
+  createImagesClient({ accessToken: input.accessToken, fetch: fetchFrom(input), operation: "images.create" })
+    .create(input)
+    .then((result) => unwrap(result, "images.create")),
+);
+
+export const deleteImage = wrapTypeformAction("images.delete", validateImagesDeleteInput, (input) =>
+  createImagesClient({ accessToken: input.accessToken, fetch: fetchFrom(input), operation: "images.delete" })
+    .delete(input)
+    .then((result) => unwrap(result, "images.delete")),
+);
+
+export const getImageBySize = wrapTypeformAction("images.get", validateImageSizeInput, (input) =>
+  createImagesClient({ accessToken: input.accessToken, fetch: fetchFrom(input), operation: "images.get" })
+    .getBySize(input, "image")
+    .then((result) => unwrap(result, "images.get")),
+);
+
+export const getBackgroundBySize = wrapTypeformAction("images.background.get", validateBackgroundSizeInput, (input) =>
+  createImagesClient({ accessToken: input.accessToken, fetch: fetchFrom(input), operation: "images.background.get" })
+    .getBySize(input, "background")
+    .then((result) => unwrap(result, "images.background.get")),
+);
+
+export const getChoiceImageBySize = wrapTypeformAction("images.choice.get", validateChoiceSizeInput, (input) =>
+  createImagesClient({ accessToken: input.accessToken, fetch: fetchFrom(input), operation: "images.choice.get" })
+    .getBySize(input, "choice")
+    .then((result) => unwrap(result, "images.choice.get")),
+);
+
+export const getWebhook = wrapTypeformAction("webhooks.get", validateWebhooksGetInput, (input) =>
+  createWebhooksClient({ accessToken: input.accessToken, fetch: fetchFrom(input) })
+    .get(input)
+    .then((result) => unwrap(result, "webhooks.get")),
+);
+
+export const deleteWebhook = wrapTypeformAction("webhooks.delete", validateWebhooksDeleteInput, (input) =>
+  createWebhooksClient({ accessToken: input.accessToken, fetch: fetchFrom(input) })
+    .delete(input)
+    .then((result) => unwrap(result, "webhooks.delete")),
+);
+
+export const getFormMessages = wrapTypeformAction("forms.messages.get", validateFormMessagesGetInput, (input) =>
+  createFormExtrasClient({ accessToken: input.accessToken, fetch: fetchFrom(input), operation: "forms.messages.get" })
+    .getMessages(input)
+    .then((result) => unwrap(result, "forms.messages.get")),
+);
+
+export const updateFormMessages = wrapTypeformAction("forms.messages.update", validateFormMessagesUpdateInput, (input) =>
+  createFormExtrasClient({ accessToken: input.accessToken, fetch: fetchFrom(input), operation: "forms.messages.update" })
+    .updateMessages(input)
+    .then((result) => unwrap(result, "forms.messages.update")),
+);
+
+export const patchForm = wrapTypeformAction("forms.patch", validateFormsPatchInput, (input) =>
+  createFormExtrasClient({ accessToken: input.accessToken, fetch: fetchFrom(input), operation: "forms.patch" })
+    .patch(input)
+    .then((result) => unwrap(result, "forms.patch")),
+);
+
+export const getResponseFiles = wrapTypeformAction("responses.files.get", validateResponseFilesGetInput, (input) =>
+  createFormExtrasClient({ accessToken: input.accessToken, fetch: fetchFrom(input), operation: "responses.files.get" })
+    .getResponseFiles(input)
+    .then((result) => unwrap(result, "responses.files.get")),
+);
+
+export const uploadVideo = wrapTypeformAction("videos.upload", validateVideosUploadInput, (input) =>
+  createFormExtrasClient({ accessToken: input.accessToken, fetch: fetchFrom(input), operation: "videos.upload" })
+    .uploadVideo(input)
+    .then((result) => unwrap(result, "videos.upload")),
+);
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
