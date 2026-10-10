@@ -1,7 +1,17 @@
 {
+  "key": "agentql",
+  "name": "AgentQL",
+  "version": "0.2.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "dev-tools"
+  ],
   "auth": {
+    "type": "api_key",
     "scopes": [],
     "setup": {
+      "mode": "api_key",
       "fields": [
         {
           "key": "apiKey",
@@ -9,81 +19,74 @@
           "required": true,
           "secret": true
         }
-      ],
-      "mode": "api_key"
-    },
-    "type": "api_key"
-  },
-  "categories": [
-    "dev-tools"
-  ],
-  "evidence": {
-    "fixture": {
-      "status": "supplied"
-    },
-    "live": {
-      "status": "unverified"
+      ]
     }
   },
+  "provenance": {
+    "source": {
+      "url": "https://github.com/oomol-lab/open-connector",
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "api.agentql.com"
+    ]
+  },
+  "models": [
+    "usage",
+    "session",
+    "query"
+  ],
   "http": {
+    "baseUrl": "https://api.agentql.com",
     "auth": {
       "field": "apiKey",
       "in": "header",
       "name": "X-API-Key",
       "value": "{{apiKey}}"
     },
-    "baseUrl": "https://api.agentql.com",
+    "headers": {
+      "Accept": "application/json"
+    },
     "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after",
       "defaultRetryAfterSeconds": 30,
       "messagePaths": [
         "error_info",
         "detail",
         "message"
-      ],
-      "rateLimitStatuses": [
-        429
-      ],
-      "retryAfterHeader": "retry-after"
-    },
-    "headers": {
-      "Accept": "application/json"
+      ]
     }
-  },
-  "key": "agentql",
-  "models": [
-    "usage",
-    "session",
-    "query"
-  ],
-  "name": "AgentQL",
-  "network": {
-    "allowedHosts": [
-      "api.agentql.com"
-    ]
   },
   "operations": {
     "healthcheck": {
-      "description": "Validate the AgentQL API key by reading usage counters.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {},
-        "type": "object"
-      },
       "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 5000,
       "maxInputBytes": 4096,
       "maxResponseBytes": 65536,
+      "title": "Healthcheck",
+      "description": "Validate the AgentQL API key by reading usage counters.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
       "outputSchema": {
-        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "required": [
-          "data"
-        ],
-        "type": "object"
+        "additionalProperties": false
       },
       "request": {
         "method": "GET",
@@ -92,108 +95,87 @@
           200
         ]
       },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 5000,
-      "title": "Healthcheck",
-      "validationMode": "strict-generated"
-    },
-    "query.data": {
-      "description": "Extract structured data from a public webpage with an AgentQL query. Consumes API credits.",
       "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "query": {
-            "minLength": 1,
-            "type": "string"
-          },
-          "url": {
-            "minLength": 1,
-            "type": "string"
-          }
-        },
-        "required": [
-          "query",
-          "url"
-        ],
-        "type": "object"
-      },
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "usage.get": {
       "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
+      "title": "Get usage",
+      "description": "Get AgentQL account and API key usage counters.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
       "outputSchema": {
-        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "required": [
-          "data"
-        ],
-        "type": "object"
+        "additionalProperties": false
       },
       "request": {
-        "body": {
-          "query": "{{query}}",
-          "url": "{{url}}"
-        },
-        "headers": {
-          "Content-Type": "application/json",
-          "X-TF-Request-Origin": "rest-api-data"
-        },
-        "method": "POST",
-        "path": "/v1/query-data",
+        "method": "GET",
+        "path": "/v1/usage",
         "success": [
           200
         ]
       },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 30000,
-      "title": "Query page data",
-      "validationMode": "strict-generated"
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
     },
     "sessions.usage.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List session usage",
       "description": "List AgentQL Tetra session telemetry with optional pagination.",
-      "enforceOutputSchema": true,
       "inputSchema": {
-        "additionalProperties": false,
+        "type": "object",
         "properties": {
           "limit": {
-            "maximum": 1000,
+            "type": "integer",
             "minimum": 1,
-            "type": "integer"
+            "maximum": 1000
           },
           "page": {
-            "minimum": 1,
-            "type": "integer"
+            "type": "integer",
+            "minimum": 1
           },
           "status": {
+            "type": "string",
             "enum": [
               "running",
               "ended"
-            ],
-            "type": "string"
+            ]
           }
         },
-        "type": "object"
+        "additionalProperties": false
       },
-      "kind": "action",
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
       "outputSchema": {
-        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "required": [
-          "data"
-        ],
-        "type": "object"
+        "additionalProperties": false
       },
       "request": {
         "method": "GET",
@@ -207,56 +189,773 @@
           200
         ]
       },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "title": "List session usage",
-      "validationMode": "strict-generated"
-    },
-    "usage.get": {
-      "description": "Get AgentQL account and API key usage counters.",
       "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {},
-        "type": "object"
-      },
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "query.data": {
       "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
+      "title": "Query page data",
+      "description": "Extract structured data from a public webpage with an AgentQL query. Consumes API credits.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "minLength": 1
+          },
+          "url": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "query",
+          "url"
+        ],
+        "additionalProperties": false
+      },
       "outputSchema": {
-        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "required": [
-          "data"
-        ],
-        "type": "object"
+        "additionalProperties": false
       },
       "request": {
-        "method": "GET",
-        "path": "/v1/usage",
+        "method": "POST",
+        "path": "/v1/query-data",
+        "headers": {
+          "Content-Type": "application/json",
+          "X-TF-Request-Origin": "rest-api-data"
+        },
+        "body": {
+          "query": "{{query}}",
+          "url": "{{url}}"
+        },
         "success": [
           200
         ]
       },
-      "responseFormat": "json",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "sessions.usage.get": {
+      "kind": "action",
       "sideEffect": "read",
       "timeoutMs": 15000,
-      "title": "Get usage",
-      "validationMode": "strict-generated"
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get session usage",
+      "description": "Get Tetra browser session telemetry for one session id.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "sessionId": {
+            "type": "string",
+            "description": "Browser session identifier.",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "sessionId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/tetra/usage",
+        "query": {
+          "session_id": "{{sessionId}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "query.html": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Query HTML data",
+      "description": "Extract structured data from raw HTML with an AgentQL query. Consumes API credits.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "AgentQL query to execute.",
+            "minLength": 1
+          },
+          "html": {
+            "type": "string",
+            "description": "Raw HTML to query.",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "query",
+          "html"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/query-data",
+        "headers": {
+          "Content-Type": "application/json",
+          "X-TF-Request-Origin": "rest-api-data"
+        },
+        "body": {
+          "query": "{{query}}",
+          "html": "{{html}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "query.prompt": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Query page with prompt",
+      "description": "Extract structured data from a public webpage using a natural-language prompt. Consumes API credits.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "prompt": {
+            "type": "string",
+            "description": "Natural-language description of the data to extract.",
+            "minLength": 1
+          },
+          "url": {
+            "type": "string",
+            "description": "Public page URL.",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "prompt",
+          "url"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/query-data",
+        "headers": {
+          "Content-Type": "application/json",
+          "X-TF-Request-Origin": "rest-api-data"
+        },
+        "body": {
+          "prompt": "{{prompt}}",
+          "url": "{{url}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "query.prompt.html": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Query HTML with prompt",
+      "description": "Extract structured data from raw HTML using a natural-language prompt. Consumes API credits.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "prompt": {
+            "type": "string",
+            "description": "Natural-language description of the data to extract.",
+            "minLength": 1
+          },
+          "html": {
+            "type": "string",
+            "description": "Raw HTML to query.",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "prompt",
+          "html"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/query-data",
+        "headers": {
+          "Content-Type": "application/json",
+          "X-TF-Request-Origin": "rest-api-data"
+        },
+        "body": {
+          "prompt": "{{prompt}}",
+          "html": "{{html}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "query.data.standard": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Query page data in standard mode",
+      "description": "Extract structured data from a public webpage in standard (deeper) mode. Consumes API credits.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "AgentQL query to execute.",
+            "minLength": 1
+          },
+          "url": {
+            "type": "string",
+            "description": "Public page URL.",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "query",
+          "url"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/query-data",
+        "headers": {
+          "Content-Type": "application/json",
+          "X-TF-Request-Origin": "rest-api-data"
+        },
+        "body": {
+          "query": "{{query}}",
+          "url": "{{url}}",
+          "params": {
+            "mode": "standard"
+          }
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "query.data.screenshot": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Query page data with screenshot",
+      "description": "Extract structured data from a public webpage and include a screenshot in metadata. Consumes API credits.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "AgentQL query to execute.",
+            "minLength": 1
+          },
+          "url": {
+            "type": "string",
+            "description": "Public page URL.",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "query",
+          "url"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/query-data",
+        "headers": {
+          "Content-Type": "application/json",
+          "X-TF-Request-Origin": "rest-api-data"
+        },
+        "body": {
+          "query": "{{query}}",
+          "url": "{{url}}",
+          "params": {
+            "is_screenshot_enabled": true
+          }
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "query.data.scroll": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Query page data after scroll",
+      "description": "Extract structured data after scrolling to the bottom of a public webpage. Consumes API credits.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "AgentQL query to execute.",
+            "minLength": 1
+          },
+          "url": {
+            "type": "string",
+            "description": "Public page URL.",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "query",
+          "url"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/query-data",
+        "headers": {
+          "Content-Type": "application/json",
+          "X-TF-Request-Origin": "rest-api-data"
+        },
+        "body": {
+          "query": "{{query}}",
+          "url": "{{url}}",
+          "params": {
+            "is_scroll_to_bottom_enabled": true
+          }
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "query.data.wait": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Query page data after wait",
+      "description": "Extract structured data after waiting for a public webpage to load. Consumes API credits.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "AgentQL query to execute.",
+            "minLength": 1
+          },
+          "url": {
+            "type": "string",
+            "description": "Public page URL.",
+            "minLength": 1
+          },
+          "waitFor": {
+            "type": "integer",
+            "description": "Seconds to wait for the page to load before querying.",
+            "minimum": 0,
+            "maximum": 10
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "query",
+          "url",
+          "waitFor"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/query-data",
+        "headers": {
+          "Content-Type": "application/json",
+          "X-TF-Request-Origin": "rest-api-data"
+        },
+        "body": {
+          "query": "{{query}}",
+          "url": "{{url}}",
+          "params": {
+            "wait_for": "{{waitFor}}"
+          }
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "sessions.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create browser session",
+      "description": "Create a Tetra remote browser session and return a CDP URL.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "browserUaPreset": {
+            "type": "string",
+            "description": "User-agent preset.",
+            "enum": [
+              "windows",
+              "macos",
+              "linux"
+            ]
+          },
+          "browserProfile": {
+            "type": "string",
+            "description": "Browser profile.",
+            "enum": [
+              "light",
+              "stealth",
+              "tf-browser"
+            ]
+          },
+          "inactivityTimeoutSeconds": {
+            "type": "integer",
+            "description": "Inactivity timeout in seconds.",
+            "minimum": 5,
+            "maximum": 86400
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/tetra/sessions",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "browser_ua_preset": "{{browserUaPreset}}",
+          "browser_profile": "{{browserProfile}}",
+          "inactivity_timeout_seconds": "{{inactivityTimeoutSeconds}}"
+        },
+        "success": [
+          200,
+          201
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "sessions.create.stealth": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create stealth browser session",
+      "description": "Create a Tetra remote browser session with the stealth browser profile.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "inactivityTimeoutSeconds": {
+            "type": "integer",
+            "description": "Inactivity timeout in seconds.",
+            "minimum": 5,
+            "maximum": 86400
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/tetra/sessions",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "browser_profile": "stealth",
+          "inactivity_timeout_seconds": "{{inactivityTimeoutSeconds}}"
+        },
+        "success": [
+          200,
+          201
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "sessions.create.windows": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create Windows browser session",
+      "description": "Create a Tetra remote browser session that simulates a Windows user agent.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/tetra/sessions",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "browser_ua_preset": "windows"
+        },
+        "success": [
+          200,
+          201
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "sessions.create.proxy": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create proxied browser session",
+      "description": "Create a Tetra remote browser session that uses a Tetra proxy in a chosen country.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "countryCode": {
+            "type": "string",
+            "description": "Two-letter proxy country code.",
+            "minLength": 2
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "countryCode"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/tetra/sessions",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "proxy": {
+            "type": "tetra",
+            "country_code": "{{countryCode}}"
+          }
+        },
+        "success": [
+          200,
+          201
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
     }
   },
-  "provenance": {
-    "source": {
-      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
-      "url": "https://github.com/oomol-lab/open-connector"
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
     }
-  },
-  "runtime": "bun",
-  "version": "0.1.0",
-  "visibility": "public"
+  }
 }

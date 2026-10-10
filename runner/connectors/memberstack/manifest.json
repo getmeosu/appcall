@@ -1,1 +1,958 @@
-{"auth":{"scopes":[],"setup":{"fields":[{"key":"apiKey","label":"Memberstack secret key","required":true,"secret":true}],"mode":"api_key"},"type":"api_key"},"categories":["dev-tools"],"evidence":{"fixture":{"status":"supplied"},"live":{"status":"unverified"}},"http":{"auth":{"field":"apiKey","in":"header","name":"x-api-key","value":"{{apiKey}}"},"baseUrl":"https://admin.memberstack.com","errors":{"defaultRetryAfterSeconds":30,"messagePaths":["message","code","error"],"rateLimitStatuses":[429],"retryAfterHeader":"retry-after"},"headers":{"Accept":"application/json"}},"key":"memberstack","models":["member"],"name":"Memberstack","network":{"allowedHosts":["admin.memberstack.com"]},"operations":{"healthcheck":{"description":"Validate the Memberstack secret key with GET /members?limit=1.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{},"type":"object"},"kind":"action","maxInputBytes":4096,"maxResponseBytes":65536,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/members","query":{"limit":"1"},"success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":5000,"title":"Healthcheck","validationMode":"strict-generated"},"members.get":{"description":"Retrieve one Memberstack member by ID or email.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{"idOrEmail":{"minLength":1,"type":"string"},"include":{"minLength":1,"type":"string"}},"required":["idOrEmail"],"type":"object"},"kind":"action","maxInputBytes":65536,"maxResponseBytes":1048576,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/members/{{idOrEmail}}","query":{"include":"{{include}}"},"success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":10000,"title":"Get member","validationMode":"strict-generated"},"members.list":{"description":"List Memberstack members with optional cursor pagination.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{"after":{"minimum":0,"type":"integer"},"includeJSON":{"type":"boolean"},"limit":{"maximum":100,"minimum":1,"type":"integer"},"order":{"enum":["ASC","DESC"],"type":"string"}},"type":"object"},"kind":"action","maxInputBytes":65536,"maxResponseBytes":5242880,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/members","query":{"after":"{{after}}","includeJSON":"{{includeJSON}}","limit":"{{limit}}","order":"{{order}}"},"success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":15000,"title":"List members","validationMode":"strict-generated"}},"provenance":{"source":{"revision":"33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a","url":"https://github.com/oomol-lab/open-connector"}},"runtime":"bun","version":"0.1.0","visibility":"public"}
+{
+  "key": "memberstack",
+  "name": "Memberstack",
+  "version": "0.2.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "dev-tools"
+  ],
+  "auth": {
+    "type": "api_key",
+    "scopes": [],
+    "setup": {
+      "mode": "api_key",
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "Memberstack secret key",
+          "required": true,
+          "secret": true
+        }
+      ]
+    }
+  },
+  "provenance": {
+    "source": {
+      "url": "https://github.com/oomol-lab/open-connector",
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "admin.memberstack.com"
+    ]
+  },
+  "models": [
+    "member",
+    "data_table",
+    "data_record"
+  ],
+  "http": {
+    "baseUrl": "https://admin.memberstack.com",
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "x-api-key",
+      "value": "{{apiKey}}"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after",
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "message",
+        "code",
+        "error"
+      ]
+    },
+    "headers": {
+      "Accept": "application/json"
+    }
+  },
+  "operations": {
+    "healthcheck": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 5000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "title": "Healthcheck",
+      "description": "Validate the Memberstack secret key with GET /members?limit=1.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/members",
+        "query": {
+          "limit": "1"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "members.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List members",
+      "description": "List Memberstack members with optional cursor pagination.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "after": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "order": {
+            "type": "string",
+            "enum": [
+              "ASC",
+              "DESC"
+            ]
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "includeJSON": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/members",
+        "query": {
+          "after": "{{after}}",
+          "order": "{{order}}",
+          "limit": "{{limit}}",
+          "includeJSON": "{{includeJSON}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "members.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get member",
+      "description": "Retrieve one Memberstack member by ID or email.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "idOrEmail": {
+            "type": "string",
+            "minLength": 1
+          },
+          "include": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "idOrEmail"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/members/{{idOrEmail}}",
+        "query": {
+          "include": "{{include}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "members.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create member",
+      "description": "Create a Memberstack member with email and optional password or login redirect.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Member email address."
+          },
+          "password": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Member password. Required unless passwordless auth is enabled."
+          },
+          "loginRedirect": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Path to redirect to after login."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "email"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/members",
+        "success": [
+          200
+        ],
+        "body": {
+          "email": "{{email}}",
+          "password": "{{password}}",
+          "loginRedirect": "{{loginRedirect}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "members.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Update member",
+      "description": "Partially update a Memberstack member by member ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Member ID starting with mem_."
+          },
+          "email": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Updated email address."
+          },
+          "loginRedirect": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Updated login redirect path."
+          },
+          "verified": {
+            "type": "boolean",
+            "description": "Email-verified status."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/members/{{id}}",
+        "success": [
+          200
+        ],
+        "body": {
+          "email": "{{email}}",
+          "loginRedirect": "{{loginRedirect}}",
+          "verified": "{{verified}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "members.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Delete member",
+      "description": "Permanently delete a Memberstack member by member ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Member ID starting with mem_."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/members/{{id}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "members.addPlan": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Add plan",
+      "description": "Add a free Memberstack plan to a member.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Member ID starting with mem_."
+          },
+          "planId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Free plan ID starting with pln_."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "planId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "added",
+          "planId"
+        ],
+        "properties": {
+          "added": {
+            "type": "boolean"
+          },
+          "planId": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/members/{{id}}/add-plan",
+        "success": [
+          200
+        ],
+        "body": {
+          "planId": "{{planId}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "result": {
+          "added": true,
+          "planId": "{{input.planId}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "members.removePlan": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Remove plan",
+      "description": "Remove a free Memberstack plan from a member.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Member ID starting with mem_."
+          },
+          "planId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Free plan ID starting with pln_."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "planId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "removed",
+          "planId"
+        ],
+        "properties": {
+          "removed": {
+            "type": "boolean"
+          },
+          "planId": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/members/{{id}}/remove-plan",
+        "success": [
+          200
+        ],
+        "body": {
+          "planId": "{{planId}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "result": {
+          "removed": true,
+          "planId": "{{input.planId}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "members.verifyToken": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Verify member token",
+      "description": "Verify a Memberstack member access token and return the decoded payload.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Member access token issued by Memberstack."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "token"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/members/verify-token",
+        "success": [
+          200
+        ],
+        "body": {
+          "token": "{{token}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "dataTables.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List data tables",
+      "description": "List Memberstack data tables in the application.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/data-tables",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "dataTables.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get data table",
+      "description": "Retrieve one Memberstack data table by key or ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "tableKey": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Table key or table ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "tableKey"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/data-tables/{{tableKey}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "dataRecords.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create data record",
+      "description": "Create a record in a Memberstack data table.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "tableKey": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Table key or table ID."
+          },
+          "data": {
+            "type": "object",
+            "description": "Field key-value pairs for the new record."
+          },
+          "memberId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Optional owning member ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "tableKey",
+          "data"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v2/data-tables/{{tableKey}}/records",
+        "success": [
+          200
+        ],
+        "body": {
+          "data": "{{data}}",
+          "memberId": "{{memberId}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "dataRecords.query": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Query data records",
+      "description": "Query Memberstack data table records with filters, sort, and pagination.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "tableKey": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Table key or table ID."
+          },
+          "query": {
+            "type": "object",
+            "description": "findMany or findUnique query object."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "tableKey",
+          "query"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v2/data-tables/{{tableKey}}/records/query",
+        "success": [
+          200
+        ],
+        "body": {
+          "query": "{{query}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "dataRecords.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get data record",
+      "description": "Retrieve one Memberstack data table record by ID using findUnique.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "tableKey": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Table key or table ID."
+          },
+          "recordId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Record ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "tableKey",
+          "recordId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v2/data-tables/{{tableKey}}/records/query",
+        "success": [
+          200
+        ],
+        "body": {
+          "query": {
+            "findUnique": {
+              "where": {
+                "id": "{{recordId}}"
+              }
+            }
+          }
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "dataRecords.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Update data record",
+      "description": "Partially update a Memberstack data table record.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "tableKey": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Table key or table ID."
+          },
+          "recordId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Record ID."
+          },
+          "data": {
+            "type": "object",
+            "description": "Field key-value pairs to update."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "tableKey",
+          "recordId",
+          "data"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/v2/data-tables/{{tableKey}}/records/{{recordId}}",
+        "success": [
+          200
+        ],
+        "body": {
+          "data": "{{data}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "dataRecords.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Delete data record",
+      "description": "Permanently delete a Memberstack data table record.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "tableKey": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Table key or table ID."
+          },
+          "recordId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Record ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "tableKey",
+          "recordId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/v2/data-tables/{{tableKey}}/records/{{recordId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    }
+  },
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
+    }
+  }
+}

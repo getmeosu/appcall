@@ -87,8 +87,19 @@
       "healthcheck",
       "bookings.list",
       "bookings.get",
+      "bookings.create",
+      "bookings.cancel",
       "cities.list",
-      "products.get"
+      "cities.get",
+      "categories.listByCity",
+      "collections.listByCity",
+      "subcategories.listByCity",
+      "products.listByCity",
+      "products.listByCategory",
+      "products.listByCollection",
+      "products.get",
+      "inventory.listByVariant",
+      "reviews.listByProduct"
     ],
     "upstreamSha": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
     "marketFocus": "international",
@@ -205,6 +216,32 @@
         "bookingId is a required path segment on GET /booking/{bookingId}."
       ]
     },
+    "bookings.create": {
+      "upstreamActionId": "list_bookings",
+      "sourceRefs": [
+        "provider-auth"
+      ],
+      "documentationUrls": [
+        "https://partner.headout.com/affiliate"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "POST /booking creates a booking. Previously omitted write from the pinned source."
+      ]
+    },
+    "bookings.cancel": {
+      "upstreamActionId": "get_booking",
+      "sourceRefs": [
+        "provider-auth"
+      ],
+      "documentationUrls": [
+        "https://partner.headout.com/affiliate"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "POST /booking/{bookingId}/cancel cancels a booking. Previously omitted write from the pinned source."
+      ]
+    },
     "cities.list": {
       "upstreamActionId": "list_cities",
       "sourceRefs": [
@@ -218,6 +255,97 @@
       "responseContract": "appcall-provider-json-v1",
       "adaptations": [
         "Optional offset and limit use official query names on GET /city."
+      ]
+    },
+    "cities.get": {
+      "upstreamActionId": "list_cities",
+      "sourceRefs": [
+        "provider-auth"
+      ],
+      "documentationUrls": [
+        "https://partner.headout.com/affiliate"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "GET /city/{cityCode} reads one city from the public v1 city collection."
+      ]
+    },
+    "categories.listByCity": {
+      "upstreamActionId": "list_cities",
+      "sourceRefs": [
+        "provider-auth"
+      ],
+      "documentationUrls": [
+        "https://partner.headout.com/affiliate"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Pinned list_categories_by_city is GET /category/list-by/city?cityCode=."
+      ]
+    },
+    "collections.listByCity": {
+      "upstreamActionId": "list_cities",
+      "sourceRefs": [
+        "provider-auth"
+      ],
+      "documentationUrls": [
+        "https://partner.headout.com/affiliate"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "GET /collection/list-by/city follows the public v1 list-by pattern for collections."
+      ]
+    },
+    "subcategories.listByCity": {
+      "upstreamActionId": "list_cities",
+      "sourceRefs": [
+        "provider-auth"
+      ],
+      "documentationUrls": [
+        "https://partner.headout.com/affiliate"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "GET /subcategory/list-by/city follows the public v1 list-by pattern for subcategories."
+      ]
+    },
+    "products.listByCity": {
+      "upstreamActionId": "get_product",
+      "sourceRefs": [
+        "provider-auth"
+      ],
+      "documentationUrls": [
+        "https://partner.headout.com/affiliate"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Pinned list_products_by_city is GET /product/listing/list-by/city."
+      ]
+    },
+    "products.listByCategory": {
+      "upstreamActionId": "get_product",
+      "sourceRefs": [
+        "provider-auth"
+      ],
+      "documentationUrls": [
+        "https://partner.headout.com/affiliate"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Pinned list_products_by_category is GET /product/listing/list-by/category."
+      ]
+    },
+    "products.listByCollection": {
+      "upstreamActionId": "get_product",
+      "sourceRefs": [
+        "provider-auth"
+      ],
+      "documentationUrls": [
+        "https://partner.headout.com/affiliate"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "GET /product/listing/list-by/collection follows the public v1 listing list-by pattern."
       ]
     },
     "products.get": {
@@ -234,12 +362,38 @@
       "adaptations": [
         "productId is a required path segment on GET /product/get/{productId}. Optional currencyCode, language, and fetchVariants map to currencyCode, language, and fetch-variants query names from pinned source."
       ]
+    },
+    "inventory.listByVariant": {
+      "upstreamActionId": "get_product",
+      "sourceRefs": [
+        "provider-auth"
+      ],
+      "documentationUrls": [
+        "https://partner.headout.com/affiliate"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Pinned list_inventory_by_variant is GET /inventory/list-by/variant."
+      ]
+    },
+    "reviews.listByProduct": {
+      "upstreamActionId": "get_product",
+      "sourceRefs": [
+        "provider-auth"
+      ],
+      "documentationUrls": [
+        "https://partner.headout.com/affiliate"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "GET /review/list-by/product follows the public v1 list-by pattern for product reviews."
+      ]
     }
   },
   "manifest": {
     "key": "headout",
     "name": "Headout",
-    "version": "0.1.0",
+    "version": "0.2.0",
     "runtime": "bun",
     "visibility": "public",
     "categories": [
@@ -268,7 +422,10 @@
     "models": [
       "booking",
       "city",
-      "product"
+      "category",
+      "collection",
+      "product",
+      "inventory"
     ],
     "http": {
       "baseUrl": "https://www.headout.com/api/public/v1",
@@ -427,6 +584,128 @@
         "validationMode": "strict-generated",
         "responseFormat": "json"
       },
+      "bookings.create": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "write",
+        "title": "Create booking",
+        "description": "Create a Headout booking for a product variant.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "variantId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Variant id to book."
+            },
+            "startDateTime": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Slot start local date-time."
+            },
+            "partnerReferenceId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Partner booking reference."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "variantId",
+            "startDateTime"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "POST",
+          "path": "/booking",
+          "success": [
+            200,
+            201
+          ],
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "variantId": "{{variantId}}",
+            "startDateTime": "{{startDateTime}}",
+            "partnerReferenceId": "{{partnerReferenceId}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "bookings.cancel": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "destructive",
+        "title": "Cancel booking",
+        "description": "Cancel a Headout booking by booking id.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "bookingId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Booking id."
+            },
+            "reason": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Cancellation reason."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "bookingId"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "POST",
+          "path": "/booking/{{bookingId}}/cancel",
+          "success": [
+            200,
+            201
+          ],
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "reason": "{{reason}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
       "cities.list": {
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
@@ -471,6 +750,447 @@
           "success": [
             200
           ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "cities.get": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "read",
+        "title": "Get city",
+        "description": "Get one Headout city by city code.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "cityCode": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Headout city code."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "cityCode"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/city/{{cityCode}}",
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "categories.listByCity": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "read",
+        "title": "List categories by city",
+        "description": "List Headout categories for a given city.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "cityCode": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Headout city code."
+            },
+            "offset": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Pagination offset."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Page size."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "cityCode"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/category/list-by/city",
+          "success": [
+            200
+          ],
+          "query": {
+            "cityCode": "{{cityCode}}",
+            "offset": "{{offset}}",
+            "limit": "{{limit}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "collections.listByCity": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "read",
+        "title": "List collections by city",
+        "description": "List Headout collections for a given city.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "cityCode": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Headout city code."
+            },
+            "language": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Language code."
+            },
+            "offset": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Pagination offset."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Page size."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "cityCode"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/collection/list-by/city",
+          "success": [
+            200
+          ],
+          "query": {
+            "cityCode": "{{cityCode}}",
+            "language": "{{language}}",
+            "offset": "{{offset}}",
+            "limit": "{{limit}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "subcategories.listByCity": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "read",
+        "title": "List subcategories by city",
+        "description": "List Headout subcategories for a given city.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "cityCode": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Headout city code."
+            },
+            "offset": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Pagination offset."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Page size."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "cityCode"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/subcategory/list-by/city",
+          "success": [
+            200
+          ],
+          "query": {
+            "cityCode": "{{cityCode}}",
+            "offset": "{{offset}}",
+            "limit": "{{limit}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "products.listByCity": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "read",
+        "title": "List products by city",
+        "description": "List Headout product listings for a city.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "cityCode": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Headout city code."
+            },
+            "currencyCode": {
+              "type": "string",
+              "minLength": 1,
+              "description": "ISO 4217 currency code."
+            },
+            "language": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Language code."
+            },
+            "offset": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Pagination offset."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Page size."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "cityCode"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/product/listing/list-by/city",
+          "success": [
+            200
+          ],
+          "query": {
+            "cityCode": "{{cityCode}}",
+            "currencyCode": "{{currencyCode}}",
+            "language": "{{language}}",
+            "offset": "{{offset}}",
+            "limit": "{{limit}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "products.listByCategory": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "read",
+        "title": "List products by category",
+        "description": "List Headout product listings for a category.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "categoryId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Category id."
+            },
+            "currencyCode": {
+              "type": "string",
+              "minLength": 1,
+              "description": "ISO 4217 currency code."
+            },
+            "language": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Language code."
+            },
+            "offset": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Pagination offset."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Page size."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "categoryId"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/product/listing/list-by/category",
+          "success": [
+            200
+          ],
+          "query": {
+            "categoryId": "{{categoryId}}",
+            "currencyCode": "{{currencyCode}}",
+            "language": "{{language}}",
+            "offset": "{{offset}}",
+            "limit": "{{limit}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "products.listByCollection": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "read",
+        "title": "List products by collection",
+        "description": "List Headout product listings for a collection.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "collectionId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Collection id."
+            },
+            "currencyCode": {
+              "type": "string",
+              "minLength": 1,
+              "description": "ISO 4217 currency code."
+            },
+            "offset": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Pagination offset."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Page size."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "collectionId"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/product/listing/list-by/collection",
+          "success": [
+            200
+          ],
+          "query": {
+            "collectionId": "{{collectionId}}",
+            "currencyCode": "{{currencyCode}}",
+            "offset": "{{offset}}",
+            "limit": "{{limit}}"
+          }
         },
         "enforceOutputSchema": true,
         "validationMode": "strict-generated",
@@ -531,6 +1251,144 @@
           "success": [
             200
           ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "inventory.listByVariant": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "read",
+        "title": "List inventory by variant",
+        "description": "List Headout inventory rows for one variant.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "variantId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Variant id."
+            },
+            "startDateTime": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Lower bound start date-time."
+            },
+            "endDateTime": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Upper bound end date-time."
+            },
+            "currencyCode": {
+              "type": "string",
+              "minLength": 1,
+              "description": "ISO 4217 currency code."
+            },
+            "offset": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Pagination offset."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Page size."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "variantId"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/inventory/list-by/variant",
+          "success": [
+            200
+          ],
+          "query": {
+            "variantId": "{{variantId}}",
+            "startDateTime": "{{startDateTime}}",
+            "endDateTime": "{{endDateTime}}",
+            "currencyCode": "{{currencyCode}}",
+            "offset": "{{offset}}",
+            "limit": "{{limit}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "reviews.listByProduct": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "read",
+        "title": "List reviews by product",
+        "description": "List Headout reviews for a product.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "productId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Product id."
+            },
+            "offset": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Pagination offset."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Page size."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "productId"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/review/list-by/product",
+          "success": [
+            200
+          ],
+          "query": {
+            "productId": "{{productId}}",
+            "offset": "{{offset}}",
+            "limit": "{{limit}}"
+          }
         },
         "enforceOutputSchema": true,
         "validationMode": "strict-generated",

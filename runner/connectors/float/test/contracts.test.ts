@@ -18,7 +18,7 @@ describe("float declarative fixture contracts", () => {
   });
   it("rejects invalid page before fetch, maps 401/429, and rejects malformed output", async () => {
     let calls = 0; const fetch = async () => { calls++; return new Response("[]"); };
-    expect(() => actions["people.list"]!({ apiKey: "x", page: 0 })).toThrow(); expect(calls).toBe(0);
+    await expect(Promise.resolve(actions["people.list"]!({ apiKey: "x", active: 2, fetch }))).rejects.toMatchObject({ code: "INVALID_ACTION_INPUT" }); expect(calls).toBe(0);
     await expect(actions.healthcheck!({ apiKey: "x", fetch: async () => new Response('{"error":"bad"}', { status: 401 }) })).rejects.toMatchObject({ code: "CONNECTOR_UPSTREAM_ERROR" });
     await expect(actions.healthcheck!({ apiKey: "x", fetch: async () => new Response("[]", { status: 429, headers: { "retry-after": "7" } }) })).rejects.toMatchObject({ code: "CONNECTOR_RATE_LIMITED", retryAfterSeconds: 7 });
     await expect(actions["clients.list"]!({ apiKey: "x", fetch: async () => new Response("null") })).rejects.toMatchObject({ code: "CONNECTOR_RESPONSE_INVALID" });

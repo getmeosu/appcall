@@ -1,7 +1,17 @@
 {
+  "key": "acuity-scheduling",
+  "name": "Acuity Scheduling",
+  "version": "0.2.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "scheduling"
+  ],
   "auth": {
+    "type": "api_key",
     "scopes": [],
     "setup": {
+      "mode": "api_key",
       "fields": [
         {
           "key": "userId",
@@ -15,90 +25,159 @@
           "required": true,
           "secret": true
         }
-      ],
-      "mode": "api_key"
-    },
-    "type": "api_key"
-  },
-  "categories": [
-    "scheduling"
-  ],
-  "evidence": {
-    "fixture": {
-      "status": "supplied"
-    },
-    "live": {
-      "status": "unverified"
+      ]
     }
   },
-  "http": {
-    "auth": {
-      "basic": {
-        "password": "{{apiKey}}",
-        "username": "{{userId}}"
-      },
-      "field": "apiKey",
-      "in": "header",
-      "name": "Authorization"
-    },
-    "baseUrl": "https://acuityscheduling.com/api/v1",
-    "errors": {
-      "defaultRetryAfterSeconds": 30,
-      "messagePaths": [
-        "message",
-        "error",
-        "detail"
-      ],
-      "rateLimitStatuses": [
-        429
-      ],
-      "retryAfterHeader": "retry-after"
-    },
-    "headers": {
-      "Accept": "application/json"
+  "provenance": {
+    "source": {
+      "url": "https://github.com/oomol-lab/open-connector",
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"
     }
   },
-  "key": "acuity-scheduling",
-  "models": [
-    "account",
-    "calendar",
-    "appointment-type",
-    "form",
-    "appointment"
-  ],
-  "name": "Acuity Scheduling",
   "network": {
     "allowedHosts": [
       "acuityscheduling.com"
     ]
   },
+  "models": [
+    "account",
+    "calendar",
+    "appointment-type",
+    "form",
+    "appointment",
+    "client",
+    "block",
+    "label",
+    "product"
+  ],
+  "http": {
+    "baseUrl": "https://acuityscheduling.com/api/v1",
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "Authorization",
+      "basic": {
+        "username": "{{userId}}",
+        "password": "{{apiKey}}"
+      }
+    },
+    "headers": {
+      "Accept": "application/json"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after",
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "message",
+        "error",
+        "detail"
+      ]
+    }
+  },
   "operations": {
-    "appointment-types.list": {
-      "description": "List appointment types configured in Acuity Scheduling.",
-      "enforceOutputSchema": true,
+    "healthcheck": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 5000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "title": "Healthcheck",
+      "description": "Validate Acuity Scheduling credentials with GET /me.",
       "inputSchema": {
-        "additionalProperties": false,
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
-          "includeDeleted": {
-            "type": "boolean"
+          "data": {
+            "type": "object"
           }
         },
-        "type": "object"
+        "additionalProperties": false
       },
+      "request": {
+        "method": "GET",
+        "path": "/me",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "calendars.list": {
       "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
+      "title": "List calendars",
+      "description": "List calendars configured in the Acuity Scheduling account.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
       "outputSchema": {
-        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "array"
           }
         },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/calendars",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "appointment-types.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List appointment types",
+      "description": "List appointment types configured in Acuity Scheduling.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "includeDeleted": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
         "required": [
           "data"
         ],
-        "type": "object"
+        "properties": {
+          "data": {
+            "type": "array"
+          }
+        },
+        "additionalProperties": false
       },
       "request": {
         "method": "GET",
@@ -110,129 +189,34 @@
           200
         ]
       },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "title": "List appointment types",
-      "validationMode": "strict-generated"
-    },
-    "appointments.list": {
-      "description": "List Acuity Scheduling appointments with optional date and canceled filters.",
       "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "canceled": {
-            "type": "boolean"
-          },
-          "max": {
-            "maximum": 1000,
-            "minimum": 1,
-            "type": "integer"
-          },
-          "maxDate": {
-            "minLength": 1,
-            "type": "string"
-          },
-          "minDate": {
-            "minLength": 1,
-            "type": "string"
-          }
-        },
-        "type": "object"
-      },
-      "kind": "action",
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "outputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "data": {
-            "type": "array"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "type": "object"
-      },
-      "request": {
-        "method": "GET",
-        "path": "/appointments",
-        "query": {
-          "canceled": "{{canceled}}",
-          "max": "{{max}}",
-          "maxDate": "{{maxDate}}",
-          "minDate": "{{minDate}}"
-        },
-        "success": [
-          200
-        ]
-      },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "title": "List appointments",
-      "validationMode": "strict-generated"
-    },
-    "calendars.list": {
-      "description": "List calendars configured in the Acuity Scheduling account.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {},
-        "type": "object"
-      },
-      "kind": "action",
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "outputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "data": {
-            "type": "array"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "type": "object"
-      },
-      "request": {
-        "method": "GET",
-        "path": "/calendars",
-        "success": [
-          200
-        ]
-      },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "title": "List calendars",
-      "validationMode": "strict-generated"
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
     },
     "forms.list": {
-      "description": "List intake forms configured in Acuity Scheduling.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {},
-        "type": "object"
-      },
       "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
+      "title": "List intake forms",
+      "description": "List intake forms configured in Acuity Scheduling.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
       "outputSchema": {
-        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "array"
           }
         },
-        "required": [
-          "data"
-        ],
-        "type": "object"
+        "additionalProperties": false
       },
       "request": {
         "method": "GET",
@@ -241,56 +225,943 @@
           200
         ]
       },
-      "responseFormat": "json",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "appointments.list": {
+      "kind": "action",
       "sideEffect": "read",
       "timeoutMs": 15000,
-      "title": "List intake forms",
-      "validationMode": "strict-generated"
-    },
-    "healthcheck": {
-      "description": "Validate Acuity Scheduling credentials with GET /me.",
-      "enforceOutputSchema": true,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List appointments",
+      "description": "List Acuity Scheduling appointments with optional date and canceled filters.",
       "inputSchema": {
-        "additionalProperties": false,
-        "properties": {},
-        "type": "object"
+        "type": "object",
+        "properties": {
+          "max": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000
+          },
+          "minDate": {
+            "type": "string",
+            "minLength": 1
+          },
+          "maxDate": {
+            "type": "string",
+            "minLength": 1
+          },
+          "canceled": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
       },
-      "kind": "action",
-      "maxInputBytes": 4096,
-      "maxResponseBytes": 65536,
       "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/appointments",
+        "query": {
+          "max": "{{max}}",
+          "minDate": "{{minDate}}",
+          "maxDate": "{{maxDate}}",
+          "canceled": "{{canceled}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "appointments.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get appointment",
+      "description": "Retrieve one Acuity Scheduling appointment by ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "appointmentId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Appointment ID."
+          }
+        },
         "additionalProperties": false,
+        "required": [
+          "appointmentId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "required": [
-          "data"
-        ],
-        "type": "object"
+        "additionalProperties": false
       },
       "request": {
         "method": "GET",
-        "path": "/me",
+        "path": "/appointments/{{appointmentId}}",
         "success": [
           200
         ]
       },
-      "responseFormat": "json",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "appointments.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create appointment",
+      "description": "Book an Acuity Scheduling appointment.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "datetime": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Appointment start datetime."
+          },
+          "appointmentTypeID": {
+            "type": "integer",
+            "description": "Appointment type ID."
+          },
+          "firstName": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Client first name."
+          },
+          "lastName": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Client last name."
+          },
+          "email": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Client email."
+          },
+          "calendarID": {
+            "type": "integer",
+            "description": "Calendar ID."
+          },
+          "phone": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Client phone number."
+          },
+          "notes": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Admin notes."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "datetime",
+          "appointmentTypeID",
+          "firstName",
+          "lastName"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/appointments",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "datetime": "{{datetime}}",
+          "appointmentTypeID": "{{appointmentTypeID}}",
+          "firstName": "{{firstName}}",
+          "lastName": "{{lastName}}",
+          "email": "{{email}}",
+          "calendarID": "{{calendarID}}",
+          "phone": "{{phone}}",
+          "notes": "{{notes}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "appointments.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Update appointment",
+      "description": "Update whitelist attributes on an Acuity Scheduling appointment.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "appointmentId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Appointment ID."
+          },
+          "firstName": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Client first name."
+          },
+          "lastName": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Client last name."
+          },
+          "email": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Client email."
+          },
+          "phone": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Client phone number."
+          },
+          "notes": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Admin notes."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "appointmentId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/appointments/{{appointmentId}}",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "firstName": "{{firstName}}",
+          "lastName": "{{lastName}}",
+          "email": "{{email}}",
+          "phone": "{{phone}}",
+          "notes": "{{notes}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "appointments.cancel": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Cancel appointment",
+      "description": "Cancel an Acuity Scheduling appointment.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "appointmentId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Appointment ID."
+          },
+          "cancelNote": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Cancellation note."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "appointmentId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/appointments/{{appointmentId}}/cancel",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "cancelNote": "{{cancelNote}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "appointments.reschedule": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Reschedule appointment",
+      "description": "Move an Acuity Scheduling appointment to a new datetime.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "appointmentId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Appointment ID."
+          },
+          "datetime": {
+            "type": "string",
+            "minLength": 1,
+            "description": "New appointment datetime."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "appointmentId",
+          "datetime"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/appointments/{{appointmentId}}/reschedule",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "datetime": "{{datetime}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "appointment-types.get": {
+      "kind": "action",
       "sideEffect": "read",
-      "timeoutMs": 5000,
-      "title": "Healthcheck",
-      "validationMode": "strict-generated"
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get appointment type",
+      "description": "Retrieve one Acuity Scheduling appointment type by ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "appointmentTypeId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Appointment type ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "appointmentTypeId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/appointment-types/{{appointmentTypeId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "clients.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List clients",
+      "description": "List clients stored in the Acuity Scheduling account.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "max": {
+            "type": "integer",
+            "description": "Maximum number of clients to return.",
+            "minimum": 1,
+            "maximum": 1000
+          },
+          "search": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Search query."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/clients",
+        "success": [
+          200
+        ],
+        "query": {
+          "max": "{{max}}",
+          "search": "{{search}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "clients.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create client",
+      "description": "Create a client in Acuity Scheduling.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "firstName": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Client first name."
+          },
+          "lastName": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Client last name."
+          },
+          "email": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Client email."
+          },
+          "phone": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Client phone number."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "firstName",
+          "lastName"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/clients",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "firstName": "{{firstName}}",
+          "lastName": "{{lastName}}",
+          "email": "{{email}}",
+          "phone": "{{phone}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "availability.dates": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List available dates",
+      "description": "List dates that have availability for an appointment type.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "appointmentTypeID": {
+            "type": "integer",
+            "description": "Appointment type ID."
+          },
+          "month": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Month in YYYY-MM format."
+          },
+          "calendarID": {
+            "type": "integer",
+            "description": "Calendar ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "appointmentTypeID",
+          "month"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/availability/dates",
+        "success": [
+          200
+        ],
+        "query": {
+          "appointmentTypeID": "{{appointmentTypeID}}",
+          "month": "{{month}}",
+          "calendarID": "{{calendarID}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "availability.times": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List available times",
+      "description": "List available time slots for an appointment type on a date.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "appointmentTypeID": {
+            "type": "integer",
+            "description": "Appointment type ID."
+          },
+          "date": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Date in YYYY-MM-DD format."
+          },
+          "calendarID": {
+            "type": "integer",
+            "description": "Calendar ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "appointmentTypeID",
+          "date"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/availability/times",
+        "success": [
+          200
+        ],
+        "query": {
+          "appointmentTypeID": "{{appointmentTypeID}}",
+          "date": "{{date}}",
+          "calendarID": "{{calendarID}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "blocks.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List blocks",
+      "description": "List calendar blocks in the Acuity Scheduling account.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "minDate": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Only include blocks on or after this date."
+          },
+          "maxDate": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Only include blocks on or before this date."
+          },
+          "calendarID": {
+            "type": "integer",
+            "description": "Calendar ID."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/blocks",
+        "success": [
+          200
+        ],
+        "query": {
+          "minDate": "{{minDate}}",
+          "maxDate": "{{maxDate}}",
+          "calendarID": "{{calendarID}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "blocks.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create block",
+      "description": "Create a calendar block in Acuity Scheduling.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "start": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Block start datetime."
+          },
+          "end": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Block end datetime."
+          },
+          "calendarID": {
+            "type": "integer",
+            "description": "Calendar ID."
+          },
+          "notes": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Block notes."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "start",
+          "end",
+          "calendarID"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/blocks",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "start": "{{start}}",
+          "end": "{{end}}",
+          "calendarID": "{{calendarID}}",
+          "notes": "{{notes}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "blocks.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Delete block",
+      "description": "Delete a calendar block in Acuity Scheduling.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "blockId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Block ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "blockId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/blocks/{{blockId}}",
+        "success": [
+          200,
+          201
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "labels.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List labels",
+      "description": "List appointment labels configured in Acuity Scheduling.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/labels",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "products.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List products",
+      "description": "List products such as packages and gift certificates.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/products",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
     }
   },
-  "provenance": {
-    "source": {
-      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
-      "url": "https://github.com/oomol-lab/open-connector"
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
     }
-  },
-  "runtime": "bun",
-  "version": "0.1.0",
-  "visibility": "public"
+  }
 }

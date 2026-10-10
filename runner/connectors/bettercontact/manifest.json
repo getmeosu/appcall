@@ -1,7 +1,17 @@
 {
+  "key": "bettercontact",
+  "name": "BetterContact",
+  "version": "0.2.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "crm"
+  ],
   "auth": {
+    "type": "api_key",
     "scopes": [],
     "setup": {
+      "mode": "api_key",
       "fields": [
         {
           "key": "apiKey",
@@ -9,79 +19,74 @@
           "required": true,
           "secret": true
         }
-      ],
-      "mode": "api_key"
-    },
-    "type": "api_key"
-  },
-  "categories": [
-    "crm"
-  ],
-  "evidence": {
-    "fixture": {
-      "status": "supplied"
-    },
-    "live": {
-      "status": "unverified"
+      ]
     }
   },
+  "provenance": {
+    "source": {
+      "url": "https://github.com/oomol-lab/open-connector",
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "app.bettercontact.rocks"
+    ]
+  },
+  "models": [
+    "account",
+    "enrichment",
+    "lead",
+    "company"
+  ],
   "http": {
+    "baseUrl": "https://app.bettercontact.rocks/api/v2",
     "auth": {
       "field": "apiKey",
       "in": "header",
       "name": "X-API-Key",
       "value": "{{apiKey}}"
     },
-    "baseUrl": "https://app.bettercontact.rocks/api/v2",
+    "headers": {
+      "Accept": "application/json"
+    },
     "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after",
       "defaultRetryAfterSeconds": 30,
       "messagePaths": [
         "error",
         "message"
-      ],
-      "rateLimitStatuses": [
-        429
-      ],
-      "retryAfterHeader": "retry-after"
-    },
-    "headers": {
-      "Accept": "application/json"
+      ]
     }
   },
-  "key": "bettercontact",
-  "models": [
-    "account",
-    "enrichment"
-  ],
-  "name": "BetterContact",
-  "network": {
-    "allowedHosts": [
-      "app.bettercontact.rocks"
-    ]
-  },
   "operations": {
-    "account.get": {
-      "description": "Get remaining BetterContact credits for the API key.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {},
-        "type": "object"
-      },
+    "healthcheck": {
       "kind": "action",
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "timeoutMs": 5000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "title": "Healthcheck",
+      "description": "Validate the BetterContact API key by reading account credits.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
       "outputSchema": {
-        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "required": [
-          "data"
-        ],
-        "type": "object"
+        "additionalProperties": false
       },
       "request": {
         "method": "GET",
@@ -90,42 +95,78 @@
           200
         ]
       },
-      "responseFormat": "json",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "account.get": {
+      "kind": "action",
       "sideEffect": "read",
       "timeoutMs": 15000,
-      "title": "Get account balance",
-      "validationMode": "strict-generated"
-    },
-    "enrichment.result.get": {
-      "description": "Get a previously submitted BetterContact enrichment by request ID.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "requestId": {
-            "minLength": 1,
-            "type": "string"
-          }
-        },
-        "required": [
-          "requestId"
-        ],
-        "type": "object"
-      },
-      "kind": "action",
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
+      "title": "Get account balance",
+      "description": "Get remaining BetterContact credits for the API key.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
       "outputSchema": {
-        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/account",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "enrichment.result.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get enrichment result",
+      "description": "Get a previously submitted BetterContact enrichment by request ID.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "requestId"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
         "required": [
           "data"
         ],
-        "type": "object"
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
       },
       "request": {
         "method": "GET",
@@ -134,56 +175,1048 @@
           200
         ]
       },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "title": "Get enrichment result",
-      "validationMode": "strict-generated"
-    },
-    "healthcheck": {
-      "description": "Validate the BetterContact API key by reading account credits.",
       "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {},
-        "type": "object"
-      },
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "enrichment.create": {
       "kind": "action",
-      "maxInputBytes": 4096,
-      "maxResponseBytes": 65536,
-      "outputSchema": {
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create email enrichment",
+      "description": "Submit up to 100 leads for waterfall work-email enrichment.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "first_name": {
+            "type": "string",
+            "description": "Contact first name.",
+            "minLength": 1
+          },
+          "last_name": {
+            "type": "string",
+            "description": "Contact last name.",
+            "minLength": 1
+          },
+          "company": {
+            "type": "string",
+            "description": "Company name."
+          },
+          "company_domain": {
+            "type": "string",
+            "description": "Company domain."
+          },
+          "linkedin_url": {
+            "type": "string",
+            "description": "Public LinkedIn profile URL."
+          },
+          "webhook": {
+            "type": "string",
+            "description": "URL that receives the finished batch."
+          },
+          "enrich_email_address": {
+            "type": "boolean",
+            "description": "Enrich work email addresses."
+          }
+        },
         "additionalProperties": false,
+        "required": [
+          "first_name",
+          "last_name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/async",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "data": [
+            {
+              "first_name": "{{first_name}}",
+              "last_name": "{{last_name}}",
+              "company": "{{company}}",
+              "company_domain": "{{company_domain}}",
+              "linkedin_url": "{{linkedin_url}}"
+            }
+          ],
+          "webhook": "{{webhook}}",
+          "enrich_email_address": "{{enrich_email_address}}"
+        },
+        "success": [
+          201
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "enrichment.create_phone": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create phone enrichment",
+      "description": "Submit leads for waterfall mobile-phone enrichment. Phone add-on required.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "first_name": {
+            "type": "string",
+            "description": "Contact first name.",
+            "minLength": 1
+          },
+          "last_name": {
+            "type": "string",
+            "description": "Contact last name.",
+            "minLength": 1
+          },
+          "company": {
+            "type": "string",
+            "description": "Company name."
+          },
+          "company_domain": {
+            "type": "string",
+            "description": "Company domain."
+          },
+          "linkedin_url": {
+            "type": "string",
+            "description": "Public LinkedIn profile URL."
+          },
+          "webhook": {
+            "type": "string",
+            "description": "URL that receives the finished batch."
+          },
+          "enrich_phone_number": {
+            "type": "boolean",
+            "description": "Enrich mobile phone numbers."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "first_name",
+          "last_name",
+          "enrich_phone_number"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
         "required": [
           "data"
         ],
-        "type": "object"
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/async",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "data": [
+            {
+              "first_name": "{{first_name}}",
+              "last_name": "{{last_name}}",
+              "company": "{{company}}",
+              "company_domain": "{{company_domain}}",
+              "linkedin_url": "{{linkedin_url}}"
+            }
+          ],
+          "webhook": "{{webhook}}",
+          "enrich_phone_number": "{{enrich_phone_number}}"
+        },
+        "success": [
+          201
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "enrichment.create_profile": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create profile enrichment",
+      "description": "Submit a lead with LinkedIn URL for waterfall profile enrichment.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "first_name": {
+            "type": "string",
+            "description": "Contact first name.",
+            "minLength": 1
+          },
+          "last_name": {
+            "type": "string",
+            "description": "Contact last name.",
+            "minLength": 1
+          },
+          "company": {
+            "type": "string",
+            "description": "Company name."
+          },
+          "company_domain": {
+            "type": "string",
+            "description": "Company domain."
+          },
+          "linkedin_url": {
+            "type": "string",
+            "description": "Public LinkedIn profile URL."
+          },
+          "webhook": {
+            "type": "string",
+            "description": "URL that receives the finished batch."
+          },
+          "enrich_profile": {
+            "type": "boolean",
+            "description": "Enrich the LinkedIn profile."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "first_name",
+          "last_name",
+          "linkedin_url",
+          "enrich_profile"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/async",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "data": [
+            {
+              "first_name": "{{first_name}}",
+              "last_name": "{{last_name}}",
+              "company": "{{company}}",
+              "company_domain": "{{company_domain}}",
+              "linkedin_url": "{{linkedin_url}}"
+            }
+          ],
+          "webhook": "{{webhook}}",
+          "enrich_profile": "{{enrich_profile}}"
+        },
+        "success": [
+          201
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "enrichment.create_catch_all": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create catch-all enrichment",
+      "description": "Submit leads with the extra catch-all verification layer enabled.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "first_name": {
+            "type": "string",
+            "description": "Contact first name.",
+            "minLength": 1
+          },
+          "last_name": {
+            "type": "string",
+            "description": "Contact last name.",
+            "minLength": 1
+          },
+          "company": {
+            "type": "string",
+            "description": "Company name."
+          },
+          "company_domain": {
+            "type": "string",
+            "description": "Company domain."
+          },
+          "linkedin_url": {
+            "type": "string",
+            "description": "Public LinkedIn profile URL."
+          },
+          "webhook": {
+            "type": "string",
+            "description": "URL that receives the finished batch."
+          },
+          "verify_catch_all": {
+            "type": "boolean",
+            "description": "Run catch-all verification."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "first_name",
+          "last_name",
+          "verify_catch_all"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/async",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "data": [
+            {
+              "first_name": "{{first_name}}",
+              "last_name": "{{last_name}}",
+              "company": "{{company}}",
+              "company_domain": "{{company_domain}}",
+              "linkedin_url": "{{linkedin_url}}"
+            }
+          ],
+          "webhook": "{{webhook}}",
+          "verify_catch_all": "{{verify_catch_all}}"
+        },
+        "success": [
+          201
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "enrichment.create_with_webhook": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create enrichment with webhook",
+      "description": "Submit leads and push the finished batch to a webhook instead of polling.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "first_name": {
+            "type": "string",
+            "description": "Contact first name.",
+            "minLength": 1
+          },
+          "last_name": {
+            "type": "string",
+            "description": "Contact last name.",
+            "minLength": 1
+          },
+          "company": {
+            "type": "string",
+            "description": "Company name."
+          },
+          "company_domain": {
+            "type": "string",
+            "description": "Company domain."
+          },
+          "linkedin_url": {
+            "type": "string",
+            "description": "Public LinkedIn profile URL."
+          },
+          "webhook": {
+            "type": "string",
+            "description": "URL that receives the finished batch."
+          },
+          "enrich_email_address": {
+            "type": "boolean",
+            "description": "Enrich work email addresses."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "first_name",
+          "last_name",
+          "webhook"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/async",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "data": [
+            {
+              "first_name": "{{first_name}}",
+              "last_name": "{{last_name}}",
+              "company": "{{company}}",
+              "company_domain": "{{company_domain}}",
+              "linkedin_url": "{{linkedin_url}}"
+            }
+          ],
+          "webhook": "{{webhook}}",
+          "enrich_email_address": "{{enrich_email_address}}"
+        },
+        "success": [
+          201
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "lead_finder.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create lead finder search",
+      "description": "Find new leads from company and people criteria.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "company_include": {
+            "type": "string",
+            "description": "Company domain or name to include.",
+            "minLength": 1
+          },
+          "max_leads": {
+            "type": "integer",
+            "description": "Number of leads to return, 1-200.",
+            "minimum": 1,
+            "maximum": 200
+          },
+          "webhook": {
+            "type": "string",
+            "description": "URL that receives finished search results."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "company_include"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/lead_finder/async",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "filters": {
+            "company": {
+              "include": [
+                "{{company_include}}"
+              ]
+            }
+          },
+          "max_leads": "{{max_leads}}",
+          "webhook": "{{webhook}}"
+        },
+        "success": [
+          202
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "lead_finder.create_enriched": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create enriched lead finder search",
+      "description": "Find leads and run waterfall email enrichment before returning results.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "company_include": {
+            "type": "string",
+            "description": "Company domain or name to include.",
+            "minLength": 1
+          },
+          "enrich_email_address": {
+            "type": "boolean",
+            "description": "Enrich emails for every found lead."
+          },
+          "max_leads": {
+            "type": "integer",
+            "description": "Number of leads to return, 1-200.",
+            "minimum": 1,
+            "maximum": 200
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "company_include",
+          "enrich_email_address"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/lead_finder/async",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "filters": {
+            "company": {
+              "include": [
+                "{{company_include}}"
+              ]
+            }
+          },
+          "enrich_email_address": "{{enrich_email_address}}",
+          "max_leads": "{{max_leads}}"
+        },
+        "success": [
+          202
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "lead_finder.create_paginated": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create paginated lead finder search",
+      "description": "Find leads with limit and offset pagination.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "company_include": {
+            "type": "string",
+            "description": "Company domain or name to include.",
+            "minLength": 1
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Page size, 1-200.",
+            "minimum": 1,
+            "maximum": 200
+          },
+          "offset": {
+            "type": "integer",
+            "description": "Number of leads to skip.",
+            "minimum": 0
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "company_include",
+          "limit"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/lead_finder/async",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "filters": {
+            "company": {
+              "include": [
+                "{{company_include}}"
+              ]
+            }
+          },
+          "limit": "{{limit}}",
+          "offset": "{{offset}}"
+        },
+        "success": [
+          202
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "lead_finder.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get lead finder results",
+      "description": "Retrieve a previously submitted Lead Finder search by request id.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "description": "Lead Finder request id.",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "requestId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
       },
       "request": {
         "method": "GET",
-        "path": "/account",
+        "path": "/lead_finder/async/{{requestId}}",
         "success": [
           200
         ]
       },
-      "responseFormat": "json",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "company_finder.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create company finder search",
+      "description": "Find companies from firmographic filters. Company Finder does not send webhooks.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "company_industry": {
+            "type": "string",
+            "description": "Industry value from BetterContact taxonomies.",
+            "minLength": 1
+          },
+          "company_hq_location": {
+            "type": "string",
+            "description": "Headquarters location."
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Page size, 1-200.",
+            "minimum": 1,
+            "maximum": 200
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "company_industry"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/company_finder/async",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "filters": {
+            "company_industry": {
+              "include": [
+                "{{company_industry}}"
+              ]
+            },
+            "company_hq_location": {
+              "include": [
+                "{{company_hq_location}}"
+              ]
+            }
+          },
+          "limit": "{{limit}}"
+        },
+        "success": [
+          202
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "company_finder.get": {
+      "kind": "action",
       "sideEffect": "read",
-      "timeoutMs": 5000,
-      "title": "Healthcheck",
-      "validationMode": "strict-generated"
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get company finder results",
+      "description": "Retrieve a previously submitted Company Finder search by request id.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "description": "Company Finder request id.",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "requestId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/company_finder/async/{{requestId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "profile.company.enrich": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Enrich company profile",
+      "description": "Look up a company by domain. Synchronous and does not consume credits.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "company_domain": {
+            "type": "string",
+            "description": "Company website or domain.",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "company_domain"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/enrich_profile/company",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "company_domain": "{{company_domain}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "profile.company.enrich_linkedin": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Enrich company profile by LinkedIn",
+      "description": "Look up a company by LinkedIn URL. Synchronous and does not consume credits.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "company_linkedin_url": {
+            "type": "string",
+            "description": "Company LinkedIn page URL.",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "company_linkedin_url"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/enrich_profile/company",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "company_linkedin_url": "{{company_linkedin_url}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "profile.lead.enrich": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Enrich lead profile",
+      "description": "Look up a person by name and company domain. Costs 0.1 credit when a profile is found.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "first_name": {
+            "type": "string",
+            "description": "First name.",
+            "minLength": 1
+          },
+          "last_name": {
+            "type": "string",
+            "description": "Last name.",
+            "minLength": 1
+          },
+          "company_domain": {
+            "type": "string",
+            "description": "Company domain.",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "first_name",
+          "last_name",
+          "company_domain"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/enrich_profile/lead",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "first_name": "{{first_name}}",
+          "last_name": "{{last_name}}",
+          "company_domain": "{{company_domain}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "profile.lead.enrich_linkedin": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Enrich lead profile by LinkedIn",
+      "description": "Look up a person by LinkedIn URL. Costs 0.1 credit when a profile is found.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "linkedin_url": {
+            "type": "string",
+            "description": "Public LinkedIn profile URL.",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "linkedin_url"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/enrich_profile/lead",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "linkedin_url": "{{linkedin_url}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
     }
   },
-  "provenance": {
-    "source": {
-      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
-      "url": "https://github.com/oomol-lab/open-connector"
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
     }
-  },
-  "runtime": "bun",
-  "version": "0.1.0",
-  "visibility": "public"
+  }
 }
