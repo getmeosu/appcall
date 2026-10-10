@@ -51,18 +51,90 @@
   "key": "needle",
   "models": [
     "collection",
+    "connector",
     "file",
+    "local_connector",
     "stats"
   ],
   "name": "Needle",
   "network": {
     "allowedHosts": [
-      "needle.app"
+      "needle.app",
+      "search.needle.app"
     ]
   },
   "operations": {
-    "collections.files.list": {
-      "description": "List files attached to a Needle collection.",
+    "collections.create": {
+      "description": "Create a new Needle collection. Use after confirming the collection name.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "description": {
+            "type": "string"
+          },
+          "file_ids": {
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "minItems": 1,
+            "type": "array"
+          },
+          "metadata": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "name": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "body": {
+          "description": "{{description}}",
+          "file_ids": "{{file_ids}}",
+          "metadata": "{{metadata}}",
+          "name": "{{name}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "method": "POST",
+        "path": "/api/v1/collections",
+        "success": [
+          200,
+          201
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Create collection",
+      "validationMode": "strict-generated"
+    },
+    "collections.files.add": {
+      "description": "Add files to a Needle collection by providing file URLs. URLs can be public or private (generated via the Files API).",
       "enforceOutputSchema": true,
       "inputSchema": {
         "additionalProperties": false,
@@ -70,6 +142,151 @@
           "collection_id": {
             "minLength": 1,
             "type": "string"
+          },
+          "files": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "name": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "url": {
+                  "minLength": 1,
+                  "type": "string"
+                }
+              },
+              "required": [
+                "name",
+                "url"
+              ],
+              "type": "object"
+            },
+            "minItems": 1,
+            "type": "array"
+          }
+        },
+        "required": [
+          "collection_id",
+          "files"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "body": {
+          "files": "{{files}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "method": "POST",
+        "path": "/api/v1/collections/{{collection_id}}/files",
+        "success": [
+          200,
+          201
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Add files to a collection",
+      "validationMode": "strict-generated"
+    },
+    "collections.files.delete": {
+      "description": "Delete files from a Needle collection by providing file IDs.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "collection_id": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "file_ids": {
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "minItems": 1,
+            "type": "array"
+          }
+        },
+        "required": [
+          "collection_id",
+          "file_ids"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "body": {
+          "file_ids": "{{file_ids}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "method": "DELETE",
+        "path": "/api/v1/collections/{{collection_id}}/files",
+        "result": {
+          "data": {}
+        },
+        "success": [
+          200,
+          204
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "title": "Delete files from a collection",
+      "validationMode": "strict-generated"
+    },
+    "collections.files.list": {
+      "description": "List files attached to a Needle collection. Returns file metadata only; fetch file URLs separately to access content.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "collection_id": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "limit": {
+            "minimum": 1,
+            "type": "integer"
+          },
+          "offset": {
+            "minimum": 0,
+            "type": "integer"
           }
         },
         "required": [
@@ -95,6 +312,10 @@
       "request": {
         "method": "GET",
         "path": "/api/v1/collections/{{collection_id}}/files",
+        "query": {
+          "limit": "{{limit}}",
+          "offset": "{{offset}}"
+        },
         "success": [
           200
         ]
@@ -150,11 +371,20 @@
       "validationMode": "strict-generated"
     },
     "collections.list": {
-      "description": "List Needle collections visible to the API key.",
+      "description": "List Needle collections visible to the API key. Similar names can exist; verify collection_id before subsequent operations.",
       "enforceOutputSchema": true,
       "inputSchema": {
         "additionalProperties": false,
-        "properties": {},
+        "properties": {
+          "limit": {
+            "minimum": 1,
+            "type": "integer"
+          },
+          "offset": {
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
         "type": "object"
       },
       "kind": "action",
@@ -175,6 +405,10 @@
       "request": {
         "method": "GET",
         "path": "/api/v1/collections",
+        "query": {
+          "limit": "{{limit}}",
+          "offset": "{{offset}}"
+        },
         "success": [
           200
         ]
@@ -185,8 +419,84 @@
       "title": "List collections",
       "validationMode": "strict-generated"
     },
+    "collections.search": {
+      "description": "Perform semantic search within a Needle collection and return ranked results with source references.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "collection_id": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "max_distance": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "offset": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "options": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "text": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "top_k": {
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "collection_id",
+          "text"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "baseUrl": "https://search.needle.app",
+        "body": {
+          "max_distance": "{{max_distance}}",
+          "offset": "{{offset}}",
+          "options": "{{options}}",
+          "text": "{{text}}",
+          "top_k": "{{top_k}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "method": "POST",
+        "path": "/api/v1/collections/{{collection_id}}/search",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 30000,
+      "title": "Search collection",
+      "validationMode": "strict-generated"
+    },
     "collections.stats.get": {
-      "description": "Get indexing and storage statistics for a Needle collection.",
+      "description": "Get indexing and storage statistics for a Needle collection. Zero document count is valid for empty collections.",
       "enforceOutputSchema": true,
       "inputSchema": {
         "additionalProperties": false,
@@ -229,6 +539,137 @@
       "title": "Get collection stats",
       "validationMode": "strict-generated"
     },
+    "connectors.list": {
+      "description": "List connectors configured in the Needle account.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {},
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/connectors",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List connectors",
+      "validationMode": "strict-generated"
+    },
+    "files.download_url.get": {
+      "description": "Get a short-lived signed private download URL for a Needle file. Use the URL immediately; it expires quickly.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "file_id": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "file_id"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/files/{{file_id}}/download_url",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get file download URL",
+      "validationMode": "strict-generated"
+    },
+    "files.upload_url.get": {
+      "description": "Get signed URLs for uploading local files to Needle. Multiple content types generate multiple upload URLs.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "content_type": {
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "minItems": 1,
+            "type": "array"
+          }
+        },
+        "required": [
+          "content_type"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/files/upload_url",
+        "query": {
+          "content_type": "{{content_type}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get file upload URL",
+      "validationMode": "strict-generated"
+    },
     "healthcheck": {
       "description": "Validate the Needle API key with GET /api/v1/collections.",
       "enforceOutputSchema": true,
@@ -264,6 +705,351 @@
       "timeoutMs": 5000,
       "title": "Healthcheck",
       "validationMode": "strict-generated"
+    },
+    "local_connectors.create": {
+      "description": "Create a local connector that monitors specified folders on a device and indexes them into Needle collections.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "collection_ids": {
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "minItems": 1,
+            "type": "array"
+          },
+          "cpu": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "device_model": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "device_name": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "folders": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "folder_path": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "recursive": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "folder_path",
+                "recursive"
+              ],
+              "type": "object"
+            },
+            "minItems": 1,
+            "type": "array"
+          },
+          "name": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "os": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "serial_number": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "collection_ids",
+          "cpu",
+          "device_model",
+          "device_name",
+          "folders",
+          "name",
+          "os",
+          "serial_number"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "body": {
+          "collection_ids": "{{collection_ids}}",
+          "cpu": "{{cpu}}",
+          "device_model": "{{device_model}}",
+          "device_name": "{{device_name}}",
+          "folders": "{{folders}}",
+          "name": "{{name}}",
+          "os": "{{os}}",
+          "serial_number": "{{serial_number}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "method": "POST",
+        "path": "/api/v1/connectors/local",
+        "success": [
+          200,
+          201
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Create local connector",
+      "validationMode": "strict-generated"
+    },
+    "local_connectors.files.add": {
+      "description": "Add files to a local connector by providing file metadata (name and URL).",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "connector_id": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "files": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "name": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "updated_at": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "url": {
+                  "minLength": 1,
+                  "type": "string"
+                }
+              },
+              "required": [
+                "name",
+                "url"
+              ],
+              "type": "object"
+            },
+            "minItems": 1,
+            "type": "array"
+          }
+        },
+        "required": [
+          "connector_id",
+          "files"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "body": {
+          "files": "{{files}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "method": "POST",
+        "path": "/api/v1/connectors/{{connector_id}}/local/files",
+        "success": [
+          200,
+          201
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Add files to local connector",
+      "validationMode": "strict-generated"
+    },
+    "local_connectors.files.delete": {
+      "description": "Delete files from a local connector by filename or file IDs.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "by": {
+            "enum": [
+              "name",
+              "file_ids"
+            ],
+            "type": "string"
+          },
+          "connector_id": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "file_ids": {
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "minItems": 1,
+            "type": "array"
+          },
+          "name": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "by",
+          "connector_id"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "body": {
+          "by": "{{by}}",
+          "file_ids": "{{file_ids}}",
+          "name": "{{name}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "method": "DELETE",
+        "path": "/api/v1/connectors/{{connector_id}}/local/files",
+        "success": [
+          200,
+          204
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "title": "Delete files from local connector",
+      "validationMode": "strict-generated"
+    },
+    "local_connectors.get": {
+      "description": "Retrieve details of a local connector by ID, including device details and associated folders.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "connector_id": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "connector_id"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/connectors/{{connector_id}}/local",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get local connector",
+      "validationMode": "strict-generated"
+    },
+    "local_connectors.list": {
+      "description": "List local connectors configured in the Needle account.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {},
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/connectors/local",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List local connectors",
+      "validationMode": "strict-generated"
     }
   },
   "provenance": {
@@ -273,6 +1059,6 @@
     }
   },
   "runtime": "bun",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "visibility": "public"
 }

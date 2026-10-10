@@ -1,7 +1,18 @@
 # Needle
 
-Read-only Needle collections API recipe. Configure an API key from Needle settings (`ndl_...`) sent as `x-api-key` to `https://needle.app`. Native GET reads send `Accept: application/json` and omit the pinned helper's `content-type` and `user-agent` headers.
+Needle collections, files, search, and local-connector REST recipe covering origin healthcheck plus every Composio `NEEDLE_*` HTTP tool (16 tools, 17 operations; healthcheck is an authenticated `GET /api/v1/collections` probe and is not a Composio slug).
 
-Covered operations: credential-only `healthcheck` (`GET /api/v1/collections`), `collections.list`, `collections.get`, `collections.stats.get`, and `collections.files.list`. Writes, URL file import, and collection search on `search.needle.app` are omitted. Native returns raw Needle JSON under `data` rather than the pinned `{collections}` / `{collection}` / `{files}` unwrap.
+Configure an API key from Needle settings (`ndl_...`) sent as `x-api-key` to `https://needle.app`. Collection search uses `https://search.needle.app`. Native requests send `Accept: application/json` and omit the pinned helper's `content-type` and `user-agent` headers except on JSON bodies.
 
-Source attribution: oomol-lab/open-connector at `33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a` (Apache-2.0). Official docs: https://docs.needle.app/docs/api-reference/needle-api/. Fixtures are independently derived from official docs plus pinned source; live authentication remains unverified.
+## Operations
+
+- Auth: `healthcheck` (`GET /api/v1/collections`).
+- Collections: `collections.list`, `collections.get`, `collections.create`, `collections.stats.get`, `collections.search`.
+- Collection files: `collections.files.list`, `collections.files.add`, `collections.files.delete`.
+- Files: `files.upload_url.get`, `files.download_url.get`.
+- Connectors: `connectors.list`.
+- Local connectors: `local_connectors.list`, `local_connectors.get`, `local_connectors.create`, `local_connectors.files.add`, `local_connectors.files.delete`.
+
+Successful JSON responses are raw Needle JSON under AppCall `data`. Optional query/body fields are omitted when unset. Collection file deletes that return 204 map to `{data:{}}`.
+
+Source attribution: oomol-lab/open-connector at `33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a` (Apache-2.0). Official docs: https://docs.needle.app/docs/api-reference/needle-api/. TypeScript SDK: https://github.com/needle-ai/needle-typescript. Fixtures are independently derived from official docs plus pinned source; live authentication remains unverified.

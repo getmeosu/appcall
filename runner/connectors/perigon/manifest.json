@@ -1,1 +1,1296 @@
-{"auth":{"scopes":[],"setup":{"fields":[{"key":"apiKey","label":"Perigon API key","required":true,"secret":true}],"mode":"api_key"},"type":"api_key"},"categories":["utility"],"evidence":{"fixture":{"status":"supplied"},"live":{"status":"unverified"}},"http":{"auth":{"field":"apiKey","in":"header","name":"x-api-key","value":"{{apiKey}}"},"baseUrl":"https://api.perigon.io","errors":{"defaultRetryAfterSeconds":30,"messagePaths":["message","error","title"],"rateLimitStatuses":[429]},"headers":{"Accept":"application/json"}},"key":"perigon","models":["topic","journalist","person"],"name":"Perigon","network":{"allowedHosts":["api.perigon.io"]},"operations":{"healthcheck":{"description":"Validate the Perigon API key with GET /v1/topics/all?size=1.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{},"type":"object"},"kind":"action","maxInputBytes":4096,"maxResponseBytes":65536,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/v1/topics/all","query":{"size":"1"},"success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":5000,"title":"Healthcheck","validationMode":"strict-generated"},"journalists.get":{"description":"Get one Perigon journalist profile by journalist ID.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{"id":{"description":"Perigon journalist ID.","minLength":1,"type":"string"}},"required":["id"],"type":"object"},"kind":"action","maxInputBytes":65536,"maxResponseBytes":5242880,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/v1/journalists/{{id}}","success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":15000,"title":"Get journalist","validationMode":"strict-generated"},"people.search":{"description":"Search Perigon people entities by query.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{"page":{"description":"Zero-based page number.","minimum":0,"type":"integer"},"q":{"description":"People search query.","minLength":1,"type":"string"},"size":{"description":"Results per page.","maximum":100,"minimum":1,"type":"integer"}},"required":["q"],"type":"object"},"kind":"action","maxInputBytes":65536,"maxResponseBytes":5242880,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/v1/people/all","query":{"page":"{{page}}","q":"{{q}}","size":"{{size}}"},"success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":15000,"title":"Search people","validationMode":"strict-generated"},"topics.list":{"description":"Browse or filter Perigon topics used to classify news content.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{"category":{"description":"Parent category filter.","minLength":1,"type":"string"},"name":{"description":"Topic name filter.","minLength":1,"type":"string"},"page":{"description":"Zero-based page number.","minimum":0,"type":"integer"},"size":{"description":"Results per page.","maximum":100,"minimum":1,"type":"integer"},"subcategory":{"description":"Subcategory filter.","minLength":1,"type":"string"}},"type":"object"},"kind":"action","maxInputBytes":65536,"maxResponseBytes":5242880,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/v1/topics/all","query":{"category":"{{category}}","name":"{{name}}","page":"{{page}}","size":"{{size}}","subcategory":"{{subcategory}}"},"success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":15000,"title":"List topics","validationMode":"strict-generated"}},"provenance":{"source":{"revision":"33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a","url":"https://github.com/oomol-lab/open-connector"}},"runtime":"bun","version":"0.1.0","visibility":"public"}
+{
+  "key": "perigon",
+  "name": "Perigon",
+  "version": "0.2.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "utility"
+  ],
+  "auth": {
+    "type": "api_key",
+    "scopes": [],
+    "setup": {
+      "mode": "api_key",
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "Perigon API key",
+          "required": true,
+          "secret": true
+        }
+      ]
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "api.perigon.io"
+    ]
+  },
+  "models": [
+    "topic",
+    "journalist",
+    "person",
+    "article",
+    "story",
+    "source",
+    "company",
+    "monitor",
+    "contact_point",
+    "watchlist"
+  ],
+  "http": {
+    "baseUrl": "https://api.perigon.io",
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "x-api-key",
+      "value": "{{apiKey}}"
+    },
+    "headers": {
+      "Accept": "application/json"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "message",
+        "error",
+        "title"
+      ]
+    }
+  },
+  "operations": {
+    "healthcheck": {
+      "timeoutMs": 5000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Healthcheck",
+      "description": "Validate the Perigon API key with GET /v1/topics/all?size=1.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/topics/all",
+        "query": {
+          "size": "1"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "topics.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List topics",
+      "description": "Browse or filter Perigon topics used to classify news content.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Topic name filter."
+          },
+          "category": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Parent category filter."
+          },
+          "subcategory": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Subcategory filter."
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Zero-based page number."
+          },
+          "size": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Results per page."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/topics/all",
+        "query": {
+          "name": "{{name}}",
+          "category": "{{category}}",
+          "subcategory": "{{subcategory}}",
+          "page": "{{page}}",
+          "size": "{{size}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "journalists.get": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Get journalist",
+      "description": "Get one Perigon journalist profile by journalist ID.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Perigon journalist ID."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/journalists/{{id}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "people.search": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Search people",
+      "description": "Search Perigon people entities by query.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "q"
+        ],
+        "properties": {
+          "q": {
+            "type": "string",
+            "minLength": 1,
+            "description": "People search query."
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Zero-based page number."
+          },
+          "size": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Results per page."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/people/all",
+        "query": {
+          "q": "{{q}}",
+          "page": "{{page}}",
+          "size": "{{size}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "journalists.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List journalists",
+      "description": "Search Perigon journalist profiles.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "q": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Journalist search query."
+          },
+          "size": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Results per page."
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Zero-based page number."
+          },
+          "source": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Publisher domain filter."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/journalists/all",
+        "success": [
+          200
+        ],
+        "query": {
+          "q": "{{q}}",
+          "size": "{{size}}",
+          "page": "{{page}}",
+          "source": "{{source}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "articles.search": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Search articles",
+      "description": "Search Perigon news articles with keyword, source, and date filters.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "q": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Article search query. Supports Boolean operators."
+          },
+          "size": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Results per page."
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Zero-based page number."
+          },
+          "from": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Inclusive published-from date."
+          },
+          "to": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Inclusive published-to date."
+          },
+          "category": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Category filter such as Tech or Business."
+          },
+          "source": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Publisher domain filter."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/articles/all",
+        "success": [
+          200
+        ],
+        "query": {
+          "q": "{{q}}",
+          "size": "{{size}}",
+          "page": "{{page}}",
+          "from": "{{from}}",
+          "to": "{{to}}",
+          "category": "{{category}}",
+          "source": "{{source}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "stories.search": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Search stories",
+      "description": "Search Perigon clustered news stories.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "q": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Story search query."
+          },
+          "size": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Results per page."
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Zero-based page number."
+          },
+          "topic": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Topic filter."
+          },
+          "source": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Publisher domain filter."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/stories/all",
+        "success": [
+          200
+        ],
+        "query": {
+          "q": "{{q}}",
+          "size": "{{size}}",
+          "page": "{{page}}",
+          "topic": "{{topic}}",
+          "source": "{{source}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "sources.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List sources",
+      "description": "Browse Perigon publisher sources.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "domain": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Publisher domain filter."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Source name filter."
+          },
+          "category": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Dominant coverage category."
+          },
+          "size": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Results per page."
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Zero-based page number."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/sources/all",
+        "success": [
+          200
+        ],
+        "query": {
+          "domain": "{{domain}}",
+          "name": "{{name}}",
+          "category": "{{category}}",
+          "size": "{{size}}",
+          "page": "{{page}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "companies.search": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Search companies",
+      "description": "Search Perigon company entities.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "q": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Company search query."
+          },
+          "size": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Results per page."
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Zero-based page number."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "q"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/companies/all",
+        "success": [
+          200
+        ],
+        "query": {
+          "q": "{{q}}",
+          "size": "{{size}}",
+          "page": "{{page}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "vector.search": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Vector search news",
+      "description": "Semantically search recent Perigon news articles by prompt.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "prompt": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Natural-language search prompt."
+          },
+          "size": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Results to return."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "prompt"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/vector/news/all",
+        "success": [
+          200
+        ],
+        "body": {
+          "prompt": "{{prompt}}",
+          "size": "{{size}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "monitors.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List monitors",
+      "description": "List Perigon monitors owned by the organization.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "sortBy": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Sort field such as createdAt."
+          },
+          "sortOrder": {
+            "type": "string",
+            "enum": [
+              "asc",
+              "desc"
+            ],
+            "description": "Sort direction."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/api/monitors",
+        "success": [
+          200
+        ],
+        "query": {
+          "sortBy": "{{sortBy}}",
+          "sortOrder": "{{sortOrder}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "monitors.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get monitor",
+      "description": "Retrieve one Perigon monitor by UUID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "uuid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Monitor UUID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "uuid"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/api/monitors/{{uuid}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "monitors.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create monitor",
+      "description": "Create a Perigon monitor that classifies matching news over time.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Display name."
+          },
+          "classificationType": {
+            "type": "string",
+            "enum": [
+              "EVENT",
+              "MENTIONS",
+              "TOPIC"
+            ],
+            "description": "Monitor classification type."
+          },
+          "monitoringObjective": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Plain-language definition of what the monitor tracks."
+          },
+          "q": {
+            "type": "string",
+            "minLength": 1,
+            "description": "News query used as the monitor scope."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "classificationType",
+          "monitoringObjective",
+          "q"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/api/monitors",
+        "success": [
+          200,
+          201
+        ],
+        "body": {
+          "name": "{{name}}",
+          "classificationType": "{{classificationType}}",
+          "monitoringObjective": "{{monitoringObjective}}",
+          "dataSchema": {
+            "version": "V1",
+            "allowExtra": false,
+            "schema": {}
+          },
+          "query": {
+            "q": "{{q}}"
+          }
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "monitors.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Update monitor",
+      "description": "Partially update a Perigon monitor by UUID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "uuid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Monitor UUID."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Updated display name."
+          },
+          "monitoringObjective": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Updated monitoring objective."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "uuid"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/v1/api/monitors/{{uuid}}",
+        "success": [
+          200
+        ],
+        "body": {
+          "name": "{{name}}",
+          "monitoringObjective": "{{monitoringObjective}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "monitors.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Delete monitor",
+      "description": "Archive or delete a Perigon monitor by UUID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "uuid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Monitor UUID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "uuid"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "deleted",
+          "uuid"
+        ],
+        "properties": {
+          "deleted": {
+            "type": "boolean"
+          },
+          "uuid": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/v1/api/monitors/{{uuid}}",
+        "success": [
+          200,
+          204
+        ],
+        "result": {
+          "deleted": true,
+          "uuid": "{{input.uuid}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "monitors.events": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List monitor events",
+      "description": "List structured events emitted by a Perigon monitor.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "uuid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Monitor UUID."
+          },
+          "from": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Inclusive created-from timestamp."
+          },
+          "size": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Results per page."
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Zero-based page number."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "uuid"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/api/monitors/{{uuid}}/events",
+        "success": [
+          200
+        ],
+        "query": {
+          "from": "{{from}}",
+          "size": "{{size}}",
+          "page": "{{page}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "monitors.activate": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Activate monitor",
+      "description": "Activate a Perigon monitor so it starts matching content.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "uuid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Monitor UUID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "uuid"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/api/monitors/{{uuid}}/activate",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "monitors.pause": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Pause monitor",
+      "description": "Pause a Perigon monitor without deleting it.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "uuid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Monitor UUID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "uuid"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/api/monitors/{{uuid}}/pause",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "contactPoints.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List contact points",
+      "description": "List Perigon webhook and email contact points.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/api/contactPoints",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "contactPoints.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create contact point",
+      "description": "Create a Perigon webhook contact point.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "WEBHOOK"
+            ],
+            "description": "Contact point type. API creation supports WEBHOOK."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Display name."
+          },
+          "webhook": {
+            "type": "string",
+            "minLength": 1,
+            "description": "HTTPS destination URL."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "type",
+          "name",
+          "webhook"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/api/contactPoints",
+        "success": [
+          200,
+          201
+        ],
+        "body": {
+          "type": "{{type}}",
+          "name": "{{name}}",
+          "webhook": "{{webhook}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "watchlists.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List watchlists",
+      "description": "List Perigon watchlists used to scope entity monitors.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/api/watchlists",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    }
+  },
+  "provenance": {
+    "source": {
+      "url": "https://github.com/oomol-lab/open-connector",
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"
+    }
+  },
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
+    }
+  }
+}
