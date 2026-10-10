@@ -53,7 +53,17 @@
   "models": [
     "queue",
     "performance",
-    "validator"
+    "validator",
+    "epoch",
+    "slot",
+    "chart",
+    "execution",
+    "ens",
+    "rocketpool",
+    "ethstore",
+    "state",
+    "sync_committee",
+    "deposit"
   ],
   "name": "Beaconcha.in",
   "network": {
@@ -62,6 +72,496 @@
     ]
   },
   "operations": {
+    "charts.get": {
+      "description": "Retrieve a beaconcha.in chart as a PNG image from GET /api/v1/chart/{chart}.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "chart": {
+            "description": "Chart visualization to retrieve.",
+            "enum": [
+              "blocks",
+              "validators",
+              "staked_ether",
+              "average_balance",
+              "network_liveness",
+              "participation_rate",
+              "stake_effectiveness",
+              "balance_distribution",
+              "effective_balance_distribution",
+              "performance_distribution_365d",
+              "deposits",
+              "withdrawals",
+              "graffiti_wordcloud",
+              "pools_distribution",
+              "historic_pool_performance",
+              "avg_gas_used_chart_data",
+              "execution_burned_fees",
+              "block_gas_used",
+              "block_count_chart_data",
+              "block_time_avg_chart_data",
+              "avg_gas_limit_chart_data",
+              "avg_block_util_chart_data",
+              "tx_count_chart_data"
+            ],
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "chart"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "headers": {
+          "Accept": "image/png"
+        },
+        "method": "GET",
+        "path": "/api/v1/chart/{{chart}}",
+        "query": {
+          "apikey": "{{apiKey}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get chart",
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "deposits.by_tx_hash": {
+      "description": "Retrieve beacon chain validator deposit events for an execution-layer transaction hash.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "tx_hash": {
+            "description": "Execution-layer transaction hash (0x-prefixed 32-byte hex).",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "tx_hash"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/eth1deposit/{{tx_hash}}",
+        "query": {
+          "apikey": "{{apiKey}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get ETH1 deposits by transaction hash",
+      "validationMode": "strict-generated"
+    },
+    "ens.resolve": {
+      "description": "Resolve an ENS name to an Ethereum address or an address back to an ENS name.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "domain": {
+            "description": "ENS name (for example vitalik.eth) or 0x-prefixed Ethereum address.",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "domain"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/ens/lookup/{{domain}}",
+        "query": {
+          "apikey": "{{apiKey}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Resolve ENS name or address",
+      "validationMode": "strict-generated"
+    },
+    "epoch.get": {
+      "description": "Retrieve aggregate metrics and status for a beacon chain epoch.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "epoch": {
+            "description": "Epoch number (>= 0) or the keywords latest or finalized.",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "epoch"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/epoch/{{epoch}}",
+        "query": {
+          "apikey": "{{apiKey}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get epoch",
+      "validationMode": "strict-generated"
+    },
+    "ethstore.daily": {
+      "description": "Retrieve ETH.Store daily aggregate validator-return metrics for a beaconchain-day.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "day": {
+            "description": "Beaconchain-day index (>= 0) or the keyword latest.",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "day"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/ethstore/{{day}}",
+        "query": {
+          "apikey": "{{apiKey}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get ETH.Store daily aggregates",
+      "validationMode": "strict-generated"
+    },
+    "execution.block": {
+      "description": "Retrieve one or more execution-layer blocks by block number (comma-separated, max 100).",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "block_number": {
+            "description": "Comma-separated execution block numbers (non-negative integers).",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "block_number"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/execution/block/{{block_number}}",
+        "query": {
+          "apikey": "{{apiKey}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get execution block",
+      "validationMode": "strict-generated"
+    },
+    "execution.erc20_tokens": {
+      "description": "Retrieve a paginated list of ERC-20 token balances for an Ethereum address.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "address": {
+            "description": "0x-prefixed 20-byte Ethereum address.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "limit": {
+            "description": "Maximum tokens to return per page (1-200).",
+            "maximum": 200,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "offset": {
+            "description": "Number of items to skip from the start of the result set.",
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "address"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/execution/address/{{address}}/erc20tokens",
+        "query": {
+          "apikey": "{{apiKey}}",
+          "limit": "{{limit}}",
+          "offset": "{{offset}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get ERC-20 token balances",
+      "validationMode": "strict-generated"
+    },
+    "execution.produced_blocks": {
+      "description": "Retrieve execution-layer blocks attributed to fee recipients, proposer indices, or pubkeys.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "address_index_or_pubkey": {
+            "description": "Comma-separated fee recipient addresses, proposer indices, or BLS pubkeys.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "limit": {
+            "description": "Maximum blocks to return (1-100).",
+            "maximum": 100,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "offset": {
+            "description": "Number of items to skip from the merged result set.",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "sort": {
+            "description": "Sort order by execution block number.",
+            "enum": [
+              "asc",
+              "desc"
+            ],
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "address_index_or_pubkey"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/execution/{{address_index_or_pubkey}}/produced",
+        "query": {
+          "apikey": "{{apiKey}}",
+          "limit": "{{limit}}",
+          "offset": "{{offset}}",
+          "sort": "{{sort}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get execution produced blocks",
+      "validationMode": "strict-generated"
+    },
+    "health.node": {
+      "description": "Check beaconcha.in explorer module health via GET /api/healthz.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {},
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "headers": {
+          "Accept": "text/plain"
+        },
+        "method": "GET",
+        "path": "/api/healthz",
+        "query": {
+          "apikey": "{{apiKey}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "sideEffect": "read",
+      "timeoutMs": 5000,
+      "title": "Get explorer health",
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
     "healthcheck": {
       "description": "Validate the Beaconcha.in API key with POST /api/v2/ethereum/queues for mainnet.",
       "enforceOutputSchema": true,
@@ -220,6 +720,935 @@
       "title": "Get staking queues",
       "validationMode": "strict-generated"
     },
+    "rocketpool.validator": {
+      "description": "Retrieve Rocket Pool minipool metadata for one or more validators.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "indexOrPubkey": {
+            "description": "Comma-separated validator indices and/or BLS public keys (max 100).",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "indexOrPubkey"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/rocketpool/validator/{{indexOrPubkey}}",
+        "query": {
+          "apikey": "{{apiKey}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get Rocket Pool validator",
+      "validationMode": "strict-generated"
+    },
+    "slot.attestations": {
+      "description": "Retrieve attestations included in the beacon block for a slot.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "slot": {
+            "description": "Slot number (>= 0) or the keyword latest.",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "slot"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/slot/{{slot}}/attestations",
+        "query": {
+          "apikey": "{{apiKey}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get slot attestations",
+      "validationMode": "strict-generated"
+    },
+    "slot.attester_slashings": {
+      "description": "Retrieve attester slashing operations included in the beacon block for a slot.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "slot": {
+            "description": "Slot number (>= 0) or the keyword latest.",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "slot"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/slot/{{slot}}/attesterslashings",
+        "query": {
+          "apikey": "{{apiKey}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get slot attester slashings",
+      "validationMode": "strict-generated"
+    },
+    "slot.get": {
+      "description": "Retrieve detailed information about a beacon chain slot by number, latest/head, or block root.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "slot_or_hash": {
+            "description": "Slot number, latest/head, or 0x-prefixed 32-byte block root.",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "slot_or_hash"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/slot/{{slot_or_hash}}",
+        "query": {
+          "apikey": "{{apiKey}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get slot",
+      "validationMode": "strict-generated"
+    },
+    "slot.proposer_slashings": {
+      "description": "Retrieve proposer slashing operations included in the beacon block for a slot.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "slot": {
+            "description": "Slot number (>= 0) or the keyword latest.",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "slot"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/slot/{{slot}}/proposerslashings",
+        "query": {
+          "apikey": "{{apiKey}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get slot proposer slashings",
+      "validationMode": "strict-generated"
+    },
+    "slot.voluntary_exits": {
+      "description": "Retrieve voluntary exit operations included in the beacon block for a slot.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "slot": {
+            "description": "Slot number (>= 0) or the keyword latest.",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "slot"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/slot/{{slot}}/voluntaryexits",
+        "query": {
+          "apikey": "{{apiKey}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get slot voluntary exits",
+      "validationMode": "strict-generated"
+    },
+    "state.latest": {
+      "description": "Retrieve the latest known beacon chain network state, finality, and ETH price context.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {},
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/latestState",
+        "query": {
+          "apikey": "{{apiKey}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get latest state",
+      "validationMode": "strict-generated"
+    },
+    "sync_committee.get": {
+      "description": "Retrieve the 512 validator indices in the sync committee for a period.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "period": {
+            "description": "Sync period index, or the keywords latest or next.",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "period"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/sync_committee/{{period}}",
+        "query": {
+          "apikey": "{{apiKey}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get sync committee",
+      "validationMode": "strict-generated"
+    },
+    "validators.attestation_efficiency": {
+      "description": "Retrieve normalized attestation inclusion effectiveness for one or more validators.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "validator_id": {
+            "description": "Comma-separated validator indices and/or 0x-prefixed BLS public keys.",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "validator_id"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/validator/{{validator_id}}/attestationefficiency",
+        "query": {
+          "apikey": "{{apiKey}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get validator attestation efficiency",
+      "validationMode": "strict-generated"
+    },
+    "validators.attestations": {
+      "description": "Retrieve attestations observed for validators within a bounded epoch window.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "endEpoch": {
+            "description": "End epoch for the query window (inclusive).",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "indexOrPubkey": {
+            "description": "Comma-separated validator indices and/or 0x-prefixed BLS public keys.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "slim": {
+            "description": "When true, omit week and committeeindex fields from each item.",
+            "type": "boolean"
+          },
+          "startEpoch": {
+            "description": "Start epoch for the query window.",
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "indexOrPubkey"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/validator/{{indexOrPubkey}}/attestations",
+        "query": {
+          "apikey": "{{apiKey}}",
+          "endEpoch": "{{endEpoch}}",
+          "slim": "{{slim}}",
+          "startEpoch": "{{startEpoch}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get validator attestations",
+      "validationMode": "strict-generated"
+    },
+    "validators.balance_history": {
+      "description": "Retrieve per-epoch balance history for one or more validators.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "index_or_pubkey": {
+            "description": "Comma-separated validator indices and/or 0x-prefixed BLS public keys.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "latest_epoch": {
+            "description": "Most recent epoch to include (inclusive).",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "limit": {
+            "description": "Number of epochs to return (1-100).",
+            "maximum": 100,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "offset": {
+            "description": "Epochs to skip backwards from latest_epoch.",
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "index_or_pubkey"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/validator/{{index_or_pubkey}}/balancehistory",
+        "query": {
+          "apikey": "{{apiKey}}",
+          "latest_epoch": "{{latest_epoch}}",
+          "limit": "{{limit}}",
+          "offset": "{{offset}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get validator balance history",
+      "validationMode": "strict-generated"
+    },
+    "validators.bls_changes": {
+      "description": "Retrieve BLS-to-execution credential change messages (EIP-4881) for validators.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "index_or_pubkey": {
+            "description": "Comma-separated validator indices and/or 0x-prefixed BLS public keys.",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "index_or_pubkey"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/validator/{{index_or_pubkey}}/blsChange",
+        "query": {
+          "apikey": "{{apiKey}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get validator BLS changes",
+      "validationMode": "strict-generated"
+    },
+    "validators.by_deposit_address": {
+      "description": "Retrieve validators that deposited from a specific execution-layer address (ENS allowed).",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "eth1address": {
+            "description": "0x-prefixed execution-layer address or ENS name.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "limit": {
+            "description": "Maximum records to return (1-2000).",
+            "maximum": 2000,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "offset": {
+            "description": "Number of items to skip from the start of the result set.",
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "eth1address"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/validator/eth1/{{eth1address}}",
+        "query": {
+          "apikey": "{{apiKey}}",
+          "limit": "{{limit}}",
+          "offset": "{{offset}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get validators by deposit address",
+      "validationMode": "strict-generated"
+    },
+    "validators.by_withdrawal_credentials": {
+      "description": "Retrieve validators matching withdrawal credentials or an execution-layer address.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "limit": {
+            "description": "Maximum validators to return (1-200).",
+            "maximum": 200,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "offset": {
+            "description": "Number of items to skip from the start of the result set.",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "withdrawal_credentials_or_eth1_address": {
+            "description": "32-byte withdrawal credentials or 0x-prefixed 20-byte address (ENS allowed).",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "withdrawal_credentials_or_eth1_address"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/validator/withdrawalCredentials/{{withdrawal_credentials_or_eth1_address}}",
+        "query": {
+          "apikey": "{{apiKey}}",
+          "limit": "{{limit}}",
+          "offset": "{{offset}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get validators by withdrawal credentials",
+      "validationMode": "strict-generated"
+    },
+    "validators.consensus_rewards": {
+      "description": "Retrieve consensus-layer reward totals for 1d/7d/31d/365d lookback windows (gwei).",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "index_or_pubkey": {
+            "description": "Comma-separated validator indices and/or 0x-prefixed BLS public keys.",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "index_or_pubkey"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/validator/{{index_or_pubkey}}/performance",
+        "query": {
+          "apikey": "{{apiKey}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get validator consensus rewards",
+      "validationMode": "strict-generated"
+    },
+    "validators.daily_stats": {
+      "description": "Retrieve per-day balance and duty statistics for a single validator index.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "end_day": {
+            "description": "Last day index to include (inclusive).",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "index": {
+            "description": "Validator index (>= 0).",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "start_day": {
+            "description": "First day index to include (inclusive).",
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "index"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/validator/stats/{{index}}",
+        "query": {
+          "apikey": "{{apiKey}}",
+          "end_day": "{{end_day}}",
+          "start_day": "{{start_day}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get validator daily stats",
+      "validationMode": "strict-generated"
+    },
+    "validators.deposits": {
+      "description": "Retrieve execution-layer deposit events for one or more validators.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "indexOrPubkey": {
+            "description": "Comma-separated validator indices and/or 0x-prefixed BLS public keys.",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "indexOrPubkey"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/validator/{{indexOrPubkey}}/deposits",
+        "query": {
+          "apikey": "{{apiKey}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get validator deposits",
+      "validationMode": "strict-generated"
+    },
+    "validators.execution_rewards": {
+      "description": "Retrieve execution-layer priority-fee and MEV rewards for one or more validators (wei).",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "validator_ids": {
+            "description": "Comma-separated validator indices and/or 0x-prefixed BLS public keys.",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "validator_ids"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/validator/{{validator_ids}}/execution/performance",
+        "query": {
+          "apikey": "{{apiKey}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get validator execution rewards",
+      "validationMode": "strict-generated"
+    },
     "validators.get": {
       "description": "Get one Beaconcha.in validator snapshot by index or public key.",
       "enforceOutputSchema": true,
@@ -284,6 +1713,112 @@
       "sideEffect": "read",
       "timeoutMs": 15000,
       "title": "Get validator",
+      "validationMode": "strict-generated"
+    },
+    "validators.income_history": {
+      "description": "Retrieve a per-epoch income breakdown for one or more validators.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "index_or_pubkey": {
+            "description": "Comma-separated validator indices and/or 0x-prefixed BLS public keys.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "latest_epoch": {
+            "description": "Most recent epoch to include (inclusive).",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "limit": {
+            "description": "Number of epochs to return (1-100).",
+            "maximum": 100,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "offset": {
+            "description": "Epochs to skip backwards from latest_epoch.",
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "index_or_pubkey"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/validator/{{index_or_pubkey}}/incomedetailhistory",
+        "query": {
+          "apikey": "{{apiKey}}",
+          "latest_epoch": "{{latest_epoch}}",
+          "limit": "{{limit}}",
+          "offset": "{{offset}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get validator income history",
+      "validationMode": "strict-generated"
+    },
+    "validators.leaderboard": {
+      "description": "Retrieve the current top 100 validators ranked by 7-day consensus-layer rewards.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {},
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/validator/leaderboard",
+        "query": {
+          "apikey": "{{apiKey}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get validator leaderboard",
       "validationMode": "strict-generated"
     },
     "validators.list": {
@@ -364,6 +1899,202 @@
       "timeoutMs": 15000,
       "title": "List validators",
       "validationMode": "strict-generated"
+    },
+    "validators.proposal_luck": {
+      "description": "Retrieve proposal luck statistics compared with expected proposal rates.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "validators": {
+            "description": "Comma-separated validator indices and/or BLS public keys (max 100).",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "validators"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/validators/proposalLuck",
+        "query": {
+          "apikey": "{{apiKey}}",
+          "validators": "{{validators}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get validators proposal luck",
+      "validationMode": "strict-generated"
+    },
+    "validators.proposals": {
+      "description": "Retrieve beacon blocks proposed by validators within a bounded epoch window.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "epoch": {
+            "description": "Upper bound of the 100-epoch proposal window (inclusive).",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "indexOrPubkey": {
+            "description": "Comma-separated validator indices and/or BLS public keys.",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "indexOrPubkey"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/validator/{{indexOrPubkey}}/proposals",
+        "query": {
+          "apikey": "{{apiKey}}",
+          "epoch": "{{epoch}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get validator proposals",
+      "validationMode": "strict-generated"
+    },
+    "validators.queue": {
+      "description": "Retrieve current activation and exit queue counts and effective balances.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {},
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/validators/queue",
+        "query": {
+          "apikey": "{{apiKey}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get validators queue",
+      "validationMode": "strict-generated"
+    },
+    "validators.withdrawals": {
+      "description": "Retrieve withdrawal operations for validators within a bounded epoch window.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "epoch": {
+            "description": "Upper bound of the 100-epoch withdrawal window (inclusive).",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "index_or_pubkey": {
+            "description": "Comma-separated validator indices and/or 0x-prefixed BLS public keys.",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "index_or_pubkey"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/validator/{{index_or_pubkey}}/withdrawals",
+        "query": {
+          "apikey": "{{apiKey}}",
+          "epoch": "{{epoch}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get validator withdrawals",
+      "validationMode": "strict-generated"
     }
   },
   "provenance": {
@@ -373,6 +2104,6 @@
     }
   },
   "runtime": "bun",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "visibility": "public"
 }
