@@ -80,6 +80,36 @@
         "path": "src/providers/companycam/executors.ts",
         "startLine": 337,
         "endLine": 350
+      },
+      "action-create-project": {
+        "path": "src/providers/companycam/actions.ts",
+        "startLine": 171,
+        "endLine": 190
+      },
+      "action-update-project": {
+        "path": "src/providers/companycam/actions.ts",
+        "startLine": 191,
+        "endLine": 209
+      },
+      "action-create-tag": {
+        "path": "src/providers/companycam/actions.ts",
+        "startLine": 268,
+        "endLine": 278
+      },
+      "handler-create-project": {
+        "path": "src/providers/companycam/executors.ts",
+        "startLine": 79,
+        "endLine": 90
+      },
+      "handler-update-project": {
+        "path": "src/providers/companycam/executors.ts",
+        "startLine": 91,
+        "endLine": 101
+      },
+      "handler-create-tag": {
+        "path": "src/providers/companycam/executors.ts",
+        "startLine": 164,
+        "endLine": 174
       }
     }
   },
@@ -87,13 +117,33 @@
     "providerId": "companycam",
     "appcallId": "companycam",
     "disposition": "APPROVED",
-    "edition": "international CompanyCam Core API v2",
+    "edition": "international CompanyCam Core API v2/v3 covering Composio COMPANYCAM tools",
     "operations": [
       "healthcheck",
-      "users.current",
-      "projects.list",
       "projects.get",
-      "users.list"
+      "projects.list",
+      "users.current",
+      "users.list",
+      "projects.create",
+      "projects.update",
+      "projects.search",
+      "comments.add",
+      "comments.list",
+      "photos.get",
+      "photos.create",
+      "photos.description.set",
+      "photos.tags.add",
+      "photos.tags.list",
+      "tags.create",
+      "projects.labels.add",
+      "projects.labels.list",
+      "projects.photos.list",
+      "customers.create",
+      "customers.list",
+      "customers.update",
+      "projects.tasks.create",
+      "projects.tasks.list",
+      "projects.tasks.update"
     ],
     "upstreamSha": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
     "marketFocus": "international",
@@ -178,19 +228,19 @@
         "Credential-only healthcheck uses GET /company, matching the pinned validator and official Retrieve Company operation."
       ]
     },
-    "users.current": {
-      "upstreamActionId": "get_current_user",
+    "projects.get": {
+      "upstreamActionId": "get_project",
       "sourceRefs": [
-        "action-get-current-user",
-        "handler-get-current-user",
+        "action-get-project",
+        "handler-get-project",
         "request-auth"
       ],
       "documentationUrls": [
-        "https://companycam.readme.io/reference/getcurrentuser"
+        "https://companycam.readme.io/reference/getproject"
       ],
       "responseContract": "appcall-provider-json-v1",
       "adaptations": [
-        "Returns raw GET /users/current JSON under data."
+        "projectId is percent-encoded as one path segment on GET /projects/{projectId}."
       ]
     },
     "projects.list": {
@@ -209,19 +259,19 @@
         "perPage is sent as the documented per_page query parameter. Official list response is a JSON array. modified_since and status filters are omitted from this bounded subset."
       ]
     },
-    "projects.get": {
-      "upstreamActionId": "get_project",
+    "users.current": {
+      "upstreamActionId": "get_current_user",
       "sourceRefs": [
-        "action-get-project",
-        "handler-get-project",
+        "action-get-current-user",
+        "handler-get-current-user",
         "request-auth"
       ],
       "documentationUrls": [
-        "https://companycam.readme.io/reference/getproject"
+        "https://companycam.readme.io/reference/getcurrentuser"
       ],
       "responseContract": "appcall-provider-json-v1",
       "adaptations": [
-        "projectId is percent-encoded as one path segment on GET /projects/{projectId}."
+        "Returns raw GET /users/current JSON under data."
       ]
     },
     "users.list": {
@@ -239,22 +289,303 @@
       "adaptations": [
         "perPage is sent as per_page. Official list response is a JSON array."
       ]
+    },
+    "projects.create": {
+      "upstreamActionId": "create_project",
+      "sourceRefs": [
+        "action-create-project",
+        "handler-create-project",
+        "request-auth"
+      ],
+      "documentationUrls": [
+        "https://companycam.readme.io/reference/createproject"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "POST /projects. Native name is required. Nested address/coordinates/geofence/primary_contact use Core API field names and are omitted when unset. userEmail is sent as X-CompanyCam-User."
+      ]
+    },
+    "projects.update": {
+      "upstreamActionId": "update_project",
+      "sourceRefs": [
+        "action-update-project",
+        "handler-update-project",
+        "request-auth"
+      ],
+      "documentationUrls": [
+        "https://companycam.readme.io/reference/updateproject"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "PUT /projects/{projectId}. Unset optional blobs are omitted."
+      ]
+    },
+    "projects.search": {
+      "upstreamActionId": "list_projects",
+      "sourceRefs": [
+        "action-list-projects",
+        "handler-list-projects",
+        "query-builders",
+        "request-auth"
+      ],
+      "documentationUrls": [
+        "https://companycam.readme.io/reference/listprojects"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Same GET /projects as projects.list, with required query. perPage maps to per_page; modifiedSince maps to modified_since."
+      ]
+    },
+    "comments.add": {
+      "upstreamActionId": "get_company",
+      "sourceRefs": [
+        "request-auth"
+      ],
+      "documentationUrls": [
+        "https://companycam.readme.io/reference/createprojectcomment",
+        "https://companycam.readme.io/reference/createphotocomment"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "commentCollection enum projects|photos selects POST /projects/{id}/comments or POST /photos/{id}/comments. Body is { comment: { content } }."
+      ]
+    },
+    "comments.list": {
+      "upstreamActionId": "get_company",
+      "sourceRefs": [
+        "request-auth"
+      ],
+      "documentationUrls": [
+        "https://companycam.readme.io/reference/listprojectcomments",
+        "https://companycam.readme.io/reference/listphotocomments"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "commentCollection enum selects GET /projects/{id}/comments or GET /photos/{id}/comments."
+      ]
+    },
+    "photos.get": {
+      "upstreamActionId": "get_company",
+      "sourceRefs": [
+        "request-auth"
+      ],
+      "documentationUrls": [
+        "https://companycam.readme.io/reference/getphoto"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "GET /photos/{photoId}; the ID is percent-encoded as one path segment."
+      ]
+    },
+    "photos.create": {
+      "upstreamActionId": "get_company",
+      "sourceRefs": [
+        "request-auth"
+      ],
+      "documentationUrls": [
+        "https://companycam.readme.io/reference/createprojectphoto"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "POST /projects/{projectId}/photos with photo.uri and photo.captured_at (native capturedAt). Optional tags/description/coordinates omitted when unset."
+      ]
+    },
+    "photos.description.set": {
+      "upstreamActionId": "get_company",
+      "sourceRefs": [
+        "request-auth"
+      ],
+      "documentationUrls": [
+        "https://companycam.readme.io/reference/updatephotodescription"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "POST /photos/{photoId}/descriptions with { description }."
+      ]
+    },
+    "photos.tags.add": {
+      "upstreamActionId": "get_company",
+      "sourceRefs": [
+        "request-auth"
+      ],
+      "documentationUrls": [
+        "https://companycam.readme.io/reference/createphototags"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "POST /photos/{photoId}/tags with { tags: [display names] }."
+      ]
+    },
+    "photos.tags.list": {
+      "upstreamActionId": "get_company",
+      "sourceRefs": [
+        "request-auth"
+      ],
+      "documentationUrls": [
+        "https://companycam.readme.io/reference/listphototags"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "GET /photos/{photoId}/tags lists tags attached to one photo."
+      ]
+    },
+    "tags.create": {
+      "upstreamActionId": "create_tag",
+      "sourceRefs": [
+        "action-create-tag",
+        "handler-create-tag",
+        "request-auth"
+      ],
+      "documentationUrls": [
+        "https://companycam.readme.io/reference/createtag"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "POST /tags with { tag: { display_value } }. Native displayValue maps to display_value."
+      ]
+    },
+    "projects.labels.add": {
+      "upstreamActionId": "get_company",
+      "sourceRefs": [
+        "request-auth"
+      ],
+      "documentationUrls": [
+        "https://companycam.readme.io/reference/createprojectlabels"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "POST /projects/{projectId}/labels with { project: { labels } }."
+      ]
+    },
+    "projects.labels.list": {
+      "upstreamActionId": "get_company",
+      "sourceRefs": [
+        "request-auth"
+      ],
+      "documentationUrls": [
+        "https://companycam.readme.io/reference/listprojectlabels"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "GET /projects/{projectId}/labels."
+      ]
+    },
+    "projects.photos.list": {
+      "upstreamActionId": "get_company",
+      "sourceRefs": [
+        "request-auth"
+      ],
+      "documentationUrls": [
+        "https://companycam.readme.io/reference/listprojectphotos"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "GET /projects/{projectId}/photos. Native perPage/startDate/endDate/userIds/groupIds/tagIds map to per_page/start_date/end_date/user_ids/group_ids/tag_ids."
+      ]
+    },
+    "customers.create": {
+      "upstreamActionId": "create_project",
+      "sourceRefs": [
+        "action-create-project",
+        "handler-create-project",
+        "request-auth"
+      ],
+      "documentationUrls": [
+        "https://developers.companycam.com/reference/createcustomer"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "POST https://api.companycam.com/v3/crm/customers. v3 Core CRM; request.baseUrl is https://api.companycam.com/v3."
+      ]
+    },
+    "customers.list": {
+      "upstreamActionId": "list_projects",
+      "sourceRefs": [
+        "action-list-projects",
+        "handler-list-projects",
+        "request-auth"
+      ],
+      "documentationUrls": [
+        "https://developers.companycam.com/reference/listcustomers"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "GET https://api.companycam.com/v3/crm/customers."
+      ]
+    },
+    "customers.update": {
+      "upstreamActionId": "update_project",
+      "sourceRefs": [
+        "action-update-project",
+        "handler-update-project",
+        "request-auth"
+      ],
+      "documentationUrls": [
+        "https://developers.companycam.com/reference/updatecustomer"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "PATCH https://api.companycam.com/v3/crm/customers/{customerId}."
+      ]
+    },
+    "projects.tasks.create": {
+      "upstreamActionId": "create_project",
+      "sourceRefs": [
+        "action-create-project",
+        "handler-create-project",
+        "request-auth"
+      ],
+      "documentationUrls": [
+        "https://developers.companycam.com/reference/createprojecttask"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "POST https://api.companycam.com/v3/projects/{projectId}/tasks."
+      ]
+    },
+    "projects.tasks.list": {
+      "upstreamActionId": "list_projects",
+      "sourceRefs": [
+        "action-list-projects",
+        "handler-list-projects",
+        "request-auth"
+      ],
+      "documentationUrls": [
+        "https://developers.companycam.com/reference/listprojecttasks"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "GET https://api.companycam.com/v3/projects/{projectId}/tasks."
+      ]
+    },
+    "projects.tasks.update": {
+      "upstreamActionId": "update_project",
+      "sourceRefs": [
+        "action-update-project",
+        "handler-update-project",
+        "request-auth"
+      ],
+      "documentationUrls": [
+        "https://developers.companycam.com/reference/updateprojecttask"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "PATCH https://api.companycam.com/v3/projects/{projectId}/tasks/{taskId}."
+      ]
     }
   },
   "manifest": {
     "key": "companycam",
     "name": "CompanyCam",
-    "version": "0.1.0",
+    "version": "0.3.0",
     "runtime": "bun",
     "visibility": "public",
     "categories": [
       "productivity"
     ],
     "auth": {
-      "type": "api_key",
       "scopes": [],
       "setup": {
-        "mode": "api_key",
         "fields": [
           {
             "key": "apiKey",
@@ -262,8 +593,10 @@
             "required": true,
             "secret": true
           }
-        ]
-      }
+        ],
+        "mode": "api_key"
+      },
+      "type": "api_key"
     },
     "network": {
       "allowedHosts": [
@@ -273,28 +606,34 @@
     "models": [
       "company",
       "user",
-      "project"
+      "project",
+      "photo",
+      "comment",
+      "tag",
+      "label",
+      "customer",
+      "task"
     ],
     "http": {
-      "baseUrl": "https://api.companycam.com/v2",
       "auth": {
         "field": "apiKey",
         "in": "header",
         "name": "Authorization",
         "value": "Bearer {{apiKey}}"
       },
+      "baseUrl": "https://api.companycam.com/v2",
       "errors": {
-        "rateLimitStatuses": [
-          429
-        ],
-        "retryAfterHeader": "retry-after",
         "defaultRetryAfterSeconds": 30,
         "messagePaths": [
           "errors",
           "error",
           "message",
           "detail"
-        ]
+        ],
+        "rateLimitStatuses": [
+          429
+        ],
+        "retryAfterHeader": "retry-after"
       },
       "headers": {
         "Accept": "application/json"
@@ -302,29 +641,27 @@
     },
     "operations": {
       "healthcheck": {
+        "description": "Validate the CompanyCam access token with GET /company.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {},
+          "type": "object"
+        },
         "kind": "action",
-        "sideEffect": "read",
-        "timeoutMs": 5000,
         "maxInputBytes": 4096,
         "maxResponseBytes": 65536,
-        "title": "Healthcheck",
-        "description": "Validate the CompanyCam access token with GET /company.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {},
-          "additionalProperties": false
-        },
         "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
+          "additionalProperties": false,
           "properties": {
             "data": {
               "type": "object"
             }
           },
-          "additionalProperties": false
+          "required": [
+            "data"
+          ],
+          "type": "object"
         },
         "request": {
           "method": "GET",
@@ -333,84 +670,92 @@
             200
           ]
         },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "users.current": {
-        "kind": "action",
+        "responseFormat": "json",
         "sideEffect": "read",
-        "timeoutMs": 15000,
-        "maxInputBytes": 4096,
-        "maxResponseBytes": 5242880,
-        "title": "Get current user",
-        "description": "Retrieve the CompanyCam user associated with the access token.",
+        "timeoutMs": 5000,
+        "title": "Healthcheck",
+        "validationMode": "strict-generated"
+      },
+      "projects.get": {
+        "description": "Retrieve one CompanyCam project by ID.",
+        "enforceOutputSchema": true,
         "inputSchema": {
-          "type": "object",
-          "properties": {},
-          "additionalProperties": false
-        },
-        "outputSchema": {
-          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "projectId": {
+              "minLength": 1,
+              "type": "string"
+            }
+          },
           "required": [
-            "data"
+            "projectId"
           ],
+          "type": "object"
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "additionalProperties": false,
           "properties": {
             "data": {
               "type": "object"
             }
           },
-          "additionalProperties": false
+          "required": [
+            "data"
+          ],
+          "type": "object"
         },
         "request": {
           "method": "GET",
-          "path": "/users/current",
+          "path": "/projects/{{projectId}}",
           "success": [
             200
           ]
         },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "projects.list": {
-        "kind": "action",
+        "responseFormat": "json",
         "sideEffect": "read",
         "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "title": "List projects",
+        "title": "Get project",
+        "validationMode": "strict-generated"
+      },
+      "projects.list": {
         "description": "List CompanyCam projects with optional name/address query and page filters.",
+        "enforceOutputSchema": true,
         "inputSchema": {
-          "type": "object",
+          "additionalProperties": false,
           "properties": {
             "page": {
-              "type": "integer",
-              "minimum": 1
+              "minimum": 1,
+              "type": "integer"
             },
             "perPage": {
-              "type": "integer",
+              "maximum": 100,
               "minimum": 1,
-              "maximum": 100
+              "type": "integer"
             },
             "query": {
-              "type": "string",
-              "minLength": 1
+              "minLength": 1,
+              "type": "string"
             }
           },
-          "additionalProperties": false
+          "type": "object"
         },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
         "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
+          "additionalProperties": false,
           "properties": {
             "data": {
               "type": "array"
             }
           },
-          "additionalProperties": false
+          "required": [
+            "data"
+          ],
+          "type": "object"
         },
         "request": {
           "method": "GET",
@@ -424,88 +769,80 @@
             200
           ]
         },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "projects.get": {
-        "kind": "action",
+        "responseFormat": "json",
         "sideEffect": "read",
         "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "title": "Get project",
-        "description": "Retrieve one CompanyCam project by ID.",
+        "title": "List projects",
+        "validationMode": "strict-generated"
+      },
+      "users.current": {
+        "description": "Retrieve the CompanyCam user associated with the access token.",
+        "enforceOutputSchema": true,
         "inputSchema": {
-          "type": "object",
-          "properties": {
-            "projectId": {
-              "type": "string",
-              "minLength": 1
-            }
-          },
           "additionalProperties": false,
-          "required": [
-            "projectId"
-          ]
+          "properties": {},
+          "type": "object"
         },
+        "kind": "action",
+        "maxInputBytes": 4096,
+        "maxResponseBytes": 5242880,
         "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
+          "additionalProperties": false,
           "properties": {
             "data": {
               "type": "object"
             }
           },
-          "additionalProperties": false
+          "required": [
+            "data"
+          ],
+          "type": "object"
         },
         "request": {
           "method": "GET",
-          "path": "/projects/{{projectId}}",
+          "path": "/users/current",
           "success": [
             200
           ]
         },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "users.list": {
-        "kind": "action",
+        "responseFormat": "json",
         "sideEffect": "read",
         "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "title": "List users",
+        "title": "Get current user",
+        "validationMode": "strict-generated"
+      },
+      "users.list": {
         "description": "List CompanyCam users with optional page filters.",
+        "enforceOutputSchema": true,
         "inputSchema": {
-          "type": "object",
+          "additionalProperties": false,
           "properties": {
             "page": {
-              "type": "integer",
-              "minimum": 1
+              "minimum": 1,
+              "type": "integer"
             },
             "perPage": {
-              "type": "integer",
+              "maximum": 100,
               "minimum": 1,
-              "maximum": 100
+              "type": "integer"
             }
           },
-          "additionalProperties": false
+          "type": "object"
         },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
         "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
+          "additionalProperties": false,
           "properties": {
             "data": {
               "type": "array"
             }
           },
-          "additionalProperties": false
+          "required": [
+            "data"
+          ],
+          "type": "object"
         },
         "request": {
           "method": "GET",
@@ -518,6 +855,1587 @@
             200
           ]
         },
+        "responseFormat": "json",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "title": "List users",
+        "validationMode": "strict-generated"
+      },
+      "projects.create": {
+        "kind": "action",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Create project",
+        "description": "Create a CompanyCam project via POST /projects. Name is required; address, coordinates, geofence, and primary_contact are optional Core API fields. Optional userEmail is sent as X-CompanyCam-User.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "name"
+          ],
+          "properties": {
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Project name."
+            },
+            "address": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "street_address_1": {
+                  "type": "string",
+                  "description": "First street address line."
+                },
+                "street_address_2": {
+                  "type": "string",
+                  "description": "Second street address line."
+                },
+                "city": {
+                  "type": "string",
+                  "description": "City."
+                },
+                "state": {
+                  "type": "string",
+                  "description": "State or region."
+                },
+                "postal_code": {
+                  "type": "string",
+                  "description": "Postal or ZIP code."
+                },
+                "country": {
+                  "type": "string",
+                  "description": "Country code."
+                }
+              }
+            },
+            "coordinates": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "lat",
+                "lon"
+              ],
+              "properties": {
+                "lat": {
+                  "type": "number",
+                  "description": "Latitude."
+                },
+                "lon": {
+                  "type": "number",
+                  "description": "Longitude."
+                }
+              }
+            },
+            "geofence": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "lat",
+                  "lon"
+                ],
+                "properties": {
+                  "lat": {
+                    "type": "number",
+                    "description": "Latitude."
+                  },
+                  "lon": {
+                    "type": "number",
+                    "description": "Longitude."
+                  }
+                }
+              },
+              "description": "Geofence coordinates."
+            },
+            "primary_contact": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "name"
+              ],
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Primary contact name."
+                },
+                "email": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Primary contact email."
+                },
+                "phone_number": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Primary contact phone."
+                }
+              }
+            },
+            "userEmail": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Creator email sent as X-CompanyCam-User."
+            }
+          }
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          }
+        },
+        "request": {
+          "method": "POST",
+          "path": "/projects",
+          "success": [
+            201
+          ],
+          "headers": {
+            "X-CompanyCam-User": "{{userEmail}}",
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "name": "{{name}}",
+            "address": "{{address}}",
+            "coordinates": "{{coordinates}}",
+            "geofence": "{{geofence}}",
+            "primary_contact": "{{primary_contact}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "projects.update": {
+        "kind": "action",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Update project",
+        "description": "Update a CompanyCam project via PUT /projects/{projectId}. Optional name, address, coordinates, and geofence are sent when set.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "projectId"
+          ],
+          "properties": {
+            "projectId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "CompanyCam project ID."
+            },
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Updated project name."
+            },
+            "address": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "street_address_1": {
+                  "type": "string",
+                  "description": "First street address line."
+                },
+                "street_address_2": {
+                  "type": "string",
+                  "description": "Second street address line."
+                },
+                "city": {
+                  "type": "string",
+                  "description": "City."
+                },
+                "state": {
+                  "type": "string",
+                  "description": "State or region."
+                },
+                "postal_code": {
+                  "type": "string",
+                  "description": "Postal or ZIP code."
+                },
+                "country": {
+                  "type": "string",
+                  "description": "Country code."
+                }
+              }
+            },
+            "coordinates": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "lat",
+                "lon"
+              ],
+              "properties": {
+                "lat": {
+                  "type": "number",
+                  "description": "Latitude."
+                },
+                "lon": {
+                  "type": "number",
+                  "description": "Longitude."
+                }
+              }
+            },
+            "geofence": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "lat",
+                  "lon"
+                ],
+                "properties": {
+                  "lat": {
+                    "type": "number",
+                    "description": "Latitude."
+                  },
+                  "lon": {
+                    "type": "number",
+                    "description": "Longitude."
+                  }
+                }
+              },
+              "description": "Updated geofence coordinates."
+            }
+          }
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          }
+        },
+        "request": {
+          "method": "PUT",
+          "path": "/projects/{{projectId}}",
+          "success": [
+            200
+          ],
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "name": "{{name}}",
+            "address": "{{address}}",
+            "coordinates": "{{coordinates}}",
+            "geofence": "{{geofence}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "projects.search": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Search projects",
+        "description": "Search CompanyCam projects via GET /projects with a required query (name or address line 1). Optional page, perPage, modifiedSince, and status filters match the Core API list endpoint.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "query"
+          ],
+          "properties": {
+            "query": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Filter by name or first address line."
+            },
+            "page": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Page number for offset pagination."
+            },
+            "perPage": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Results per page (sent as per_page, max 100)."
+            },
+            "modifiedSince": {
+              "type": "string",
+              "minLength": 1,
+              "description": "ISO-8601 timestamp sent as modified_since."
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "active",
+                "deleted"
+              ],
+              "description": "Project status filter."
+            }
+          }
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "array"
+            }
+          }
+        },
+        "request": {
+          "method": "GET",
+          "path": "/projects",
+          "success": [
+            200
+          ],
+          "query": {
+            "query": "{{query}}",
+            "page": "{{page}}",
+            "per_page": "{{perPage}}",
+            "modified_since": "{{modifiedSince}}",
+            "status": "{{status}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "comments.add": {
+        "kind": "action",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Add comment",
+        "description": "Add a comment to a CompanyCam project or photo via POST /{commentCollection}/{resourceId}/comments. commentCollection is projects or photos. Optional userEmail is sent as X-CompanyCam-User.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "commentCollection",
+            "resourceId",
+            "content"
+          ],
+          "properties": {
+            "commentCollection": {
+              "type": "string",
+              "enum": [
+                "projects",
+                "photos"
+              ],
+              "description": "Comment parent collection: projects or photos."
+            },
+            "resourceId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Project ID or photo ID matching commentCollection."
+            },
+            "content": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Comment text sent as comment.content."
+            },
+            "userEmail": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Commenter email sent as X-CompanyCam-User."
+            }
+          }
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          }
+        },
+        "request": {
+          "method": "POST",
+          "path": "/{{commentCollection}}/{{resourceId}}/comments",
+          "success": [
+            201
+          ],
+          "headers": {
+            "X-CompanyCam-User": "{{userEmail}}",
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "comment": {
+              "content": "{{content}}"
+            }
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "comments.list": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "List comments",
+        "description": "List comments on a CompanyCam project or photo via GET /{commentCollection}/{resourceId}/comments. commentCollection is projects or photos.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "commentCollection",
+            "resourceId"
+          ],
+          "properties": {
+            "commentCollection": {
+              "type": "string",
+              "enum": [
+                "projects",
+                "photos"
+              ],
+              "description": "Comment parent collection: projects or photos."
+            },
+            "resourceId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Project ID or photo ID matching commentCollection."
+            },
+            "page": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Page number for offset pagination."
+            },
+            "perPage": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Results per page (sent as per_page, max 100)."
+            }
+          }
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "array"
+            }
+          }
+        },
+        "request": {
+          "method": "GET",
+          "path": "/{{commentCollection}}/{{resourceId}}/comments",
+          "success": [
+            200
+          ],
+          "query": {
+            "page": "{{page}}",
+            "per_page": "{{perPage}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "photos.get": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Get photo",
+        "description": "Retrieve one CompanyCam photo by ID via GET /photos/{photoId}.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "photoId"
+          ],
+          "properties": {
+            "photoId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "CompanyCam photo ID."
+            }
+          }
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          }
+        },
+        "request": {
+          "method": "GET",
+          "path": "/photos/{{photoId}}",
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "photos.create": {
+        "kind": "action",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Add project photo from URL",
+        "description": "Add a photo to a CompanyCam project by URL via POST /projects/{projectId}/photos. Requires uri and capturedAt (unix seconds). Optional description, tags, coordinates, and userEmail (X-CompanyCam-User).",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "projectId",
+            "uri",
+            "capturedAt"
+          ],
+          "properties": {
+            "projectId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "CompanyCam project ID."
+            },
+            "uri": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Publicly reachable HTTPS image URL."
+            },
+            "capturedAt": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Unix timestamp when the photo was captured, sent as captured_at."
+            },
+            "description": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Photo description."
+            },
+            "tags": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "description": "Tag display names to attach."
+            },
+            "coordinates": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "lat",
+                "lon"
+              ],
+              "properties": {
+                "lat": {
+                  "type": "number",
+                  "description": "Latitude."
+                },
+                "lon": {
+                  "type": "number",
+                  "description": "Longitude."
+                }
+              }
+            },
+            "userEmail": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Creator email sent as X-CompanyCam-User."
+            }
+          }
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          }
+        },
+        "request": {
+          "method": "POST",
+          "path": "/projects/{{projectId}}/photos",
+          "success": [
+            201
+          ],
+          "headers": {
+            "X-CompanyCam-User": "{{userEmail}}",
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "photo": {
+              "uri": "{{uri}}",
+              "captured_at": "{{capturedAt}}",
+              "description": "{{description}}",
+              "tags": "{{tags}}",
+              "coordinates": "{{coordinates}}"
+            }
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "photos.description.set": {
+        "kind": "action",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Set photo description",
+        "description": "Set a CompanyCam photo description via POST /photos/{photoId}/descriptions.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "photoId",
+            "description"
+          ],
+          "properties": {
+            "photoId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "CompanyCam photo ID."
+            },
+            "description": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Photo description."
+            }
+          }
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          }
+        },
+        "request": {
+          "method": "POST",
+          "path": "/photos/{{photoId}}/descriptions",
+          "success": [
+            201
+          ],
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "description": "{{description}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "photos.tags.add": {
+        "kind": "action",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Add photo tags",
+        "description": "Attach media tags by display name via POST /photos/{photoId}/tags. Body is { tags: [strings] }.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "photoId",
+            "tags"
+          ],
+          "properties": {
+            "photoId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "CompanyCam photo ID."
+            },
+            "tags": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "description": "Tag display names to attach."
+            }
+          }
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "array"
+            }
+          }
+        },
+        "request": {
+          "method": "POST",
+          "path": "/photos/{{photoId}}/tags",
+          "success": [
+            201
+          ],
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "tags": "{{tags}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "photos.tags.list": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "List photo tags",
+        "description": "List tags attached to one CompanyCam photo via GET /photos/{photoId}/tags.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "photoId"
+          ],
+          "properties": {
+            "photoId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "CompanyCam photo ID."
+            },
+            "page": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Page number for offset pagination."
+            },
+            "perPage": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Results per page (sent as per_page, max 100)."
+            }
+          }
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "array"
+            }
+          }
+        },
+        "request": {
+          "method": "GET",
+          "path": "/photos/{{photoId}}/tags",
+          "success": [
+            200
+          ],
+          "query": {
+            "page": "{{page}}",
+            "per_page": "{{perPage}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "tags.create": {
+        "kind": "action",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Create photo tag",
+        "description": "Create a reusable CompanyCam media tag via POST /tags with tag.display_value.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "displayValue"
+          ],
+          "properties": {
+            "displayValue": {
+              "type": "string",
+              "minLength": 1,
+              "description": "User-facing tag label sent as tag.display_value."
+            }
+          }
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          }
+        },
+        "request": {
+          "method": "POST",
+          "path": "/tags",
+          "success": [
+            201
+          ],
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "tag": {
+              "display_value": "{{displayValue}}"
+            }
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "projects.labels.add": {
+        "kind": "action",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Add project labels",
+        "description": "Attach project labels by display name via POST /projects/{projectId}/labels. Body is { project: { labels: [strings] } }.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "projectId",
+            "labels"
+          ],
+          "properties": {
+            "projectId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "CompanyCam project ID."
+            },
+            "labels": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "description": "Label display names to attach."
+            }
+          }
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "array"
+            }
+          }
+        },
+        "request": {
+          "method": "POST",
+          "path": "/projects/{{projectId}}/labels",
+          "success": [
+            201
+          ],
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "project": {
+              "labels": "{{labels}}"
+            }
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "projects.labels.list": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "List project labels",
+        "description": "List labels on a CompanyCam project via GET /projects/{projectId}/labels.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "projectId"
+          ],
+          "properties": {
+            "projectId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "CompanyCam project ID."
+            },
+            "page": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Page number for offset pagination."
+            },
+            "perPage": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Results per page (sent as per_page, max 100)."
+            }
+          }
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "array"
+            }
+          }
+        },
+        "request": {
+          "method": "GET",
+          "path": "/projects/{{projectId}}/labels",
+          "success": [
+            200
+          ],
+          "query": {
+            "page": "{{page}}",
+            "per_page": "{{perPage}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "projects.photos.list": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "List project photos",
+        "description": "List photos on a CompanyCam project via GET /projects/{projectId}/photos. Optional page, perPage, after, before, startDate, endDate, userIds, groupIds, and tagIds match the Core API.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "projectId"
+          ],
+          "properties": {
+            "projectId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "CompanyCam project ID."
+            },
+            "page": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Page number for offset pagination."
+            },
+            "perPage": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Results per page (sent as per_page, max 100)."
+            },
+            "after": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Forward cursor from X-Next-Cursor."
+            },
+            "before": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Backward cursor from X-Prev-Cursor."
+            },
+            "startDate": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Unix timestamp sent as start_date."
+            },
+            "endDate": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Unix timestamp sent as end_date."
+            },
+            "userIds": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "description": "Filter by capturer user IDs (user_ids)."
+            },
+            "groupIds": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "description": "Filter by group IDs (group_ids)."
+            },
+            "tagIds": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "description": "Filter by tag IDs (tag_ids)."
+            }
+          }
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "array"
+            }
+          }
+        },
+        "request": {
+          "method": "GET",
+          "path": "/projects/{{projectId}}/photos",
+          "success": [
+            200
+          ],
+          "query": {
+            "page": "{{page}}",
+            "per_page": "{{perPage}}",
+            "after": "{{after}}",
+            "before": "{{before}}",
+            "start_date": "{{startDate}}",
+            "end_date": "{{endDate}}",
+            "user_ids": "{{userIds}}",
+            "group_ids": "{{groupIds}}",
+            "tag_ids": "{{tagIds}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "customers.create": {
+        "kind": "action",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Create customer",
+        "description": "Create a CompanyCam customer via POST /crm/customers on Core API v3. Name is required; email, notes, is_company, phone_number, address, and contacts are optional. Street, city, and state are required when address is supplied.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "name"
+          ],
+          "properties": {
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Customer name."
+            },
+            "email": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Customer email address."
+            },
+            "notes": {
+              "type": "string",
+              "description": "Customer notes."
+            },
+            "isCompany": {
+              "type": "boolean",
+              "description": "Whether the customer represents a company (is_company)."
+            },
+            "phoneNumber": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Customer phone number (phone_number)."
+            },
+            "address": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "street_address_1",
+                "city",
+                "state"
+              ],
+              "description": "Customer address. Street, city, and state are required when supplied.",
+              "properties": {
+                "street_address_1": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Primary street address."
+                },
+                "street_address_2": {
+                  "type": "string",
+                  "description": "Second street address line."
+                },
+                "city": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "City."
+                },
+                "state": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "State or region."
+                },
+                "postal_code": {
+                  "type": "string",
+                  "description": "Postal or ZIP code."
+                },
+                "country": {
+                  "type": "string",
+                  "description": "Country code."
+                }
+              }
+            },
+            "contacts": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "Contact name."
+                  },
+                  "email": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "Contact email."
+                  },
+                  "phone_number": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "Contact phone."
+                  }
+                }
+              },
+              "description": "Initial contacts to create for the customer."
+            }
+          }
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          }
+        },
+        "request": {
+          "baseUrl": "https://api.companycam.com/v3",
+          "method": "POST",
+          "path": "/crm/customers",
+          "success": [
+            201
+          ],
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "name": "{{name}}",
+            "email": "{{email}}",
+            "notes": "{{notes}}",
+            "is_company": "{{isCompany}}",
+            "phone_number": "{{phoneNumber}}",
+            "address": "{{address}}",
+            "contacts": "{{contacts}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "customers.list": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "List customers",
+        "description": "List or search CompanyCam customers via GET /crm/customers on Core API v3. Optional query matches customer names and contact text.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "query": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Optional text to match against customer names and contact details."
+            }
+          }
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "array"
+            }
+          }
+        },
+        "request": {
+          "baseUrl": "https://api.companycam.com/v3",
+          "method": "GET",
+          "path": "/crm/customers",
+          "success": [
+            200
+          ],
+          "query": {
+            "query": "{{query}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "customers.update": {
+        "kind": "action",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Update customer",
+        "description": "Update a CompanyCam customer via PATCH /crm/customers/{customerId} on Core API v3. Optional name, notes, and address city/postal_code are sent when set.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "customerId"
+          ],
+          "properties": {
+            "customerId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "CompanyCam customer ID."
+            },
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Updated customer name."
+            },
+            "notes": {
+              "type": "string",
+              "description": "Updated customer notes."
+            },
+            "address": {
+              "type": "object",
+              "additionalProperties": false,
+              "description": "Supported customer address updates: city and/or postal code.",
+              "properties": {
+                "city": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Updated city."
+                },
+                "postal_code": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Updated postal or ZIP code."
+                }
+              }
+            }
+          }
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          }
+        },
+        "request": {
+          "baseUrl": "https://api.companycam.com/v3",
+          "method": "PATCH",
+          "path": "/crm/customers/{{customerId}}",
+          "success": [
+            200
+          ],
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "name": "{{name}}",
+            "notes": "{{notes}}",
+            "address": "{{address}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "projects.tasks.create": {
+        "kind": "action",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Create project task",
+        "description": "Create a CompanyCam project task via POST /projects/{projectId}/tasks on Core API v3. details and projectId are required; optional assigneeIds are sent as assignee_ids. This is the project-task resource (OAuth project_tasks), not checklists.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "projectId",
+            "details"
+          ],
+          "properties": {
+            "projectId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "CompanyCam project ID."
+            },
+            "details": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Task details (CompanyCam limits project tasks to 250 characters)."
+            },
+            "assigneeIds": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "description": "CompanyCam user IDs to assign (assignee_ids)."
+            }
+          }
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          }
+        },
+        "request": {
+          "baseUrl": "https://api.companycam.com/v3",
+          "method": "POST",
+          "path": "/projects/{{projectId}}/tasks",
+          "success": [
+            201
+          ],
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "details": "{{details}}",
+            "assignee_ids": "{{assigneeIds}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "projects.tasks.list": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "List project tasks",
+        "description": "List CompanyCam project tasks via GET /projects/{projectId}/tasks on Core API v3, including status, completion, assignees, and attached media. This is the project-task resource, not checklists.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "projectId"
+          ],
+          "properties": {
+            "projectId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "CompanyCam project ID."
+            }
+          }
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "array"
+            }
+          }
+        },
+        "request": {
+          "baseUrl": "https://api.companycam.com/v3",
+          "method": "GET",
+          "path": "/projects/{{projectId}}/tasks",
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "projects.tasks.update": {
+        "kind": "action",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Update project task",
+        "description": "Update a CompanyCam project task via PATCH /projects/{projectId}/tasks/{taskId} on Core API v3. Optional details and assigneeIds (assignee_ids) add or retain assignees. This tool does not send provider assignee-removal records, so omitted users are retained.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "projectId",
+            "taskId"
+          ],
+          "properties": {
+            "projectId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "CompanyCam project ID containing the task."
+            },
+            "taskId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "CompanyCam project task ID."
+            },
+            "details": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Updated task details (CompanyCam limits project tasks to 250 characters)."
+            },
+            "assigneeIds": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "description": "User IDs to add or retain. Omitted users are retained; this tool never sends assignee-removal records."
+            }
+          }
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          }
+        },
+        "request": {
+          "baseUrl": "https://api.companycam.com/v3",
+          "method": "PATCH",
+          "path": "/projects/{{projectId}}/tasks/{{taskId}}",
+          "success": [
+            200
+          ],
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "details": "{{details}}",
+            "assignee_ids": "{{assigneeIds}}"
+          }
+        },
         "enforceOutputSchema": true,
         "validationMode": "strict-generated",
         "responseFormat": "json"
@@ -525,8 +2443,8 @@
     },
     "provenance": {
       "source": {
-        "url": "https://github.com/oomol-lab/open-connector",
-        "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"
+        "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
+        "url": "https://github.com/oomol-lab/open-connector"
       }
     },
     "evidence": {
