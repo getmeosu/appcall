@@ -1,7 +1,17 @@
 {
+  "key": "fern",
+  "name": "Fern",
+  "version": "0.2.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "payments"
+  ],
   "auth": {
+    "type": "api_key",
     "scopes": [],
     "setup": {
+      "mode": "api_key",
       "fields": [
         {
           "key": "apiKey",
@@ -9,136 +19,123 @@
           "required": true,
           "secret": true
         }
-      ],
-      "mode": "api_key"
-    },
-    "type": "api_key"
-  },
-  "categories": [
-    "payments"
-  ],
-  "evidence": {
-    "fixture": {
-      "status": "supplied"
-    },
-    "live": {
-      "status": "unverified"
+      ]
     }
   },
+  "network": {
+    "allowedHosts": [
+      "api.fernhq.com"
+    ]
+  },
+  "models": [
+    "customer",
+    "payment-account",
+    "transaction",
+    "quote",
+    "automation-rule"
+  ],
   "http": {
+    "baseUrl": "https://api.fernhq.com",
     "auth": {
       "field": "apiKey",
       "in": "header",
       "name": "Authorization",
       "value": "Bearer {{apiKey}}"
     },
-    "baseUrl": "https://api.fernhq.com",
+    "headers": {
+      "Accept": "application/json"
+    },
     "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after",
       "defaultRetryAfterSeconds": 30,
       "messagePaths": [
         "message",
         "error",
         "detail"
-      ],
-      "rateLimitStatuses": [
-        429
-      ],
-      "retryAfterHeader": "retry-after"
-    },
-    "headers": {
-      "Accept": "application/json"
+      ]
     }
   },
-  "key": "fern",
-  "models": [
-    "customer",
-    "payment-account",
-    "transaction"
-  ],
-  "name": "Fern",
-  "network": {
-    "allowedHosts": [
-      "api.fernhq.com"
-    ]
-  },
   "operations": {
-    "customers.get": {
-      "description": "Get one Fern customer by identifier.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "customerId": {
-            "minLength": 1,
-            "type": "string"
-          }
-        },
-        "required": [
-          "customerId"
-        ],
-        "type": "object"
-      },
-      "kind": "action",
+    "healthcheck": {
+      "timeoutMs": 15000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Healthcheck",
+      "description": "Validate a Fern API key by listing one customer page.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
       "outputSchema": {
-        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "required": [
-          "data"
-        ],
-        "type": "object"
+        "additionalProperties": false
       },
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated",
       "request": {
         "method": "GET",
-        "path": "/customers/{{customerId}}",
+        "path": "/customers",
+        "query": {
+          "pageSize": "1"
+        },
         "success": [
           200
         ]
-      },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "title": "Get customer",
-      "validationMode": "strict-generated"
+      }
     },
     "customers.list": {
-      "description": "List Fern customers.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "pageSize": {
-            "maximum": 100,
-            "minimum": 1,
-            "type": "integer"
-          },
-          "pageToken": {
-            "minLength": 1,
-            "type": "string"
-          }
-        },
-        "type": "object"
-      },
-      "kind": "action",
+      "timeoutMs": 15000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List customers",
+      "description": "List Fern customers.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "pageSize": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "pageToken": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      },
       "outputSchema": {
-        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "required": [
-          "data"
-        ],
-        "type": "object"
+        "additionalProperties": false
       },
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated",
       "request": {
         "method": "GET",
         "path": "/customers",
@@ -149,148 +146,1061 @@
         "success": [
           200
         ]
-      },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "title": "List customers",
-      "validationMode": "strict-generated"
+      }
     },
-    "healthcheck": {
-      "description": "Validate a Fern API key by listing one customer page.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {},
-        "type": "object"
-      },
-      "kind": "action",
+    "customers.get": {
+      "timeoutMs": 15000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Get customer",
+      "description": "Get one Fern customer by identifier.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "customerId"
+        ],
+        "properties": {
+          "customerId": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      },
       "outputSchema": {
-        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "required": [
-          "data"
-        ],
-        "type": "object"
+        "additionalProperties": false
       },
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated",
       "request": {
         "method": "GET",
-        "path": "/customers",
-        "query": {
-          "pageSize": "1"
-        },
+        "path": "/customers/{{customerId}}",
         "success": [
           200
         ]
-      },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "title": "Healthcheck",
-      "validationMode": "strict-generated"
+      }
     },
     "payment-accounts.get": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Get payment account",
       "description": "Get one Fern payment account by identifier.",
-      "enforceOutputSchema": true,
       "inputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "paymentAccountId": {
-            "minLength": 1,
-            "type": "string"
-          }
-        },
+        "type": "object",
         "required": [
           "paymentAccountId"
         ],
-        "type": "object"
+        "properties": {
+          "paymentAccountId": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
       },
-      "kind": "action",
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 1048576,
       "outputSchema": {
-        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "required": [
-          "data"
-        ],
-        "type": "object"
+        "additionalProperties": false
       },
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated",
       "request": {
         "method": "GET",
         "path": "/payment-accounts/{{paymentAccountId}}",
         "success": [
           200
         ]
-      },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "title": "Get payment account",
-      "validationMode": "strict-generated"
+      }
     },
     "transactions.get": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Get transaction",
       "description": "Get one Fern transaction by identifier.",
-      "enforceOutputSchema": true,
       "inputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "transactionId": {
-            "minLength": 1,
-            "type": "string"
-          }
-        },
+        "type": "object",
         "required": [
           "transactionId"
         ],
-        "type": "object"
+        "properties": {
+          "transactionId": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
       },
-      "kind": "action",
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 1048576,
       "outputSchema": {
-        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "required": [
-          "data"
-        ],
-        "type": "object"
+        "additionalProperties": false
       },
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated",
       "request": {
         "method": "GET",
         "path": "/transactions/{{transactionId}}",
         "success": [
           200
         ]
-      },
-      "responseFormat": "json",
-      "sideEffect": "read",
+      }
+    },
+    "customers.create": {
       "timeoutMs": 15000,
-      "title": "Get transaction",
-      "validationMode": "strict-generated"
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Create customer",
+      "description": "Create a Fern individual or business customer.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "customerType": {
+            "type": "string",
+            "enum": [
+              "INDIVIDUAL",
+              "BUSINESS"
+            ],
+            "description": "Customer type."
+          },
+          "email": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Customer email."
+          },
+          "firstName": {
+            "type": "string",
+            "minLength": 1,
+            "description": "First name for an individual customer."
+          },
+          "lastName": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Last name for an individual customer."
+          },
+          "businessName": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Business name for a business customer."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "customerType",
+          "email"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/customers",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "customerType": "{{customerType}}",
+          "email": "{{email}}",
+          "firstName": "{{firstName}}",
+          "lastName": "{{lastName}}",
+          "businessName": "{{businessName}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "customers.update": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Update customer",
+      "description": "Patch Fern customer KYC fields before or during verification.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "customerId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Customer identifier."
+          },
+          "firstName": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Updated first name."
+          },
+          "lastName": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Updated last name."
+          },
+          "email": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Updated email."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "customerId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/customers/{{customerId}}",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "firstName": "{{firstName}}",
+          "lastName": "{{lastName}}",
+          "email": "{{email}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "payment-accounts.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List payment accounts",
+      "description": "List Fern payment accounts with optional pagination.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "pageSize": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "pageToken": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Forward pagination token."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/payment-accounts",
+        "success": [
+          200
+        ],
+        "query": {
+          "pageSize": "{{pageSize}}",
+          "pageToken": "{{pageToken}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "payment-accounts.create": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Create payment account",
+      "description": "Create a Fern payment account for a customer.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "paymentAccountType": {
+            "type": "string",
+            "enum": [
+              "FERN_CRYPTO_WALLET",
+              "EXTERNAL_CRYPTO_WALLET",
+              "EXTERNAL_BANK_ACCOUNT",
+              "FERN_AUTO_FIAT_ACCOUNT",
+              "FERN_FIAT_ACCOUNT"
+            ],
+            "description": "Payment account type."
+          },
+          "customerId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Customer identifier."
+          },
+          "nickname": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Optional account nickname."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "paymentAccountType",
+          "customerId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/payment-accounts",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "paymentAccountType": "{{paymentAccountType}}",
+          "customerId": "{{customerId}}",
+          "nickname": "{{nickname}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "payment-accounts.delete": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "destructive",
+      "title": "Delete payment account",
+      "description": "Delete a Fern payment account by identifier.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "paymentAccountId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Payment account identifier."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "paymentAccountId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/payment-accounts/{{paymentAccountId}}",
+        "success": [
+          200,
+          204
+        ],
+        "result": {
+          "data": {}
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "payment-accounts.balance": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Get payment account balance",
+      "description": "Get the balance of a Fern payment account.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "paymentAccountId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Payment account identifier."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "paymentAccountId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/payment-accounts/{{paymentAccountId}}/balance",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "exchange-rates.get": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Get exchange rate",
+      "description": "Get a Fern exchange rate and fees between source and destination currencies.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "sourceCurrency": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Source currency label or contract address."
+          },
+          "sourcePaymentMethod": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Source payment method."
+          },
+          "destinationCurrency": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Destination currency label or contract address."
+          },
+          "destinationPaymentMethod": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Destination payment method."
+          },
+          "sourceAmount": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Optional source amount."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "sourceCurrency",
+          "sourcePaymentMethod",
+          "destinationCurrency",
+          "destinationPaymentMethod"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/exchange-rates",
+        "success": [
+          200
+        ],
+        "query": {
+          "sourceCurrency": "{{sourceCurrency}}",
+          "sourcePaymentMethod": "{{sourcePaymentMethod}}",
+          "destinationCurrency": "{{destinationCurrency}}",
+          "destinationPaymentMethod": "{{destinationPaymentMethod}}",
+          "sourceAmount": "{{sourceAmount}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "quotes.create": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Create quote",
+      "description": "Create a Fern quote for an onramp, offramp, or payout.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "customerId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Customer identifier."
+          },
+          "sourceCurrency": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Source currency label."
+          },
+          "sourcePaymentMethod": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Source payment method."
+          },
+          "sourceAmount": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Source amount."
+          },
+          "sourcePaymentAccountId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Source payment account identifier."
+          },
+          "destinationCurrency": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Destination currency label."
+          },
+          "destinationPaymentMethod": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Destination payment method."
+          },
+          "destinationPaymentAccountId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Destination payment account identifier."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "customerId",
+          "sourceCurrency",
+          "sourcePaymentMethod",
+          "sourceAmount",
+          "destinationCurrency",
+          "destinationPaymentMethod",
+          "destinationPaymentAccountId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/quotes",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "customerId": "{{customerId}}",
+          "source": {
+            "sourcePaymentAccountId": "{{sourcePaymentAccountId}}",
+            "sourceCurrency": "{{sourceCurrency}}",
+            "sourcePaymentMethod": "{{sourcePaymentMethod}}",
+            "sourceAmount": "{{sourceAmount}}"
+          },
+          "destination": {
+            "destinationPaymentAccountId": "{{destinationPaymentAccountId}}",
+            "destinationPaymentMethod": "{{destinationPaymentMethod}}",
+            "destinationCurrency": "{{destinationCurrency}}"
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "transactions.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List transactions",
+      "description": "List Fern transactions with optional customer and pagination filters.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "pageSize": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "pageToken": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Forward pagination token."
+          },
+          "customerId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Customer identifier."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/transactions",
+        "success": [
+          200
+        ],
+        "query": {
+          "pageSize": "{{pageSize}}",
+          "pageToken": "{{pageToken}}",
+          "customerId": "{{customerId}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "transactions.create": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Create transaction",
+      "description": "Create a Fern transaction from an unexpired quote.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "quoteId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Quote identifier."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "quoteId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/transactions",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "quoteId": "{{quoteId}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "transactions.cancel": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "destructive",
+      "title": "Cancel transaction",
+      "description": "Cancel a Fern transaction by identifier.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "transactionId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Transaction identifier."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "transactionId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/transactions/{{transactionId}}",
+        "success": [
+          200,
+          204
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "automation-rules.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List automation rules",
+      "description": "List Fern automation rules with optional pagination.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "pageSize": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "pageToken": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Forward pagination token."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/automation-rules",
+        "success": [
+          200
+        ],
+        "query": {
+          "pageSize": "{{pageSize}}",
+          "pageToken": "{{pageToken}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "automation-rules.get": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Get automation rule",
+      "description": "Retrieve one Fern automation rule by identifier.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "automationRuleId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Automation rule identifier."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "automationRuleId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/automation-rules/{{automationRuleId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "automation-rules.create": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Create automation rule",
+      "description": "Create a Fern automation rule for a customer.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "customerId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Customer identifier."
+          },
+          "destinationPaymentAccountId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Destination payment account identifier."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Rule display name."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "customerId",
+          "destinationPaymentAccountId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/automation-rules",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "customerId": "{{customerId}}",
+          "destinationPaymentAccountId": "{{destinationPaymentAccountId}}",
+          "name": "{{name}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "automation-rules.delete": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "destructive",
+      "title": "Delete automation rule",
+      "description": "Delete a Fern automation rule by identifier.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "automationRuleId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Automation rule identifier."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "automationRuleId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/automation-rules/{{automationRuleId}}",
+        "success": [
+          200,
+          204
+        ],
+        "result": {
+          "data": {}
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
     }
   },
   "provenance": {
     "source": {
-      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
-      "url": "https://github.com/oomol-lab/open-connector"
+      "url": "https://github.com/oomol-lab/open-connector",
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"
     }
   },
-  "runtime": "bun",
-  "version": "0.1.0",
-  "visibility": "public"
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
+    }
+  }
 }
