@@ -1,1 +1,1203 @@
-{"auth":{"scopes":[],"setup":{"fields":[{"key":"apiKey","label":"HR Partner API key","required":true,"secret":true}],"mode":"api_key"},"type":"api_key"},"categories":["productivity"],"evidence":{"fixture":{"status":"supplied"},"live":{"status":"unverified"}},"http":{"auth":{"field":"apiKey","in":"header","name":"x-api-key","value":"{{apiKey}}"},"baseUrl":"https://api.hrpartner.io","errors":{"defaultRetryAfterSeconds":30,"messagePaths":["error","error.message","message"],"rateLimitStatuses":[429],"retryAfterHeader":"retry-after"},"headers":{"Accept":"application/json"}},"key":"hr-partner","models":["company","employee","job"],"name":"HR Partner","network":{"allowedHosts":["api.hrpartner.io"]},"operations":{"company.get":{"description":"Retrieve HR Partner company information with optional custom-field and module flags.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{"active_modules":{"type":"boolean"},"custom_fields":{"type":"boolean"}},"type":"object"},"kind":"action","maxInputBytes":65536,"maxResponseBytes":5242880,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/company","query":{"active_modules":"{{active_modules}}","custom_fields":"{{custom_fields}}"},"success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":15000,"title":"Get company","validationMode":"strict-generated"},"employees.get":{"description":"Retrieve one HR Partner employee by employee code.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{"employee_code":{"minLength":1,"type":"string"}},"required":["employee_code"],"type":"object"},"kind":"action","maxInputBytes":65536,"maxResponseBytes":5242880,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/employee/{{employee_code}}","success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":15000,"title":"Get employee","validationMode":"strict-generated"},"employees.list":{"description":"List HR Partner employees with an optional name search.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{"search":{"minLength":1,"type":"string"}},"type":"object"},"kind":"action","maxInputBytes":65536,"maxResponseBytes":5242880,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"array"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/employees","query":{"search":"{{search}}"},"success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":15000,"title":"List employees","validationMode":"strict-generated"},"healthcheck":{"description":"Validate the HR Partner API key with GET /company.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{},"type":"object"},"kind":"action","maxInputBytes":4096,"maxResponseBytes":65536,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/company","success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":5000,"title":"Healthcheck","validationMode":"strict-generated"},"jobs.list":{"description":"List HR Partner job listings with an optional search filter.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{"search":{"minLength":1,"type":"string"}},"type":"object"},"kind":"action","maxInputBytes":65536,"maxResponseBytes":5242880,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"array"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/jobs","query":{"search":"{{search}}"},"success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":15000,"title":"List job listings","validationMode":"strict-generated"}},"provenance":{"source":{"revision":"33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a","url":"https://github.com/oomol-lab/open-connector"}},"runtime":"bun","version":"0.1.0","visibility":"public"}
+{
+  "key": "hr-partner",
+  "name": "HR Partner",
+  "version": "0.2.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "productivity"
+  ],
+  "auth": {
+    "type": "api_key",
+    "scopes": [],
+    "setup": {
+      "mode": "api_key",
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "HR Partner API key",
+          "required": true,
+          "secret": true
+        }
+      ]
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "api.hrpartner.io"
+    ]
+  },
+  "models": [
+    "company",
+    "employee",
+    "job",
+    "applicant",
+    "application",
+    "position",
+    "absence",
+    "reminder",
+    "timesheet",
+    "leave_request",
+    "goal",
+    "project"
+  ],
+  "http": {
+    "baseUrl": "https://api.hrpartner.io",
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "x-api-key",
+      "value": "{{apiKey}}"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after",
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "error",
+        "error.message",
+        "message"
+      ]
+    },
+    "headers": {
+      "Accept": "application/json"
+    }
+  },
+  "operations": {
+    "healthcheck": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 5000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "title": "Healthcheck",
+      "description": "Validate the HR Partner API key with GET /company.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/company",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "company.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get company",
+      "description": "Retrieve HR Partner company information with optional custom-field and module flags.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "custom_fields": {
+            "type": "boolean"
+          },
+          "active_modules": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/company",
+        "query": {
+          "custom_fields": "{{custom_fields}}",
+          "active_modules": "{{active_modules}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "employees.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List employees",
+      "description": "List HR Partner employees with an optional name search.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "search": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/employees",
+        "query": {
+          "search": "{{search}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "employees.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get employee",
+      "description": "Retrieve one HR Partner employee by employee code.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "employee_code"
+        ],
+        "properties": {
+          "employee_code": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/employee/{{employee_code}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "jobs.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List job listings",
+      "description": "List HR Partner job listings with an optional search filter.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "search": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/jobs",
+        "query": {
+          "search": "{{search}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "employees.upsert": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Upsert employee",
+      "description": "Create or update an HR Partner employee by employee code.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "employee_code": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Employee code used as the path identifier."
+          },
+          "code": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Employee code stored on the record."
+          },
+          "first_names": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Given names."
+          },
+          "last_name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Surname."
+          },
+          "email": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Primary email address."
+          },
+          "department": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Department name."
+          },
+          "employment_status": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Employment status."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "employee_code"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/employee/{{employee_code}}",
+        "success": [
+          200,
+          201
+        ],
+        "body": {
+          "code": "{{code}}",
+          "first_names": "{{first_names}}",
+          "last_name": "{{last_name}}",
+          "email": "{{email}}",
+          "department": "{{department}}",
+          "employment_status": "{{employment_status}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "jobs.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get job listing",
+      "description": "Retrieve one HR Partner job listing by job ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "job_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Job listing ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "job_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/job/{{job_id}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "applicants.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List applicants",
+      "description": "List HR Partner applicants with an optional name or email search.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "search": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Match applicant name or email."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/applicants",
+        "success": [
+          200
+        ],
+        "query": {
+          "search": "{{search}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "applicants.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get applicant",
+      "description": "Retrieve one HR Partner applicant by applicant ID or email.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "applicant_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Applicant ID or email."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "applicant_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/applicant/{{applicant_id}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "applications.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List applications",
+      "description": "List HR Partner applications for a job listing.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "job_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Job listing ID."
+          },
+          "source": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Application source filter."
+          },
+          "stage": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Hiring stage filter."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "job_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/applications/{{job_id}}",
+        "success": [
+          200
+        ],
+        "query": {
+          "source": "{{source}}",
+          "stage": "{{stage}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "applications.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get application",
+      "description": "Retrieve one HR Partner job application by application ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "application_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Application ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "application_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/application/{{application_id}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "positions.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List positions",
+      "description": "List HR Partner position and employment-contract records.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "employee": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Employee code filter."
+          },
+          "department": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Department name filter."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/positions",
+        "success": [
+          200
+        ],
+        "query": {
+          "employee": "{{employee}}",
+          "department": "{{department}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "absences.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List absences",
+      "description": "List HR Partner employee absence records.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "employee": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Employee code filter."
+          },
+          "absence_reason": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Absence reason filter."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/absences",
+        "success": [
+          200
+        ],
+        "query": {
+          "employee": "{{employee}}",
+          "absence_reason": "{{absence_reason}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "reminders.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List reminders",
+      "description": "List HR Partner reminders with optional employee or department filters.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "employee": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Employee code filter."
+          },
+          "department": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Department name filter."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/reminders",
+        "success": [
+          200
+        ],
+        "query": {
+          "employee": "{{employee}}",
+          "department": "{{department}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "reminders.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get reminder",
+      "description": "Retrieve one HR Partner reminder by reminder ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "reminder_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Reminder ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "reminder_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/reminder/{{reminder_id}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "reminders.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Update reminder",
+      "description": "Update an HR Partner reminder's description, active flag, or notification settings.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "reminder_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Reminder ID."
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Updated reminder description."
+          },
+          "active": {
+            "type": "boolean",
+            "description": "Whether the reminder is active."
+          },
+          "send_notification": {
+            "type": "boolean",
+            "description": "Whether to send a notification."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "reminder_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/reminder/{{reminder_id}}",
+        "success": [
+          200
+        ],
+        "body": {
+          "description": "{{description}}",
+          "active": "{{active}}",
+          "send_notification": "{{send_notification}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "reminders.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Delete reminder",
+      "description": "Delete an HR Partner reminder by reminder ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "reminder_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Reminder ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "reminder_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "deleted",
+          "reminder_id"
+        ],
+        "properties": {
+          "deleted": {
+            "type": "boolean"
+          },
+          "reminder_id": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/reminder/{{reminder_id}}",
+        "success": [
+          200,
+          204
+        ],
+        "result": {
+          "deleted": true,
+          "reminder_id": "{{input.reminder_id}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "timesheets.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List timesheets",
+      "description": "List HR Partner timesheets with optional employee or date filters.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "employee": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Employee code filter."
+          },
+          "timesheet_date_from": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Inclusive start date (yyyy-mm-dd)."
+          },
+          "timesheet_date_to": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Inclusive end date (yyyy-mm-dd)."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/timesheets",
+        "success": [
+          200
+        ],
+        "query": {
+          "employee": "{{employee}}",
+          "timesheet_date_from": "{{timesheet_date_from}}",
+          "timesheet_date_to": "{{timesheet_date_to}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "leave_requests.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List leave requests",
+      "description": "List HR Partner leave requests with optional employee or reason filters.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "employee": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Employee code filter."
+          },
+          "absence_reason": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Leave reason filter."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/leave_requests",
+        "success": [
+          200
+        ],
+        "query": {
+          "employee": "{{employee}}",
+          "absence_reason": "{{absence_reason}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "leave_requests.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get leave request",
+      "description": "Retrieve one HR Partner leave request by ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "leave_request_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Leave request ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "leave_request_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/leave_request/{{leave_request_id}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "goals.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List goals",
+      "description": "List HR Partner employee or company goals.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "employee": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Employee code filter."
+          },
+          "goal_scope": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Goal scope such as employee or company."
+          },
+          "goal_is_active": {
+            "type": "boolean",
+            "description": "Return only active goals."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/goals",
+        "success": [
+          200
+        ],
+        "query": {
+          "employee": "{{employee}}",
+          "goal_scope": "{{goal_scope}}",
+          "goal_is_active": "{{goal_is_active}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "projects.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List projects",
+      "description": "List HR Partner projects and activities.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "employee": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Employee code filter."
+          },
+          "project": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Project name filter."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/projects",
+        "success": [
+          200
+        ],
+        "query": {
+          "employee": "{{employee}}",
+          "project": "{{project}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    }
+  },
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
+    }
+  },
+  "provenance": {
+    "source": {
+      "url": "https://github.com/oomol-lab/open-connector",
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"
+    }
+  }
+}
