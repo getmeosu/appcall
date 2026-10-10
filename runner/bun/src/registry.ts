@@ -28,6 +28,9 @@ import {
   sendPhoto as tgSendPhoto, sendDocument as tgSendDocument, editMessage as tgEditMessage, deleteMessage as tgDeleteMessage,
   forwardMessage as tgForwardMessage, pinMessage as tgPinMessage, getChatInfo as tgGetChatInfo,
   getChatMemberCountAction as tgGetChatMemberCount, sendChatActionHandler as tgSendChatAction, getMeAction as tgGetMe,
+  sendLocation as tgSendLocation, sendPoll as tgSendPoll, exportChatInviteLink as tgExportInviteLink,
+  getChatAdministrators as tgGetChatAdministrators, getChatMember as tgGetChatMember, getChatHistory as tgGetChatHistory,
+  getUpdates as tgGetUpdates, setMyCommands as tgSetMyCommands, answerCallbackQuery as tgAnswerCallbackQuery,
 } from "../../connectors/telegram/src/actions";
 import { healthcheck as telegramHealthcheck } from "../../connectors/telegram/src/healthcheck";
 import { executeMessagesListSync as listTelegramMessages } from "../../connectors/telegram/src/sync";
@@ -796,6 +799,7 @@ import {
   getContact as bvGetContact, updateContact as bvUpdateContact, deleteContact as bvDeleteContact, sendEmail as bvSendEmail,
   createList as bvCreateList, getList as bvGetList, addContactsToList as bvAddToList, removeContactsFromList as bvRemoveFromList,
   createEmailCampaign as bvCreateCampaign, sendEmailCampaign as bvSendCampaign, getEmailCampaign as bvGetCampaign,
+  brevoParityActions,
 } from "../../connectors/brevo/src/actions";
 import { healthcheck as brevoHealthcheck } from "../../connectors/brevo/src/healthcheck";
 import { executeContactsListSync as listBrevoContacts, executeListsListSync as listBrevoLists, executeCampaignsListSync as listBrevoCampaigns } from "../../connectors/brevo/src/sync";
@@ -1047,7 +1051,34 @@ import { executeFormsListSync as listTypeformForms, executeResponsesListSync as 
 import {
   listForms as tfListForms, getForm as tfGetForm, createForm as tfCreateForm, updateForm as tfUpdateForm, deleteForm as tfDeleteForm,
   listResponses as tfListResponses, deleteResponses as tfDeleteResponses, createWebhook as tfCreateWebhook, listWebhooks as tfListWebhooks,
+  getUserMe as tfGetUserMe,
+  listWorkspaces as tfListWorkspaces,
+  getWorkspace as tfGetWorkspace,
+  createWorkspace as tfCreateWorkspace,
+  createAccountWorkspace as tfCreateAccountWorkspace,
+  updateWorkspace as tfUpdateWorkspace,
+  deleteWorkspace as tfDeleteWorkspace,
+  listThemes as tfListThemes,
+  getTheme as tfGetTheme,
+  createTheme as tfCreateTheme,
+  updateTheme as tfUpdateTheme,
+  patchTheme as tfPatchTheme,
+  deleteTheme as tfDeleteTheme,
+  listImages as tfListImages,
+  createImage as tfCreateImage,
+  deleteImage as tfDeleteImage,
+  getImageBySize as tfGetImageBySize,
+  getBackgroundBySize as tfGetBackgroundBySize,
+  getChoiceImageBySize as tfGetChoiceImageBySize,
+  getWebhook as tfGetWebhook,
+  deleteWebhook as tfDeleteWebhook,
+  getFormMessages as tfGetFormMessages,
+  updateFormMessages as tfUpdateFormMessages,
+  patchForm as tfPatchForm,
+  getResponseFiles as tfGetResponseFiles,
+  uploadVideo as tfUploadVideo,
 } from "../../connectors/typeform/src/actions";
+import { parseWebhook as typeformParseWebhook } from "../../connectors/typeform/src/webhook";
 import calendlyManifest from "../../connectors/calendly/manifest.json";
 import { healthcheck as calendlyHealthcheck } from "../../connectors/calendly/src/healthcheck";
 import {
@@ -1297,6 +1328,7 @@ import { listContacts as resendListContacts } from "../../connectors/resend/src/
 import googlemeetManifest from "../../connectors/googlemeet/manifest.json";
 import { healthcheck as googlemeetHealthcheck } from "../../connectors/googlemeet/src/healthcheck";
 import { createMeeting as gmeetCreateMeeting, listMeetings as gmeetListMeetings, getMeeting as gmeetGetMeeting, updateMeeting as gmeetUpdateMeeting, deleteMeeting as gmeetDeleteMeeting } from "../../connectors/googlemeet/src/actions";
+import { statuscakeFormHandlers } from "../../connectors/statuscake/src/actions";
 
 // Google Meet operations (extend the existing google-workspace connector).
 import {
@@ -1304,6 +1336,10 @@ import {
   createMeetSpace as gwCreateMeetSpace, getMeetSpace as gwGetMeetSpace,
   listConferenceRecords as gwListConferenceRecords,
 } from "../../connectors/google-workspace/src/meet";
+import {
+  getAnalystRatings as nasdaqGetAnalystRatings,
+  listDatabasesByDate as nasdaqListDatabasesByDate,
+} from "../../connectors/nasdaq/src/actions";
 
 // Microsoft Teams meeting operations (extend the existing microsoft-365 connector).
 import {
@@ -1313,8 +1349,11 @@ import {
 } from "../../connectors/microsoft-365/src/actions";
 
 import { createField as lapostaCreateField, createMember as lapostaCreateMember, updateMember as lapostaUpdateMember } from "../../connectors/laposta/src/actions";
+import { getMeetingAnalysis as avomaGetMeetingAnalysis } from "../../connectors/avoma/src/handlers";
 import { createConnectorHttpClient, type ConnectorHttpClient } from "./http";
 import { withDeclarativeConnectors } from "./declarative/loader";
+import { heyzineWriteHandlers } from "../../connectors/heyzine/src/writes";
+import { parseWebhook as heyzineParseWebhook } from "../../connectors/heyzine/src/webhook";
 
 type Manifest = {
   key: string;
@@ -1463,10 +1502,14 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
     fake: {
       "messages.send": (input) => ({ input }),
     },
+    heyzine: heyzineWriteHandlers,
     laposta: {
       "fields.create": lapostaCreateField,
       "members.create": lapostaCreateMember,
       "members.update": lapostaUpdateMember,
+    },
+    avoma: {
+      "meetings.analysis.get": avomaGetMeetingAnalysis,
     },
     notion: {
       "credentials.validate": validateNotionCredentials,
@@ -1541,6 +1584,15 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
       "chats.getMemberCount": tgGetChatMemberCount,
       "chats.sendAction": tgSendChatAction,
       "bot.getMe": tgGetMe,
+      "messages.sendLocation": tgSendLocation,
+      "messages.sendPoll": tgSendPoll,
+      "chats.exportInviteLink": tgExportInviteLink,
+      "chats.getAdministrators": tgGetChatAdministrators,
+      "chats.getMember": tgGetChatMember,
+      "chats.getHistory": tgGetChatHistory,
+      "bot.getUpdates": tgGetUpdates,
+      "bot.setMyCommands": tgSetMyCommands,
+      "callbacks.answer": tgAnswerCallbackQuery,
     },
     whatsapp: {
       "messages.send": sendWhatsAppMessage,
@@ -2415,6 +2467,28 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
       "automations.get": mcGetAutomation,
     },
     brevo: {
+      "account.get": brevoParityActions["account.get"],
+      "companies.create": brevoParityActions["companies.create"],
+      "companies.get": brevoParityActions["companies.get"],
+      "companies.delete": brevoParityActions["companies.delete"],
+      "companies.list": brevoParityActions["companies.list"],
+      "smtp.templates.createOrUpdate": brevoParityActions["smtp.templates.createOrUpdate"],
+      "smtp.templates.delete": brevoParityActions["smtp.templates.delete"],
+      "smtp.templates.list": brevoParityActions["smtp.templates.list"],
+      "smtp.templates.get": brevoParityActions["smtp.templates.get"],
+      "smsCampaigns.create": brevoParityActions["smsCampaigns.create"],
+      "smsCampaigns.delete": brevoParityActions["smsCampaigns.delete"],
+      "smsCampaigns.get": brevoParityActions["smsCampaigns.get"],
+      "smsCampaigns.list": brevoParityActions["smsCampaigns.list"],
+      "contacts.campaignStats.get": brevoParityActions["contacts.campaignStats.get"],
+      "contacts.import": brevoParityActions["contacts.import"],
+      "contacts.attributes.list": brevoParityActions["contacts.attributes.list"],
+      "crm.notes.list": brevoParityActions["crm.notes.list"],
+      "crm.objects.records.list": brevoParityActions["crm.objects.records.list"],
+      "senders.list": brevoParityActions["senders.list"],
+      "senders.domains.list": brevoParityActions["senders.domains.list"],
+      "smtp.events.list": brevoParityActions["smtp.events.list"],
+      "emailCampaigns.update": brevoParityActions["emailCampaigns.update"],
       "contacts.create": createBrevoContact,
       "contacts.get": bvGetContact,
       "contacts.update": bvUpdateContact,
@@ -2509,6 +2583,32 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
       "responses.delete": tfDeleteResponses,
       "webhooks.create": tfCreateWebhook,
       "webhooks.list": tfListWebhooks,
+      "users.me": tfGetUserMe,
+      "workspaces.list": tfListWorkspaces,
+      "workspaces.get": tfGetWorkspace,
+      "workspaces.create": tfCreateWorkspace,
+      "workspaces.create_in_account": tfCreateAccountWorkspace,
+      "workspaces.update": tfUpdateWorkspace,
+      "workspaces.delete": tfDeleteWorkspace,
+      "themes.list": tfListThemes,
+      "themes.get": tfGetTheme,
+      "themes.create": tfCreateTheme,
+      "themes.update": tfUpdateTheme,
+      "themes.patch": tfPatchTheme,
+      "themes.delete": tfDeleteTheme,
+      "images.list": tfListImages,
+      "images.create": tfCreateImage,
+      "images.delete": tfDeleteImage,
+      "images.get": tfGetImageBySize,
+      "images.background.get": tfGetBackgroundBySize,
+      "images.choice.get": tfGetChoiceImageBySize,
+      "webhooks.get": tfGetWebhook,
+      "webhooks.delete": tfDeleteWebhook,
+      "forms.messages.get": tfGetFormMessages,
+      "forms.messages.update": tfUpdateFormMessages,
+      "forms.patch": tfPatchForm,
+      "responses.files.get": tfGetResponseFiles,
+      "videos.upload": tfUploadVideo,
     },
     calendly: {
       "users.me.action": calGetUsersMe,
@@ -2872,6 +2972,11 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
       "meetings.update": gmeetUpdateMeeting,
       "meetings.delete": gmeetDeleteMeeting,
     },
+    nasdaq: {
+      "analystRatings.get": nasdaqGetAnalystRatings,
+      "databases.listByDate": nasdaqListDatabasesByDate,
+    },
+    statuscake: statuscakeFormHandlers,
   },
   syncs: {
     notion: {
@@ -3107,6 +3212,7 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
     },
   },
   webhooks: {
+    heyzine: { parse: heyzineParseWebhook },
     rb2b: { parse: rb2bParseWebhook, verify: rb2bVerifyWebhook },
     // Apollo does not sign its phone-reveal callbacks, so it registers only a
     // parser. The registry treats a connector with no verifier as verified.
@@ -3117,6 +3223,7 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
     // not required for EventOnly ingest; the parser classifies the action.
     ashby: { parse: ashbyParseWebhook },
     calendly: { parse: calendlyParseWebhook },
+    typeform: { parse: typeformParseWebhook },
   },
 }));
 

@@ -1,1 +1,1303 @@
-{"auth":{"scopes":[],"setup":{"fields":[{"key":"apiKey","label":"Eventzilla API key","required":true,"secret":true}],"mode":"api_key"},"type":"api_key"},"categories":["scheduling"],"evidence":{"fixture":{"status":"supplied"},"live":{"status":"unverified"}},"http":{"auth":{"field":"apiKey","in":"header","name":"x-api-key","value":"{{apiKey}}"},"baseUrl":"https://www.eventzillaapi.net/api/v2","errors":{"defaultRetryAfterSeconds":30,"messagePaths":["message","error","error_code","detail","title"],"rateLimitStatuses":[429],"retryAfterHeader":"retry-after"},"headers":{"Accept":"application/json"}},"key":"eventzilla","models":["event","ticket","user"],"name":"Eventzilla","network":{"allowedHosts":["www.eventzillaapi.net"]},"operations":{"events.get":{"description":"Get one Eventzilla event by eventid.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{"eventid":{"minimum":1,"type":"integer"}},"required":["eventid"],"type":"object"},"kind":"action","maxInputBytes":65536,"maxResponseBytes":5242880,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/events/{{eventid}}","success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":15000,"title":"Get event","validationMode":"strict-generated"},"events.list":{"description":"List Eventzilla events with optional status, category, and offset/limit paging.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{"category":{"minLength":1,"type":"string"},"limit":{"maximum":100,"minimum":1,"type":"integer"},"offset":{"minimum":0,"type":"integer"},"status":{"minLength":1,"type":"string"}},"type":"object"},"kind":"action","maxInputBytes":65536,"maxResponseBytes":5242880,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/events","query":{"category":"{{category}}","limit":"{{limit}}","offset":"{{offset}}","status":"{{status}}"},"success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":15000,"title":"List events","validationMode":"strict-generated"},"healthcheck":{"description":"Validate the Eventzilla API key with GET /users?offset=0&limit=1.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{},"type":"object"},"kind":"action","maxInputBytes":4096,"maxResponseBytes":65536,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/users","query":{"limit":1,"offset":0},"success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":5000,"title":"Healthcheck","validationMode":"strict-generated"},"tickets.list":{"description":"List Eventzilla ticket types for one event.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{"eventid":{"minimum":1,"type":"integer"}},"required":["eventid"],"type":"object"},"kind":"action","maxInputBytes":65536,"maxResponseBytes":5242880,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/events/{{eventid}}/tickets","success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":15000,"title":"List event tickets","validationMode":"strict-generated"},"users.get":{"description":"Get one Eventzilla organizer or sub-organizer by userid.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{"userid":{"minimum":1,"type":"integer"}},"required":["userid"],"type":"object"},"kind":"action","maxInputBytes":65536,"maxResponseBytes":5242880,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/users/{{userid}}","success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":15000,"title":"Get user","validationMode":"strict-generated"}},"provenance":{"source":{"revision":"33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a","url":"https://github.com/oomol-lab/open-connector"}},"runtime":"bun","version":"0.1.0","visibility":"public"}
+{
+  "key": "eventzilla",
+  "name": "Eventzilla",
+  "version": "0.2.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "scheduling"
+  ],
+  "auth": {
+    "type": "api_key",
+    "scopes": [],
+    "setup": {
+      "mode": "api_key",
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "Eventzilla API key",
+          "required": true,
+          "secret": true
+        }
+      ]
+    }
+  },
+  "provenance": {
+    "source": {
+      "url": "https://github.com/oomol-lab/open-connector",
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "www.eventzillaapi.net"
+    ]
+  },
+  "models": [
+    "event",
+    "ticket",
+    "user",
+    "attendee",
+    "transaction",
+    "category",
+    "checkout"
+  ],
+  "http": {
+    "baseUrl": "https://www.eventzillaapi.net/api/v2",
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "x-api-key",
+      "value": "{{apiKey}}"
+    },
+    "headers": {
+      "Accept": "application/json"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after",
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "message",
+        "error",
+        "error_code",
+        "detail",
+        "title"
+      ]
+    }
+  },
+  "operations": {
+    "healthcheck": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 5000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "title": "Healthcheck",
+      "description": "Validate the Eventzilla API key with GET /users?offset=0&limit=1.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/users",
+        "query": {
+          "offset": 0,
+          "limit": 1
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "events.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List events",
+      "description": "List Eventzilla events with optional status, category, and offset/limit paging.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "offset": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "status": {
+            "type": "string",
+            "minLength": 1
+          },
+          "category": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/events",
+        "query": {
+          "offset": "{{offset}}",
+          "limit": "{{limit}}",
+          "status": "{{status}}",
+          "category": "{{category}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "events.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get event",
+      "description": "Get one Eventzilla event by eventid.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "eventid": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "eventid"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/events/{{eventid}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "tickets.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List event tickets",
+      "description": "List Eventzilla ticket types for one event.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "eventid": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "eventid"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/events/{{eventid}}/tickets",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "users.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get user",
+      "description": "Get one Eventzilla organizer or sub-organizer by userid.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "userid": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "userid"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/users/{{userid}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "users.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List users",
+      "description": "List Eventzilla organizers and sub-organizers with optional offset/limit paging.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "offset": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Number of records to skip."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Maximum records to return.",
+            "maximum": 100
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/users",
+        "success": [
+          200
+        ],
+        "query": {
+          "offset": "{{offset}}",
+          "limit": "{{limit}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "events.transactions.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List event transactions",
+      "description": "List Eventzilla transactions for one event with optional offset/limit paging.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "eventid"
+        ],
+        "properties": {
+          "eventid": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Event identifier."
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Number of records to skip."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Maximum records to return.",
+            "maximum": 100
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/events/{{eventid}}/transactions",
+        "success": [
+          200
+        ],
+        "query": {
+          "offset": "{{offset}}",
+          "limit": "{{limit}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "events.attendees.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List event attendees",
+      "description": "List Eventzilla attendees registered for one event.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "eventid"
+        ],
+        "properties": {
+          "eventid": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Event identifier."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/events/{{eventid}}/attendees",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "events.togglesales": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Toggle event sales",
+      "description": "Publish or unpublish ticket sales for an Eventzilla event.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "eventid",
+          "status"
+        ],
+        "properties": {
+          "eventid": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Event identifier."
+          },
+          "status": {
+            "type": "boolean",
+            "description": "true to publish sales, false to unpublish sales."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/events/togglesales",
+        "success": [
+          200,
+          201
+        ],
+        "body": {
+          "eventid": "{{eventid}}",
+          "status": "{{status}}"
+        },
+        "headers": {
+          "Accept": "application/json",
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "events.ticket-types.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create free ticket type",
+      "description": "Create a free ticket type for an Eventzilla event.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "eventid",
+          "ticket_type_name",
+          "quantity_total",
+          "ticket_type_description",
+          "sales_start_date",
+          "sales_end_date",
+          "sales_start_time",
+          "sales_end_time",
+          "limit_minimum",
+          "limit_maximum",
+          "is_visible",
+          "boxoffice_only"
+        ],
+        "properties": {
+          "eventid": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Event identifier."
+          },
+          "ticket_type_name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Name displayed for this ticket type."
+          },
+          "quantity_total": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Total quantity available."
+          },
+          "ticket_type_description": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Public description shown to attendees."
+          },
+          "sales_start_date": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Date when sales open (ISO 8601 date)."
+          },
+          "sales_end_date": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Date when sales close (ISO 8601 date)."
+          },
+          "sales_start_time": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Time when sales open."
+          },
+          "sales_end_time": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Time when sales close."
+          },
+          "limit_minimum": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Minimum quantity in one order."
+          },
+          "limit_maximum": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Maximum quantity in one order."
+          },
+          "is_visible": {
+            "type": "boolean",
+            "description": "Whether this ticket type is visible on the event page."
+          },
+          "boxoffice_only": {
+            "type": "boolean",
+            "description": "Whether this ticket type is box-office only."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/events/{{eventid}}/ticket-types",
+        "success": [
+          200,
+          201
+        ],
+        "body": {
+          "ticket_type_name": "{{ticket_type_name}}",
+          "quantity_total": "{{quantity_total}}",
+          "ticket_type_description": "{{ticket_type_description}}",
+          "sales_start_date": "{{sales_start_date}}",
+          "sales_end_date": "{{sales_end_date}}",
+          "sales_start_time": "{{sales_start_time}}",
+          "sales_end_time": "{{sales_end_time}}",
+          "limit_minimum": "{{limit_minimum}}",
+          "limit_maximum": "{{limit_maximum}}",
+          "is_visible": "{{is_visible}}",
+          "boxoffice_only": "{{boxoffice_only}}"
+        },
+        "headers": {
+          "Accept": "application/json",
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "events.ticket-types.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Update free ticket type",
+      "description": "Update an existing free ticket type on an Eventzilla event.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "eventid",
+          "ticket_type_id",
+          "ticket_type_name",
+          "quantity_total",
+          "ticket_type_description",
+          "sales_start_date",
+          "sales_end_date",
+          "sales_start_time",
+          "sales_end_time",
+          "limit_minimum",
+          "limit_maximum",
+          "is_visible",
+          "boxoffice_only"
+        ],
+        "properties": {
+          "eventid": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Event identifier."
+          },
+          "ticket_type_id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Ticket type identifier."
+          },
+          "ticket_type_name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Name displayed for this ticket type."
+          },
+          "quantity_total": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Total quantity available."
+          },
+          "ticket_type_description": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Public description shown to attendees."
+          },
+          "sales_start_date": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Date when sales open (ISO 8601 date)."
+          },
+          "sales_end_date": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Date when sales close (ISO 8601 date)."
+          },
+          "sales_start_time": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Time when sales open."
+          },
+          "sales_end_time": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Time when sales close."
+          },
+          "limit_minimum": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Minimum quantity in one order."
+          },
+          "limit_maximum": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Maximum quantity in one order."
+          },
+          "is_visible": {
+            "type": "boolean",
+            "description": "Whether this ticket type is visible on the event page."
+          },
+          "boxoffice_only": {
+            "type": "boolean",
+            "description": "Whether this ticket type is box-office only."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/events/{{eventid}}/ticket-types/{{ticket_type_id}}",
+        "success": [
+          200
+        ],
+        "body": {
+          "ticket_type_name": "{{ticket_type_name}}",
+          "quantity_total": "{{quantity_total}}",
+          "ticket_type_description": "{{ticket_type_description}}",
+          "sales_start_date": "{{sales_start_date}}",
+          "sales_end_date": "{{sales_end_date}}",
+          "sales_start_time": "{{sales_start_time}}",
+          "sales_end_time": "{{sales_end_time}}",
+          "limit_minimum": "{{limit_minimum}}",
+          "limit_maximum": "{{limit_maximum}}",
+          "is_visible": "{{is_visible}}",
+          "boxoffice_only": "{{boxoffice_only}}"
+        },
+        "headers": {
+          "Accept": "application/json",
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "categories.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List event categories",
+      "description": "List Eventzilla event categories used to classify and filter events.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/categories",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "events.order.cancel": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Cancel event order",
+      "description": "Cancel an Eventzilla order after checkout.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "checkout_id",
+          "eventid",
+          "comments"
+        ],
+        "properties": {
+          "checkout_id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Checkout identifier."
+          },
+          "eventid": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Event identifier."
+          },
+          "comments": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Organizer comments for cancellation."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/events/order/cancel",
+        "success": [
+          200
+        ],
+        "body": {
+          "checkout_id": "{{checkout_id}}",
+          "eventid": "{{eventid}}",
+          "comments": "{{comments}}"
+        },
+        "headers": {
+          "Accept": "application/json",
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "events.order.confirm": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Confirm event order",
+      "description": "Confirm a pending Eventzilla order after checkout.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "checkout_id",
+          "eventid"
+        ],
+        "properties": {
+          "checkout_id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Checkout identifier."
+          },
+          "eventid": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Event identifier."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/events/order/confirm",
+        "success": [
+          200
+        ],
+        "body": {
+          "checkout_id": "{{checkout_id}}",
+          "eventid": "{{eventid}}"
+        },
+        "headers": {
+          "Accept": "application/json",
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "checkout.prepare": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Prepare checkout",
+      "description": "Prepare an Eventzilla registration checkout for one event date.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "eventid",
+          "dateid"
+        ],
+        "properties": {
+          "eventid": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Event identifier."
+          },
+          "dateid": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Event date/occurrence identifier."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/checkout/prepare/{{eventid}}/{{dateid}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "checkout.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create checkout order",
+      "description": "Create an Eventzilla checkout order that reserves ticket quantities.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "eventid",
+          "eventdateid",
+          "ticket_types"
+        ],
+        "properties": {
+          "eventid": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Event identifier."
+          },
+          "eventdateid": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Event date/occurrence identifier."
+          },
+          "ticket_types": {
+            "type": "array",
+            "description": "Ticket types and quantities to reserve.",
+            "items": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "ticket_type_id": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "description": "Ticket type identifier."
+                },
+                "quantity": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "description": "Quantity requested."
+                }
+              }
+            }
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/checkout/create",
+        "success": [
+          200,
+          201
+        ],
+        "body": {
+          "eventid": "{{eventid}}",
+          "eventdateid": "{{eventdateid}}",
+          "ticket_types": "{{ticket_types}}"
+        },
+        "headers": {
+          "Accept": "application/json",
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "checkout.confirm": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Confirm checkout order",
+      "description": "Confirm an Eventzilla checkout order after payment.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "eventid",
+          "eventdateid",
+          "checkout_id",
+          "payment_status"
+        ],
+        "properties": {
+          "eventid": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Event identifier."
+          },
+          "eventdateid": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Event date/occurrence identifier."
+          },
+          "checkout_id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Checkout identifier."
+          },
+          "payment_status": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Payment status for ticket confirmation."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/checkout/confirm",
+        "success": [
+          200
+        ],
+        "body": {
+          "eventid": "{{eventid}}",
+          "eventdateid": "{{eventdateid}}",
+          "checkout_id": "{{checkout_id}}",
+          "payment_status": "{{payment_status}}"
+        },
+        "headers": {
+          "Accept": "application/json",
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "attendees.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get attendee",
+      "description": "Get one Eventzilla attendee by attendeeid.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "attendeeid"
+        ],
+        "properties": {
+          "attendeeid": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Attendee identifier."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/attendees/{{attendeeid}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "attendees.checkin": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Check in attendee",
+      "description": "Check in an Eventzilla attendee or revert check-in by ticket barcode.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "barcode",
+          "eventcheckin"
+        ],
+        "properties": {
+          "barcode": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique barcode from the attendee's ticket."
+          },
+          "eventcheckin": {
+            "type": "boolean",
+            "description": "true to check in, false to revert check-in."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/attendee/checkin",
+        "success": [
+          200
+        ],
+        "body": {
+          "barcode": "{{barcode}}",
+          "eventcheckin": "{{eventcheckin}}"
+        },
+        "headers": {
+          "Accept": "application/json",
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "transactions.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get transaction",
+      "description": "Get an Eventzilla transaction by checkout ID or order reference.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "identifier"
+        ],
+        "properties": {
+          "identifier": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Checkout ID or order reference number."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/transactions/{{identifier}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    }
+  },
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
+    }
+  }
+}
