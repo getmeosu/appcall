@@ -1,6 +1,6 @@
 # JobNimbus
 
-Read-only international **JobNimbus Open API** recipe for the contractor CRM at [jobnimbus.com](https://www.jobnimbus.com). JobNimbus is a Lehi, Utah company. This is the Open API at `https://app.jobnimbus.com/api1`, not the newer Platform API at `https://api.jobnimbus.com`.
+International **JobNimbus Open API** recipe for the contractor CRM at [jobnimbus.com](https://www.jobnimbus.com). JobNimbus is a Lehi, Utah company. This is the Open API at `https://app.jobnimbus.com/api1`, not the newer Platform API at `https://api.jobnimbus.com`.
 
 ## Setup
 
@@ -8,13 +8,26 @@ Create an API key in JobNimbus under Settings > API Keys and store it as `apiKey
 
 ## Operations
 
-- `healthcheck`: `GET /contacts?size=1` with empty input (cheap authenticated list probe). The pinned credential validator uses `GET /account/settings`, which is not a `defineProviderAction`.
-- `contacts.list`: `GET /contacts` with optional `size` (1–1000) and `from` (zero-based offset).
-- `contacts.get`: `GET /contacts/{contactId}`; the ID is percent-encoded as one path segment.
-- `jobs.list`: `GET /jobs` with the same optional pagination.
-- `jobs.get`: `GET /jobs/{jobId}`.
+- `healthcheck`: `GET /contacts?size=1` with empty input (cheap authenticated list probe).
+- `contacts.list`: `GET /contacts` with optional `size` (1–1000), `from`, `fields`, `filter`, `sort_field`, `sort_direction`. Maps to JOBNIMBUS_CONTACT_LIST.
+- `contacts.get`: `GET /contacts/{contactId}`. Maps to JOBNIMBUS_CONTACT_GET.
+- `contacts.update`: `PUT /contacts/{jnid}` mapping Composio camelCase to Open API snake_case. Maps to JOBNIMBUS_CONTACT_UPDATE.
+- `jobs.list` / `jobs.get`: origin Open API job reads (not in the Composio 21-tool set).
+- `account.settings.get`: `GET /account/settings`. Maps to JOBNIMBUS_ACCOUNT_GET_SETTINGS.
+- `account.locations.create`: `POST /account/location`. Maps to JOBNIMBUS_ACCOUNT_CREATE_LOCATION.
+- `account.filetypes.create`: `POST /account/filetype`. Maps to JOBNIMBUS_CREATE_FILE_TYPE.
+- `account.workflows.status.create`: `POST /account/workflow/{workflowid}/status`. Maps to JOBNIMBUS_CREATE_WORKFLOW_STATUS.
+- `activities.list` / `activities.get`: Open API activities. Maps to JOBNIMBUS_LIST_ACTIVITIES / JOBNIMBUS_ACTIVITY_GET.
+- `tasks.create` / `tasks.list` / `tasks.update`: Open API tasks. Maps to JOBNIMBUS_CREATE_TASK / JOBNIMBUS_TASK_LIST / JOBNIMBUS_UPDATE_TASK.
+- `files.get`: `GET /files/{jnid}`. Maps to JOBNIMBUS_FILE_GET.
+- `products.list` / `products.get`: `GET /v2/products`. Maps to JOBNIMBUS_LIST_PRODUCTS / JOBNIMBUS_PRODUCT_GET.
+- `materialorders.list` / `materialorders.create`: `GET|POST /v2/materialorders`. Maps to JOBNIMBUS_LIST_MATERIAL_ORDERS / JOBNIMBUS_CREATE_MATERIAL_ORDER.
+- `workorders.list`: `GET /v2/workorders`. Maps to JOBNIMBUS_LIST_WORKORDERS.
+- `invoices.list`: `GET /v2/invoices`. Maps to JOBNIMBUS_LIST_INVOICES.
+- `payments.list`: `GET /payments`. Maps to JOBNIMBUS_LIST_PAYMENTS.
+- `utility.uoms.list`: `GET /utility/uoms`. Maps to JOBNIMBUS_UTILITY_GET_UOMS.
 
-Successful responses are raw provider JSON under AppCall `data`. List endpoints return `{ count, results }`. Writes, Elasticsearch-style `filter` JSON encoding, `fields` comma-join, `actor`, and sort are omitted.
+Successful responses are raw provider JSON under AppCall `data`. List endpoints return `{ count, results }`.
 
 ## Adaptations
 

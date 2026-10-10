@@ -1,7 +1,17 @@
 {
+  "key": "boloforms",
+  "name": "BoloForms",
+  "version": "0.2.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "forms"
+  ],
   "auth": {
+    "type": "api_key",
     "scopes": [],
     "setup": {
+      "mode": "api_key",
       "fields": [
         {
           "key": "apiKey",
@@ -9,14 +19,1341 @@
           "required": true,
           "secret": true
         }
-      ],
-      "mode": "api_key"
-    },
-    "type": "api_key"
+      ]
+    }
   },
-  "categories": [
-    "forms"
+  "network": {
+    "allowedHosts": [
+      "sapi.boloforms.com"
+    ]
+  },
+  "models": [
+    "document",
+    "template-respondent",
+    "form-response",
+    "template",
+    "form"
   ],
+  "http": {
+    "baseUrl": "https://sapi.boloforms.com",
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "x-api-key",
+      "value": "{{apiKey}}"
+    },
+    "headers": {
+      "Accept": "application/json"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after",
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "message",
+        "error",
+        "data.message",
+        "data.error"
+      ]
+    }
+  },
+  "operations": {
+    "healthcheck": {
+      "timeoutMs": 5000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Healthcheck",
+      "description": "Validate the BoloForms API key by listing one page of documents.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "array",
+              "object"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/signature/get-documents",
+        "success": [
+          200
+        ],
+        "query": {
+          "page": 1,
+          "limit": 1
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "documents.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List documents",
+      "description": "List documents and form statistics from the current BoloForms workspace.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "workspaceId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "query": {
+            "type": "string",
+            "minLength": 1
+          },
+          "documentId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "filter": {
+            "type": "string",
+            "minLength": 1
+          },
+          "sortBy": {
+            "type": "string",
+            "minLength": 1
+          },
+          "sortOrder": {
+            "type": "string",
+            "minLength": 1
+          },
+          "dateFrom": {
+            "type": "string",
+            "minLength": 1
+          },
+          "dateTo": {
+            "type": "string",
+            "minLength": 1
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "array",
+              "object"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/signature/get-documents",
+        "success": [
+          200
+        ],
+        "query": {
+          "query": "{{query}}",
+          "documentId": "{{documentId}}",
+          "filter": "{{filter}}",
+          "sortBy": "{{sortBy}}",
+          "sortOrder": "{{sortOrder}}",
+          "dateFrom": "{{dateFrom}}",
+          "dateTo": "{{dateTo}}",
+          "page": "{{page}}",
+          "limit": "{{limit}}"
+        },
+        "headers": {
+          "workspaceid": "{{workspaceId}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "documents.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get document",
+      "description": "Fetch one BoloForms document by documentId on GET /signature/get-documents.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "documentId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "BoloForms document identifier."
+          },
+          "workspaceId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Optional workspace id sent as the workspaceid header."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "documentId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "array",
+              "object"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/signature/get-documents",
+        "success": [
+          200
+        ],
+        "headers": {
+          "workspaceid": "{{workspaceId}}"
+        },
+        "query": {
+          "documentId": "{{documentId}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "documents.search": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Search documents",
+      "description": "Search BoloForms documents with the pinned query parameter on GET /signature/get-documents.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Search text matched by BoloForms."
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Page number."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Page size."
+          },
+          "workspaceId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Optional workspace id sent as the workspaceid header."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "query"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "array",
+              "object"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/signature/get-documents",
+        "success": [
+          200
+        ],
+        "headers": {
+          "workspaceid": "{{workspaceId}}"
+        },
+        "query": {
+          "query": "{{query}}",
+          "page": "{{page}}",
+          "limit": "{{limit}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "documents.listFiltered": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "List filtered documents",
+      "description": "List BoloForms documents with a required filter on GET /signature/get-documents.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "filter": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Document filter such as ALL, DRAFT, or COMPLETED."
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Page number."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Page size."
+          },
+          "workspaceId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Optional workspace id sent as the workspaceid header."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "filter"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "array",
+              "object"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/signature/get-documents",
+        "success": [
+          200
+        ],
+        "headers": {
+          "workspaceid": "{{workspaceId}}"
+        },
+        "query": {
+          "filter": "{{filter}}",
+          "page": "{{page}}",
+          "limit": "{{limit}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "documents.listByDate": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "List documents by date",
+      "description": "List BoloForms documents between dateFrom and dateTo on GET /signature/get-documents.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "dateFrom": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Inclusive start date."
+          },
+          "dateTo": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Inclusive end date."
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Page number."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Page size."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "dateFrom",
+          "dateTo"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "array",
+              "object"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/signature/get-documents",
+        "success": [
+          200
+        ],
+        "query": {
+          "dateFrom": "{{dateFrom}}",
+          "dateTo": "{{dateTo}}",
+          "page": "{{page}}",
+          "limit": "{{limit}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "documents.listSorted": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "List sorted documents",
+      "description": "List BoloForms documents with required sortBy and sortOrder on GET /signature/get-documents.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "sortBy": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Sort field."
+          },
+          "sortOrder": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Sort direction such as asc or desc."
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Page number."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Page size."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "sortBy",
+          "sortOrder"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "array",
+              "object"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/signature/get-documents",
+        "success": [
+          200
+        ],
+        "query": {
+          "sortBy": "{{sortBy}}",
+          "sortOrder": "{{sortOrder}}",
+          "page": "{{page}}",
+          "limit": "{{limit}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "template-respondents.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List template respondents",
+      "description": "List signing participants for a BoloForms template.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "templateId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "templateId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "array",
+              "object"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/signature/get-template-respondent",
+        "success": [
+          200
+        ],
+        "query": {
+          "templateId": "{{templateId}}",
+          "page": "{{page}}",
+          "limit": "{{limit}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "template-respondents.listPage": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "List template respondents page",
+      "description": "List a required page of BoloForms template respondents on GET /signature/get-template-respondent.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "templateId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Template identifier."
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Page number."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Page size."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "templateId",
+          "page",
+          "limit"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "array",
+              "object"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/signature/get-template-respondent",
+        "success": [
+          200
+        ],
+        "query": {
+          "templateId": "{{templateId}}",
+          "page": "{{page}}",
+          "limit": "{{limit}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "form-responses.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List form responses",
+      "description": "List response records for a BoloForms form.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "formId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "formId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "array",
+              "object"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/signature/get-form-responses",
+        "success": [
+          200
+        ],
+        "query": {
+          "formId": "{{formId}}",
+          "page": "{{page}}",
+          "limit": "{{limit}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "form-responses.listPage": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "List form responses page",
+      "description": "List a required page of BoloForms form responses on GET /signature/get-form-responses.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "formId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Form identifier."
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Page number."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Page size."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "formId",
+          "page",
+          "limit"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "array",
+              "object"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/signature/get-form-responses",
+        "success": [
+          200
+        ],
+        "query": {
+          "formId": "{{formId}}",
+          "page": "{{page}}",
+          "limit": "{{limit}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "templates.send": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Send template for signing",
+      "description": "Send a BoloForms PDF or form template via POST /signature/pdf-template-lambda.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "documentId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Template or form documentId from the BoloForms dashboard."
+          },
+          "receiversList": {
+            "type": "array",
+            "minItems": 1,
+            "description": "Recipients to send the template to.",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "name",
+                "email"
+              ],
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Recipient role name."
+                },
+                "email": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Recipient email."
+                },
+                "subject": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Per-recipient email subject."
+                },
+                "message": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Per-recipient email message."
+                }
+              }
+            }
+          },
+          "mailSubject": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Global email subject."
+          },
+          "mailMessage": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Global email message."
+          },
+          "signingType": {
+            "type": "string",
+            "enum": [
+              "PDF_TEMPLATE",
+              "FORM_TEMPLATE"
+            ],
+            "description": "Template kind to send."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "documentId",
+          "signingType",
+          "receiversList"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/signature/pdf-template-lambda",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "documentId": "{{documentId}}",
+          "signingType": "{{signingType}}",
+          "receiversList": "{{receiversList}}",
+          "mailData": {
+            "subject": "{{mailSubject}}",
+            "message": "{{mailMessage}}"
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "templates.sendPdf": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Send PDF template",
+      "description": "Send a BoloForms PDF_TEMPLATE via POST /signature/pdf-template-lambda.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "documentId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Template or form documentId from the BoloForms dashboard."
+          },
+          "receiversList": {
+            "type": "array",
+            "minItems": 1,
+            "description": "Recipients to send the template to.",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "name",
+                "email"
+              ],
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Recipient role name."
+                },
+                "email": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Recipient email."
+                },
+                "subject": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Per-recipient email subject."
+                },
+                "message": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Per-recipient email message."
+                }
+              }
+            }
+          },
+          "mailSubject": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Global email subject."
+          },
+          "mailMessage": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Global email message."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "documentId",
+          "receiversList"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/signature/pdf-template-lambda",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "documentId": "{{documentId}}",
+          "signingType": "PDF_TEMPLATE",
+          "receiversList": "{{receiversList}}",
+          "mailData": {
+            "subject": "{{mailSubject}}",
+            "message": "{{mailMessage}}"
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "forms.send": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Send form for signing",
+      "description": "Send a BoloForms FORM_TEMPLATE via POST /signature/pdf-template-lambda.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "documentId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Template or form documentId from the BoloForms dashboard."
+          },
+          "receiversList": {
+            "type": "array",
+            "minItems": 1,
+            "description": "Recipients to send the template to.",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "name",
+                "email"
+              ],
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Recipient role name."
+                },
+                "email": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Recipient email."
+                },
+                "subject": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Per-recipient email subject."
+                },
+                "message": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Per-recipient email message."
+                }
+              }
+            }
+          },
+          "mailSubject": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Global email subject."
+          },
+          "mailMessage": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Global email message."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "documentId",
+          "receiversList"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/signature/pdf-template-lambda",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "documentId": "{{documentId}}",
+          "signingType": "FORM_TEMPLATE",
+          "receiversList": "{{receiversList}}",
+          "mailData": {
+            "subject": "{{mailSubject}}",
+            "message": "{{mailMessage}}"
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "templates.sendWithVariables": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Send template with variables",
+      "description": "Send a BoloForms template with variablesData on POST /signature/pdf-template-lambda.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "documentId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Template or form documentId from the BoloForms dashboard."
+          },
+          "receiversList": {
+            "type": "array",
+            "minItems": 1,
+            "description": "Recipients to send the template to.",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "name",
+                "email"
+              ],
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Recipient role name."
+                },
+                "email": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Recipient email."
+                },
+                "subject": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Per-recipient email subject."
+                },
+                "message": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Per-recipient email message."
+                }
+              }
+            }
+          },
+          "mailSubject": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Global email subject."
+          },
+          "mailMessage": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Global email message."
+          },
+          "signingType": {
+            "type": "string",
+            "enum": [
+              "PDF_TEMPLATE",
+              "FORM_TEMPLATE"
+            ],
+            "description": "Template kind to send."
+          },
+          "variablesData": {
+            "type": "object",
+            "description": "Custom template variables."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "documentId",
+          "signingType",
+          "receiversList",
+          "variablesData"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/signature/pdf-template-lambda",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "documentId": "{{documentId}}",
+          "signingType": "{{signingType}}",
+          "receiversList": "{{receiversList}}",
+          "variablesData": "{{variablesData}}",
+          "mailData": {
+            "subject": "{{mailSubject}}",
+            "message": "{{mailMessage}}"
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "templates.sendWithPdfData": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Send template with PDF data",
+      "description": "Send a BoloForms template with pdfData on POST /signature/pdf-template-lambda.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "documentId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Template or form documentId from the BoloForms dashboard."
+          },
+          "receiversList": {
+            "type": "array",
+            "minItems": 1,
+            "description": "Recipients to send the template to.",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "name",
+                "email"
+              ],
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Recipient role name."
+                },
+                "email": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Recipient email."
+                },
+                "subject": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Per-recipient email subject."
+                },
+                "message": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Per-recipient email message."
+                }
+              }
+            }
+          },
+          "mailSubject": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Global email subject."
+          },
+          "mailMessage": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Global email message."
+          },
+          "signingType": {
+            "type": "string",
+            "enum": [
+              "PDF_TEMPLATE",
+              "FORM_TEMPLATE"
+            ],
+            "description": "Template kind to send."
+          },
+          "pdfData": {
+            "type": "object",
+            "description": "PDF field values to merge into the template."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "documentId",
+          "signingType",
+          "receiversList",
+          "pdfData"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/signature/pdf-template-lambda",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "documentId": "{{documentId}}",
+          "signingType": "{{signingType}}",
+          "receiversList": "{{receiversList}}",
+          "pdfData": "{{pdfData}}",
+          "mailData": {
+            "subject": "{{mailSubject}}",
+            "message": "{{mailMessage}}"
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    }
+  },
+  "provenance": {
+    "source": {
+      "url": "https://github.com/oomol-lab/open-connector",
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"
+    }
+  },
   "evidence": {
     "fixture": {
       "status": "supplied"
@@ -24,310 +1361,5 @@
     "live": {
       "status": "unverified"
     }
-  },
-  "http": {
-    "auth": {
-      "field": "apiKey",
-      "in": "header",
-      "name": "x-api-key",
-      "value": "{{apiKey}}"
-    },
-    "baseUrl": "https://sapi.boloforms.com",
-    "errors": {
-      "defaultRetryAfterSeconds": 30,
-      "messagePaths": [
-        "message",
-        "error",
-        "data.message",
-        "data.error"
-      ],
-      "rateLimitStatuses": [
-        429
-      ],
-      "retryAfterHeader": "retry-after"
-    },
-    "headers": {
-      "Accept": "application/json"
-    }
-  },
-  "key": "boloforms",
-  "models": [
-    "document",
-    "template-respondent",
-    "form-response"
-  ],
-  "name": "BoloForms",
-  "network": {
-    "allowedHosts": [
-      "sapi.boloforms.com"
-    ]
-  },
-  "operations": {
-    "documents.list": {
-      "description": "List documents and form statistics from the current BoloForms workspace.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "dateFrom": {
-            "minLength": 1,
-            "type": "string"
-          },
-          "dateTo": {
-            "minLength": 1,
-            "type": "string"
-          },
-          "documentId": {
-            "minLength": 1,
-            "type": "string"
-          },
-          "filter": {
-            "minLength": 1,
-            "type": "string"
-          },
-          "limit": {
-            "minimum": 1,
-            "type": "integer"
-          },
-          "page": {
-            "minimum": 1,
-            "type": "integer"
-          },
-          "query": {
-            "minLength": 1,
-            "type": "string"
-          },
-          "sortBy": {
-            "minLength": 1,
-            "type": "string"
-          },
-          "sortOrder": {
-            "minLength": 1,
-            "type": "string"
-          },
-          "workspaceId": {
-            "minLength": 1,
-            "type": "string"
-          }
-        },
-        "type": "object"
-      },
-      "kind": "action",
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 1048576,
-      "outputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "data": {
-            "type": [
-              "array",
-              "object"
-            ]
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "type": "object"
-      },
-      "request": {
-        "headers": {
-          "workspaceid": "{{workspaceId}}"
-        },
-        "method": "GET",
-        "path": "/signature/get-documents",
-        "query": {
-          "dateFrom": "{{dateFrom}}",
-          "dateTo": "{{dateTo}}",
-          "documentId": "{{documentId}}",
-          "filter": "{{filter}}",
-          "limit": "{{limit}}",
-          "page": "{{page}}",
-          "query": "{{query}}",
-          "sortBy": "{{sortBy}}",
-          "sortOrder": "{{sortOrder}}"
-        },
-        "success": [
-          200
-        ]
-      },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "title": "List documents",
-      "validationMode": "strict-generated"
-    },
-    "form-responses.list": {
-      "description": "List response records for a BoloForms form.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "formId": {
-            "minLength": 1,
-            "type": "string"
-          },
-          "limit": {
-            "minimum": 1,
-            "type": "integer"
-          },
-          "page": {
-            "minimum": 1,
-            "type": "integer"
-          }
-        },
-        "required": [
-          "formId"
-        ],
-        "type": "object"
-      },
-      "kind": "action",
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 1048576,
-      "outputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "data": {
-            "type": [
-              "array",
-              "object"
-            ]
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "type": "object"
-      },
-      "request": {
-        "method": "GET",
-        "path": "/signature/get-form-responses",
-        "query": {
-          "formId": "{{formId}}",
-          "limit": "{{limit}}",
-          "page": "{{page}}"
-        },
-        "success": [
-          200
-        ]
-      },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "title": "List form responses",
-      "validationMode": "strict-generated"
-    },
-    "healthcheck": {
-      "description": "Validate the BoloForms API key by listing one page of documents.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {},
-        "type": "object"
-      },
-      "kind": "action",
-      "maxInputBytes": 4096,
-      "maxResponseBytes": 65536,
-      "outputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "data": {
-            "type": [
-              "array",
-              "object"
-            ]
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "type": "object"
-      },
-      "request": {
-        "method": "GET",
-        "path": "/signature/get-documents",
-        "query": {
-          "limit": 1,
-          "page": 1
-        },
-        "success": [
-          200
-        ]
-      },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 5000,
-      "title": "Healthcheck",
-      "validationMode": "strict-generated"
-    },
-    "template-respondents.list": {
-      "description": "List signing participants for a BoloForms template.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "limit": {
-            "minimum": 1,
-            "type": "integer"
-          },
-          "page": {
-            "minimum": 1,
-            "type": "integer"
-          },
-          "templateId": {
-            "minLength": 1,
-            "type": "string"
-          }
-        },
-        "required": [
-          "templateId"
-        ],
-        "type": "object"
-      },
-      "kind": "action",
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 1048576,
-      "outputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "data": {
-            "type": [
-              "array",
-              "object"
-            ]
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "type": "object"
-      },
-      "request": {
-        "method": "GET",
-        "path": "/signature/get-template-respondent",
-        "query": {
-          "limit": "{{limit}}",
-          "page": "{{page}}",
-          "templateId": "{{templateId}}"
-        },
-        "success": [
-          200
-        ]
-      },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "title": "List template respondents",
-      "validationMode": "strict-generated"
-    }
-  },
-  "provenance": {
-    "source": {
-      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
-      "url": "https://github.com/oomol-lab/open-connector"
-    }
-  },
-  "runtime": "bun",
-  "version": "0.1.0",
-  "visibility": "public"
+  }
 }
