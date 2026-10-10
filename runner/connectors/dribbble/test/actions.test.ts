@@ -1,11 +1,9 @@
 import { describe, expect, it } from "bun:test";
-import { actions as connectorActions, createAttachment, createShot } from "../src/actions";
+import { actions as connectorActions } from "../src/actions";
 import manifest from "../manifest.json";
 import cases from "../fixtures/contracts.json";
 
 const actions = connectorActions;
-
-const png = Uint8Array.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x01]);
 
 for (const c of cases) {
   describe(c.op, () => {
@@ -120,133 +118,5 @@ it("omits unset project update fields", async () => {
       expect(JSON.parse(String(init?.body))).toEqual({ name: "Sherpa" });
       return new Response('{"id":3,"name":"Sherpa"}');
     },
-  });
-});
-
-describe("shots.create", () => {
-  it("rejects missing title or image before any request", async () => {
-    let called = false;
-    const fetch = async () => {
-      called = true;
-      return new Response(null, { status: 202 });
-    };
-    await expect(createShot({ accessToken: "test-secret", title: "Sketch", fetch })).rejects.toMatchObject({
-      code: "INVALID_ACTION_INPUT",
-    });
-    await expect(createShot({ accessToken: "test-secret", image: "aGVsbG8=", fetch })).rejects.toMatchObject({
-      code: "INVALID_ACTION_INPUT",
-    });
-    expect(called).toBe(false);
-  });
-
-  it("posts multipart image, title, tags and optional fields", async () => {
-    let count = 0;
-    const result = await createShot({
-      accessToken: "test-secret",
-      title: "Sketch",
-      image: png,
-      imageFileName: "sketch.png",
-      description: "An illustration",
-      tags: ["art", "wip"],
-      lowProfile: false,
-      teamId: 39,
-      fetch: async (url: unknown, init?: RequestInit) => {
-        count++;
-        expect(String(url)).toBe("https://api.dribbble.com/v2/shots");
-        expect(init?.method).toBe("POST");
-        const headers = new Headers(init?.headers);
-        expect(headers.get("Authorization")).toBe("Bearer test-secret");
-        expect(headers.get("Content-Type") ?? "").not.toContain("application/json");
-        const form = init?.body as FormData;
-        expect(form).toBeInstanceOf(FormData);
-        const file = form.get("image");
-        expect(file).toBeInstanceOf(Blob);
-        expect((file as File).name).toBe("sketch.png");
-        expect(form.get("title")).toBe("Sketch");
-        expect(form.get("description")).toBe("An illustration");
-        expect(form.get("low_profile")).toBe("false");
-        expect(form.get("team_id")).toBe("39");
-        expect(form.getAll("tags[]")).toEqual(["art", "wip"]);
-        return new Response(null, {
-          status: 202,
-          headers: { Location: "https://api.dribbble.com/v2/shots/471756" },
-        });
-      },
-    });
-    expect(count).toBe(1);
-    expect(result).toMatchObject({
-      connector: "dribbble",
-      action: "shots.create",
-      source: "provider",
-      accepted: true,
-      location: "https://api.dribbble.com/v2/shots/471756",
-      shotId: 471756,
-    });
-  });
-
-  it("uses Dribbble unix rate-reset semantics", async () => {
-    const headers = { "x-ratelimit-reset": String(Math.floor(Date.now() / 1000) + 30) };
-    try {
-      await createShot({
-        accessToken: "test-secret",
-        title: "Sketch",
-        image: png,
-        fetch: async () => new Response("{}", { status: 429, headers }),
-      });
-      throw new Error("unexpected success");
-    } catch (e) {
-      expect(e).toMatchObject({ code: "CONNECTOR_RATE_LIMITED" });
-      const delay = (e as { retryAfterSeconds: number }).retryAfterSeconds;
-      expect(delay).toBeGreaterThanOrEqual(28);
-      expect(delay).toBeLessThanOrEqual(30);
-    }
-  });
-});
-
-describe("attachments.create", () => {
-  it("posts multipart file to the shot attachments path", async () => {
-    let count = 0;
-    const result = await createAttachment({
-      accessToken: "test-secret",
-      shotId: 45,
-      file: "aGVsbG8=",
-      fileName: "detail.jpg",
-      contentType: "image/jpeg",
-      fetch: async (url: unknown, init?: RequestInit) => {
-        count++;
-        expect(String(url)).toBe("https://api.dribbble.com/v2/shots/45/attachments");
-        expect(init?.method).toBe("POST");
-        const headers = new Headers(init?.headers);
-        expect(headers.get("Authorization")).toBe("Bearer test-secret");
-        const form = init?.body as FormData;
-        const file = form.get("file");
-        expect(file).toBeInstanceOf(Blob);
-        expect((file as File).name).toBe("detail.jpg");
-        expect(await (file as Blob).text()).toBe("hello");
-        return new Response(null, { status: 202 });
-      },
-    });
-    expect(count).toBe(1);
-    expect(result).toMatchObject({
-      connector: "dribbble",
-      action: "attachments.create",
-      source: "provider",
-      accepted: true,
-    });
-  });
-
-  it("rejects missing shotId before any request", async () => {
-    let called = false;
-    await expect(
-      createAttachment({
-        accessToken: "test-secret",
-        file: "aGVsbG8=",
-        fetch: async () => {
-          called = true;
-          return new Response(null, { status: 202 });
-        },
-      }),
-    ).rejects.toMatchObject({ code: "INVALID_ACTION_INPUT" });
-    expect(called).toBe(false);
   });
 });

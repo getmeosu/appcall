@@ -126,8 +126,6 @@ function declaredInput(key: string, value: unknown): unknown {
     Object.entries(input).filter(([name]) => name in properties || name === "accessToken" || name === "fetch"),
   );
 }
-actions["shots.create"] = createShot as CompiledHandler;
-actions["attachments.create"] = createAttachment as CompiledHandler;
 
 function buildShotForm(input: ShotInput): FormData {
   const form = new FormData();

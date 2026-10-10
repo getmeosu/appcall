@@ -1,19 +1,13 @@
 import { describe, expect, test } from "bun:test";
 import { compileDeclarativeConnector } from "../../../bun/src/declarative/compile";
-import { createAttachment, createShot } from "../src/actions";
 import manifest from "../manifest.json";
 import COMPOSIO_TOOLS from "./composio-cover.json";
 
 const operations = manifest.operations as Record<string, Record<string, unknown>>;
 const ORIGIN_OPS = ["healthcheck", "users.me", "shots.list", "shots.get", "shots.update", "shots.delete"] as const;
-const HANDWRITTEN = new Set(["shots.create", "attachments.create"]);
 
 const compiled = compileDeclarativeConnector(manifest as never);
-const actions = {
-  ...compiled.actions,
-  "shots.create": createShot,
-  "attachments.create": createAttachment,
-};
+const actions = compiled.actions;
 
 function requestOf(key: string): Record<string, unknown> {
   return operations[key]!.request as Record<string, unknown>;
@@ -50,40 +44,32 @@ describe("dribbble manifest", () => {
     expect((operations["shots.get"]!.inputSchema as { required: string[] }).required).toEqual(["id"]);
   });
 
-  test("covers every Composio Dribbble tool with a real request or handwritten handler", () => {
-    expect(Object.keys(COMPOSIO_TOOLS)).toHaveLength(12);
-    expect(Object.keys(operations).length).toBe(17);
+  test("covers every remaining Composio Dribbble tool with a compiled request", () => {
+    expect(Object.keys(COMPOSIO_TOOLS)).toHaveLength(10);
+    expect(Object.keys(operations).length).toBe(15);
+    expect(operations["shots.create"]).toBeUndefined();
+    expect(operations["attachments.create"]).toBeUndefined();
     for (const [slug, key] of Object.entries(COMPOSIO_TOOLS)) {
       expect(operations[key], slug).toBeDefined();
       expect(actions[key as keyof typeof actions], slug).toBeTypeOf("function");
-      if (HANDWRITTEN.has(key)) {
-        expect(operations[key]!.request, slug).toBeUndefined();
-        expect(compiled.actions[key], slug).toBeUndefined();
-      } else {
-        expect(requestOf(key), slug).toBeDefined();
-        expect(compiled.actions[key], slug).toBeTypeOf("function");
-      }
+      expect(requestOf(key), slug).toBeDefined();
+      expect(compiled.actions[key], slug).toBeTypeOf("function");
     }
     expect(operations.healthcheck).toBeDefined();
   });
 
-  test("gives every action a title, description, object inputSchema, and request or handler", () => {
+  test("gives every action a title, description, object inputSchema, and request", () => {
     for (const [key, operation] of Object.entries(operations)) {
       expect(operation.kind, key).toBe("action");
       expect(["read", "write", "destructive"], key).toContain(operation.sideEffect);
       expect(String(operation.title ?? "").length, key).toBeGreaterThan(0);
       expect(String(operation.description ?? "").length, key).toBeGreaterThan(10);
       expect((operation.inputSchema as { type?: string }).type, key).toBe("object");
-      if (HANDWRITTEN.has(key)) {
-        expect(operation.request, key).toBeUndefined();
-        expect(actions[key as keyof typeof actions], key).toBeTypeOf("function");
-      } else {
-        expect(operation.request, `${key} must declare a request block`).toBeDefined();
-        const request = operation.request as Record<string, unknown>;
-        expect(typeof request.method, key).toBe("string");
-        expect(typeof request.path, key).toBe("string");
-        expect(String(request.path).startsWith("/"), key).toBe(true);
-      }
+      expect(operation.request, `${key} must declare a request block`).toBeDefined();
+      const request = operation.request as Record<string, unknown>;
+      expect(typeof request.method, key).toBe("string");
+      expect(typeof request.path, key).toBe("string");
+      expect(String(request.path).startsWith("/"), key).toBe(true);
     }
   });
 
@@ -100,7 +86,6 @@ describe("dribbble manifest", () => {
 
   test("only interpolates path placeholders the schema requires", () => {
     for (const [key, operation] of Object.entries(operations)) {
-      if (HANDWRITTEN.has(key)) continue;
       const request = operation.request as Record<string, unknown>;
       const schema = operation.inputSchema as { required?: string[] };
       const placeholders = [...String(request.path ?? "").matchAll(/\{\{\s*([A-Za-z0-9_.$-]+)\s*\}\}/g)].map((match) => match[1]);
