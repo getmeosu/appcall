@@ -83,7 +83,22 @@
       "account.get",
       "emails.verify",
       "person.email.find",
-      "company.emails.find"
+      "company.emails.find",
+      "decision_maker.email.find",
+      "linkedin.email.find",
+      "emails.report_bad",
+      "domain.emails.info",
+      "domain.emails.order",
+      "bulk.create",
+      "bulk.get",
+      "bulk.download",
+      "geolead.create",
+      "geolead.get",
+      "geolead.download",
+      "webhook.bulk.completed",
+      "webhook.find_email.completed",
+      "webhook.domain_email.ready",
+      "webhook.geolead.completed"
     ],
     "upstreamSha": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
     "marketFocus": "international",
@@ -158,31 +173,22 @@
     "healthcheck": {
       "upstreamActionId": "get_account",
       "sourceRefs": [
-        "definition-auth",
-        "action-get-account",
-        "handler-get-account",
-        "credential-validate",
         "request-auth",
-        "api-base"
+        "request-json"
       ],
       "documentationUrls": [
-        "https://anymailfinder.com/email-finder-api/docs/account",
-        "https://anymailfinder.com/email-finder-api/docs/authentication"
+        "https://anymailfinder.com/email-finder-api/docs/account"
       ],
       "responseContract": "appcall-provider-json-v1",
       "adaptations": [
-        "Credential-only healthcheck maps to documented free GET /v5.1/account used by the pinned validator. Find and verify endpoints consume credits and are not used as healthcheck.",
-        "Authorization is the raw API key documented by the official auth page and endpoint cURL examples, matching the pinned executor. Marketing copy that says Bearer is not used.",
-        "Native category is crm (sales contact-email discovery). Source Marketing/Data are not in the Rust CATEGORIES allowlist.",
-        "Returns raw Anymail Finder JSON under data rather than the source email/creditsLeft/raw wrapper. The upstream user-agent is not sent."
+        "Credential-only healthcheck maps to documented free GET /v5.1/account."
       ]
     },
     "account.get": {
       "upstreamActionId": "get_account",
       "sourceRefs": [
-        "action-get-account",
-        "handler-get-account",
-        "request-auth"
+        "request-auth",
+        "request-json"
       ],
       "documentationUrls": [
         "https://anymailfinder.com/email-finder-api/docs/account"
@@ -195,59 +201,260 @@
     "emails.verify": {
       "upstreamActionId": "verify_email",
       "sourceRefs": [
-        "action-verify-email",
-        "handler-verify-email",
-        "request-auth"
+        "request-auth",
+        "request-json"
       ],
       "documentationUrls": [
         "https://anymailfinder.com/email-finder-api/docs/verify-email"
       ],
       "responseContract": "appcall-provider-json-v1",
       "adaptations": [
-        "Maps to documented POST /v5.1/verify-email with required email. Official pricing is 0.2 credit per verification (repeats within 30 days free). Not used as healthcheck.",
-        "Optional x-webhook-url async delivery is omitted.",
-        "Timeout is 180000 ms per the official timeout recommendation for live SMTP checks."
+        "Maps to POST /v5.1/verify-email. Optional x-webhook-url async delivery is omitted."
       ]
     },
     "person.email.find": {
       "upstreamActionId": "find_person_email",
       "sourceRefs": [
-        "action-find-person-email",
-        "handler-find-person-email",
-        "request-auth"
+        "request-auth",
+        "request-json"
       ],
       "documentationUrls": [
         "https://anymailfinder.com/email-finder-api/docs/find-person-email"
       ],
       "responseContract": "appcall-provider-json-v1",
       "adaptations": [
-        "Maps to documented POST /v5.1/find-email/person. Native requires the documented example pair full_name + domain. first_name/last_name, company_name, and linkedin_url-only variants are omitted because native schemas cannot express the official anyOf combinations.",
-        "Charged only when a valid email is found. Not used as healthcheck. Optional x-webhook-url is omitted.",
-        "Timeout is 180000 ms per official docs."
+        "Maps to POST /v5.1/find-email/person with full_name + domain."
       ]
     },
     "company.emails.find": {
       "upstreamActionId": "find_company_emails",
       "sourceRefs": [
-        "action-find-company-emails",
-        "handler-find-company-emails",
-        "request-auth"
+        "request-auth",
+        "request-json"
       ],
       "documentationUrls": [
         "https://anymailfinder.com/email-finder-api/docs/find-company-email"
       ],
       "responseContract": "appcall-provider-json-v1",
       "adaptations": [
-        "Maps to documented POST /v5.1/find-email/company with required domain. Optional company_name and email_type are omitted so the native request stays the official preferred-domain example.",
-        "Charged only when valid emails are found. Not used as healthcheck. Optional x-webhook-url is omitted.",
-        "Timeout is 180000 ms per official docs."
+        "Maps to POST /v5.1/find-email/company with required domain."
+      ]
+    },
+    "decision_maker.email.find": {
+      "upstreamActionId": "find_decision_maker_email",
+      "sourceRefs": [
+        "request-auth",
+        "request-json"
+      ],
+      "documentationUrls": [
+        "https://anymailfinder.com/email-finder-api/docs/find-decision-maker-email"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Maps to POST /v5.1/find-email/decision-maker with domain and decision_maker_category."
+      ]
+    },
+    "linkedin.email.find": {
+      "upstreamActionId": "find_linkedin_email",
+      "sourceRefs": [
+        "request-auth",
+        "request-json"
+      ],
+      "documentationUrls": [
+        "https://anymailfinder.com/email-finder-api/docs/find-linkedin-url-email"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Maps to POST /v5.1/find-email/linkedin-url with linkedin_url."
+      ]
+    },
+    "emails.report_bad": {
+      "upstreamActionId": "report_bad_email",
+      "sourceRefs": [
+        "request-auth",
+        "request-json"
+      ],
+      "documentationUrls": [
+        "https://anymailfinder.com/email-finder-api/docs/report-bad-email"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Maps to POST /v5.1/report/bad-email."
+      ]
+    },
+    "domain.emails.info": {
+      "upstreamActionId": "domain_email_info",
+      "sourceRefs": [
+        "request-auth",
+        "request-json"
+      ],
+      "documentationUrls": [
+        "https://anymailfinder.com/email-finder-api/docs/domain-email/count"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Maps to GET /v5.1/domain/{domain}/email."
+      ]
+    },
+    "domain.emails.order": {
+      "upstreamActionId": "domain_email_order",
+      "sourceRefs": [
+        "request-auth",
+        "request-json"
+      ],
+      "documentationUrls": [
+        "https://anymailfinder.com/email-finder-api/docs/domain-email/order"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Maps to POST /v5.1/domain/{domain}/email/order. CSV download is omitted."
+      ]
+    },
+    "bulk.create": {
+      "upstreamActionId": "create_bulk_json",
+      "sourceRefs": [
+        "request-auth",
+        "request-json"
+      ],
+      "documentationUrls": [
+        "https://anymailfinder.com/email-finder-api/docs/bulk/create-json"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Maps to POST /v5.1/bulk/json. Multipart file upload is omitted."
+      ]
+    },
+    "bulk.get": {
+      "upstreamActionId": "get_bulk",
+      "sourceRefs": [
+        "request-auth",
+        "request-json"
+      ],
+      "documentationUrls": [
+        "https://anymailfinder.com/email-finder-api/docs/bulk/info"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Maps to GET /v5.1/bulk/{searchId}."
+      ]
+    },
+    "bulk.download": {
+      "upstreamActionId": "download_bulk",
+      "sourceRefs": [
+        "request-auth",
+        "request-json"
+      ],
+      "documentationUrls": [
+        "https://anymailfinder.com/email-finder-api/docs/bulk/download"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Maps to GET /v5.1/bulk/{searchId}/download with download_as=json_obj so the response stays JSON."
+      ]
+    },
+    "geolead.create": {
+      "upstreamActionId": "create_geolead",
+      "sourceRefs": [
+        "request-auth",
+        "request-json"
+      ],
+      "documentationUrls": [
+        "https://anymailfinder.com/email-finder-api/docs"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Maps to POST /v5.1/geo-lead."
+      ]
+    },
+    "geolead.get": {
+      "upstreamActionId": "get_geolead",
+      "sourceRefs": [
+        "request-auth",
+        "request-json"
+      ],
+      "documentationUrls": [
+        "https://anymailfinder.com/email-finder-api/docs"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Maps to GET /v5.1/geo-lead/{searchId}."
+      ]
+    },
+    "geolead.download": {
+      "upstreamActionId": "download_geolead",
+      "sourceRefs": [
+        "request-auth",
+        "request-json"
+      ],
+      "documentationUrls": [
+        "https://anymailfinder.com/email-finder-api/docs"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Maps to GET /v5.1/geo-lead/{searchId}/download with download_as=json_obj."
+      ]
+    },
+    "webhook.bulk.completed": {
+      "upstreamActionId": "webhook_bulk_completed",
+      "sourceRefs": [
+        "request-auth",
+        "request-json"
+      ],
+      "documentationUrls": [
+        "https://anymailfinder.com/email-finder-api/docs/bulk/create-json"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "EventOnly webhook when a bulk search completes via x-webhook-url. No HTTP request."
+      ]
+    },
+    "webhook.find_email.completed": {
+      "upstreamActionId": "webhook_find_email_completed",
+      "sourceRefs": [
+        "request-auth",
+        "request-json"
+      ],
+      "documentationUrls": [
+        "https://anymailfinder.com/email-finder-api/docs/find-person-email"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "EventOnly webhook when an async find-email call completes. No HTTP request."
+      ]
+    },
+    "webhook.domain_email.ready": {
+      "upstreamActionId": "webhook_domain_email_ready",
+      "sourceRefs": [
+        "request-auth",
+        "request-json"
+      ],
+      "documentationUrls": [
+        "https://anymailfinder.com/email-finder-api/docs/domain-email/order"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "EventOnly webhook when an ordered domain email file is ready. No HTTP request."
+      ]
+    },
+    "webhook.geolead.completed": {
+      "upstreamActionId": "webhook_geolead_completed",
+      "sourceRefs": [
+        "request-auth",
+        "request-json"
+      ],
+      "documentationUrls": [
+        "https://anymailfinder.com/email-finder-api/docs"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "EventOnly webhook when a GeoLead search completes. No HTTP request."
       ]
     }
   },
   "manifest": {
     "key": "anymail-finder",
     "name": "Anymail Finder",
-    "version": "0.1.0",
+    "version": "0.2.0",
     "runtime": "bun",
     "visibility": "public",
     "categories": [
@@ -277,7 +484,9 @@
       "account",
       "email",
       "person",
-      "company"
+      "company",
+      "bulk",
+      "geolead"
     ],
     "http": {
       "baseUrl": "https://api.anymailfinder.com",
@@ -304,11 +513,11 @@
     },
     "operations": {
       "healthcheck": {
-        "kind": "action",
-        "sideEffect": "read",
         "timeoutMs": 5000,
         "maxInputBytes": 4096,
         "maxResponseBytes": 65536,
+        "kind": "action",
+        "sideEffect": "read",
         "title": "Healthcheck",
         "description": "Validate the Anymail Finder API key with the free GET /v5.1/account probe.",
         "inputSchema": {
@@ -340,11 +549,11 @@
         "responseFormat": "json"
       },
       "account.get": {
-        "kind": "action",
-        "sideEffect": "read",
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
         "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "read",
         "title": "Get account",
         "description": "Get the Anymail Finder account email and remaining credits.",
         "inputSchema": {
@@ -376,11 +585,11 @@
         "responseFormat": "json"
       },
       "emails.verify": {
-        "kind": "action",
-        "sideEffect": "read",
         "timeoutMs": 180000,
         "maxInputBytes": 65536,
         "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "read",
         "title": "Verify email",
         "description": "Verify whether one email address is deliverable. Consumes Anymail Finder credits and is not a healthcheck.",
         "inputSchema": {
@@ -392,10 +601,10 @@
               "description": "Email address to verify."
             }
           },
+          "additionalProperties": false,
           "required": [
             "email"
-          ],
-          "additionalProperties": false
+          ]
         },
         "outputSchema": {
           "type": "object",
@@ -412,26 +621,26 @@
         "request": {
           "method": "POST",
           "path": "/v5.1/verify-email",
+          "success": [
+            200
+          ],
           "headers": {
             "Content-Type": "application/json"
           },
           "body": {
             "email": "{{email}}"
-          },
-          "success": [
-            200
-          ]
+          }
         },
         "enforceOutputSchema": true,
         "validationMode": "strict-generated",
         "responseFormat": "json"
       },
       "person.email.find": {
-        "kind": "action",
-        "sideEffect": "read",
         "timeoutMs": 180000,
         "maxInputBytes": 65536,
         "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "read",
         "title": "Find person email",
         "description": "Find a person's work email from full name and company domain. Consumes credits when a valid email is found.",
         "inputSchema": {
@@ -448,11 +657,11 @@
               "description": "Person's full name."
             }
           },
+          "additionalProperties": false,
           "required": [
             "domain",
             "fullName"
-          ],
-          "additionalProperties": false
+          ]
         },
         "outputSchema": {
           "type": "object",
@@ -469,27 +678,27 @@
         "request": {
           "method": "POST",
           "path": "/v5.1/find-email/person",
+          "success": [
+            200
+          ],
           "headers": {
             "Content-Type": "application/json"
           },
           "body": {
             "domain": "{{domain}}",
             "full_name": "{{fullName}}"
-          },
-          "success": [
-            200
-          ]
+          }
         },
         "enforceOutputSchema": true,
         "validationMode": "strict-generated",
         "responseFormat": "json"
       },
       "company.emails.find": {
-        "kind": "action",
-        "sideEffect": "read",
         "timeoutMs": 180000,
         "maxInputBytes": 65536,
         "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "read",
         "title": "Find company emails",
         "description": "Find up to 20 email addresses for a company domain. Consumes credits when valid emails are found.",
         "inputSchema": {
@@ -501,10 +710,10 @@
               "description": "Company domain such as microsoft.com."
             }
           },
+          "additionalProperties": false,
           "required": [
             "domain"
-          ],
-          "additionalProperties": false
+          ]
         },
         "outputSchema": {
           "type": "object",
@@ -521,15 +730,666 @@
         "request": {
           "method": "POST",
           "path": "/v5.1/find-email/company",
+          "success": [
+            200
+          ],
           "headers": {
             "Content-Type": "application/json"
           },
           "body": {
             "domain": "{{domain}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "decision_maker.email.find": {
+        "timeoutMs": 180000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "read",
+        "title": "Find decision maker email",
+        "description": "Find a decision-maker email for a company domain and role category.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "domain": {
+              "type": "string",
+              "minLength": 1
+            },
+            "decision_maker_category": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "string",
+                "enum": [
+                  "ceo",
+                  "engineering",
+                  "finance",
+                  "hr",
+                  "it",
+                  "logistics",
+                  "marketing",
+                  "operations",
+                  "buyer",
+                  "sales"
+                ]
+              }
+            }
           },
+          "additionalProperties": false,
+          "required": [
+            "domain",
+            "decision_maker_category"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "POST",
+          "path": "/v5.1/find-email/decision-maker",
+          "success": [
+            200
+          ],
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "domain": "{{domain}}",
+            "decision_maker_category": "{{decision_maker_category}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "linkedin.email.find": {
+        "timeoutMs": 180000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "read",
+        "title": "Find email by LinkedIn URL",
+        "description": "Find a person's email from a LinkedIn profile URL.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "linkedin_url": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "linkedin_url"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "POST",
+          "path": "/v5.1/find-email/linkedin-url",
+          "success": [
+            200
+          ],
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "linkedin_url": "{{linkedin_url}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "emails.report_bad": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "write",
+        "title": "Report bad email",
+        "description": "Report an email address as bad or invalid.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "email": {
+              "type": "string",
+              "minLength": 1
+            },
+            "additional_info": {
+              "type": "string",
+              "minLength": 1
+            },
+            "bounce_message": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "email",
+            "additional_info"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "POST",
+          "path": "/v5.1/report/bad-email",
+          "success": [
+            200
+          ],
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "email": "{{email}}",
+            "additional_info": "{{additional_info}}",
+            "bounce_message": "{{bounce_message}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "domain.emails.info": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "read",
+        "title": "Domain email count",
+        "description": "Get how many emails Anymail Finder has for a domain and the credit cost to download them.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "domain": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "domain"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/v5.1/domain/{{domain}}/email",
           "success": [
             200
           ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "domain.emails.order": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "write",
+        "title": "Order domain emails",
+        "description": "Pay to prepare a domain email list for download. Credits are charged asynchronously.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "domain": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "domain"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "POST",
+          "path": "/v5.1/domain/{{domain}}/email/order",
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "bulk.create": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "write",
+        "title": "Create bulk search",
+        "description": "Create a bulk email search from a JSON table of rows.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "data": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "domain_field_index": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "full_name_field_index": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "file_name": {
+              "type": "string",
+              "minLength": 1
+            },
+            "webhook_url": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "data"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "POST",
+          "path": "/v5.1/bulk/json",
+          "success": [
+            200
+          ],
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "data": "{{data}}",
+            "domain_field_index": "{{domain_field_index}}",
+            "full_name_field_index": "{{full_name_field_index}}",
+            "file_name": "{{file_name}}",
+            "webhook_url": "{{webhook_url}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "bulk.get": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "read",
+        "title": "Get bulk search",
+        "description": "Retrieve status and counts for a bulk email search.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "searchId": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "searchId"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/v5.1/bulk/{{searchId}}",
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "bulk.download": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "write",
+        "title": "Download bulk search",
+        "description": "Download bulk search results as JSON objects. Credits are charged on the first paid download.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "searchId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "preview_only": {
+              "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ]
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "searchId"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/v5.1/bulk/{{searchId}}/download",
+          "success": [
+            200
+          ],
+          "query": {
+            "download_as": "json_obj",
+            "preview_only": "{{preview_only}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "geolead.create": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "write",
+        "title": "Create GeoLead search",
+        "description": "Create a geographic lead search around a latitude and longitude.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "query": {
+              "type": "string",
+              "minLength": 1
+            },
+            "latitude": {
+              "type": "number",
+              "minimum": -90,
+              "maximum": 90
+            },
+            "longitude": {
+              "type": "number",
+              "minimum": -180,
+              "maximum": 180
+            },
+            "radius_km": {
+              "type": "number",
+              "minimum": 1,
+              "maximum": 25
+            },
+            "find_company_emails": {
+              "type": "boolean"
+            },
+            "find_decision_maker_categories": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "string",
+                "enum": [
+                  "ceo",
+                  "engineering",
+                  "finance",
+                  "hr",
+                  "it",
+                  "logistics",
+                  "marketing",
+                  "operations",
+                  "buyer",
+                  "sales"
+                ]
+              }
+            },
+            "file_name": {
+              "type": "string",
+              "minLength": 1
+            },
+            "result_limit": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "query",
+            "latitude",
+            "longitude",
+            "radius_km",
+            "find_company_emails",
+            "find_decision_maker_categories"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "POST",
+          "path": "/v5.1/geo-lead",
+          "success": [
+            200
+          ],
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "query": "{{query}}",
+            "latitude": "{{latitude}}",
+            "longitude": "{{longitude}}",
+            "radius_km": "{{radius_km}}",
+            "find_company_emails": "{{find_company_emails}}",
+            "find_decision_maker_categories": "{{find_decision_maker_categories}}",
+            "file_name": "{{file_name}}",
+            "result_limit": "{{result_limit}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "geolead.get": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "read",
+        "title": "Get GeoLead search",
+        "description": "Retrieve status for a GeoLead search.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "searchId": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "searchId"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/v5.1/geo-lead/{{searchId}}",
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "geolead.download": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "write",
+        "title": "Download GeoLead search",
+        "description": "Download GeoLead results as JSON objects. Credits are charged on the first paid download.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "searchId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "preview_only": {
+              "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ]
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "searchId"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/v5.1/geo-lead/{{searchId}}/download",
+          "success": [
+            200
+          ],
+          "query": {
+            "download_as": "json_obj",
+            "preview_only": "{{preview_only}}"
+          }
         },
         "enforceOutputSchema": true,
         "validationMode": "strict-generated",
