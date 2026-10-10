@@ -1,1 +1,1330 @@
-{"auth":{"setup":{"fields":[{"key":"apiKey","label":"Affinity API key","required":true,"secret":true}],"mode":"api_key"},"type":"api_key"},"categories":["crm"],"evidence":{"fixture":{"status":"supplied"},"live":{"status":"unverified"}},"http":{"auth":{"field":"apiKey","in":"header","name":"Authorization","value":"Bearer {{apiKey}}"},"baseUrl":"https://api.affinity.co","errors":{"defaultRetryAfterSeconds":30,"messagePaths":["message","error","errors.0.message"],"rateLimitStatuses":[429],"retryAfterHeader":"retry-after"},"headers":{"Accept":"application/json"}},"key":"affinity","models":["user","person","company"],"name":"Affinity","network":{"allowedHosts":["api.affinity.co"]},"operations":{"companies.list":{"description":"List Affinity companies with optional cursor and limit.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{"cursor":{"minLength":1,"type":"string"},"limit":{"maximum":100,"minimum":1,"type":"integer"}},"type":"object"},"kind":"action","maxInputBytes":65536,"maxResponseBytes":5242880,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/v2/companies","query":{"cursor":"{{cursor}}","limit":"{{limit}}"},"success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":15000,"title":"List companies","validationMode":"strict-generated"},"healthcheck":{"description":"Validate the Affinity API key with GET /v2/auth/whoami.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{},"type":"object"},"kind":"action","maxInputBytes":4096,"maxResponseBytes":524288,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/v2/auth/whoami","success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":10000,"title":"Healthcheck","validationMode":"strict-generated"},"persons.get":{"description":"Get one Affinity person by numeric personId.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{"personId":{"minimum":1,"type":"integer"}},"required":["personId"],"type":"object"},"kind":"action","maxInputBytes":65536,"maxResponseBytes":1048576,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/v2/persons/{{personId}}","success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":10000,"title":"Get person","validationMode":"strict-generated"},"persons.list":{"description":"List Affinity persons with optional cursor and limit.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{"cursor":{"minLength":1,"type":"string"},"limit":{"maximum":100,"minimum":1,"type":"integer"}},"type":"object"},"kind":"action","maxInputBytes":65536,"maxResponseBytes":5242880,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/v2/persons","query":{"cursor":"{{cursor}}","limit":"{{limit}}"},"success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":15000,"title":"List persons","validationMode":"strict-generated"}},"provenance":{"source":{"revision":"33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a","url":"https://github.com/oomol-lab/open-connector"}},"runtime":"bun","version":"0.1.0","visibility":"public"}
+{
+  "auth": {
+    "setup": {
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "Affinity API key",
+          "required": true,
+          "secret": true
+        }
+      ],
+      "mode": "api_key"
+    },
+    "type": "api_key"
+  },
+  "categories": [
+    "crm"
+  ],
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
+    }
+  },
+  "http": {
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "Authorization",
+      "value": "Bearer {{apiKey}}"
+    },
+    "baseUrl": "https://api.affinity.co",
+    "errors": {
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "message",
+        "error",
+        "errors.0.message"
+      ],
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after"
+    },
+    "headers": {
+      "Accept": "application/json"
+    }
+  },
+  "key": "affinity",
+  "models": [
+    "user",
+    "person",
+    "company",
+    "opportunity",
+    "list",
+    "saved_view",
+    "list_entry",
+    "field"
+  ],
+  "name": "Affinity",
+  "network": {
+    "allowedHosts": [
+      "api.affinity.co"
+    ]
+  },
+  "operations": {
+    "companies.list": {
+      "description": "List Affinity companies with optional cursor, limit, ids, fieldIds, and fieldTypes.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "cursor": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "limit": {
+            "maximum": 100,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "ids": {
+            "type": "array",
+            "minItems": 1,
+            "description": "Affinity company IDs to fetch directly. Emitted as repeated ids query keys.",
+            "items": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          "fieldIds": {
+            "type": "array",
+            "minItems": 1,
+            "description": "Field IDs whose values should be returned. Emitted as repeated fieldIds query keys.",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "fieldTypes": {
+            "type": "array",
+            "minItems": 1,
+            "description": "Field types whose values should be returned. Emitted as repeated fieldTypes query keys.",
+            "items": {
+              "type": "string",
+              "enum": [
+                "enriched",
+                "global",
+                "relationship-intelligence"
+              ]
+            }
+          }
+        },
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/companies",
+        "query": {
+          "cursor": "{{cursor}}",
+          "limit": "{{limit}}",
+          "ids": "{{ids}}",
+          "fieldIds": "{{fieldIds}}",
+          "fieldTypes": "{{fieldTypes}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List companies",
+      "validationMode": "strict-generated"
+    },
+    "healthcheck": {
+      "description": "Validate the Affinity API key with GET /v2/auth/whoami.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {},
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 524288,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/auth/whoami",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "title": "Healthcheck",
+      "validationMode": "strict-generated"
+    },
+    "persons.get": {
+      "description": "Get one Affinity person by numeric personId. Optional fieldIds and fieldTypes attach non-list-specific field data.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "personId": {
+            "minimum": 1,
+            "type": "integer"
+          },
+          "fieldIds": {
+            "type": "array",
+            "minItems": 1,
+            "description": "Field IDs whose values should be returned. Emitted as repeated fieldIds query keys.",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "fieldTypes": {
+            "type": "array",
+            "minItems": 1,
+            "description": "Field types whose values should be returned. Emitted as repeated fieldTypes query keys.",
+            "items": {
+              "type": "string",
+              "enum": [
+                "enriched",
+                "global",
+                "relationship-intelligence"
+              ]
+            }
+          }
+        },
+        "required": [
+          "personId"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/persons/{{personId}}",
+        "success": [
+          200
+        ],
+        "query": {
+          "fieldIds": "{{fieldIds}}",
+          "fieldTypes": "{{fieldTypes}}"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "title": "Get person",
+      "validationMode": "strict-generated"
+    },
+    "persons.list": {
+      "description": "List Affinity persons with optional cursor, limit, ids, fieldIds, and fieldTypes.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "cursor": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "limit": {
+            "maximum": 100,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "ids": {
+            "type": "array",
+            "minItems": 1,
+            "description": "Affinity person IDs to fetch directly. Emitted as repeated ids query keys.",
+            "items": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          "fieldIds": {
+            "type": "array",
+            "minItems": 1,
+            "description": "Field IDs whose values should be returned. Emitted as repeated fieldIds query keys.",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "fieldTypes": {
+            "type": "array",
+            "minItems": 1,
+            "description": "Field types whose values should be returned. Emitted as repeated fieldTypes query keys.",
+            "items": {
+              "type": "string",
+              "enum": [
+                "enriched",
+                "global",
+                "relationship-intelligence"
+              ]
+            }
+          }
+        },
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/persons",
+        "query": {
+          "cursor": "{{cursor}}",
+          "limit": "{{limit}}",
+          "ids": "{{ids}}",
+          "fieldIds": "{{fieldIds}}",
+          "fieldTypes": "{{fieldTypes}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List persons",
+      "validationMode": "strict-generated"
+    },
+    "companies.fields.list": {
+      "description": "List non-list-specific Affinity company field metadata via GET /v2/companies/fields. Maps to AFFINITY_GET_METADATA_ON_COMPANY_FIELDS.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "cursor": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Pagination cursor returned by a previous Affinity page."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Number of items to include in the page (1-100)."
+          }
+        }
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/companies/fields",
+        "success": [
+          200
+        ],
+        "query": {
+          "cursor": "{{cursor}}",
+          "limit": "{{limit}}"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List company fields",
+      "validationMode": "strict-generated"
+    },
+    "companies.get": {
+      "description": "Get one Affinity company by numeric companyId via GET /v2/companies/{companyId}. Optional fieldIds and fieldTypes attach non-list-specific field data. Maps to AFFINITY_GET_A_SINGLE_COMPANY.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "companyId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Numeric Affinity company ID."
+          },
+          "fieldIds": {
+            "type": "array",
+            "minItems": 1,
+            "description": "Field IDs whose values should be returned. Emitted as repeated fieldIds query keys.",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "fieldTypes": {
+            "type": "array",
+            "minItems": 1,
+            "description": "Field types whose values should be returned. Emitted as repeated fieldTypes query keys.",
+            "items": {
+              "type": "string",
+              "enum": [
+                "enriched",
+                "global",
+                "relationship-intelligence"
+              ]
+            }
+          }
+        },
+        "required": [
+          "companyId"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/companies/{{companyId}}",
+        "success": [
+          200
+        ],
+        "query": {
+          "fieldIds": "{{fieldIds}}",
+          "fieldTypes": "{{fieldTypes}}"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "title": "Get company",
+      "validationMode": "strict-generated"
+    },
+    "companies.list_entries.list": {
+      "description": "Paginate list entries for one company across lists via GET /v2/companies/{companyId}/list-entries. Returns list-specific field data. Maps to AFFINITY_GET_A_COMPANY_S_LIST_ENTRIES.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "companyId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Numeric Affinity company ID."
+          },
+          "cursor": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Pagination cursor returned by a previous Affinity page."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Number of items to include in the page (1-100)."
+          }
+        },
+        "required": [
+          "companyId"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/companies/{{companyId}}/list-entries",
+        "success": [
+          200
+        ],
+        "query": {
+          "cursor": "{{cursor}}",
+          "limit": "{{limit}}"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List company list entries",
+      "validationMode": "strict-generated"
+    },
+    "companies.lists.list": {
+      "description": "Paginate lists that contain one company via GET /v2/companies/{companyId}/lists. Maps to AFFINITY_GET_A_COMPANY_S_LISTS.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "companyId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Numeric Affinity company ID."
+          },
+          "cursor": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Pagination cursor returned by a previous Affinity page."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Number of items to include in the page (1-100)."
+          }
+        },
+        "required": [
+          "companyId"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/companies/{{companyId}}/lists",
+        "success": [
+          200
+        ],
+        "query": {
+          "cursor": "{{cursor}}",
+          "limit": "{{limit}}"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List company lists",
+      "validationMode": "strict-generated"
+    },
+    "lists.fields.list": {
+      "description": "List field metadata available on one Affinity list via GET /v2/lists/{listId}/fields. Maps to AFFINITY_GET_METADATA_ON_A_SINGLE_LIST_S_FIELDS.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "listId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Numeric Affinity list ID."
+          },
+          "cursor": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Pagination cursor returned by a previous Affinity page."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Number of items to include in the page (1-100)."
+          }
+        },
+        "required": [
+          "listId"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/lists/{{listId}}/fields",
+        "success": [
+          200
+        ],
+        "query": {
+          "cursor": "{{cursor}}",
+          "limit": "{{limit}}"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List list fields",
+      "validationMode": "strict-generated"
+    },
+    "lists.get": {
+      "description": "Get metadata for one Affinity list via GET /v2/lists/{listId}. Maps to AFFINITY_GET_METADATA_ON_A_SINGLE_LIST.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "listId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Numeric Affinity list ID."
+          }
+        },
+        "required": [
+          "listId"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/lists/{{listId}}",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "title": "Get list",
+      "validationMode": "strict-generated"
+    },
+    "lists.list": {
+      "description": "Paginate Affinity lists visible to the authenticated user via GET /v2/lists. Maps to AFFINITY_GET_METADATA_ON_ALL_LISTS.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "cursor": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Pagination cursor returned by a previous Affinity page."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Number of items to include in the page (1-100)."
+          }
+        }
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/lists",
+        "success": [
+          200
+        ],
+        "query": {
+          "cursor": "{{cursor}}",
+          "limit": "{{limit}}"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List lists",
+      "validationMode": "strict-generated"
+    },
+    "lists.list_entries.list": {
+      "description": "Paginate rows on one Affinity list via GET /v2/lists/{listId}/list-entries. Optional fieldIds and fieldTypes attach field data. Maps to AFFINITY_GET_ALL_LIST_ENTRIES_ON_A_LIST.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "listId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Numeric Affinity list ID."
+          },
+          "cursor": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Pagination cursor returned by a previous Affinity page."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Number of items to include in the page (1-100)."
+          },
+          "fieldIds": {
+            "type": "array",
+            "minItems": 1,
+            "description": "Field IDs whose values should be returned. Emitted as repeated fieldIds query keys.",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "fieldTypes": {
+            "type": "array",
+            "minItems": 1,
+            "description": "Field types whose values should be returned. Emitted as repeated fieldTypes query keys.",
+            "items": {
+              "type": "string",
+              "enum": [
+                "enriched",
+                "global",
+                "list",
+                "relationship-intelligence"
+              ]
+            }
+          }
+        },
+        "required": [
+          "listId"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/lists/{{listId}}/list-entries",
+        "success": [
+          200
+        ],
+        "query": {
+          "cursor": "{{cursor}}",
+          "limit": "{{limit}}",
+          "fieldIds": "{{fieldIds}}",
+          "fieldTypes": "{{fieldTypes}}"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List list entries",
+      "validationMode": "strict-generated"
+    },
+    "lists.saved_views.get": {
+      "description": "Get metadata for one saved view via GET /v2/lists/{listId}/saved-views/{viewId}. Maps to AFFINITY_GET_METADATA_ON_A_SINGLE_SAVED_VIEW.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "listId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Numeric Affinity list ID."
+          },
+          "viewId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Numeric Affinity saved view ID."
+          }
+        },
+        "required": [
+          "listId",
+          "viewId"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/lists/{{listId}}/saved-views/{{viewId}}",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "title": "Get saved view",
+      "validationMode": "strict-generated"
+    },
+    "lists.saved_views.list": {
+      "description": "Paginate saved views on one Affinity list via GET /v2/lists/{listId}/saved-views. Maps to AFFINITY_GET_METADATA_ON_SAVED_VIEWS.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "listId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Numeric Affinity list ID."
+          },
+          "cursor": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Pagination cursor returned by a previous Affinity page."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Number of items to include in the page (1-100)."
+          }
+        },
+        "required": [
+          "listId"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/lists/{{listId}}/saved-views",
+        "success": [
+          200
+        ],
+        "query": {
+          "cursor": "{{cursor}}",
+          "limit": "{{limit}}"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List saved views",
+      "validationMode": "strict-generated"
+    },
+    "lists.saved_views.list_entries.list": {
+      "description": "Paginate rows on one sheet-type saved view via GET /v2/lists/{listId}/saved-views/{viewId}/list-entries. Honors the view's filters and selected columns. Maps to AFFINITY_GET_ALL_LIST_ENTRIES_ON_A_SAVED_VIEW.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "listId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Numeric Affinity list ID."
+          },
+          "viewId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Numeric Affinity saved view ID."
+          },
+          "cursor": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Pagination cursor returned by a previous Affinity page."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Number of items to include in the page (1-100)."
+          }
+        },
+        "required": [
+          "listId",
+          "viewId"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/lists/{{listId}}/saved-views/{{viewId}}/list-entries",
+        "success": [
+          200
+        ],
+        "query": {
+          "cursor": "{{cursor}}",
+          "limit": "{{limit}}"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List saved view list entries",
+      "validationMode": "strict-generated"
+    },
+    "opportunities.get": {
+      "description": "Get one Affinity opportunity by numeric opportunityId via GET /v2/opportunities/{opportunityId}. Returns basic info without field data. Maps to AFFINITY_GET_A_SINGLE_OPPORTUNITY.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "opportunityId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Numeric Affinity opportunity ID."
+          }
+        },
+        "required": [
+          "opportunityId"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/opportunities/{{opportunityId}}",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "title": "Get opportunity",
+      "validationMode": "strict-generated"
+    },
+    "opportunities.list": {
+      "description": "Paginate Affinity opportunities via GET /v2/opportunities. Returns basic info without field data. Optional ids filters the page. Maps to AFFINITY_GET_ALL_OPPORTUNITIES.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "cursor": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Pagination cursor returned by a previous Affinity page."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Number of items to include in the page (1-100)."
+          },
+          "ids": {
+            "type": "array",
+            "minItems": 1,
+            "description": "Affinity opportunity IDs to fetch directly. Emitted as repeated ids query keys.",
+            "items": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        }
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/opportunities",
+        "success": [
+          200
+        ],
+        "query": {
+          "cursor": "{{cursor}}",
+          "limit": "{{limit}}",
+          "ids": "{{ids}}"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List opportunities",
+      "validationMode": "strict-generated"
+    },
+    "persons.fields.list": {
+      "description": "List non-list-specific Affinity person field metadata via GET /v2/persons/fields. Maps to AFFINITY_GET_METADATA_ON_PERSON_FIELDS.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "cursor": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Pagination cursor returned by a previous Affinity page."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Number of items to include in the page (1-100)."
+          }
+        }
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/persons/fields",
+        "success": [
+          200
+        ],
+        "query": {
+          "cursor": "{{cursor}}",
+          "limit": "{{limit}}"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List person fields",
+      "validationMode": "strict-generated"
+    },
+    "persons.list_entries.list": {
+      "description": "Paginate list entries for one person across lists via GET /v2/persons/{personId}/list-entries. Returns list-specific field data. Maps to AFFINITY_GET_A_PERSON_S_LIST_ENTRIES.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "personId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Numeric Affinity person ID."
+          },
+          "cursor": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Pagination cursor returned by a previous Affinity page."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Number of items to include in the page (1-100)."
+          }
+        },
+        "required": [
+          "personId"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/persons/{{personId}}/list-entries",
+        "success": [
+          200
+        ],
+        "query": {
+          "cursor": "{{cursor}}",
+          "limit": "{{limit}}"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List person list entries",
+      "validationMode": "strict-generated"
+    },
+    "persons.lists.list": {
+      "description": "Paginate lists that contain one person via GET /v2/persons/{personId}/lists. Maps to AFFINITY_GET_A_PERSON_S_LISTS.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "personId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Numeric Affinity person ID."
+          },
+          "cursor": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Pagination cursor returned by a previous Affinity page."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Number of items to include in the page (1-100)."
+          }
+        },
+        "required": [
+          "personId"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/persons/{{personId}}/lists",
+        "success": [
+          200
+        ],
+        "query": {
+          "cursor": "{{cursor}}",
+          "limit": "{{limit}}"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List person lists",
+      "validationMode": "strict-generated"
+    },
+    "users.me": {
+      "description": "Get the authenticated Affinity user, tenant, and API grant via GET /v2/auth/whoami. Maps to AFFINITY_GET_CURRENT_USER.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 524288,
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/auth/whoami",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "title": "Get current user",
+      "validationMode": "strict-generated"
+    }
+  },
+  "provenance": {
+    "source": {
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
+      "url": "https://github.com/oomol-lab/open-connector"
+    }
+  },
+  "runtime": "bun",
+  "version": "0.2.0",
+  "visibility": "public"
+}
