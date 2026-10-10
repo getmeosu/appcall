@@ -93,7 +93,18 @@
       "images.list",
       "image.get",
       "images.stats",
-      "widgets.stats"
+      "widgets.stats",
+      "widgets.list",
+      "widgets.get",
+      "widgets.images.list",
+      "widgets.users.list",
+      "widgets.user.stats",
+      "widgets.user.images.list",
+      "maps.list",
+      "maps.get",
+      "store.fields",
+      "store.records.upsert",
+      "timer.update"
     ],
     "upstreamSha": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
     "marketFocus": "international",
@@ -230,12 +241,155 @@
         "Optional startDate and endDate use documented ISO 8601 query names on GET /v1/Widgets/AllStats.",
         "Returns raw NiftyImages JSON under data."
       ]
+    },
+    "widgets.list": {
+      "upstreamActionId": "list_widgets",
+      "sourceRefs": [
+        "request-auth"
+      ],
+      "documentationUrls": [
+        "https://api.niftyimages.com/images"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Maps to documented GET /v1/Widgets."
+      ]
+    },
+    "widgets.get": {
+      "upstreamActionId": "get_widget",
+      "sourceRefs": [
+        "request-auth"
+      ],
+      "documentationUrls": [
+        "https://api.niftyimages.com/images"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Maps to documented GET /v1/Widgets/{widgetKey}."
+      ]
+    },
+    "widgets.images.list": {
+      "upstreamActionId": "list_widget_images",
+      "sourceRefs": [
+        "request-auth"
+      ],
+      "documentationUrls": [
+        "https://api.niftyimages.com/images"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Maps to documented GET /v1/Widgets/{widgetKey}/Images."
+      ]
+    },
+    "widgets.users.list": {
+      "upstreamActionId": "list_widget_users",
+      "sourceRefs": [
+        "request-auth"
+      ],
+      "documentationUrls": [
+        "https://api.niftyimages.com/images"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Maps to documented GET /v1/Widgets/{widgetKey}/Users."
+      ]
+    },
+    "widgets.user.stats": {
+      "upstreamActionId": "get_widget_user_stats",
+      "sourceRefs": [
+        "request-auth"
+      ],
+      "documentationUrls": [
+        "https://api.niftyimages.com/images"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Maps to documented GET /v1/Widgets/{widgetKey}/Users/{user}."
+      ]
+    },
+    "widgets.user.images.list": {
+      "upstreamActionId": "list_widget_user_images",
+      "sourceRefs": [
+        "request-auth"
+      ],
+      "documentationUrls": [
+        "https://api.niftyimages.com/images"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Maps to documented GET /v1/Widgets/{widgetKey}/Images/{user}."
+      ]
+    },
+    "maps.list": {
+      "upstreamActionId": "list_maps",
+      "sourceRefs": [
+        "request-auth"
+      ],
+      "documentationUrls": [
+        "https://api.niftyimages.com/images"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Maps to documented GET /v1/Maps."
+      ]
+    },
+    "maps.get": {
+      "upstreamActionId": "get_map",
+      "sourceRefs": [
+        "request-auth"
+      ],
+      "documentationUrls": [
+        "https://api.niftyimages.com/images"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Maps to documented GET /v1/Maps/{mapKey}."
+      ]
+    },
+    "store.fields": {
+      "upstreamActionId": "get_store_fields",
+      "sourceRefs": [
+        "request-auth"
+      ],
+      "documentationUrls": [
+        "https://api.niftyimages.com/images"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Maps to documented GET /v1/Store."
+      ]
+    },
+    "store.records.upsert": {
+      "upstreamActionId": "add_store_record",
+      "sourceRefs": [
+        "request-auth"
+      ],
+      "documentationUrls": [
+        "https://api.niftyimages.com/images"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Maps to documented POST /v1/Store/AddRecord."
+      ]
+    },
+    "timer.update": {
+      "upstreamActionId": "update_timer",
+      "sourceRefs": [
+        "request-auth"
+      ],
+      "documentationUrls": [
+        "https://api.niftyimages.com/images"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Maps to documented PUT /v1/Timer/Update."
+      ]
     }
   },
   "manifest": {
     "key": "niftyimages",
     "name": "NiftyImages",
-    "version": "0.1.0",
+    "version": "0.2.0",
     "runtime": "bun",
     "visibility": "public",
     "categories": [
@@ -265,7 +419,10 @@
       "widget",
       "image",
       "image-stats",
-      "widget-stats"
+      "widget-stats",
+      "map",
+      "store",
+      "timer"
     ],
     "http": {
       "baseUrl": "https://api.niftyimages.com/v1",
@@ -518,6 +675,555 @@
           "success": [
             200
           ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "widgets.list": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "List widgets",
+        "description": "List widgets in the connected NiftyImages account.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "array"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/Widgets",
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "widgets.get": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Get widget",
+        "description": "Get one NiftyImages widget by widgetKey, optionally filtered by date range.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "widgetKey"
+          ],
+          "properties": {
+            "widgetKey": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Widget key."
+            },
+            "startDate": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Range start (ISO 8601)."
+            },
+            "endDate": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Range end (ISO 8601)."
+            }
+          }
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/Widgets/{{widgetKey}}",
+          "success": [
+            200
+          ],
+          "query": {
+            "startDate": "{{startDate}}",
+            "endDate": "{{endDate}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "widgets.images.list": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "List widget images",
+        "description": "List images that belong to a NiftyImages widget.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "widgetKey"
+          ],
+          "properties": {
+            "widgetKey": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Widget key."
+            }
+          }
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "array"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/Widgets/{{widgetKey}}/Images",
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "widgets.users.list": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "List widget users",
+        "description": "List users recorded against a NiftyImages widget.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "widgetKey"
+          ],
+          "properties": {
+            "widgetKey": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Widget key."
+            }
+          }
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "array"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/Widgets/{{widgetKey}}/Users",
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "widgets.user.stats": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Get widget user stats",
+        "description": "Get stats for one user on a NiftyImages widget.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "widgetKey",
+            "user"
+          ],
+          "properties": {
+            "widgetKey": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Widget key."
+            },
+            "user": {
+              "type": "string",
+              "minLength": 1,
+              "description": "User identifier or email."
+            }
+          }
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/Widgets/{{widgetKey}}/Users/{{user}}",
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "widgets.user.images.list": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "List widget user images",
+        "description": "List images shown to one user on a NiftyImages widget.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "widgetKey",
+            "user"
+          ],
+          "properties": {
+            "widgetKey": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Widget key."
+            },
+            "user": {
+              "type": "string",
+              "minLength": 1,
+              "description": "User identifier or email."
+            }
+          }
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "array"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/Widgets/{{widgetKey}}/Images/{{user}}",
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "maps.list": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "List maps",
+        "description": "List NiftyImages map widgets in the connected account.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "array"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/Maps",
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "maps.get": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Get map",
+        "description": "Get one NiftyImages map by mapKey.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "mapKey"
+          ],
+          "properties": {
+            "mapKey": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Map key."
+            }
+          }
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/Maps/{{mapKey}}",
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "store.fields": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Get data store fields",
+        "description": "List fields in the NiftyImages data store.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "array"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/Store",
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "store.records.upsert": {
+        "kind": "action",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Upsert data store record",
+        "description": "Add or update a record in the NiftyImages data store.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "key",
+            "value"
+          ],
+          "properties": {
+            "key": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Data store field key."
+            },
+            "value": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Value to store."
+            }
+          }
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "POST",
+          "path": "/Store/AddRecord",
+          "success": [
+            200,
+            201
+          ],
+          "body": {
+            "Key": "{{key}}",
+            "Value": "{{value}}"
+          },
+          "headers": {
+            "Accept": "application/json",
+            "Content-Type": "application/json"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "timer.update": {
+        "kind": "action",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Update timer target date",
+        "description": "Update the target date on a NiftyImages timer image.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "timerImageUrl",
+            "targetDate"
+          ],
+          "properties": {
+            "timerImageUrl": {
+              "type": "string",
+              "minLength": 1,
+              "description": "URL of the timer image to update."
+            },
+            "targetDate": {
+              "type": "string",
+              "minLength": 1,
+              "description": "New target date."
+            },
+            "format": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Optional display format."
+            },
+            "isUtc": {
+              "type": "boolean",
+              "description": "Whether the target date is UTC."
+            },
+            "addHours": {
+              "type": "integer",
+              "description": "Hours to add to the target date."
+            },
+            "addDays": {
+              "type": "integer",
+              "description": "Days to add to the target date."
+            },
+            "addMonths": {
+              "type": "integer",
+              "description": "Months to add to the target date."
+            }
+          }
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "PUT",
+          "path": "/Timer/Update",
+          "success": [
+            200
+          ],
+          "body": {
+            "TimerImageUrl": "{{timerImageUrl}}",
+            "TargetDate": "{{targetDate}}",
+            "Format": "{{format}}",
+            "IsUtc": "{{isUtc}}",
+            "AddHours": "{{addHours}}",
+            "AddDays": "{{addDays}}",
+            "AddMonths": "{{addMonths}}"
+          },
+          "headers": {
+            "Accept": "application/json",
+            "Content-Type": "application/json"
+          }
         },
         "enforceOutputSchema": true,
         "validationMode": "strict-generated",
