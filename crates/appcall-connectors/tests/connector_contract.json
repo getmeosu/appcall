@@ -196399,189 +196399,947 @@
     "public": true
   },
   {
-    "digest": "512333483ea6af13550b66060ae4e98f9432b69e388595e5c7a749060dabecfc",
-    "egress": true,
     "key": "eventzilla",
+    "digest": "ace23ffb79c568046eb88e012454e6402a3d4165d78add1fb69e3b2552cc9790",
+    "public": true,
+    "egress": true,
     "operations": [
       {
+        "key": "attendees.checkin",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
         "destructive": false,
+        "tool": true,
         "inputSchema": {
+          "type": "object",
           "additionalProperties": false,
+          "required": [
+            "barcode",
+            "eventcheckin"
+          ],
           "properties": {
-            "eventid": {
-              "minimum": 1,
-              "type": "integer"
+            "barcode": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Unique barcode from the attendee's ticket."
+            },
+            "eventcheckin": {
+              "type": "boolean",
+              "description": "true to check in, false to revert check-in."
+            }
+          }
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
             }
           },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "attendees.get",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "attendeeid"
+          ],
+          "properties": {
+            "attendeeid": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Attendee identifier."
+            }
+          }
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "categories.list",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "checkout.confirm",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "eventid",
+            "eventdateid",
+            "checkout_id",
+            "payment_status"
+          ],
+          "properties": {
+            "eventid": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Event identifier."
+            },
+            "eventdateid": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Event date/occurrence identifier."
+            },
+            "checkout_id": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Checkout identifier."
+            },
+            "payment_status": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Payment status for ticket confirmation."
+            }
+          }
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "checkout.create",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "eventid",
+            "eventdateid",
+            "ticket_types"
+          ],
+          "properties": {
+            "eventid": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Event identifier."
+            },
+            "eventdateid": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Event date/occurrence identifier."
+            },
+            "ticket_types": {
+              "type": "array",
+              "description": "Ticket types and quantities to reserve.",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "properties": {
+                  "ticket_type_id": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "description": "Ticket type identifier."
+                  },
+                  "quantity": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "description": "Quantity requested."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "checkout.prepare",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "eventid",
+            "dateid"
+          ],
+          "properties": {
+            "eventid": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Event identifier."
+            },
+            "dateid": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Event date/occurrence identifier."
+            }
+          }
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "events.attendees.list",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
           "required": [
             "eventid"
           ],
-          "type": "object"
+          "properties": {
+            "eventid": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Event identifier."
+            }
+          }
         },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
         "key": "events.get",
         "kind": "action",
+        "timeoutMs": 15000,
         "maxInputBytes": 65536,
         "maxResponseBytes": 5242880,
-        "outputSchema": {
-          "additionalProperties": false,
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "required": [
-            "data"
-          ],
-          "type": "object"
-        },
         "read": true,
-        "timeoutMs": 15000,
-        "tool": true
-      },
-      {
         "destructive": false,
+        "tool": true,
         "inputSchema": {
-          "additionalProperties": false,
-          "properties": {
-            "category": {
-              "minLength": 1,
-              "type": "string"
-            },
-            "limit": {
-              "maximum": 100,
-              "minimum": 1,
-              "type": "integer"
-            },
-            "offset": {
-              "minimum": 0,
-              "type": "integer"
-            },
-            "status": {
-              "minLength": 1,
-              "type": "string"
-            }
-          },
-          "type": "object"
-        },
-        "key": "events.list",
-        "kind": "action",
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "outputSchema": {
-          "additionalProperties": false,
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "required": [
-            "data"
-          ],
-          "type": "object"
-        },
-        "read": true,
-        "timeoutMs": 15000,
-        "tool": true
-      },
-      {
-        "destructive": false,
-        "inputSchema": {
-          "additionalProperties": false,
-          "properties": {},
-          "type": "object"
-        },
-        "key": "healthcheck",
-        "kind": "action",
-        "maxInputBytes": 4096,
-        "maxResponseBytes": 65536,
-        "outputSchema": {
-          "additionalProperties": false,
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "required": [
-            "data"
-          ],
-          "type": "object"
-        },
-        "read": true,
-        "timeoutMs": 5000,
-        "tool": true
-      },
-      {
-        "destructive": false,
-        "inputSchema": {
-          "additionalProperties": false,
+          "type": "object",
           "properties": {
             "eventid": {
-              "minimum": 1,
-              "type": "integer"
+              "type": "integer",
+              "minimum": 1
             }
           },
           "required": [
             "eventid"
           ],
-          "type": "object"
+          "additionalProperties": false
         },
-        "key": "tickets.list",
-        "kind": "action",
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
         "outputSchema": {
-          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "data"
+          ],
           "properties": {
             "data": {
               "type": "object"
             }
           },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "events.list",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "offset": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            },
+            "status": {
+              "type": "string",
+              "minLength": 1
+            },
+            "category": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
           "required": [
             "data"
           ],
-          "type": "object"
-        },
-        "read": true,
-        "timeoutMs": 15000,
-        "tool": true
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        }
       },
       {
+        "key": "events.order.cancel",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
         "destructive": false,
+        "tool": true,
         "inputSchema": {
+          "type": "object",
           "additionalProperties": false,
+          "required": [
+            "checkout_id",
+            "eventid",
+            "comments"
+          ],
+          "properties": {
+            "checkout_id": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Checkout identifier."
+            },
+            "eventid": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Event identifier."
+            },
+            "comments": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Organizer comments for cancellation."
+            }
+          }
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "events.order.confirm",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "checkout_id",
+            "eventid"
+          ],
+          "properties": {
+            "checkout_id": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Checkout identifier."
+            },
+            "eventid": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Event identifier."
+            }
+          }
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "events.ticket-types.create",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "eventid",
+            "ticket_type_name",
+            "quantity_total",
+            "ticket_type_description",
+            "sales_start_date",
+            "sales_end_date",
+            "sales_start_time",
+            "sales_end_time",
+            "limit_minimum",
+            "limit_maximum",
+            "is_visible",
+            "boxoffice_only"
+          ],
+          "properties": {
+            "eventid": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Event identifier."
+            },
+            "ticket_type_name": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Name displayed for this ticket type."
+            },
+            "quantity_total": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Total quantity available."
+            },
+            "ticket_type_description": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Public description shown to attendees."
+            },
+            "sales_start_date": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Date when sales open (ISO 8601 date)."
+            },
+            "sales_end_date": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Date when sales close (ISO 8601 date)."
+            },
+            "sales_start_time": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Time when sales open."
+            },
+            "sales_end_time": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Time when sales close."
+            },
+            "limit_minimum": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Minimum quantity in one order."
+            },
+            "limit_maximum": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Maximum quantity in one order."
+            },
+            "is_visible": {
+              "type": "boolean",
+              "description": "Whether this ticket type is visible on the event page."
+            },
+            "boxoffice_only": {
+              "type": "boolean",
+              "description": "Whether this ticket type is box-office only."
+            }
+          }
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "events.ticket-types.update",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "eventid",
+            "ticket_type_id",
+            "ticket_type_name",
+            "quantity_total",
+            "ticket_type_description",
+            "sales_start_date",
+            "sales_end_date",
+            "sales_start_time",
+            "sales_end_time",
+            "limit_minimum",
+            "limit_maximum",
+            "is_visible",
+            "boxoffice_only"
+          ],
+          "properties": {
+            "eventid": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Event identifier."
+            },
+            "ticket_type_id": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Ticket type identifier."
+            },
+            "ticket_type_name": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Name displayed for this ticket type."
+            },
+            "quantity_total": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Total quantity available."
+            },
+            "ticket_type_description": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Public description shown to attendees."
+            },
+            "sales_start_date": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Date when sales open (ISO 8601 date)."
+            },
+            "sales_end_date": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Date when sales close (ISO 8601 date)."
+            },
+            "sales_start_time": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Time when sales open."
+            },
+            "sales_end_time": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Time when sales close."
+            },
+            "limit_minimum": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Minimum quantity in one order."
+            },
+            "limit_maximum": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Maximum quantity in one order."
+            },
+            "is_visible": {
+              "type": "boolean",
+              "description": "Whether this ticket type is visible on the event page."
+            },
+            "boxoffice_only": {
+              "type": "boolean",
+              "description": "Whether this ticket type is box-office only."
+            }
+          }
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "events.togglesales",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "eventid",
+            "status"
+          ],
+          "properties": {
+            "eventid": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Event identifier."
+            },
+            "status": {
+              "type": "boolean",
+              "description": "true to publish sales, false to unpublish sales."
+            }
+          }
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "events.transactions.list",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "eventid"
+          ],
+          "properties": {
+            "eventid": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Event identifier."
+            },
+            "offset": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Number of records to skip."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Maximum records to return.",
+              "maximum": 100
+            }
+          }
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "healthcheck",
+        "kind": "action",
+        "timeoutMs": 5000,
+        "maxInputBytes": 4096,
+        "maxResponseBytes": 65536,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "tickets.list",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "eventid": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          "required": [
+            "eventid"
+          ],
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "transactions.get",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "identifier"
+          ],
+          "properties": {
+            "identifier": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Checkout ID or order reference number."
+            }
+          }
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "users.get",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
           "properties": {
             "userid": {
-              "minimum": 1,
-              "type": "integer"
+              "type": "integer",
+              "minimum": 1
             }
           },
           "required": [
             "userid"
           ],
-          "type": "object"
+          "additionalProperties": false
         },
-        "key": "users.get",
-        "kind": "action",
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
         "outputSchema": {
-          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "data"
+          ],
           "properties": {
             "data": {
               "type": "object"
             }
           },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "users.list",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "offset": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Number of records to skip."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Maximum records to return.",
+              "maximum": 100
+            }
+          }
+        },
+        "outputSchema": {
+          "type": "object",
           "required": [
             "data"
           ],
-          "type": "object"
-        },
-        "read": true,
-        "timeoutMs": 15000,
-        "tool": true
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        }
       }
-    ],
-    "public": true
+    ]
   },
   {
     "key": "everhour",
@@ -203487,43 +204245,87 @@
     "public": true
   },
   {
-    "digest": "0fb236896876b5158870e9c219f1687a909709e862e52fe0b69bb8e73a66b3d7",
-    "egress": true,
     "key": "float",
+    "digest": "fd2c93c93481e3e11dcf20f7ed43dc01564873889a336d24fe10263d41eadc58",
+    "public": true,
+    "egress": true,
     "operations": [
       {
+        "key": "accounts.get",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
         "destructive": false,
+        "tool": true,
         "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "account_id"
+          ],
           "properties": {
+            "account_id": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Account identifier."
+            }
+          }
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "accounts.list",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "page": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Page number of results to return. Default 1."
+            },
+            "perPage": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "description": "Items per page. Float max is 200."
+            },
             "expand": {
+              "type": "string",
               "enum": [
                 "people_id"
               ],
-              "type": "string"
-            },
-            "page": {
-              "minimum": 1,
-              "type": "integer"
-            },
-            "perPage": {
-              "maximum": 200,
-              "minimum": 1,
-              "type": "integer"
+              "description": "Include the linked person ID."
             }
-          },
-          "type": "object"
+          }
         },
-        "key": "accounts.list",
-        "kind": "action",
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
         "outputSchema": {
+          "type": "object",
           "properties": {
             "accounts": {
+              "type": "array",
               "items": {
                 "type": "object"
-              },
-              "type": "array"
+              }
             },
             "pagination": {
               "type": "object"
@@ -203532,56 +204334,332 @@
           "required": [
             "accounts",
             "pagination"
-          ],
-          "type": "object"
-        },
-        "read": true,
-        "timeoutMs": 15000,
-        "tool": true
+          ]
+        }
       },
       {
+        "key": "allocations.create",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
+        "read": false,
         "destructive": false,
+        "tool": true,
         "inputSchema": {
+          "type": "object",
           "properties": {
-            "endDate": {
-              "minLength": 1,
-              "type": "string"
-            },
-            "page": {
-              "minimum": 1,
-              "type": "integer"
-            },
-            "peopleId": {
-              "minimum": 1,
-              "type": "integer"
-            },
-            "perPage": {
-              "maximum": 200,
-              "minimum": 1,
-              "type": "integer"
-            },
             "projectId": {
+              "type": "integer",
               "minimum": 1,
-              "type": "integer"
+              "description": "ID of the project receiving the allocation."
             },
             "startDate": {
+              "type": "string",
               "minLength": 1,
-              "type": "string"
+              "description": "Date in YYYY-MM-DD format."
+            },
+            "endDate": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Date in YYYY-MM-DD format."
+            },
+            "hours": {
+              "type": "number",
+              "minimum": 0,
+              "description": "Hours scheduled per working day (official hours field)."
+            },
+            "peopleId": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Person ID to assign. Omit together with peopleIds to create an unassigned allocation."
+            },
+            "peopleIds": {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "description": "One or more person IDs. Ignored when peopleId is set."
+            },
+            "phaseId": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Project phase ID for the allocation."
+            },
+            "startTime": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Optional daily start time in 24-hour HH:MM format."
+            },
+            "status": {
+              "type": "integer",
+              "enum": [
+                0,
+                1,
+                2,
+                3,
+                4
+              ],
+              "description": "0=Draft, 1=Tentative, 2=Confirmed, 3=Complete, 4=Canceled."
+            },
+            "notes": {
+              "type": "string",
+              "description": "Details about the scheduled work."
+            },
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Project task name. Float may create the project-task definition when no matching name exists."
+            },
+            "projectTaskId": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Existing project task ID (task_meta_id); takes precedence over name."
+            },
+            "repeatState": {
+              "type": "integer",
+              "enum": [
+                0,
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8,
+                9
+              ],
+              "description": "0=none, 1=weekly, 2=monthly, 3=every two weeks, 4=every three weeks, 5=every six weeks, 6=every two months, 7=every three months, 8=every six months, 9=yearly."
+            },
+            "repeatEndDate": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Date in YYYY-MM-DD format."
             }
           },
-          "type": "object"
+          "required": [
+            "projectId",
+            "startDate",
+            "endDate",
+            "hours"
+          ]
         },
-        "key": "allocations.list",
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ]
+        }
+      },
+      {
+        "key": "allocations.delete",
         "kind": "action",
+        "timeoutMs": 15000,
         "maxInputBytes": 65536,
         "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": true,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "task_id"
+          ],
+          "properties": {
+            "task_id": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Task identifier."
+            }
+          }
+        },
         "outputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "deleted",
+            "id"
+          ],
+          "properties": {
+            "deleted": {
+              "type": "boolean"
+            },
+            "id": {
+              "type": "integer"
+            }
+          }
+        }
+      },
+      {
+        "key": "allocations.get",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "task_id"
+          ],
+          "properties": {
+            "task_id": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Task identifier."
+            }
+          }
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "allocations.list",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "page": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Page number of results to return. Default 1."
+            },
+            "perPage": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "description": "Items per page. Float max is 200."
+            },
+            "projectId": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Return allocations for this project ID."
+            },
+            "peopleId": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Return allocations assigned to this person ID."
+            },
+            "clientId": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Return allocations for projects belonging to this client ID."
+            },
+            "phaseId": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Return allocations for this project phase ID."
+            },
+            "projectTaskId": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Return allocations associated with this project task ID (task_meta_id)."
+            },
+            "startDate": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Date in YYYY-MM-DD format."
+            },
+            "endDate": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Date in YYYY-MM-DD format."
+            },
+            "billable": {
+              "type": "integer",
+              "enum": [
+                0,
+                1
+              ],
+              "description": "1 = billable allocations, 0 = non-billable."
+            },
+            "status": {
+              "type": "integer",
+              "enum": [
+                1,
+                2,
+                3
+              ],
+              "description": "1=Tentative, 2=Confirmed, 3=Complete."
+            },
+            "repeatState": {
+              "type": "integer",
+              "enum": [
+                0,
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8,
+                9
+              ],
+              "description": "0=none, 1=weekly, 2=monthly, 3=every two weeks, 4=every three weeks, 5=every six weeks, 6=every two months, 7=every three months, 8=every six months, 9=yearly."
+            },
+            "sort": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Field to sort by. Prefix with - for descending."
+            },
+            "modifiedSince": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Return records modified at or after this YYYY-MM-DD HH:MM:SS value or Unix timestamp."
+            },
+            "fields": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Comma-delimited field names to include in the response."
+            },
+            "expand": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Use task_days to include calculated working dates (requires start_date and end_date)."
+            },
+            "nextCursor": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Opaque cursor from X-Pagination-Next-Cursor for the next page."
+            }
+          }
+        },
+        "outputSchema": {
+          "type": "object",
           "properties": {
             "allocations": {
+              "type": "array",
               "items": {
                 "type": "object"
-              },
-              "type": "array"
+              }
             },
             "pagination": {
               "type": "object"
@@ -203590,40 +204668,237 @@
           "required": [
             "allocations",
             "pagination"
-          ],
-          "type": "object"
-        },
-        "read": true,
-        "timeoutMs": 15000,
-        "tool": true
+          ]
+        }
       },
       {
+        "key": "allocations.update",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
+        "read": false,
         "destructive": false,
+        "tool": true,
         "inputSchema": {
+          "type": "object",
           "properties": {
-            "page": {
+            "taskId": {
+              "type": "integer",
               "minimum": 1,
-              "type": "integer"
+              "description": "Float task_id of the allocation to update."
             },
-            "perPage": {
-              "maximum": 200,
+            "projectId": {
+              "type": "integer",
               "minimum": 1,
-              "type": "integer"
+              "description": "New project ID."
+            },
+            "startDate": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Date in YYYY-MM-DD format."
+            },
+            "endDate": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Date in YYYY-MM-DD format."
+            },
+            "hours": {
+              "type": "number",
+              "minimum": 0,
+              "description": "New hours scheduled per working day."
+            },
+            "peopleId": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Replacement person ID."
+            },
+            "peopleIds": {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "description": "Replacement list of person IDs."
+            },
+            "phaseId": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "New project phase ID."
+            },
+            "startTime": {
+              "type": "string",
+              "minLength": 1,
+              "description": "New daily start time in 24-hour HH:MM format."
+            },
+            "status": {
+              "type": "integer",
+              "enum": [
+                0,
+                1,
+                2,
+                3,
+                4
+              ],
+              "description": "0=Draft, 1=Tentative, 2=Confirmed, 3=Complete, 4=Canceled."
+            },
+            "notes": {
+              "type": "string",
+              "description": "Replacement details about the scheduled work."
+            },
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "description": "New project task name when projectTaskId is not supplied."
+            },
+            "projectTaskId": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "New project task ID (task_meta_id)."
+            },
+            "repeatState": {
+              "type": "integer",
+              "enum": [
+                0,
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8,
+                9
+              ],
+              "description": "0=none through 9=yearly."
+            },
+            "repeatEndDate": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Date in YYYY-MM-DD format."
             }
           },
-          "type": "object"
+          "required": [
+            "taskId"
+          ]
         },
-        "key": "clients.list",
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ]
+        }
+      },
+      {
+        "key": "clients.create",
         "kind": "action",
+        "timeoutMs": 15000,
         "maxInputBytes": 65536,
         "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "name"
+          ],
+          "properties": {
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Client name."
+            }
+          }
+        },
         "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "clients.get",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "client_id"
+          ],
+          "properties": {
+            "client_id": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Client identifier."
+            }
+          }
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "clients.list",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "page": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Page number of results to return. Default 1."
+            },
+            "perPage": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "description": "Items per page. Float max is 200."
+            }
+          }
+        },
+        "outputSchema": {
+          "type": "object",
           "properties": {
             "clients": {
+              "type": "array",
               "items": {
                 "type": "object"
-              },
-              "type": "array"
+              }
             },
             "pagination": {
               "type": "object"
@@ -203632,157 +204907,906 @@
           "required": [
             "clients",
             "pagination"
-          ],
-          "type": "object"
-        },
-        "read": true,
-        "timeoutMs": 15000,
-        "tool": true
+          ]
+        }
       },
       {
+        "key": "departments.list",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
         "destructive": false,
+        "tool": true,
         "inputSchema": {
-          "properties": {},
-          "type": "object"
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "page": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Page of results to return."
+            },
+            "perPage": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Items per page (max 200).",
+              "maximum": 200
+            }
+          }
         },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "array"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
         "key": "healthcheck",
         "kind": "action",
+        "timeoutMs": 10000,
         "maxInputBytes": 4096,
         "maxResponseBytes": 1048576,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {}
+        },
         "outputSchema": {
+          "type": "object",
           "properties": {
-            "accounts": {
-              "items": {
-                "type": "object"
-              },
-              "type": "array"
-            },
             "status": {
               "type": "string"
+            },
+            "accounts": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
             }
           },
           "required": [
             "status",
             "accounts"
-          ],
-          "type": "object"
-        },
-        "read": true,
-        "timeoutMs": 10000,
-        "tool": true
+          ]
+        }
       },
       {
+        "key": "milestones.list",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
         "destructive": false,
+        "tool": true,
         "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
           "properties": {
+            "page": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Page of results to return."
+            },
+            "perPage": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Items per page (max 200).",
+              "maximum": 200
+            },
+            "project_id": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Filter by project."
+            }
+          }
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "array"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "people.create",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "name"
+          ],
+          "properties": {
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Person name."
+            },
+            "email": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Person email."
+            },
+            "job_title": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Job title."
+            }
+          }
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "people.get",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "people_id"
+          ],
+          "properties": {
+            "people_id": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Person identifier."
+            }
+          }
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "people.list",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "page": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Page number of results to return. Default 1."
+            },
+            "perPage": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "description": "Items per page. Float max is 200."
+            },
             "active": {
+              "type": "integer",
               "enum": [
                 0,
                 1
               ],
-              "type": "integer"
+              "description": "1 = active, 0 = archived."
             },
             "departmentId": {
+              "type": "integer",
               "minimum": 1,
-              "type": "integer"
+              "description": "Department ID to filter people by."
             },
             "email": {
+              "type": "string",
               "minLength": 1,
-              "type": "string"
+              "description": "Exact email match, case-insensitive."
             },
-            "page": {
-              "minimum": 1,
-              "type": "integer"
+            "peopleCode": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Exact people_code match, case-insensitive."
             },
-            "perPage": {
-              "maximum": 200,
-              "minimum": 1,
-              "type": "integer"
+            "peopleTypeId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "People type IDs: 1=Employee, 2=Contractor, 3=Placeholder, 4=Role placeholder. Comma-separated."
+            },
+            "employeeType": {
+              "type": "integer",
+              "enum": [
+                0,
+                1
+              ],
+              "description": "1 = full-time, 0 = part-time."
+            },
+            "tags": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Comma-delimited exact tag names (case-insensitive)."
+            },
+            "sort": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Field to sort by. Prefix with - for descending."
+            },
+            "modifiedSince": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Return records modified at or after this YYYY-MM-DD HH:MM:SS value or Unix timestamp."
+            },
+            "fields": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Comma-delimited field names to include in the response."
+            },
+            "expand": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Comma-delimited expand values: account, managers, contracts."
+            },
+            "nextCursor": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Opaque cursor from X-Pagination-Next-Cursor for the next page."
             }
-          },
-          "type": "object"
+          }
         },
-        "key": "people.list",
-        "kind": "action",
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
         "outputSchema": {
+          "type": "object",
           "properties": {
-            "pagination": {
-              "type": "object"
-            },
             "people": {
+              "type": "array",
               "items": {
                 "type": "object"
-              },
-              "type": "array"
+              }
+            },
+            "pagination": {
+              "type": "object"
             }
           },
           "required": [
             "people",
             "pagination"
-          ],
-          "type": "object"
-        },
-        "read": true,
-        "timeoutMs": 15000,
-        "tool": true
+          ]
+        }
       },
       {
+        "key": "people.update",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
         "destructive": false,
+        "tool": true,
         "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "people_id"
+          ],
           "properties": {
-            "active": {
+            "people_id": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Person identifier."
+            },
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Person name."
+            },
+            "email": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Person email."
+            },
+            "job_title": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Job title."
+            }
+          }
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "projects.create",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Name of the new project."
+            },
+            "projectCode": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Optional third-party project identifier."
+            },
+            "clientId": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "ID of the client that owns the project."
+            },
+            "color": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Project color as a hexadecimal value."
+            },
+            "notes": {
+              "type": "string",
+              "description": "Planning notes for the project."
+            },
+            "tags": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Tags to assign to the project."
+            },
+            "status": {
+              "type": "integer",
+              "enum": [
+                0,
+                1,
+                2,
+                3,
+                4
+              ],
+              "description": "0=Draft, 1=Tentative, 2=Confirmed, 3=Completed, 4=Canceled."
+            },
+            "nonBillable": {
+              "type": "integer",
               "enum": [
                 0,
                 1
               ],
-              "type": "integer"
+              "description": "0 = billable, 1 = non-billable."
             },
-            "clientId": {
-              "minimum": 1,
-              "type": "integer"
+            "startDate": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Date in YYYY-MM-DD format."
             },
-            "page": {
-              "minimum": 1,
-              "type": "integer"
-            },
-            "perPage": {
-              "maximum": 200,
-              "minimum": 1,
-              "type": "integer"
+            "endDate": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Date in YYYY-MM-DD format."
             }
           },
-          "type": "object"
+          "required": [
+            "name"
+          ]
         },
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ]
+        }
+      },
+      {
+        "key": "projects.get",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "projectId": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "ID of the project to retrieve."
+            },
+            "expand": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Comma-delimited expand values: phases, project_tasks, project_team, expenses, currency_code."
+            }
+          },
+          "required": [
+            "projectId"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ]
+        }
+      },
+      {
         "key": "projects.list",
         "kind": "action",
+        "timeoutMs": 15000,
         "maxInputBytes": 65536,
         "maxResponseBytes": 5242880,
-        "outputSchema": {
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
           "properties": {
-            "pagination": {
-              "type": "object"
+            "page": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Page number of results to return. Default 1."
             },
+            "perPage": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "description": "Items per page. Float max is 200."
+            },
+            "active": {
+              "type": "integer",
+              "enum": [
+                0,
+                1
+              ],
+              "description": "1 = active, 0 = archived."
+            },
+            "clientId": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Return only projects belonging to this client ID."
+            },
+            "projectCode": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Exact project_code match, case-insensitive."
+            },
+            "status": {
+              "type": "integer",
+              "enum": [
+                0,
+                1,
+                2,
+                3,
+                4
+              ],
+              "description": "0=Draft, 1=Tentative, 2=Confirmed, 3=Completed, 4=Canceled."
+            },
+            "nonBillable": {
+              "type": "integer",
+              "enum": [
+                0,
+                1
+              ],
+              "description": "0 = billable projects, 1 = non-billable projects."
+            },
+            "tags": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Comma-delimited exact tag names (case-insensitive)."
+            },
+            "sort": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Field to sort by. Prefix with - for descending."
+            },
+            "modifiedSince": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Return records modified at or after this YYYY-MM-DD HH:MM:SS value or Unix timestamp."
+            },
+            "fields": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Comma-delimited field names to include in the response."
+            },
+            "expand": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Comma-delimited expand values: phases, project_tasks, project_team, expenses, currency_code."
+            },
+            "nextCursor": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Opaque cursor from X-Pagination-Next-Cursor for the next page."
+            }
+          }
+        },
+        "outputSchema": {
+          "type": "object",
+          "properties": {
             "projects": {
+              "type": "array",
               "items": {
                 "type": "object"
-              },
-              "type": "array"
+              }
+            },
+            "pagination": {
+              "type": "object"
             }
           },
           "required": [
             "projects",
             "pagination"
-          ],
-          "type": "object"
-        },
-        "read": true,
+          ]
+        }
+      },
+      {
+        "key": "projects.update",
+        "kind": "action",
         "timeoutMs": 15000,
-        "tool": true
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "projectId": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "ID of the project to update."
+            },
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "description": "New project name."
+            },
+            "projectCode": {
+              "type": "string",
+              "minLength": 1,
+              "description": "New third-party project identifier."
+            },
+            "clientId": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "New client ID."
+            },
+            "color": {
+              "type": "string",
+              "minLength": 1,
+              "description": "New project color as a hexadecimal value."
+            },
+            "notes": {
+              "type": "string",
+              "description": "Replacement planning notes."
+            },
+            "tags": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Complete replacement list of project tags."
+            },
+            "status": {
+              "type": "integer",
+              "enum": [
+                0,
+                1,
+                2,
+                3,
+                4
+              ],
+              "description": "0=Draft, 1=Tentative, 2=Confirmed, 3=Completed, 4=Canceled."
+            },
+            "nonBillable": {
+              "type": "integer",
+              "enum": [
+                0,
+                1
+              ],
+              "description": "0 = billable, 1 = non-billable."
+            },
+            "active": {
+              "type": "integer",
+              "enum": [
+                0,
+                1
+              ],
+              "description": "1 = active, 0 = archived."
+            },
+            "startDate": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Date in YYYY-MM-DD format."
+            },
+            "endDate": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Date in YYYY-MM-DD format."
+            }
+          },
+          "required": [
+            "projectId"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ]
+        }
+      },
+      {
+        "key": "reports.people.get",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "startDate": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Date in YYYY-MM-DD format."
+            },
+            "endDate": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Date in YYYY-MM-DD format."
+            },
+            "peopleId": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Return report data only for this person ID."
+            }
+          },
+          "required": [
+            "startDate",
+            "endDate"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ]
+        }
+      },
+      {
+        "key": "reports.projects.get",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "startDate": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Date in YYYY-MM-DD format."
+            },
+            "endDate": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Date in YYYY-MM-DD format."
+            },
+            "projectId": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Return report data only for this project ID."
+            }
+          },
+          "required": [
+            "startDate",
+            "endDate"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ]
+        }
+      },
+      {
+        "key": "timeoffs.create",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "people_id",
+            "start_date",
+            "end_date"
+          ],
+          "properties": {
+            "people_id": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Person identifier."
+            },
+            "start_date": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Start date (YYYY-MM-DD)."
+            },
+            "end_date": {
+              "type": "string",
+              "minLength": 1,
+              "description": "End date (YYYY-MM-DD)."
+            },
+            "timeoff_type_id": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Time-off type identifier."
+            }
+          }
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "timeoffs.list",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "page": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Page of results to return."
+            },
+            "perPage": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Items per page (max 200).",
+              "maximum": 200
+            },
+            "people_id": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Filter by person."
+            },
+            "start_date": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Range start date (YYYY-MM-DD)."
+            },
+            "end_date": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Range end date (YYYY-MM-DD)."
+            }
+          }
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "array"
+            }
+          },
+          "additionalProperties": false
+        }
       }
-    ],
-    "public": true
+    ]
   },
   {
     "key": "fluxguard",
@@ -377711,182 +379735,606 @@
     ]
   },
   {
-    "digest": "e540f1510577662ec193dfffa2450b900425a2573afdb3a06f0b517ecbd76e9c",
-    "egress": true,
     "key": "niftyimages",
+    "digest": "8be4a1eaa59359ab0c4af0083d7cd40be4cfcfd43b39492ea635141355f49e21",
+    "public": true,
+    "egress": true,
     "operations": [
       {
-        "destructive": false,
-        "inputSchema": {
-          "additionalProperties": false,
-          "properties": {},
-          "type": "object"
-        },
         "key": "healthcheck",
         "kind": "action",
+        "timeoutMs": 5000,
         "maxInputBytes": 4096,
         "maxResponseBytes": 1048576,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        },
         "outputSchema": {
-          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "data"
+          ],
           "properties": {
             "data": {
               "type": "array"
             }
           },
-          "required": [
-            "data"
-          ],
-          "type": "object"
-        },
-        "read": true,
-        "timeoutMs": 5000,
-        "tool": true
+          "additionalProperties": false
+        }
       },
       {
+        "key": "image.get",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
         "destructive": false,
+        "tool": true,
         "inputSchema": {
-          "additionalProperties": false,
-          "properties": {
-            "url": {
-              "minLength": 1,
-              "type": "string"
-            }
-          },
+          "type": "object",
           "required": [
             "url"
           ],
-          "type": "object"
+          "properties": {
+            "url": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false
         },
-        "key": "image.get",
-        "kind": "action",
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
         "outputSchema": {
-          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "data"
+          ],
           "properties": {
             "data": {
               "type": "object"
             }
           },
-          "required": [
-            "data"
-          ],
-          "type": "object"
-        },
-        "read": true,
-        "timeoutMs": 15000,
-        "tool": true
+          "additionalProperties": false
+        }
       },
       {
-        "destructive": false,
-        "inputSchema": {
-          "additionalProperties": false,
-          "properties": {
-            "pageNumber": {
-              "minimum": 1,
-              "type": "integer"
-            },
-            "pageSize": {
-              "minimum": 1,
-              "type": "integer"
-            }
-          },
-          "type": "object"
-        },
         "key": "images.list",
         "kind": "action",
+        "timeoutMs": 15000,
         "maxInputBytes": 65536,
         "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "pageSize": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "pageNumber": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          "additionalProperties": false
+        },
         "outputSchema": {
-          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "data"
+          ],
           "properties": {
             "data": {
               "type": "array"
             }
           },
-          "required": [
-            "data"
-          ],
-          "type": "object"
-        },
-        "read": true,
-        "timeoutMs": 15000,
-        "tool": true
+          "additionalProperties": false
+        }
       },
       {
-        "destructive": false,
-        "inputSchema": {
-          "additionalProperties": false,
-          "properties": {
-            "endDate": {
-              "minLength": 1,
-              "type": "string"
-            },
-            "startDate": {
-              "minLength": 1,
-              "type": "string"
-            }
-          },
-          "type": "object"
-        },
         "key": "images.stats",
         "kind": "action",
+        "timeoutMs": 15000,
         "maxInputBytes": 65536,
         "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "startDate": {
+              "type": "string",
+              "minLength": 1
+            },
+            "endDate": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false
+        },
         "outputSchema": {
-          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "data"
+          ],
           "properties": {
             "data": {
               "type": "array"
             }
           },
-          "required": [
-            "data"
-          ],
-          "type": "object"
-        },
-        "read": true,
-        "timeoutMs": 15000,
-        "tool": true
+          "additionalProperties": false
+        }
       },
       {
-        "destructive": false,
-        "inputSchema": {
-          "additionalProperties": false,
-          "properties": {
-            "endDate": {
-              "minLength": 1,
-              "type": "string"
-            },
-            "startDate": {
-              "minLength": 1,
-              "type": "string"
-            }
-          },
-          "type": "object"
-        },
-        "key": "widgets.stats",
+        "key": "maps.get",
         "kind": "action",
+        "timeoutMs": 15000,
         "maxInputBytes": 65536,
         "maxResponseBytes": 5242880,
-        "outputSchema": {
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
           "additionalProperties": false,
+          "required": [
+            "mapKey"
+          ],
+          "properties": {
+            "mapKey": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Map key."
+            }
+          }
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "maps.list",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
           "properties": {
             "data": {
               "type": "array"
             }
           },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "store.fields",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
           "required": [
             "data"
           ],
-          "type": "object"
-        },
-        "read": true,
+          "properties": {
+            "data": {
+              "type": "array"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "store.records.upsert",
+        "kind": "action",
         "timeoutMs": 15000,
-        "tool": true
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "key",
+            "value"
+          ],
+          "properties": {
+            "key": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Data store field key."
+            },
+            "value": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Value to store."
+            }
+          }
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "timer.update",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "timerImageUrl",
+            "targetDate"
+          ],
+          "properties": {
+            "timerImageUrl": {
+              "type": "string",
+              "minLength": 1,
+              "description": "URL of the timer image to update."
+            },
+            "targetDate": {
+              "type": "string",
+              "minLength": 1,
+              "description": "New target date."
+            },
+            "format": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Optional display format."
+            },
+            "isUtc": {
+              "type": "boolean",
+              "description": "Whether the target date is UTC."
+            },
+            "addHours": {
+              "type": "integer",
+              "description": "Hours to add to the target date."
+            },
+            "addDays": {
+              "type": "integer",
+              "description": "Days to add to the target date."
+            },
+            "addMonths": {
+              "type": "integer",
+              "description": "Months to add to the target date."
+            }
+          }
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "widgets.get",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "widgetKey"
+          ],
+          "properties": {
+            "widgetKey": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Widget key."
+            },
+            "startDate": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Range start (ISO 8601)."
+            },
+            "endDate": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Range end (ISO 8601)."
+            }
+          }
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "widgets.images.list",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "widgetKey"
+          ],
+          "properties": {
+            "widgetKey": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Widget key."
+            }
+          }
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "array"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "widgets.list",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "array"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "widgets.stats",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "startDate": {
+              "type": "string",
+              "minLength": 1
+            },
+            "endDate": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "array"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "widgets.user.images.list",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "widgetKey",
+            "user"
+          ],
+          "properties": {
+            "widgetKey": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Widget key."
+            },
+            "user": {
+              "type": "string",
+              "minLength": 1,
+              "description": "User identifier or email."
+            }
+          }
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "array"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "widgets.user.stats",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "widgetKey",
+            "user"
+          ],
+          "properties": {
+            "widgetKey": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Widget key."
+            },
+            "user": {
+              "type": "string",
+              "minLength": 1,
+              "description": "User identifier or email."
+            }
+          }
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "widgets.users.list",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "widgetKey"
+          ],
+          "properties": {
+            "widgetKey": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Widget key."
+            }
+          }
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "array"
+            }
+          },
+          "additionalProperties": false
+        }
       }
-    ],
-    "public": true
+    ]
   },
   {
     "digest": "99ffc12a56459d059b2b9c3eb62ac625fad7d3596dbaa1a500424c557fdb5d66",
