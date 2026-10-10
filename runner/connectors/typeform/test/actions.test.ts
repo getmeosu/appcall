@@ -602,3 +602,97 @@ describe("listWebhooks", () => {
     })).rejects.toEqual(expect.objectContaining({ code: "CONNECTOR_RATE_LIMITED", retryAfterSeconds: 12 }));
   });
 });
+
+describe("composio alias coverage on existing actions", () => {
+  test("lists forms with workspace_id and sort fields", async () => {
+    const requests: Request[] = [];
+    await listForms({
+      accessToken: "tf-token-abc",
+      workspace_id: "ws_fixture_1",
+      sort_by: "created_at",
+      order_by: "desc",
+      fetch: async (input, init) => {
+        requests.push(new Request(input, init));
+        return new Response(JSON.stringify(formsListFixture), { status: 200 });
+      },
+    });
+    expect(requests[0].url).toContain("workspace_id=ws_fixture_1");
+    expect(requests[0].url).toContain("sort_by=created_at");
+    expect(requests[0].url).toContain("order_by=desc");
+  });
+
+  test("creates a form with logic, theme, and workspace", async () => {
+    const requests: Request[] = [];
+    await createForm({
+      accessToken: "tf-token-abc",
+      title: "Quiz",
+      type: "quiz",
+      logic: [{ type: "field" }],
+      theme: { href: "https://api.typeform.com/themes/theme_fixture_1" },
+      workspace: { href: "https://api.typeform.com/workspaces/ws_fixture_1" },
+      fetch: async (input, init) => {
+        requests.push(new Request(input, init));
+        return new Response(JSON.stringify(formCreateFixture), { status: 201 });
+      },
+    });
+    expect(await requests[0].json()).toMatchObject({
+      title: "Quiz",
+      type: "quiz",
+      logic: [{ type: "field" }],
+    });
+  });
+
+  test("lists responses with Composio filters", async () => {
+    const requests: Request[] = [];
+    await listResponses({
+      accessToken: "tf-token-abc",
+      form_id: "abc123",
+      query: "alice",
+      sort: "submitted_at,desc",
+      response_type: ["completed"],
+      included_response_ids: "resp_001,resp_002",
+      fetch: async (input, init) => {
+        requests.push(new Request(input, init));
+        return new Response(JSON.stringify(responsesListFixture), { status: 200 });
+      },
+    });
+    expect(requests[0].url).toContain("query=alice");
+    expect(requests[0].url).toContain("sort=submitted_at%2Cdesc");
+    expect(requests[0].url).toContain("response_type=completed");
+    expect(requests[0].url).toContain("included_response_ids=resp_001%2Cresp_002");
+  });
+
+  test("deletes responses using included_response_ids", async () => {
+    const requests: Request[] = [];
+    await deleteResponses({
+      accessToken: "tf-token-abc",
+      formId: "abc123",
+      included_response_ids: "tok_a,tok_b",
+      fetch: async (input, init) => {
+        requests.push(new Request(input, init));
+        return new Response("", { status: 200 });
+      },
+    });
+    expect(requests[0].url).toContain("included_response_ids=tok_a%2Ctok_b");
+  });
+
+  test("creates a webhook with event_types", async () => {
+    const requests: Request[] = [];
+    await createWebhook({
+      accessToken: "tf-token-abc",
+      form_id: "abc123",
+      tag: "my-hook",
+      url: "https://example.com/hook",
+      event_types: { form_response: true, form_response_partial: false },
+      fetch: async (input, init) => {
+        requests.push(new Request(input, init));
+        return new Response(JSON.stringify(webhookCreateFixture), { status: 200 });
+      },
+    });
+    expect(await requests[0].json()).toMatchObject({
+      url: "https://example.com/hook",
+      event_types: { form_response: true, form_response_partial: false },
+    });
+  });
+});
+

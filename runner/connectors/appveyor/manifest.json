@@ -1,7 +1,17 @@
 {
+  "key": "appveyor",
+  "name": "AppVeyor",
+  "version": "0.2.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "dev-tools"
+  ],
   "auth": {
+    "type": "api_key",
     "scopes": [],
     "setup": {
+      "mode": "api_key",
       "fields": [
         {
           "key": "apiKey",
@@ -9,81 +19,138 @@
           "required": true,
           "secret": true
         }
-      ],
-      "mode": "api_key"
-    },
-    "type": "api_key"
-  },
-  "categories": [
-    "dev-tools"
-  ],
-  "evidence": {
-    "fixture": {
-      "status": "supplied"
-    },
-    "live": {
-      "status": "unverified"
+      ]
     }
   },
+  "network": {
+    "allowedHosts": [
+      "ci.appveyor.com"
+    ]
+  },
+  "models": [
+    "project",
+    "environment",
+    "user",
+    "role",
+    "build",
+    "collaborator"
+  ],
   "http": {
+    "baseUrl": "https://ci.appveyor.com/api",
     "auth": {
       "field": "apiKey",
       "in": "header",
       "name": "Authorization",
       "value": "Bearer {{apiKey}}"
     },
-    "baseUrl": "https://ci.appveyor.com/api",
+    "headers": {
+      "Accept": "application/json"
+    },
     "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after",
       "defaultRetryAfterSeconds": 30,
       "messagePaths": [
         "message",
         "Message",
         "error",
         "Error"
-      ],
-      "rateLimitStatuses": [
-        429
-      ],
-      "retryAfterHeader": "retry-after"
-    },
-    "headers": {
-      "Accept": "application/json"
+      ]
     }
   },
-  "key": "appveyor",
-  "models": [
-    "project",
-    "environment",
-    "user",
-    "role"
-  ],
-  "name": "AppVeyor",
-  "network": {
-    "allowedHosts": [
-      "ci.appveyor.com"
-    ]
-  },
   "operations": {
-    "environments.list": {
-      "description": "List AppVeyor deployment environments accessible to the connected API token.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {},
-        "type": "object"
-      },
+    "healthcheck": {
+      "timeoutMs": 5000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
       "kind": "action",
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "Healthcheck",
+      "description": "Validate the AppVeyor API token by listing projects.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
       "outputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "data": {}
-        },
+        "type": "object",
         "required": [
           "data"
         ],
-        "type": "object"
+        "properties": {
+          "data": {}
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/projects",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "projects.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List projects",
+      "description": "List AppVeyor projects accessible to the connected account-level API token.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/projects",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "environments.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List environments",
+      "description": "List AppVeyor deployment environments accessible to the connected API token.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        },
+        "additionalProperties": false
       },
       "request": {
         "method": "GET",
@@ -92,134 +159,32 @@
           200
         ]
       },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "title": "List environments",
-      "validationMode": "strict-generated"
-    },
-    "healthcheck": {
-      "description": "Validate the AppVeyor API token by listing projects.",
       "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {},
-        "type": "object"
-      },
-      "kind": "action",
-      "maxInputBytes": 4096,
-      "maxResponseBytes": 65536,
-      "outputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "data": {}
-        },
-        "required": [
-          "data"
-        ],
-        "type": "object"
-      },
-      "request": {
-        "method": "GET",
-        "path": "/projects",
-        "success": [
-          200
-        ]
-      },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 5000,
-      "title": "Healthcheck",
-      "validationMode": "strict-generated"
-    },
-    "projects.list": {
-      "description": "List AppVeyor projects accessible to the connected account-level API token.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {},
-        "type": "object"
-      },
-      "kind": "action",
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "outputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "data": {}
-        },
-        "required": [
-          "data"
-        ],
-        "type": "object"
-      },
-      "request": {
-        "method": "GET",
-        "path": "/projects",
-        "success": [
-          200
-        ]
-      },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "title": "List projects",
-      "validationMode": "strict-generated"
-    },
-    "roles.list": {
-      "description": "List AppVeyor team roles accessible to the connected API token.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {},
-        "type": "object"
-      },
-      "kind": "action",
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "outputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "data": {}
-        },
-        "required": [
-          "data"
-        ],
-        "type": "object"
-      },
-      "request": {
-        "method": "GET",
-        "path": "/roles",
-        "success": [
-          200
-        ]
-      },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "title": "List roles",
-      "validationMode": "strict-generated"
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
     },
     "users.list": {
-      "description": "List AppVeyor team users accessible to the connected API token.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {},
-        "type": "object"
-      },
-      "kind": "action",
+      "timeoutMs": 15000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List users",
+      "description": "List AppVeyor team users accessible to the connected API token.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
       "outputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "data": {}
-        },
+        "type": "object",
         "required": [
           "data"
         ],
-        "type": "object"
+        "properties": {
+          "data": {}
+        },
+        "additionalProperties": false
       },
       "request": {
         "method": "GET",
@@ -228,20 +193,817 @@
           200
         ]
       },
-      "responseFormat": "json",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "roles.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List roles",
+      "description": "List AppVeyor team roles accessible to the connected API token.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/roles",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "projects.get": {
+      "kind": "action",
       "sideEffect": "read",
       "timeoutMs": 15000,
-      "title": "List users",
-      "validationMode": "strict-generated"
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get project last build",
+      "description": "Get an AppVeyor project and its last build via GET /projects/{accountName}/{projectSlug}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "accountName": {
+            "type": "string",
+            "minLength": 1,
+            "description": "AppVeyor account name."
+          },
+          "projectSlug": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Project slug."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "accountName",
+          "projectSlug"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/projects/{{accountName}}/{{projectSlug}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "projects.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Add project",
+      "description": "Add an AppVeyor project via POST /projects.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "repositoryProvider": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Repository provider such as gitHub."
+          },
+          "repositoryName": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Repository name, typically owner/repo."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "repositoryProvider",
+          "repositoryName"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/projects",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "repositoryProvider": "{{repositoryProvider}}",
+          "repositoryName": "{{repositoryName}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "projects.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Delete project",
+      "description": "Delete an AppVeyor project via DELETE /projects/{accountName}/{projectSlug}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "accountName": {
+            "type": "string",
+            "minLength": 1,
+            "description": "AppVeyor account name."
+          },
+          "projectSlug": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Project slug."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "accountName",
+          "projectSlug"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/projects/{{accountName}}/{{projectSlug}}",
+        "success": [
+          204
+        ],
+        "result": {
+          "data": {
+            "deleted": true,
+            "accountName": "{{input.accountName}}",
+            "projectSlug": "{{input.projectSlug}}"
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "projects.history": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get project history",
+      "description": "Get AppVeyor project build history via GET /projects/{accountName}/{projectSlug}/history.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "accountName": {
+            "type": "string",
+            "minLength": 1,
+            "description": "AppVeyor account name."
+          },
+          "projectSlug": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Project slug."
+          },
+          "recordsNumber": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Number of history records to return."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "accountName",
+          "projectSlug"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/projects/{{accountName}}/{{projectSlug}}/history",
+        "success": [
+          200
+        ],
+        "query": {
+          "recordsNumber": "{{recordsNumber}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "projects.settings": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get project settings",
+      "description": "Get AppVeyor project settings via GET /projects/{accountName}/{projectSlug}/settings.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "accountName": {
+            "type": "string",
+            "minLength": 1,
+            "description": "AppVeyor account name."
+          },
+          "projectSlug": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Project slug."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "accountName",
+          "projectSlug"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/projects/{{accountName}}/{{projectSlug}}/settings",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "projects.deployments": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get project deployments",
+      "description": "Get AppVeyor project deployments via GET /projects/{accountName}/{projectSlug}/deployments.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "accountName": {
+            "type": "string",
+            "minLength": 1,
+            "description": "AppVeyor account name."
+          },
+          "projectSlug": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Project slug."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "accountName",
+          "projectSlug"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/projects/{{accountName}}/{{projectSlug}}/deployments",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "builds.start": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Start build",
+      "description": "Start an AppVeyor build of the most recent branch commit via POST /builds.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "accountName": {
+            "type": "string",
+            "minLength": 1,
+            "description": "AppVeyor account name."
+          },
+          "projectSlug": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Project slug."
+          },
+          "branch": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Git branch to build."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "accountName",
+          "projectSlug",
+          "branch"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/builds",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "accountName": "{{accountName}}",
+          "projectSlug": "{{projectSlug}}",
+          "branch": "{{branch}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "builds.cancel": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Cancel build",
+      "description": "Cancel an AppVeyor build via DELETE /builds/{accountName}/{projectSlug}/{buildVersion}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "accountName": {
+            "type": "string",
+            "minLength": 1,
+            "description": "AppVeyor account name."
+          },
+          "projectSlug": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Project slug."
+          },
+          "buildVersion": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Build version to cancel."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "accountName",
+          "projectSlug",
+          "buildVersion"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/builds/{{accountName}}/{{projectSlug}}/{{buildVersion}}",
+        "success": [
+          204
+        ],
+        "result": {
+          "data": {
+            "cancelled": true,
+            "buildVersion": "{{input.buildVersion}}"
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "environments.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get environment settings",
+      "description": "Get AppVeyor environment settings via GET /environments/{deploymentEnvironmentId}/settings.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "deploymentEnvironmentId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Deployment environment identifier."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "deploymentEnvironmentId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/environments/{{deploymentEnvironmentId}}/settings",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "environments.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Add environment",
+      "description": "Add an AppVeyor deployment environment via POST /environments.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Environment name."
+          },
+          "provider": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Deployment provider such as Webhook or Agent."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "provider"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/environments",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "name": "{{name}}",
+          "provider": "{{provider}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "environments.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Delete environment",
+      "description": "Delete an AppVeyor deployment environment via DELETE /environments/{deploymentEnvironmentId}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "deploymentEnvironmentId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Deployment environment identifier."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "deploymentEnvironmentId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/environments/{{deploymentEnvironmentId}}",
+        "success": [
+          204
+        ],
+        "result": {
+          "data": {
+            "deleted": true,
+            "deploymentEnvironmentId": "{{input.deploymentEnvironmentId}}"
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "environments.deployments": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List environment deployments",
+      "description": "List deployments for an AppVeyor environment via GET /environments/{deploymentEnvironmentId}/deployments.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "deploymentEnvironmentId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Deployment environment identifier."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "deploymentEnvironmentId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/environments/{{deploymentEnvironmentId}}/deployments",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "users.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get user",
+      "description": "Get one AppVeyor team user via GET /users/{userId}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "User identifier."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "userId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/users/{{userId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "roles.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get role",
+      "description": "Get one AppVeyor team role via GET /roles/{roleId}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "roleId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Role identifier."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "roleId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/roles/{{roleId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "collaborators.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List collaborators",
+      "description": "List AppVeyor collaborators via GET /collaborators.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/collaborators",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
     }
   },
   "provenance": {
     "source": {
-      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
-      "url": "https://github.com/oomol-lab/open-connector"
+      "url": "https://github.com/oomol-lab/open-connector",
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"
     }
   },
-  "runtime": "bun",
-  "version": "0.1.0",
-  "visibility": "public"
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
+    }
+  }
 }

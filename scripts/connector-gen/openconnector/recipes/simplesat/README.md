@@ -2,7 +2,7 @@
 
 International Simplesat API v1 recipe. Create an API key in **Settings → API keys** and send it as `X-Simplesat-Token`.
 
-Operations are bounded reads: `healthcheck` (`GET /api/v1/surveys?page_size=1`), `surveys.list`, `questions.list`, `customers.list`, and `customers.get`. Input `pageSize` maps to query `page_size`; optional question and customer filters map to snake_case query names. Provider `next` URLs are returned as data and never followed. Response search POST, customer upsert, and survey-email writes are omitted.
+v0.2.0 covers 20 HTTP actions (surveys, questions, responses, answers, customers, team members) plus EventOnly webhooks `webhook.answer_created` and `webhook.feedback_received`. Input `pageSize` maps to query `page_size`; optional filters map to snake_case names. Provider `next` URLs are returned as data and never followed.
 
 Older help copy for customer upsert uses `/api/customers/create-or-update/`; native reads follow the current v1 Postman collection and pinned source `/api/v1` paths.
 
