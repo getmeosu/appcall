@@ -1,7 +1,17 @@
 {
+  "key": "timelink",
+  "name": "timelink",
+  "version": "0.2.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "productivity"
+  ],
   "auth": {
+    "type": "api_key",
     "scopes": [],
     "setup": {
+      "mode": "api_key",
       "fields": [
         {
           "key": "apiKey",
@@ -9,162 +19,71 @@
           "required": true,
           "secret": true
         }
-      ],
-      "mode": "api_key"
-    },
-    "type": "api_key"
-  },
-  "categories": [
-    "productivity"
-  ],
-  "evidence": {
-    "fixture": {
-      "status": "supplied"
-    },
-    "live": {
-      "status": "unverified"
+      ]
     }
   },
+  "network": {
+    "allowedHosts": [
+      "api.timelink.io"
+    ]
+  },
+  "models": [
+    "token",
+    "company",
+    "user",
+    "client",
+    "project",
+    "service",
+    "timeEntry"
+  ],
   "http": {
+    "baseUrl": "https://api.timelink.io/api/v1",
     "auth": {
       "field": "apiKey",
       "in": "header",
       "name": "Authorization",
       "value": "Bearer {{apiKey}}"
     },
-    "baseUrl": "https://api.timelink.io/api/v1",
+    "headers": {
+      "Accept": "application/json"
+    },
     "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after",
       "defaultRetryAfterSeconds": 30,
       "messagePaths": [
         "message",
         "error"
-      ],
-      "rateLimitStatuses": [
-        429
-      ],
-      "retryAfterHeader": "retry-after"
-    },
-    "headers": {
-      "Accept": "application/json"
+      ]
     }
   },
-  "key": "timelink",
-  "models": [
-    "token",
-    "company",
-    "user",
-    "client",
-    "project"
-  ],
-  "name": "timelink",
-  "network": {
-    "allowedHosts": [
-      "api.timelink.io"
-    ]
-  },
   "operations": {
-    "clients.list": {
-      "description": "List timelink clients with optional page size.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "limit": {
-            "minimum": 1,
-            "type": "integer"
-          }
-        },
-        "type": "object"
-      },
-      "kind": "action",
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "outputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "type": "object"
-      },
-      "request": {
-        "method": "GET",
-        "path": "/clients",
-        "query": {
-          "limit": "{{limit}}"
-        },
-        "success": [
-          200
-        ]
-      },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "title": "List clients",
-      "validationMode": "strict-generated"
-    },
-    "company.get": {
-      "description": "Fetch the current timelink company for the authenticated token.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {},
-        "type": "object"
-      },
-      "kind": "action",
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "outputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "type": "object"
-      },
-      "request": {
-        "method": "GET",
-        "path": "/company",
-        "success": [
-          200
-        ]
-      },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "title": "Get company",
-      "validationMode": "strict-generated"
-    },
     "healthcheck": {
-      "description": "Validate the timelink API token.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {},
-        "type": "object"
-      },
-      "kind": "action",
+      "timeoutMs": 5000,
       "maxInputBytes": 4096,
       "maxResponseBytes": 65536,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Healthcheck",
+      "description": "Validate the timelink API token.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
       "outputSchema": {
-        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "required": [
-          "data"
-        ],
-        "type": "object"
+        "additionalProperties": false
       },
       "request": {
         "method": "GET",
@@ -173,108 +92,1122 @@
           200
         ]
       },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 5000,
-      "title": "Healthcheck",
-      "validationMode": "strict-generated"
-    },
-    "projects.list": {
-      "description": "List timelink projects with optional page size.",
       "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "limit": {
-            "minimum": 1,
-            "type": "integer"
-          }
-        },
-        "type": "object"
-      },
-      "kind": "action",
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "company.get": {
+      "timeoutMs": 15000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Get company",
+      "description": "Fetch the current timelink company for the authenticated token.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
       "outputSchema": {
-        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "required": [
-          "data"
-        ],
-        "type": "object"
+        "additionalProperties": false
       },
       "request": {
         "method": "GET",
-        "path": "/projects",
-        "query": {
-          "limit": "{{limit}}"
-        },
+        "path": "/company",
         "success": [
           200
         ]
       },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "title": "List projects",
-      "validationMode": "strict-generated"
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
     },
     "users.list": {
-      "description": "List timelink users with optional page size.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "limit": {
-            "minimum": 1,
-            "type": "integer"
-          }
-        },
-        "type": "object"
-      },
-      "kind": "action",
+      "timeoutMs": 15000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List users",
+      "description": "List timelink users with optional page size.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": false
+      },
       "outputSchema": {
-        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "required": [
-          "data"
-        ],
-        "type": "object"
+        "additionalProperties": false
       },
       "request": {
         "method": "GET",
         "path": "/users",
+        "success": [
+          200
+        ],
         "query": {
           "limit": "{{limit}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "users.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get user",
+      "description": "Fetch one timelink user by id.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "user ULID."
+          }
         },
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/users/{{id}}",
         "success": [
           200
         ]
       },
-      "responseFormat": "json",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "clients.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List clients",
+      "description": "List timelink clients with optional page size.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/clients",
+        "success": [
+          200
+        ],
+        "query": {
+          "limit": "{{limit}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "clients.get": {
+      "kind": "action",
       "sideEffect": "read",
       "timeoutMs": 15000,
-      "title": "List users",
-      "validationMode": "strict-generated"
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get client",
+      "description": "Fetch one timelink client by id.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "client ULID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/clients/{{id}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "clients.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create client",
+      "description": "Create a timelink client with POST /clients.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Create client name."
+          },
+          "info": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Free-form information."
+          },
+          "active": {
+            "type": "boolean",
+            "description": "Whether the record is active."
+          },
+          "billable": {
+            "type": "boolean",
+            "description": "Whether the record is billable."
+          },
+          "color": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Color value."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/clients",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "name": "{{name}}",
+          "info": "{{info}}",
+          "active": "{{active}}",
+          "billable": "{{billable}}",
+          "color": "{{color}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "clients.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Update client",
+      "description": "Update a timelink client with PUT /clients/{id}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Record ULID."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Name."
+          },
+          "info": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Free-form information."
+          },
+          "active": {
+            "type": "boolean",
+            "description": "Whether the record is active."
+          },
+          "billable": {
+            "type": "boolean",
+            "description": "Whether the record is billable."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/clients/{{id}}",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "name": "{{name}}",
+          "info": "{{info}}",
+          "active": "{{active}}",
+          "billable": "{{billable}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "projects.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List projects",
+      "description": "List timelink projects with optional page size.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/projects",
+        "success": [
+          200
+        ],
+        "query": {
+          "limit": "{{limit}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "projects.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get project",
+      "description": "Fetch one timelink project by id.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "project ULID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/projects/{{id}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "projects.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create project",
+      "description": "Create a timelink project with POST /projects.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Project name."
+          },
+          "clientId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Linked client id."
+          },
+          "info": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Free-form information."
+          },
+          "active": {
+            "type": "boolean",
+            "description": "Whether the project is active."
+          },
+          "billable": {
+            "type": "boolean",
+            "description": "Whether the project is billable."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/projects",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "name": "{{name}}",
+          "client_id": "{{clientId}}",
+          "info": "{{info}}",
+          "active": "{{active}}",
+          "billable": "{{billable}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "projects.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Update project",
+      "description": "Update a timelink project with PUT /projects/{id}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Record ULID."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Name."
+          },
+          "info": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Free-form information."
+          },
+          "active": {
+            "type": "boolean",
+            "description": "Whether the record is active."
+          },
+          "billable": {
+            "type": "boolean",
+            "description": "Whether the record is billable."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/projects/{{id}}",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "name": "{{name}}",
+          "info": "{{info}}",
+          "active": "{{active}}",
+          "billable": "{{billable}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "services.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List services",
+      "description": "List timelink services with optional page size.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Page size."
+          },
+          "active": {
+            "type": "boolean",
+            "description": "Filter by active state."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/services",
+        "success": [
+          200
+        ],
+        "query": {
+          "limit": "{{limit}}",
+          "active": "{{active}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "services.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get service",
+      "description": "Fetch one timelink service by id.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "service ULID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/services/{{id}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "timeEntries.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List time entries",
+      "description": "List timelink time entries with optional filters.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Page size."
+          },
+          "start": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter entries starting from this timestamp."
+          },
+          "end": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter entries ending before this timestamp."
+          },
+          "clientId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by client id."
+          },
+          "projectId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by project id."
+          },
+          "userId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by user id."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/timeEntries",
+        "success": [
+          200
+        ],
+        "query": {
+          "limit": "{{limit}}",
+          "start": "{{start}}",
+          "end": "{{end}}",
+          "clientId": "{{clientId}}",
+          "projectId": "{{projectId}}",
+          "userId": "{{userId}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "timeEntries.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get time entry",
+      "description": "Fetch one timelink time entry by id.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "time entry ULID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/timeEntries/{{id}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "timeEntries.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create time entry",
+      "description": "Create a timelink time entry with POST /timeEntries.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "startedAt": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Start timestamp."
+          },
+          "endedAt": {
+            "type": "string",
+            "minLength": 1,
+            "description": "End timestamp."
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Time entry description."
+          },
+          "clientId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Client id."
+          },
+          "projectId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Project id."
+          },
+          "serviceId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Service id."
+          },
+          "billable": {
+            "type": "boolean",
+            "description": "Whether the entry is billable."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "startedAt"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/timeEntries",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "started_at": "{{startedAt}}",
+          "ended_at": "{{endedAt}}",
+          "description": "{{description}}",
+          "client_id": "{{clientId}}",
+          "project_id": "{{projectId}}",
+          "service_id": "{{serviceId}}",
+          "billable": "{{billable}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "timeEntries.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Update time entry",
+      "description": "Update a timelink time entry with PUT /timeEntries/{id}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Time entry ULID."
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Time entry description."
+          },
+          "endedAt": {
+            "type": "string",
+            "minLength": 1,
+            "description": "End timestamp."
+          },
+          "billable": {
+            "type": "boolean",
+            "description": "Whether the entry is billable."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/timeEntries/{{id}}",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "description": "{{description}}",
+          "ended_at": "{{endedAt}}",
+          "billable": "{{billable}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "timeEntries.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Delete time entry",
+      "description": "Delete a timelink time entry with DELETE /timeEntries/{id}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Time entry ULID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "deleted",
+          "id"
+        ],
+        "properties": {
+          "deleted": {
+            "type": "boolean"
+          },
+          "id": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/timeEntries/{{id}}",
+        "success": [
+          200,
+          204
+        ],
+        "result": {
+          "deleted": true,
+          "id": "{{input.id}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "timeEntries.active.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List active time entries",
+      "description": "List currently running timelink time entries on GET /timeEntries/active.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Page size."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/timeEntries/active",
+        "success": [
+          200
+        ],
+        "query": {
+          "limit": "{{limit}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "timeEntries.requiredFields": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List required time-entry fields",
+      "description": "List timelink field names required for time entries on GET /timeEntries/fieldsRequired.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/timeEntries/fieldsRequired",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
     }
   },
   "provenance": {
     "source": {
-      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
-      "url": "https://github.com/oomol-lab/open-connector"
+      "url": "https://github.com/oomol-lab/open-connector",
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"
     }
   },
-  "runtime": "bun",
-  "version": "0.1.0",
-  "visibility": "public"
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
+    }
+  }
 }
