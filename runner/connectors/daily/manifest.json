@@ -52,7 +52,12 @@
   "key": "daily",
   "models": [
     "domain",
-    "room"
+    "room",
+    "meeting",
+    "recording",
+    "transcript",
+    "webhook",
+    "presence"
   ],
   "name": "Daily",
   "network": {
@@ -61,42 +66,6 @@
     ]
   },
   "operations": {
-    "domain.get": {
-      "description": "Get the top-level configuration for the connected Daily domain.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {},
-        "type": "object"
-      },
-      "kind": "action",
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "outputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "type": "object"
-      },
-      "request": {
-        "method": "GET",
-        "path": "/",
-        "success": [
-          200
-        ]
-      },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "title": "Get domain config",
-      "validationMode": "strict-generated"
-    },
     "healthcheck": {
       "description": "Validate the Daily API key by reading domain configuration.",
       "enforceOutputSchema": true,
@@ -133,20 +102,12 @@
       "title": "Healthcheck",
       "validationMode": "strict-generated"
     },
-    "rooms.get": {
-      "description": "Get configuration and metadata for a Daily room by name.",
+    "domain.get": {
+      "description": "Get the top-level configuration for the connected Daily domain.",
       "enforceOutputSchema": true,
       "inputSchema": {
         "additionalProperties": false,
-        "properties": {
-          "room_name": {
-            "minLength": 1,
-            "type": "string"
-          }
-        },
-        "required": [
-          "room_name"
-        ],
+        "properties": {},
         "type": "object"
       },
       "kind": "action",
@@ -166,7 +127,7 @@
       },
       "request": {
         "method": "GET",
-        "path": "/rooms/{{room_name}}",
+        "path": "/",
         "success": [
           200
         ]
@@ -174,7 +135,7 @@
       "responseFormat": "json",
       "sideEffect": "read",
       "timeoutMs": 15000,
-      "title": "Get room",
+      "title": "Get domain config",
       "validationMode": "strict-generated"
     },
     "rooms.list": {
@@ -231,6 +192,835 @@
       "timeoutMs": 15000,
       "title": "List rooms",
       "validationMode": "strict-generated"
+    },
+    "rooms.get": {
+      "description": "Get configuration and metadata for a Daily room by name.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "room_name": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "room_name"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/rooms/{{room_name}}",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get room",
+      "validationMode": "strict-generated"
+    },
+    "rooms.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create room",
+      "description": "Create a Daily room with optional name and privacy.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Room name. Daily generates one when omitted."
+          },
+          "privacy": {
+            "type": "string",
+            "enum": [
+              "public",
+              "private"
+            ],
+            "description": "Room privacy."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/rooms",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "name": "{{name}}",
+          "privacy": "{{privacy}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "rooms.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Update room",
+      "description": "Update a Daily room's privacy or configuration.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "room_name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Room name."
+          },
+          "privacy": {
+            "type": "string",
+            "enum": [
+              "public",
+              "private"
+            ],
+            "description": "Updated privacy."
+          }
+        },
+        "required": [
+          "room_name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/rooms/{{room_name}}",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "privacy": "{{privacy}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "rooms.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Delete room",
+      "description": "Delete a Daily room by name.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "room_name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Room name to delete."
+          }
+        },
+        "required": [
+          "room_name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/rooms/{{room_name}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "rooms.presence": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get room presence",
+      "description": "Get a presence snapshot for participants currently in a Daily room.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "room_name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Room name."
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Maximum participants to return.",
+            "minimum": 1,
+            "maximum": 100
+          }
+        },
+        "required": [
+          "room_name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/rooms/{{room_name}}/presence",
+        "success": [
+          200
+        ],
+        "query": {
+          "limit": "{{limit}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "meeting-tokens.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create meeting token",
+      "description": "Create a Daily meeting token for room access and per-participant config.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "room_name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Room the token admits the participant to."
+          },
+          "user_name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Display name baked into the token."
+          }
+        },
+        "required": [
+          "room_name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/meeting-tokens",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "properties": {
+            "room_name": "{{room_name}}",
+            "user_name": "{{user_name}}"
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "meeting-tokens.validate": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Validate meeting token",
+      "description": "Validate a Daily meeting token and return its claims.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "meeting_token": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Meeting token to validate."
+          }
+        },
+        "required": [
+          "meeting_token"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/meeting-tokens/{{meeting_token}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "meetings.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List meetings",
+      "description": "List Daily meeting sessions, optionally filtered by room.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "room": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Room name filter."
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Maximum meetings to return.",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "ongoing": {
+            "type": "boolean",
+            "description": "When true, only in-progress meetings."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/meetings",
+        "success": [
+          200
+        ],
+        "query": {
+          "room": "{{room}}",
+          "limit": "{{limit}}",
+          "ongoing": "{{ongoing}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "meetings.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get meeting",
+      "description": "Get one Daily meeting session by ID.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "meeting_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Meeting session ID."
+          }
+        },
+        "required": [
+          "meeting_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/meetings/{{meeting_id}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "recordings.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List recordings",
+      "description": "List Daily cloud recordings, optionally filtered by room.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "room_name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Room name filter."
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Maximum recordings to return.",
+            "minimum": 1,
+            "maximum": 100
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/recordings",
+        "success": [
+          200
+        ],
+        "query": {
+          "room_name": "{{room_name}}",
+          "limit": "{{limit}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "recordings.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get recording",
+      "description": "Get metadata for one Daily cloud recording.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "recording_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Recording ID."
+          }
+        },
+        "required": [
+          "recording_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/recordings/{{recording_id}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "recordings.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Delete recording",
+      "description": "Delete a Daily cloud recording.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "recording_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Recording ID to delete."
+          }
+        },
+        "required": [
+          "recording_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/recordings/{{recording_id}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "recordings.access-link": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get recording access link",
+      "description": "Get a temporary download link for a Daily cloud recording.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "recording_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Recording ID."
+          },
+          "valid_for_secs": {
+            "type": "integer",
+            "description": "Link lifetime in seconds.",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "recording_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/recordings/{{recording_id}}/access-link",
+        "success": [
+          200
+        ],
+        "query": {
+          "valid_for_secs": "{{valid_for_secs}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "presence.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List presence",
+      "description": "Get a domain-wide snapshot of participants currently in Daily rooms.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/presence",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "transcripts.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List transcripts",
+      "description": "List Daily meeting transcripts.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "room_name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Room name filter."
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Maximum transcripts to return.",
+            "minimum": 1,
+            "maximum": 100
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/transcript",
+        "success": [
+          200
+        ],
+        "query": {
+          "room_name": "{{room_name}}",
+          "limit": "{{limit}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "transcripts.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get transcript",
+      "description": "Get metadata for one Daily transcript.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "transcript_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Transcript ID."
+          }
+        },
+        "required": [
+          "transcript_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/transcript/{{transcript_id}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "webhooks.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List webhooks",
+      "description": "List Daily webhook endpoints configured on the domain.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/webhooks",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
     }
   },
   "provenance": {
@@ -240,6 +1030,6 @@
     }
   },
   "runtime": "bun",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "visibility": "public"
 }
