@@ -1,20 +1,18 @@
 # Eventzilla
 
-Read-only international **Eventzilla API v2** recipe. Organizers create an API key under Settings > Developers > API Credentials (pinned source still says Settings > App Management). Store it as `apiKey`. Requests send `x-api-key` and `Accept: application/json` to `https://www.eventzillaapi.net/api/v2`.
+International **Eventzilla API v2** recipe at version 0.2.0. Organizers create an API key under Settings > Developers > API Credentials. Store it as `apiKey`. Requests send `x-api-key` and `Accept: application/json` to `https://www.eventzillaapi.net/api/v2`.
 
 ## Operations
 
-- `healthcheck`: `GET /users?offset=0&limit=1` with empty input (cheap authenticated organizer probe; pinned credential validator).
-- `events.list`: `GET /events` with optional `offset` (≥0), `limit` (1–100), `status`, and `category`.
-- `events.get`: `GET /events/{eventid}`; `eventid` is a required positive integer.
-- `tickets.list`: `GET /events/{eventid}/tickets`.
-- `users.get`: `GET /users/{userid}`; `userid` is a required positive integer.
+HTTP actions cover events, ticket types, attendees, transactions, checkout, categories, and users. `healthcheck` remains `GET /users?offset=0&limit=1`. Writes include toggle sales, ticket-type create/update, order confirm/cancel, checkout create/confirm, and attendee check-in.
 
-Successful responses are raw provider JSON under AppCall `data`. Checkout, check-in, order confirm/cancel, and other writes are omitted.
+EventOnly webhooks (no request block) cover vendor triggers `registration.confirmed`, `registration.updated`, `registration.pending`, `registration.abandoned`, `registration.waitlisted`, `registration.invoice.paid`, `registration.cancelled`, and `attendee.checkin`.
+
+Successful HTTP responses are raw provider JSON under AppCall `data`.
 
 ## Adaptations
 
-Pinned source and official docs agree on `https://www.eventzillaapi.net/api/v2` and the `x-api-key` header. Native category is `scheduling` (source Productivity/Marketing are not in the Rust CATEGORIES allowlist). Healthcheck uses the validator's `/users?offset=0&limit=1` rather than a search. Official list-users has no required query; the validator always pages. The upstream user-agent is not sent.
+Pinned source and official docs agree on `https://www.eventzillaapi.net/api/v2` and the `x-api-key` header. Native category is `scheduling`. The upstream user-agent is not sent.
 
 ## License and evidence
 

@@ -1,1 +1,1208 @@
-{"auth":{"scopes":[],"setup":{"fields":[{"key":"apiKey","label":"Raindrop.io test token or access token","required":true,"secret":true}],"mode":"api_key"},"type":"api_key"},"categories":["productivity"],"evidence":{"fixture":{"status":"supplied"},"live":{"status":"unverified"}},"http":{"auth":{"field":"apiKey","in":"header","name":"Authorization","value":"Bearer {{apiKey}}"},"baseUrl":"https://api.raindrop.io/rest/v1","errors":{"defaultRetryAfterSeconds":30,"messagePaths":["errorMessage","error","message"],"rateLimitStatuses":[429],"retryAfterHeader":"retry-after"},"headers":{"Accept":"application/json"}},"key":"raindrop","models":["user","collection","raindrop","tag"],"name":"Raindrop.io","network":{"allowedHosts":["api.raindrop.io"]},"operations":{"collections.get":{"description":"Get one Raindrop.io collection by ID.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{"collectionId":{"type":"integer"}},"required":["collectionId"],"type":"object"},"kind":"action","maxInputBytes":65536,"maxResponseBytes":5242880,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/collection/{{collectionId}}","success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":15000,"title":"Get collection","validationMode":"strict-generated"},"collections.list":{"description":"List Raindrop.io root collections.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{},"type":"object"},"kind":"action","maxInputBytes":65536,"maxResponseBytes":5242880,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/collections","success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":15000,"title":"List collections","validationMode":"strict-generated"},"healthcheck":{"description":"Validate the Raindrop.io token with GET /user.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{},"type":"object"},"kind":"action","maxInputBytes":4096,"maxResponseBytes":65536,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/user","success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":5000,"title":"Healthcheck","validationMode":"strict-generated"},"raindrops.list":{"description":"List or search Raindrop.io bookmarks in a collection.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{"collectionId":{"type":"integer"},"nested":{"type":"boolean"},"page":{"minimum":0,"type":"integer"},"perPage":{"maximum":50,"minimum":1,"type":"integer"},"search":{"type":"string"},"sort":{"enum":["-created","created","score","-sort","title","-title","domain","-domain"],"type":"string"}},"required":["collectionId"],"type":"object"},"kind":"action","maxInputBytes":65536,"maxResponseBytes":5242880,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/raindrops/{{collectionId}}","query":{"nested":"{{nested}}","page":"{{page}}","perpage":"{{perPage}}","search":"{{search}}","sort":"{{sort}}"},"success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":15000,"title":"List raindrops","validationMode":"strict-generated"},"tags.list":{"description":"List Raindrop.io tags across all collections.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{},"type":"object"},"kind":"action","maxInputBytes":65536,"maxResponseBytes":5242880,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/tags","success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":15000,"title":"List tags","validationMode":"strict-generated"}},"provenance":{"source":{"revision":"33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a","url":"https://github.com/oomol-lab/open-connector"}},"runtime":"bun","version":"0.1.0","visibility":"public"}
+{
+  "key": "raindrop",
+  "name": "Raindrop.io",
+  "version": "0.2.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "productivity"
+  ],
+  "auth": {
+    "type": "api_key",
+    "scopes": [],
+    "setup": {
+      "mode": "api_key",
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "Raindrop.io test token or access token",
+          "required": true,
+          "secret": true
+        }
+      ]
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "api.raindrop.io"
+    ]
+  },
+  "models": [
+    "user",
+    "collection",
+    "raindrop",
+    "tag",
+    "highlight",
+    "filter"
+  ],
+  "http": {
+    "baseUrl": "https://api.raindrop.io/rest/v1",
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "Authorization",
+      "value": "Bearer {{apiKey}}"
+    },
+    "headers": {
+      "Accept": "application/json"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after",
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "errorMessage",
+        "error",
+        "message"
+      ]
+    }
+  },
+  "operations": {
+    "healthcheck": {
+      "timeoutMs": 5000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Healthcheck",
+      "description": "Validate the Raindrop.io token with GET /user.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/user",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "collections.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List collections",
+      "description": "List Raindrop.io root collections.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/collections",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "collections.get": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Get collection",
+      "description": "Get one Raindrop.io collection by ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "collectionId": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "collectionId"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/collection/{{collectionId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "raindrops.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List raindrops",
+      "description": "List or search Raindrop.io bookmarks in a collection.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "collectionId": {
+            "type": "integer"
+          },
+          "search": {
+            "type": "string"
+          },
+          "sort": {
+            "type": "string",
+            "enum": [
+              "-created",
+              "created",
+              "score",
+              "-sort",
+              "title",
+              "-title",
+              "domain",
+              "-domain"
+            ]
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "perPage": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 50
+          },
+          "nested": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "collectionId"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/raindrops/{{collectionId}}",
+        "query": {
+          "search": "{{search}}",
+          "sort": "{{sort}}",
+          "page": "{{page}}",
+          "perpage": "{{perPage}}",
+          "nested": "{{nested}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "tags.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List tags",
+      "description": "List Raindrop.io tags across all collections.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/tags",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "collections.listChildren": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List child collections",
+      "description": "List nested Raindrop.io collections via GET /collections/childrens.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/collections/childrens",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "collections.create": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Create collection",
+      "description": "Create a Raindrop.io collection via POST /collection.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Collection title."
+          },
+          "description": {
+            "type": "string",
+            "description": "Optional collection description."
+          },
+          "public": {
+            "type": "boolean",
+            "description": "Whether the collection is public."
+          },
+          "view": {
+            "type": "string",
+            "description": "Collection view such as list or grid."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "title"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/collection",
+        "success": [
+          200
+        ],
+        "body": {
+          "title": "{{title}}",
+          "description": "{{description}}",
+          "public": "{{public}}",
+          "view": "{{view}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "collections.update": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Update collection",
+      "description": "Update a Raindrop.io collection via PUT /collection/{id}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "collectionId": {
+            "type": "integer",
+            "description": "Collection ID."
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Updated title."
+          },
+          "description": {
+            "type": "string",
+            "description": "Updated description."
+          },
+          "public": {
+            "type": "boolean",
+            "description": "Whether the collection is public."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "collectionId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/collection/{{collectionId}}",
+        "success": [
+          200
+        ],
+        "body": {
+          "title": "{{title}}",
+          "description": "{{description}}",
+          "public": "{{public}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "collections.delete": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "destructive",
+      "title": "Delete collection",
+      "description": "Delete a Raindrop.io collection via DELETE /collection/{id}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "collectionId": {
+            "type": "integer",
+            "description": "Collection ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "collectionId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/collection/{{collectionId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "raindrops.get": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Get raindrop",
+      "description": "Get one Raindrop.io bookmark by ID via GET /raindrop/{id}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "description": "Raindrop ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/raindrop/{{id}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "raindrops.create": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Create raindrop",
+      "description": "Create a Raindrop.io bookmark via POST /raindrop.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "link": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Bookmark URL."
+          },
+          "collectionId": {
+            "type": "integer",
+            "description": "Destination collection ID."
+          },
+          "title": {
+            "type": "string",
+            "description": "Optional bookmark title."
+          },
+          "excerpt": {
+            "type": "string",
+            "description": "Optional excerpt."
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Optional tags."
+          },
+          "important": {
+            "type": "boolean",
+            "description": "Mark as favorite."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "link",
+          "collectionId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/raindrop",
+        "success": [
+          200
+        ],
+        "body": {
+          "link": "{{link}}",
+          "title": "{{title}}",
+          "excerpt": "{{excerpt}}",
+          "tags": "{{tags}}",
+          "important": "{{important}}",
+          "collection": {
+            "$id": "{{collectionId}}"
+          }
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "raindrops.update": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Update raindrop",
+      "description": "Update a Raindrop.io bookmark via PUT /raindrop/{id}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "description": "Raindrop ID."
+          },
+          "title": {
+            "type": "string",
+            "description": "Updated title."
+          },
+          "excerpt": {
+            "type": "string",
+            "description": "Updated excerpt."
+          },
+          "important": {
+            "type": "boolean",
+            "description": "Favorite flag."
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Replacement tags."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/raindrop/{{id}}",
+        "success": [
+          200
+        ],
+        "body": {
+          "title": "{{title}}",
+          "excerpt": "{{excerpt}}",
+          "important": "{{important}}",
+          "tags": "{{tags}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "raindrops.delete": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "destructive",
+      "title": "Delete raindrop",
+      "description": "Delete a Raindrop.io bookmark via DELETE /raindrop/{id}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "description": "Raindrop ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/raindrop/{{id}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "raindrops.suggest": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Suggest raindrop metadata",
+      "description": "Suggest collection, tags, and title for a URL via POST /raindrop/suggest.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "link": {
+            "type": "string",
+            "minLength": 1,
+            "description": "URL to analyze."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "link"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/raindrop/suggest",
+        "success": [
+          200
+        ],
+        "body": {
+          "link": "{{link}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "tags.rename": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Rename tags",
+      "description": "Rename Raindrop.io tags via PUT /tags.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "replace": {
+            "type": "string",
+            "minLength": 1,
+            "description": "New tag name."
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "description": "Existing tag names to rename."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "replace",
+          "tags"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/tags",
+        "success": [
+          200
+        ],
+        "body": {
+          "replace": "{{replace}}",
+          "tags": "{{tags}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "tags.delete": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "destructive",
+      "title": "Delete tags",
+      "description": "Delete Raindrop.io tags via DELETE /tags.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "description": "Tag names to delete."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "tags"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/tags",
+        "success": [
+          200
+        ],
+        "body": {
+          "tags": "{{tags}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "highlights.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List highlights",
+      "description": "List Raindrop.io highlights via GET /highlights.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Page index."
+          },
+          "perPage": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 50,
+            "description": "Page size (wire name perpage)."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/highlights",
+        "success": [
+          200
+        ],
+        "query": {
+          "page": "{{page}}",
+          "perpage": "{{perPage}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "filters.get": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Get filters",
+      "description": "Get Raindrop.io filters for a collection via GET /filters/{collectionId}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "collectionId": {
+            "type": "integer",
+            "description": "Collection ID (0 = all except Trash)."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "collectionId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/filters/{{collectionId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "import.parse": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Parse import URL",
+      "description": "Parse a URL for import via GET /import/url/parse.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "minLength": 1,
+            "description": "URL to parse."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "url"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/import/url/parse",
+        "success": [
+          200
+        ],
+        "query": {
+          "url": "{{url}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "import.exists": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Check imported URLs",
+      "description": "Check whether URLs already exist via POST /import/url/exists.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "urls": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "description": "URLs to check."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "urls"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/import/url/exists",
+        "success": [
+          200
+        ],
+        "body": {
+          "urls": "{{urls}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "user.update": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Update user",
+      "description": "Update the authenticated Raindrop.io user via PUT /user.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "fullName": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Updated display name."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/user",
+        "success": [
+          200
+        ],
+        "body": {
+          "fullName": "{{fullName}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "user.stats": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Get user stats",
+      "description": "Get Raindrop.io user statistics via GET /user/stats.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/user/stats",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    }
+  },
+  "provenance": {
+    "source": {
+      "url": "https://github.com/oomol-lab/open-connector",
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"
+    }
+  },
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
+    }
+  }
+}
