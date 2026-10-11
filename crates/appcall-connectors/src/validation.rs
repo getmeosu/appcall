@@ -4,7 +4,9 @@ use url::Url;
 
 pub const CATEGORIES: &[&str] = &[
     "messaging",
+    "email",
     "email-marketing",
+    "calendar",
     "crm",
     "ats-recruitment",
     "ads",

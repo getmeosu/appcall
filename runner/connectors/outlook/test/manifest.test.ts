@@ -60,7 +60,7 @@ describe("outlook manifest", () => {
     expect(manifest.version).toBe("0.2.0");
     expect(manifest.runtime).toBe("bun");
     expect(manifest.categories).toEqual(["email", "calendar"]);
-    expect(manifest.network.allowedHosts).toEqual(["graph.microsoft.com"]);
+    expect(manifest.network.allowedHosts).toEqual(["graph.microsoft.com", "login.microsoftonline.com"]);
     expect(manifest.http.baseUrl).toBe("https://graph.microsoft.com");
     expect(manifest.auth.type).toBe("oauth2");
     expect(manifest.http.auth.field).toBe("accessToken");

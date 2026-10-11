@@ -92,18 +92,33 @@
       "token.balances.get",
       "asset.transfers.list",
       "nfts.contract.list",
-      "nft.owners.get",
-      "nfts.contract.owners.list",
       "nft.contract.metadata.get",
-      "nft.floor.price.get",
       "nft.sales.list",
       "nfts.contracts.owner.list",
       "nft.rarity.compute",
       "nft.holder.check",
-      "webhook.address_activity",
-      "webhook.nft_activity",
-      "webhook.mined_transaction",
-      "webhook.dropped_transaction"
+      "nft.collection.metadata.get",
+      "nfts.collections.owner.list",
+      "nft.contract.metadata.batch",
+      "nft.floor-price.get",
+      "prices.historical.get",
+      "nfts.contracts.by-address",
+      "nft.metadata.batch",
+      "nfts.collection.list",
+      "nft.owners.contract.list",
+      "nft.owners.nft.list",
+      "nfts.portfolio.by-address",
+      "prices.by-symbol.get",
+      "tokens.balances.by-address",
+      "prices.by-address.get",
+      "tokens.by-address",
+      "transaction.count.get",
+      "transactions.history.by-address",
+      "nft.contract.invalidate",
+      "nft.airdrop.check",
+      "nft.spam.check",
+      "nft.contract.search",
+      "nft.attributes.summarize"
     ],
     "upstreamSha": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
     "marketFocus": "international",
@@ -347,32 +362,6 @@
         "GET /nft/v3/getNFTsForContract with Bearer auth."
       ]
     },
-    "nft.owners.get": {
-      "upstreamActionId": "getOwnersForNFT",
-      "sourceRefs": [
-        "request-headers"
-      ],
-      "documentationUrls": [
-        "https://www.alchemy.com/docs/nft-api/nft-api-endpoints"
-      ],
-      "responseContract": "appcall-provider-json-v1",
-      "adaptations": [
-        "GET /nft/v3/getOwnersForNFT."
-      ]
-    },
-    "nfts.contract.owners.list": {
-      "upstreamActionId": "getOwnersForContract",
-      "sourceRefs": [
-        "request-headers"
-      ],
-      "documentationUrls": [
-        "https://www.alchemy.com/docs/nft-api/nft-api-endpoints"
-      ],
-      "responseContract": "appcall-provider-json-v1",
-      "adaptations": [
-        "GET /nft/v3/getOwnersForContract."
-      ]
-    },
     "nft.contract.metadata.get": {
       "upstreamActionId": "getContractMetadata",
       "sourceRefs": [
@@ -384,19 +373,6 @@
       "responseContract": "appcall-provider-json-v1",
       "adaptations": [
         "GET /nft/v3/getContractMetadata."
-      ]
-    },
-    "nft.floor.price.get": {
-      "upstreamActionId": "getFloorPrice",
-      "sourceRefs": [
-        "request-headers"
-      ],
-      "documentationUrls": [
-        "https://www.alchemy.com/docs/nft-api/nft-api-endpoints"
-      ],
-      "responseContract": "appcall-provider-json-v1",
-      "adaptations": [
-        "GET /nft/v3/getFloorPrice."
       ]
     },
     "nft.sales.list": {
@@ -451,56 +427,444 @@
         "GET /nft/v3/isHolderOfContract."
       ]
     },
-    "webhook.address_activity": {
-      "upstreamActionId": "webhook_address_activity",
+    "nft.collection.metadata.get": {
+      "upstreamActionId": "get_token_metadata",
       "sourceRefs": [
-        "request-headers"
+        "credential-validate",
+        "rpc-request",
+        "auth-headers",
+        "rpc-base"
       ],
       "documentationUrls": [
-        "https://www.alchemy.com/docs/reference/nft-activity-webhook"
+        "https://www.alchemy.com/docs/how-to-use-api-keys-in-http-headers",
+        "https://www.alchemy.com/docs/reference/compute-unit-costs"
       ],
       "responseContract": "appcall-provider-json-v1",
       "adaptations": [
-        "EventOnly inbound Alchemy ADDRESS_ACTIVITY webhook. No outbound request."
+        "Credential-only healthcheck maps to the pinned validator POST JSON-RPC eth_gasPrice on https://eth-mainnet.g.alchemy.com/v2 (20 CU), not NFT/token lookup.",
+        "Uses official Authorization: Bearer rather than putting the API key in the URL path.",
+        "HTTP 200 JSON-RPC bodies with a non-empty error object are demoted via http.errors.bodyErrorPaths [error].",
+        "There is no named get_gas_price upstream action; mapping reuses get_token_metadata as the Token API JSON-RPC sibling. Returns the raw JSON-RPC envelope under data. Upstream user-agent is not sent."
       ]
     },
-    "webhook.nft_activity": {
-      "upstreamActionId": "webhook_nft_activity",
+    "nfts.collections.owner.list": {
+      "upstreamActionId": "get_token_metadata",
       "sourceRefs": [
-        "request-headers"
+        "credential-validate",
+        "rpc-request",
+        "auth-headers",
+        "rpc-base"
       ],
       "documentationUrls": [
-        "https://www.alchemy.com/docs/reference/nft-activity-webhook"
+        "https://www.alchemy.com/docs/how-to-use-api-keys-in-http-headers",
+        "https://www.alchemy.com/docs/reference/compute-unit-costs"
       ],
       "responseContract": "appcall-provider-json-v1",
       "adaptations": [
-        "EventOnly inbound Alchemy NFT_ACTIVITY webhook. No outbound request."
+        "Credential-only healthcheck maps to the pinned validator POST JSON-RPC eth_gasPrice on https://eth-mainnet.g.alchemy.com/v2 (20 CU), not NFT/token lookup.",
+        "Uses official Authorization: Bearer rather than putting the API key in the URL path.",
+        "HTTP 200 JSON-RPC bodies with a non-empty error object are demoted via http.errors.bodyErrorPaths [error].",
+        "There is no named get_gas_price upstream action; mapping reuses get_token_metadata as the Token API JSON-RPC sibling. Returns the raw JSON-RPC envelope under data. Upstream user-agent is not sent."
       ]
     },
-    "webhook.mined_transaction": {
-      "upstreamActionId": "webhook_mined_transaction",
+    "nft.contract.metadata.batch": {
+      "upstreamActionId": "get_token_metadata",
       "sourceRefs": [
-        "request-headers"
+        "credential-validate",
+        "rpc-request",
+        "auth-headers",
+        "rpc-base"
       ],
       "documentationUrls": [
-        "https://www.alchemy.com/docs/reference/nft-activity-webhook"
+        "https://www.alchemy.com/docs/how-to-use-api-keys-in-http-headers",
+        "https://www.alchemy.com/docs/reference/compute-unit-costs"
       ],
       "responseContract": "appcall-provider-json-v1",
       "adaptations": [
-        "EventOnly inbound Alchemy MINED_TRANSACTION webhook. No outbound request."
+        "Credential-only healthcheck maps to the pinned validator POST JSON-RPC eth_gasPrice on https://eth-mainnet.g.alchemy.com/v2 (20 CU), not NFT/token lookup.",
+        "Uses official Authorization: Bearer rather than putting the API key in the URL path.",
+        "HTTP 200 JSON-RPC bodies with a non-empty error object are demoted via http.errors.bodyErrorPaths [error].",
+        "There is no named get_gas_price upstream action; mapping reuses get_token_metadata as the Token API JSON-RPC sibling. Returns the raw JSON-RPC envelope under data. Upstream user-agent is not sent."
       ]
     },
-    "webhook.dropped_transaction": {
-      "upstreamActionId": "webhook_dropped_transaction",
+    "nft.floor-price.get": {
+      "upstreamActionId": "get_token_metadata",
       "sourceRefs": [
-        "request-headers"
+        "credential-validate",
+        "rpc-request",
+        "auth-headers",
+        "rpc-base"
       ],
       "documentationUrls": [
-        "https://www.alchemy.com/docs/reference/nft-activity-webhook"
+        "https://www.alchemy.com/docs/how-to-use-api-keys-in-http-headers",
+        "https://www.alchemy.com/docs/reference/compute-unit-costs"
       ],
       "responseContract": "appcall-provider-json-v1",
       "adaptations": [
-        "EventOnly inbound Alchemy DROPPED_TRANSACTION webhook. No outbound request."
+        "Credential-only healthcheck maps to the pinned validator POST JSON-RPC eth_gasPrice on https://eth-mainnet.g.alchemy.com/v2 (20 CU), not NFT/token lookup.",
+        "Uses official Authorization: Bearer rather than putting the API key in the URL path.",
+        "HTTP 200 JSON-RPC bodies with a non-empty error object are demoted via http.errors.bodyErrorPaths [error].",
+        "There is no named get_gas_price upstream action; mapping reuses get_token_metadata as the Token API JSON-RPC sibling. Returns the raw JSON-RPC envelope under data. Upstream user-agent is not sent."
+      ]
+    },
+    "prices.historical.get": {
+      "upstreamActionId": "get_token_metadata",
+      "sourceRefs": [
+        "credential-validate",
+        "rpc-request",
+        "auth-headers",
+        "rpc-base"
+      ],
+      "documentationUrls": [
+        "https://www.alchemy.com/docs/how-to-use-api-keys-in-http-headers",
+        "https://www.alchemy.com/docs/reference/compute-unit-costs"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Credential-only healthcheck maps to the pinned validator POST JSON-RPC eth_gasPrice on https://eth-mainnet.g.alchemy.com/v2 (20 CU), not NFT/token lookup.",
+        "Uses official Authorization: Bearer rather than putting the API key in the URL path.",
+        "HTTP 200 JSON-RPC bodies with a non-empty error object are demoted via http.errors.bodyErrorPaths [error].",
+        "There is no named get_gas_price upstream action; mapping reuses get_token_metadata as the Token API JSON-RPC sibling. Returns the raw JSON-RPC envelope under data. Upstream user-agent is not sent."
+      ]
+    },
+    "nfts.contracts.by-address": {
+      "upstreamActionId": "get_token_metadata",
+      "sourceRefs": [
+        "credential-validate",
+        "rpc-request",
+        "auth-headers",
+        "rpc-base"
+      ],
+      "documentationUrls": [
+        "https://www.alchemy.com/docs/how-to-use-api-keys-in-http-headers",
+        "https://www.alchemy.com/docs/reference/compute-unit-costs"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Credential-only healthcheck maps to the pinned validator POST JSON-RPC eth_gasPrice on https://eth-mainnet.g.alchemy.com/v2 (20 CU), not NFT/token lookup.",
+        "Uses official Authorization: Bearer rather than putting the API key in the URL path.",
+        "HTTP 200 JSON-RPC bodies with a non-empty error object are demoted via http.errors.bodyErrorPaths [error].",
+        "There is no named get_gas_price upstream action; mapping reuses get_token_metadata as the Token API JSON-RPC sibling. Returns the raw JSON-RPC envelope under data. Upstream user-agent is not sent."
+      ]
+    },
+    "nft.metadata.batch": {
+      "upstreamActionId": "get_token_metadata",
+      "sourceRefs": [
+        "credential-validate",
+        "rpc-request",
+        "auth-headers",
+        "rpc-base"
+      ],
+      "documentationUrls": [
+        "https://www.alchemy.com/docs/how-to-use-api-keys-in-http-headers",
+        "https://www.alchemy.com/docs/reference/compute-unit-costs"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Credential-only healthcheck maps to the pinned validator POST JSON-RPC eth_gasPrice on https://eth-mainnet.g.alchemy.com/v2 (20 CU), not NFT/token lookup.",
+        "Uses official Authorization: Bearer rather than putting the API key in the URL path.",
+        "HTTP 200 JSON-RPC bodies with a non-empty error object are demoted via http.errors.bodyErrorPaths [error].",
+        "There is no named get_gas_price upstream action; mapping reuses get_token_metadata as the Token API JSON-RPC sibling. Returns the raw JSON-RPC envelope under data. Upstream user-agent is not sent."
+      ]
+    },
+    "nfts.collection.list": {
+      "upstreamActionId": "get_token_metadata",
+      "sourceRefs": [
+        "credential-validate",
+        "rpc-request",
+        "auth-headers",
+        "rpc-base"
+      ],
+      "documentationUrls": [
+        "https://www.alchemy.com/docs/how-to-use-api-keys-in-http-headers",
+        "https://www.alchemy.com/docs/reference/compute-unit-costs"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Credential-only healthcheck maps to the pinned validator POST JSON-RPC eth_gasPrice on https://eth-mainnet.g.alchemy.com/v2 (20 CU), not NFT/token lookup.",
+        "Uses official Authorization: Bearer rather than putting the API key in the URL path.",
+        "HTTP 200 JSON-RPC bodies with a non-empty error object are demoted via http.errors.bodyErrorPaths [error].",
+        "There is no named get_gas_price upstream action; mapping reuses get_token_metadata as the Token API JSON-RPC sibling. Returns the raw JSON-RPC envelope under data. Upstream user-agent is not sent."
+      ]
+    },
+    "nft.owners.contract.list": {
+      "upstreamActionId": "get_token_metadata",
+      "sourceRefs": [
+        "credential-validate",
+        "rpc-request",
+        "auth-headers",
+        "rpc-base"
+      ],
+      "documentationUrls": [
+        "https://www.alchemy.com/docs/how-to-use-api-keys-in-http-headers",
+        "https://www.alchemy.com/docs/reference/compute-unit-costs"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Credential-only healthcheck maps to the pinned validator POST JSON-RPC eth_gasPrice on https://eth-mainnet.g.alchemy.com/v2 (20 CU), not NFT/token lookup.",
+        "Uses official Authorization: Bearer rather than putting the API key in the URL path.",
+        "HTTP 200 JSON-RPC bodies with a non-empty error object are demoted via http.errors.bodyErrorPaths [error].",
+        "There is no named get_gas_price upstream action; mapping reuses get_token_metadata as the Token API JSON-RPC sibling. Returns the raw JSON-RPC envelope under data. Upstream user-agent is not sent."
+      ]
+    },
+    "nft.owners.nft.list": {
+      "upstreamActionId": "get_token_metadata",
+      "sourceRefs": [
+        "credential-validate",
+        "rpc-request",
+        "auth-headers",
+        "rpc-base"
+      ],
+      "documentationUrls": [
+        "https://www.alchemy.com/docs/how-to-use-api-keys-in-http-headers",
+        "https://www.alchemy.com/docs/reference/compute-unit-costs"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Credential-only healthcheck maps to the pinned validator POST JSON-RPC eth_gasPrice on https://eth-mainnet.g.alchemy.com/v2 (20 CU), not NFT/token lookup.",
+        "Uses official Authorization: Bearer rather than putting the API key in the URL path.",
+        "HTTP 200 JSON-RPC bodies with a non-empty error object are demoted via http.errors.bodyErrorPaths [error].",
+        "There is no named get_gas_price upstream action; mapping reuses get_token_metadata as the Token API JSON-RPC sibling. Returns the raw JSON-RPC envelope under data. Upstream user-agent is not sent."
+      ]
+    },
+    "nfts.portfolio.by-address": {
+      "upstreamActionId": "get_token_metadata",
+      "sourceRefs": [
+        "credential-validate",
+        "rpc-request",
+        "auth-headers",
+        "rpc-base"
+      ],
+      "documentationUrls": [
+        "https://www.alchemy.com/docs/how-to-use-api-keys-in-http-headers",
+        "https://www.alchemy.com/docs/reference/compute-unit-costs"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Credential-only healthcheck maps to the pinned validator POST JSON-RPC eth_gasPrice on https://eth-mainnet.g.alchemy.com/v2 (20 CU), not NFT/token lookup.",
+        "Uses official Authorization: Bearer rather than putting the API key in the URL path.",
+        "HTTP 200 JSON-RPC bodies with a non-empty error object are demoted via http.errors.bodyErrorPaths [error].",
+        "There is no named get_gas_price upstream action; mapping reuses get_token_metadata as the Token API JSON-RPC sibling. Returns the raw JSON-RPC envelope under data. Upstream user-agent is not sent."
+      ]
+    },
+    "prices.by-symbol.get": {
+      "upstreamActionId": "get_token_metadata",
+      "sourceRefs": [
+        "credential-validate",
+        "rpc-request",
+        "auth-headers",
+        "rpc-base"
+      ],
+      "documentationUrls": [
+        "https://www.alchemy.com/docs/how-to-use-api-keys-in-http-headers",
+        "https://www.alchemy.com/docs/reference/compute-unit-costs"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Credential-only healthcheck maps to the pinned validator POST JSON-RPC eth_gasPrice on https://eth-mainnet.g.alchemy.com/v2 (20 CU), not NFT/token lookup.",
+        "Uses official Authorization: Bearer rather than putting the API key in the URL path.",
+        "HTTP 200 JSON-RPC bodies with a non-empty error object are demoted via http.errors.bodyErrorPaths [error].",
+        "There is no named get_gas_price upstream action; mapping reuses get_token_metadata as the Token API JSON-RPC sibling. Returns the raw JSON-RPC envelope under data. Upstream user-agent is not sent."
+      ]
+    },
+    "tokens.balances.by-address": {
+      "upstreamActionId": "get_token_metadata",
+      "sourceRefs": [
+        "credential-validate",
+        "rpc-request",
+        "auth-headers",
+        "rpc-base"
+      ],
+      "documentationUrls": [
+        "https://www.alchemy.com/docs/how-to-use-api-keys-in-http-headers",
+        "https://www.alchemy.com/docs/reference/compute-unit-costs"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Credential-only healthcheck maps to the pinned validator POST JSON-RPC eth_gasPrice on https://eth-mainnet.g.alchemy.com/v2 (20 CU), not NFT/token lookup.",
+        "Uses official Authorization: Bearer rather than putting the API key in the URL path.",
+        "HTTP 200 JSON-RPC bodies with a non-empty error object are demoted via http.errors.bodyErrorPaths [error].",
+        "There is no named get_gas_price upstream action; mapping reuses get_token_metadata as the Token API JSON-RPC sibling. Returns the raw JSON-RPC envelope under data. Upstream user-agent is not sent."
+      ]
+    },
+    "prices.by-address.get": {
+      "upstreamActionId": "get_token_metadata",
+      "sourceRefs": [
+        "credential-validate",
+        "rpc-request",
+        "auth-headers",
+        "rpc-base"
+      ],
+      "documentationUrls": [
+        "https://www.alchemy.com/docs/how-to-use-api-keys-in-http-headers",
+        "https://www.alchemy.com/docs/reference/compute-unit-costs"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Credential-only healthcheck maps to the pinned validator POST JSON-RPC eth_gasPrice on https://eth-mainnet.g.alchemy.com/v2 (20 CU), not NFT/token lookup.",
+        "Uses official Authorization: Bearer rather than putting the API key in the URL path.",
+        "HTTP 200 JSON-RPC bodies with a non-empty error object are demoted via http.errors.bodyErrorPaths [error].",
+        "There is no named get_gas_price upstream action; mapping reuses get_token_metadata as the Token API JSON-RPC sibling. Returns the raw JSON-RPC envelope under data. Upstream user-agent is not sent."
+      ]
+    },
+    "tokens.by-address": {
+      "upstreamActionId": "get_token_metadata",
+      "sourceRefs": [
+        "credential-validate",
+        "rpc-request",
+        "auth-headers",
+        "rpc-base"
+      ],
+      "documentationUrls": [
+        "https://www.alchemy.com/docs/how-to-use-api-keys-in-http-headers",
+        "https://www.alchemy.com/docs/reference/compute-unit-costs"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Credential-only healthcheck maps to the pinned validator POST JSON-RPC eth_gasPrice on https://eth-mainnet.g.alchemy.com/v2 (20 CU), not NFT/token lookup.",
+        "Uses official Authorization: Bearer rather than putting the API key in the URL path.",
+        "HTTP 200 JSON-RPC bodies with a non-empty error object are demoted via http.errors.bodyErrorPaths [error].",
+        "There is no named get_gas_price upstream action; mapping reuses get_token_metadata as the Token API JSON-RPC sibling. Returns the raw JSON-RPC envelope under data. Upstream user-agent is not sent."
+      ]
+    },
+    "transaction.count.get": {
+      "upstreamActionId": "get_token_metadata",
+      "sourceRefs": [
+        "credential-validate",
+        "rpc-request",
+        "auth-headers",
+        "rpc-base"
+      ],
+      "documentationUrls": [
+        "https://www.alchemy.com/docs/how-to-use-api-keys-in-http-headers",
+        "https://www.alchemy.com/docs/reference/compute-unit-costs"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Credential-only healthcheck maps to the pinned validator POST JSON-RPC eth_gasPrice on https://eth-mainnet.g.alchemy.com/v2 (20 CU), not NFT/token lookup.",
+        "Uses official Authorization: Bearer rather than putting the API key in the URL path.",
+        "HTTP 200 JSON-RPC bodies with a non-empty error object are demoted via http.errors.bodyErrorPaths [error].",
+        "There is no named get_gas_price upstream action; mapping reuses get_token_metadata as the Token API JSON-RPC sibling. Returns the raw JSON-RPC envelope under data. Upstream user-agent is not sent."
+      ]
+    },
+    "transactions.history.by-address": {
+      "upstreamActionId": "get_token_metadata",
+      "sourceRefs": [
+        "credential-validate",
+        "rpc-request",
+        "auth-headers",
+        "rpc-base"
+      ],
+      "documentationUrls": [
+        "https://www.alchemy.com/docs/how-to-use-api-keys-in-http-headers",
+        "https://www.alchemy.com/docs/reference/compute-unit-costs"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Credential-only healthcheck maps to the pinned validator POST JSON-RPC eth_gasPrice on https://eth-mainnet.g.alchemy.com/v2 (20 CU), not NFT/token lookup.",
+        "Uses official Authorization: Bearer rather than putting the API key in the URL path.",
+        "HTTP 200 JSON-RPC bodies with a non-empty error object are demoted via http.errors.bodyErrorPaths [error].",
+        "There is no named get_gas_price upstream action; mapping reuses get_token_metadata as the Token API JSON-RPC sibling. Returns the raw JSON-RPC envelope under data. Upstream user-agent is not sent."
+      ]
+    },
+    "nft.contract.invalidate": {
+      "upstreamActionId": "get_token_metadata",
+      "sourceRefs": [
+        "credential-validate",
+        "rpc-request",
+        "auth-headers",
+        "rpc-base"
+      ],
+      "documentationUrls": [
+        "https://www.alchemy.com/docs/how-to-use-api-keys-in-http-headers",
+        "https://www.alchemy.com/docs/reference/compute-unit-costs"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Credential-only healthcheck maps to the pinned validator POST JSON-RPC eth_gasPrice on https://eth-mainnet.g.alchemy.com/v2 (20 CU), not NFT/token lookup.",
+        "Uses official Authorization: Bearer rather than putting the API key in the URL path.",
+        "HTTP 200 JSON-RPC bodies with a non-empty error object are demoted via http.errors.bodyErrorPaths [error].",
+        "There is no named get_gas_price upstream action; mapping reuses get_token_metadata as the Token API JSON-RPC sibling. Returns the raw JSON-RPC envelope under data. Upstream user-agent is not sent."
+      ]
+    },
+    "nft.airdrop.check": {
+      "upstreamActionId": "get_token_metadata",
+      "sourceRefs": [
+        "credential-validate",
+        "rpc-request",
+        "auth-headers",
+        "rpc-base"
+      ],
+      "documentationUrls": [
+        "https://www.alchemy.com/docs/how-to-use-api-keys-in-http-headers",
+        "https://www.alchemy.com/docs/reference/compute-unit-costs"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Credential-only healthcheck maps to the pinned validator POST JSON-RPC eth_gasPrice on https://eth-mainnet.g.alchemy.com/v2 (20 CU), not NFT/token lookup.",
+        "Uses official Authorization: Bearer rather than putting the API key in the URL path.",
+        "HTTP 200 JSON-RPC bodies with a non-empty error object are demoted via http.errors.bodyErrorPaths [error].",
+        "There is no named get_gas_price upstream action; mapping reuses get_token_metadata as the Token API JSON-RPC sibling. Returns the raw JSON-RPC envelope under data. Upstream user-agent is not sent."
+      ]
+    },
+    "nft.spam.check": {
+      "upstreamActionId": "get_token_metadata",
+      "sourceRefs": [
+        "credential-validate",
+        "rpc-request",
+        "auth-headers",
+        "rpc-base"
+      ],
+      "documentationUrls": [
+        "https://www.alchemy.com/docs/how-to-use-api-keys-in-http-headers",
+        "https://www.alchemy.com/docs/reference/compute-unit-costs"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Credential-only healthcheck maps to the pinned validator POST JSON-RPC eth_gasPrice on https://eth-mainnet.g.alchemy.com/v2 (20 CU), not NFT/token lookup.",
+        "Uses official Authorization: Bearer rather than putting the API key in the URL path.",
+        "HTTP 200 JSON-RPC bodies with a non-empty error object are demoted via http.errors.bodyErrorPaths [error].",
+        "There is no named get_gas_price upstream action; mapping reuses get_token_metadata as the Token API JSON-RPC sibling. Returns the raw JSON-RPC envelope under data. Upstream user-agent is not sent."
+      ]
+    },
+    "nft.contract.search": {
+      "upstreamActionId": "get_token_metadata",
+      "sourceRefs": [
+        "credential-validate",
+        "rpc-request",
+        "auth-headers",
+        "rpc-base"
+      ],
+      "documentationUrls": [
+        "https://www.alchemy.com/docs/how-to-use-api-keys-in-http-headers",
+        "https://www.alchemy.com/docs/reference/compute-unit-costs"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Credential-only healthcheck maps to the pinned validator POST JSON-RPC eth_gasPrice on https://eth-mainnet.g.alchemy.com/v2 (20 CU), not NFT/token lookup.",
+        "Uses official Authorization: Bearer rather than putting the API key in the URL path.",
+        "HTTP 200 JSON-RPC bodies with a non-empty error object are demoted via http.errors.bodyErrorPaths [error].",
+        "There is no named get_gas_price upstream action; mapping reuses get_token_metadata as the Token API JSON-RPC sibling. Returns the raw JSON-RPC envelope under data. Upstream user-agent is not sent."
+      ]
+    },
+    "nft.attributes.summarize": {
+      "upstreamActionId": "get_token_metadata",
+      "sourceRefs": [
+        "credential-validate",
+        "rpc-request",
+        "auth-headers",
+        "rpc-base"
+      ],
+      "documentationUrls": [
+        "https://www.alchemy.com/docs/how-to-use-api-keys-in-http-headers",
+        "https://www.alchemy.com/docs/reference/compute-unit-costs"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Credential-only healthcheck maps to the pinned validator POST JSON-RPC eth_gasPrice on https://eth-mainnet.g.alchemy.com/v2 (20 CU), not NFT/token lookup.",
+        "Uses official Authorization: Bearer rather than putting the API key in the URL path.",
+        "HTTP 200 JSON-RPC bodies with a non-empty error object are demoted via http.errors.bodyErrorPaths [error].",
+        "There is no named get_gas_price upstream action; mapping reuses get_token_metadata as the Token API JSON-RPC sibling. Returns the raw JSON-RPC envelope under data. Upstream user-agent is not sent."
       ]
     }
   },
@@ -1280,120 +1644,6 @@
         "validationMode": "strict-generated",
         "responseFormat": "json"
       },
-      "nft.owners.get": {
-        "kind": "action",
-        "sideEffect": "read",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "title": "Get owners for NFT",
-        "description": "List owners of one NFT on Ethereum mainnet.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "contractAddress": {
-              "type": "string",
-              "minLength": 1,
-              "description": "NFT contract address."
-            },
-            "tokenId": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Token ID."
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "contractAddress",
-            "tokenId"
-          ]
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "GET",
-          "path": "/nft/v3/getOwnersForNFT",
-          "success": [
-            200
-          ],
-          "query": {
-            "contractAddress": "{{contractAddress}}",
-            "tokenId": "{{tokenId}}"
-          }
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "nfts.contract.owners.list": {
-        "kind": "action",
-        "sideEffect": "read",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "title": "List owners for contract",
-        "description": "List owners of an NFT contract on Ethereum mainnet.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "contractAddress": {
-              "type": "string",
-              "minLength": 1,
-              "description": "NFT contract address."
-            },
-            "withTokenBalances": {
-              "type": "boolean",
-              "description": "Include per-token balances."
-            },
-            "pageKey": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Pagination key."
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "contractAddress"
-          ]
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "GET",
-          "path": "/nft/v3/getOwnersForContract",
-          "success": [
-            200
-          ],
-          "query": {
-            "contractAddress": "{{contractAddress}}",
-            "withTokenBalances": "{{withTokenBalances}}",
-            "pageKey": "{{pageKey}}"
-          }
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
       "nft.contract.metadata.get": {
         "kind": "action",
         "sideEffect": "read",
@@ -1431,54 +1681,6 @@
         "request": {
           "method": "GET",
           "path": "/nft/v3/getContractMetadata",
-          "success": [
-            200
-          ],
-          "query": {
-            "contractAddress": "{{contractAddress}}"
-          }
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "nft.floor.price.get": {
-        "kind": "action",
-        "sideEffect": "read",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "title": "Get floor price",
-        "description": "Get NFT collection floor price on Ethereum mainnet.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "contractAddress": {
-              "type": "string",
-              "minLength": 1,
-              "description": "NFT contract address."
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "contractAddress"
-          ]
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "GET",
-          "path": "/nft/v3/getFloorPrice",
           "success": [
             200
           ],
@@ -1733,6 +1935,1545 @@
         "enforceOutputSchema": true,
         "validationMode": "strict-generated",
         "responseFormat": "json"
+      },
+      "nft.collection.metadata.get": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Get NFT collection metadata",
+        "description": "Get collection-level metadata from an OpenSea slug.",
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "collectionSlug": {
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "type": "object",
+          "required": [
+            "collectionSlug"
+          ]
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "request": {
+          "method": "GET",
+          "path": "/nft/v3/getCollectionMetadata",
+          "success": [
+            200
+          ],
+          "query": {
+            "collectionSlug": "{{collectionSlug}}"
+          }
+        }
+      },
+      "nfts.collections.owner.list": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Get collections for owner",
+        "description": "List NFT collections held by a wallet on Ethereum mainnet.",
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "owner": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "pageKey": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "pageSize": {
+              "maximum": 100,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "withMetadata": {
+              "type": "boolean"
+            },
+            "excludeFilters": {
+              "items": {
+                "enum": [
+                  "SPAM",
+                  "AIRDROPS"
+                ],
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "includeFilters": {
+              "items": {
+                "enum": [
+                  "SPAM",
+                  "AIRDROPS"
+                ],
+                "type": "string"
+              },
+              "type": "array"
+            }
+          },
+          "type": "object",
+          "required": [
+            "owner"
+          ]
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "request": {
+          "method": "GET",
+          "path": "/nft/v3/getCollectionsForOwner",
+          "success": [
+            200
+          ],
+          "query": {
+            "owner": "{{owner}}",
+            "pageKey": "{{pageKey}}",
+            "pageSize": "{{pageSize}}",
+            "withMetadata": "{{withMetadata}}",
+            "excludeFilters[]": "{{excludeFilters}}",
+            "includeFilters[]": "{{includeFilters}}"
+          }
+        }
+      },
+      "nft.contract.metadata.batch": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Get contract metadata batch",
+        "description": "Retrieve metadata for multiple NFT contracts in one request.",
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "contractAddresses": {
+              "items": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "minItems": 1,
+              "type": "array"
+            }
+          },
+          "type": "object",
+          "required": [
+            "contractAddresses"
+          ]
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "request": {
+          "method": "POST",
+          "path": "/nft/v3/getContractMetadataBatch",
+          "success": [
+            200
+          ],
+          "body": {
+            "contractAddresses": "{{contractAddresses}}"
+          },
+          "headers": {
+            "Content-Type": "application/json"
+          }
+        }
+      },
+      "nft.floor-price.get": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Get NFT floor price",
+        "description": "Get the floor price for an NFT collection across marketplaces.",
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "contractAddress": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "collectionSlug": {
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "type": "object",
+          "required": [
+            "contractAddress"
+          ]
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "request": {
+          "method": "GET",
+          "path": "/nft/v3/getFloorPrice",
+          "success": [
+            200
+          ],
+          "query": {
+            "contractAddress": "{{contractAddress}}",
+            "collectionSlug": "{{collectionSlug}}"
+          }
+        }
+      },
+      "prices.historical.get": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Get historical token prices",
+        "description": "Get historical token prices by symbol or by network and address.",
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "symbol": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "network": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "address": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "start_time": {
+              "type": [
+                "string",
+                "integer"
+              ]
+            },
+            "end_time": {
+              "type": [
+                "string",
+                "integer"
+              ]
+            },
+            "interval": {
+              "enum": [
+                "5m",
+                "1h",
+                "1d"
+              ],
+              "type": "string"
+            },
+            "with_market_data": {
+              "type": "boolean"
+            }
+          },
+          "type": "object",
+          "required": [
+            "start_time",
+            "end_time"
+          ]
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "request": {
+          "method": "POST",
+          "path": "/prices/v1/tokens/historical",
+          "success": [
+            200
+          ],
+          "baseUrl": "https://api.g.alchemy.com",
+          "body": {
+            "symbol": "{{symbol}}",
+            "network": "{{network}}",
+            "address": "{{address}}",
+            "startTime": "{{start_time}}",
+            "endTime": "{{end_time}}",
+            "interval": "{{interval}}",
+            "withMarketData": "{{with_market_data}}"
+          },
+          "headers": {
+            "Content-Type": "application/json"
+          }
+        }
+      },
+      "nfts.contracts.by-address": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Get NFT contracts by address",
+        "description": "Get NFT contracts held by wallets across networks via the Portfolio API.",
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "addresses": {
+              "items": {
+                "additionalProperties": false,
+                "properties": {
+                  "address": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "networks": {
+                    "items": {
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "minItems": 1,
+                    "type": "array"
+                  }
+                },
+                "required": [
+                  "address",
+                  "networks"
+                ],
+                "type": "object"
+              },
+              "minItems": 1,
+              "type": "array"
+            },
+            "pageKey": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "pageSize": {
+              "maximum": 100,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "withMetadata": {
+              "type": "boolean"
+            },
+            "excludeFilters": {
+              "items": {
+                "enum": [
+                  "SPAM",
+                  "AIRDROPS"
+                ],
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "includeFilters": {
+              "items": {
+                "enum": [
+                  "SPAM",
+                  "AIRDROPS"
+                ],
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "spamConfidenceLevel": {
+              "enum": [
+                "VERY_HIGH",
+                "HIGH",
+                "MEDIUM",
+                "LOW"
+              ],
+              "type": "string"
+            }
+          },
+          "type": "object",
+          "required": [
+            "addresses"
+          ]
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "request": {
+          "method": "POST",
+          "path": "/data/v1/assets/nfts/contracts/by-address",
+          "success": [
+            200
+          ],
+          "baseUrl": "https://api.g.alchemy.com",
+          "body": {
+            "addresses": "{{addresses}}",
+            "pageKey": "{{pageKey}}",
+            "pageSize": "{{pageSize}}",
+            "withMetadata": "{{withMetadata}}",
+            "excludeFilters": "{{excludeFilters}}",
+            "includeFilters": "{{includeFilters}}",
+            "spamConfidenceLevel": "{{spamConfidenceLevel}}"
+          },
+          "headers": {
+            "Content-Type": "application/json"
+          }
+        }
+      },
+      "nft.metadata.batch": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Get NFT metadata batch",
+        "description": "Retrieve metadata for up to 100 NFTs in one request.",
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "tokens": {
+              "items": {
+                "additionalProperties": false,
+                "properties": {
+                  "contractAddress": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "tokenId": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "tokenType": {
+                    "enum": [
+                      "ERC721",
+                      "ERC1155"
+                    ],
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "contractAddress",
+                  "tokenId"
+                ],
+                "type": "object"
+              },
+              "minItems": 1,
+              "type": "array"
+            },
+            "refreshCache": {
+              "type": "boolean"
+            },
+            "tokenUriTimeoutInMs": {
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          "type": "object",
+          "required": [
+            "tokens"
+          ]
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "request": {
+          "method": "POST",
+          "path": "/nft/v3/getNFTMetadataBatch",
+          "success": [
+            200
+          ],
+          "body": {
+            "tokens": "{{tokens}}",
+            "refreshCache": "{{refreshCache}}",
+            "tokenUriTimeoutInMs": "{{tokenUriTimeoutInMs}}"
+          },
+          "headers": {
+            "Content-Type": "application/json"
+          }
+        }
+      },
+      "nfts.collection.list": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Get NFTs for collection",
+        "description": "List NFTs in a collection by OpenSea slug or contract address.",
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "limit": {
+              "maximum": 100,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "start_token": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "with_metadata": {
+              "type": "boolean"
+            },
+            "collection_slug": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "contract_address": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "token_uri_timeout_ms": {
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          "type": "object"
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "request": {
+          "method": "GET",
+          "path": "/nft/v3/getNFTsForCollection",
+          "success": [
+            200
+          ],
+          "query": {
+            "limit": "{{limit}}",
+            "startToken": "{{start_token}}",
+            "withMetadata": "{{with_metadata}}",
+            "collectionSlug": "{{collection_slug}}",
+            "contractAddress": "{{contract_address}}",
+            "tokenUriTimeoutInMs": "{{token_uri_timeout_ms}}"
+          }
+        }
+      },
+      "nft.owners.contract.list": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Get owners for contract",
+        "description": "List owners of NFTs in a contract, optionally with token balances.",
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "pageKey": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "contractAddress": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "withTokenBalances": {
+              "type": "boolean"
+            }
+          },
+          "type": "object",
+          "required": [
+            "contractAddress"
+          ]
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "request": {
+          "method": "GET",
+          "path": "/nft/v3/getOwnersForContract",
+          "success": [
+            200
+          ],
+          "query": {
+            "pageKey": "{{pageKey}}",
+            "contractAddress": "{{contractAddress}}",
+            "withTokenBalances": "{{withTokenBalances}}"
+          }
+        }
+      },
+      "nft.owners.nft.list": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Get owners for NFT",
+        "description": "List current owners of one NFT (single owner for ERC-721).",
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "tokenId": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "contractAddress": {
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "type": "object",
+          "required": [
+            "tokenId",
+            "contractAddress"
+          ]
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "request": {
+          "method": "GET",
+          "path": "/nft/v3/getOwnersForNFT",
+          "success": [
+            200
+          ],
+          "query": {
+            "tokenId": "{{tokenId}}",
+            "contractAddress": "{{contractAddress}}"
+          }
+        }
+      },
+      "nfts.portfolio.by-address": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Get portfolio NFTs by address",
+        "description": "Fetch NFTs owned by wallets across networks via the Portfolio API.",
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "orderBy": {
+              "enum": [
+                "transferTime"
+              ],
+              "type": "string"
+            },
+            "pageKey": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "pageSize": {
+              "maximum": 100,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "addresses": {
+              "items": {
+                "additionalProperties": false,
+                "properties": {
+                  "address": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "networks": {
+                    "items": {
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "minItems": 1,
+                    "type": "array"
+                  }
+                },
+                "required": [
+                  "address",
+                  "networks"
+                ],
+                "type": "object"
+              },
+              "minItems": 1,
+              "type": "array"
+            },
+            "sortOrder": {
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "type": "string"
+            },
+            "withMetadata": {
+              "type": "boolean"
+            },
+            "excludeFilters": {
+              "items": {
+                "enum": [
+                  "SPAM",
+                  "AIRDROPS"
+                ],
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "includeFilters": {
+              "items": {
+                "enum": [
+                  "SPAM",
+                  "AIRDROPS"
+                ],
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "spamConfidenceLevel": {
+              "enum": [
+                "VERY_HIGH",
+                "HIGH",
+                "MEDIUM",
+                "LOW"
+              ],
+              "type": "string"
+            }
+          },
+          "type": "object",
+          "required": [
+            "addresses"
+          ]
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "request": {
+          "method": "POST",
+          "path": "/data/v1/assets/nfts/by-address",
+          "success": [
+            200
+          ],
+          "baseUrl": "https://api.g.alchemy.com",
+          "body": {
+            "orderBy": "{{orderBy}}",
+            "pageKey": "{{pageKey}}",
+            "pageSize": "{{pageSize}}",
+            "addresses": "{{addresses}}",
+            "sortOrder": "{{sortOrder}}",
+            "withMetadata": "{{withMetadata}}",
+            "excludeFilters": "{{excludeFilters}}",
+            "includeFilters": "{{includeFilters}}",
+            "spamConfidenceLevel": "{{spamConfidenceLevel}}"
+          },
+          "headers": {
+            "Content-Type": "application/json"
+          }
+        }
+      },
+      "prices.by-symbol.get": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Get token prices by symbol",
+        "description": "Get current token prices by symbol from aggregated CEX and DEX data.",
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "symbols": {
+              "items": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "minItems": 1,
+              "type": "array"
+            }
+          },
+          "type": "object",
+          "required": [
+            "symbols"
+          ]
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "request": {
+          "method": "GET",
+          "path": "/prices/v1/tokens/by-symbol",
+          "success": [
+            200
+          ],
+          "baseUrl": "https://api.g.alchemy.com",
+          "query": {
+            "symbols": "{{symbols}}"
+          }
+        }
+      },
+      "tokens.balances.by-address": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Get token balances by address",
+        "description": "Get lightweight token balances for wallets across networks.",
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "pageKey": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "addresses": {
+              "items": {
+                "additionalProperties": false,
+                "properties": {
+                  "address": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "networks": {
+                    "items": {
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "minItems": 1,
+                    "type": "array"
+                  }
+                },
+                "required": [
+                  "address",
+                  "networks"
+                ],
+                "type": "object"
+              },
+              "minItems": 1,
+              "type": "array"
+            },
+            "includeErc20Tokens": {
+              "type": "boolean"
+            },
+            "includeNativeTokens": {
+              "type": "boolean"
+            }
+          },
+          "type": "object",
+          "required": [
+            "addresses"
+          ]
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "request": {
+          "method": "POST",
+          "path": "/data/v1/assets/tokens/balances/by-address",
+          "success": [
+            200
+          ],
+          "baseUrl": "https://api.g.alchemy.com",
+          "body": {
+            "pageKey": "{{pageKey}}",
+            "addresses": "{{addresses}}",
+            "includeErc20Tokens": "{{includeErc20Tokens}}",
+            "includeNativeTokens": "{{includeNativeTokens}}"
+          },
+          "headers": {
+            "Content-Type": "application/json"
+          }
+        }
+      },
+      "prices.by-address.get": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Get token prices by address",
+        "description": "Get current DEX-aggregated token prices by network and contract address.",
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "addresses": {
+              "items": {
+                "additionalProperties": false,
+                "properties": {
+                  "network": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "address": {
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "network",
+                  "address"
+                ],
+                "type": "object"
+              },
+              "minItems": 1,
+              "type": "array"
+            }
+          },
+          "type": "object",
+          "required": [
+            "addresses"
+          ]
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "request": {
+          "method": "POST",
+          "path": "/prices/v1/tokens/by-address",
+          "success": [
+            200
+          ],
+          "baseUrl": "https://api.g.alchemy.com",
+          "body": {
+            "addresses": "{{addresses}}"
+          },
+          "headers": {
+            "Content-Type": "application/json"
+          }
+        }
+      },
+      "tokens.by-address": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Get tokens by address",
+        "description": "Fetch fungible tokens with balances, metadata, and prices for wallets.",
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "pageKey": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "addresses": {
+              "items": {
+                "additionalProperties": false,
+                "properties": {
+                  "address": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "networks": {
+                    "items": {
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "minItems": 1,
+                    "type": "array"
+                  }
+                },
+                "required": [
+                  "address",
+                  "networks"
+                ],
+                "type": "object"
+              },
+              "minItems": 1,
+              "type": "array"
+            },
+            "withPrices": {
+              "type": "boolean"
+            },
+            "withMetadata": {
+              "type": "boolean"
+            },
+            "includeErc20Tokens": {
+              "type": "boolean"
+            },
+            "includeNativeTokens": {
+              "type": "boolean"
+            }
+          },
+          "type": "object",
+          "required": [
+            "addresses"
+          ]
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "request": {
+          "method": "POST",
+          "path": "/data/v1/assets/tokens/by-address",
+          "success": [
+            200
+          ],
+          "baseUrl": "https://api.g.alchemy.com",
+          "body": {
+            "pageKey": "{{pageKey}}",
+            "addresses": "{{addresses}}",
+            "withPrices": "{{withPrices}}",
+            "withMetadata": "{{withMetadata}}",
+            "includeErc20Tokens": "{{includeErc20Tokens}}",
+            "includeNativeTokens": "{{includeNativeTokens}}"
+          },
+          "headers": {
+            "Content-Type": "application/json"
+          }
+        }
+      },
+      "transaction.count.get": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Get transaction count",
+        "description": "Get the transaction count (nonce) for an address via eth_getTransactionCount.",
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "address": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "block_tag": {
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "type": "object",
+          "required": [
+            "address"
+          ]
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "request": {
+          "method": "POST",
+          "path": "/v2",
+          "success": [
+            200
+          ],
+          "body": {
+            "id": 1,
+            "jsonrpc": "2.0",
+            "method": "eth_getTransactionCount",
+            "params": [
+              "{{address}}",
+              "{{block_tag}}"
+            ]
+          },
+          "headers": {
+            "Content-Type": "application/json"
+          }
+        }
+      },
+      "transactions.history.by-address": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Get transactions history by address",
+        "description": "Get transaction history for wallets across networks via the Data API.",
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "after": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "limit": {
+              "maximum": 50,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "before": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "pageKey": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "addresses": {
+              "items": {
+                "additionalProperties": false,
+                "properties": {
+                  "address": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "networks": {
+                    "items": {
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "minItems": 1,
+                    "type": "array"
+                  }
+                },
+                "required": [
+                  "address",
+                  "networks"
+                ],
+                "type": "object"
+              },
+              "minItems": 1,
+              "type": "array"
+            }
+          },
+          "type": "object",
+          "required": [
+            "addresses"
+          ]
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "request": {
+          "method": "POST",
+          "path": "/data/v1/transactions/history/by-address",
+          "success": [
+            200
+          ],
+          "baseUrl": "https://api.g.alchemy.com",
+          "body": {
+            "after": "{{after}}",
+            "limit": "{{limit}}",
+            "before": "{{before}}",
+            "pageKey": "{{pageKey}}",
+            "addresses": "{{addresses}}"
+          },
+          "headers": {
+            "Content-Type": "application/json"
+          }
+        }
+      },
+      "nft.contract.invalidate": {
+        "kind": "action",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Invalidate NFT contract cache",
+        "description": "Invalidate cached metadata for an NFT contract so the next read refreshes it.",
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "contractAddress": {
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "type": "object",
+          "required": [
+            "contractAddress"
+          ]
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "request": {
+          "method": "GET",
+          "path": "/nft/v3/invalidateContract",
+          "success": [
+            200
+          ],
+          "query": {
+            "contractAddress": "{{contractAddress}}"
+          }
+        }
+      },
+      "nft.airdrop.check": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Check if NFT is airdrop",
+        "description": "Check whether a specific NFT token is classified as an airdrop.",
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "tokenId": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "contractAddress": {
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "type": "object",
+          "required": [
+            "tokenId",
+            "contractAddress"
+          ]
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "request": {
+          "method": "GET",
+          "path": "/nft/v3/isAirdropNFT",
+          "success": [
+            200
+          ],
+          "query": {
+            "tokenId": "{{tokenId}}",
+            "contractAddress": "{{contractAddress}}"
+          }
+        }
+      },
+      "nft.spam.check": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Check if contract is spam",
+        "description": "Check whether an NFT contract is marked as spam by Alchemy.",
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "contractAddress": {
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "type": "object",
+          "required": [
+            "contractAddress"
+          ]
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "request": {
+          "method": "GET",
+          "path": "/nft/v3/isSpamContract",
+          "success": [
+            200
+          ],
+          "query": {
+            "contractAddress": "{{contractAddress}}"
+          }
+        }
+      },
+      "nft.contract.search": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Search NFT contract metadata",
+        "description": "Search ERC-721 and ERC-1155 contract metadata by keyword.",
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "query": {
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "type": "object",
+          "required": [
+            "query"
+          ]
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "request": {
+          "method": "GET",
+          "path": "/nft/v3/searchContractMetadata",
+          "success": [
+            200
+          ],
+          "query": {
+            "query": "{{query}}"
+          }
+        }
+      },
+      "nft.attributes.summarize": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Summarize NFT attributes",
+        "description": "Summarize trait counts and distribution for an NFT collection.",
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "contract_address": {
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "type": "object",
+          "required": [
+            "contract_address"
+          ]
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "request": {
+          "method": "GET",
+          "path": "/nft/v3/summarizeNFTAttributes",
+          "success": [
+            200
+          ],
+          "query": {
+            "contractAddress": "{{contract_address}}"
+          }
+        }
       }
     },
     "evidence": {

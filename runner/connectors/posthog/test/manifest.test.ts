@@ -31,8 +31,10 @@ describe("posthog manifest", () => {
       value: "Bearer {{apiKey}}",
     });
     expect(manifest.network.allowedHosts).toEqual([
-      "{{region}}.posthog.com",
-      "{{region}}.i.posthog.com",
+      "us.posthog.com",
+      "eu.posthog.com",
+      "us.i.posthog.com",
+      "eu.i.posthog.com",
     ]);
     expect(manifest.auth.setup.fields.map((field: { key: string }) => field.key)).toEqual([
       "apiKey",
