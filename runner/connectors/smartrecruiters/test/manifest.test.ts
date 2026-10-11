@@ -50,7 +50,26 @@ const G2_EFFECTS: Record<string, [string, string | undefined, string | undefined
   "postings.get": ["read", undefined, undefined, "internal_postings_read"],
 };
 
-const NEW_EFFECTS = { ...G1_EFFECTS, ...G2_EFFECTS };
+// G3 lock: [sideEffect, effectPolicy, reconcile, OAuth scope].
+const G3_EFFECTS: Record<string, [string, string | undefined, string | undefined, string]> = {
+  "interviews.create": ["write", undefined, undefined, "interviews_write"],
+  "interviews.get": ["read", undefined, undefined, "interviews_read"],
+  "interviews.update": ["write", "Reconcile", "interviews.get", "interviews_write"],
+  "interviews.delete": ["destructive", undefined, undefined, "interviews_write"],
+  "interview_types.list": ["read", undefined, undefined, "interview_types_read"],
+  "messages.share": ["write", undefined, undefined, "messages_write"],
+  "messages.list": ["read", undefined, undefined, "messages_read"],
+  "offers.list": ["read", undefined, undefined, "candidates_offers_read"],
+  "offers.get": ["read", undefined, undefined, "candidates_offers_read"],
+  "offers.search": ["read", undefined, undefined, "candidates_offers_read"],
+  "reviews.list": ["read", undefined, undefined, "reviews_read"],
+  "reviews.get": ["read", undefined, undefined, "reviews_read"],
+  "scorecards.criteria.list": ["read", undefined, undefined, "jobs_read"],
+  "users.get": ["read", undefined, undefined, "users_read"],
+  "users.me": ["read", undefined, undefined, "user_me_read"],
+};
+
+const NEW_EFFECTS = { ...G1_EFFECTS, ...G2_EFFECTS, ...G3_EFFECTS };
 
 const STRICT_KEYS = new Set([
   "type",
@@ -95,8 +114,8 @@ describe("SmartRecruiters manifest", () => {
     expect(manifest.key).toBe("smartrecruiters");
   });
 
-  it("has version 0.5.0", () => {
-    expect(manifest.version).toBe("0.5.0");
+  it("has version 0.6.0", () => {
+    expect(manifest.version).toBe("0.6.0");
   });
 
   it("uses bun runtime", () => {
@@ -137,9 +156,9 @@ describe("SmartRecruiters manifest", () => {
     expect(manifest.operations.healthcheck.request.query).toEqual({ limit: 1 });
   });
 
-  it("declares the 8 SR-1 operations plus 15 G1 and 15 G2 operations (38)", () => {
+  it("declares the 8 SR-1 operations plus 15 G1, 15 G2 and 15 G3 operations (53)", () => {
     expect(Object.keys(manifest.operations).sort()).toEqual([...SR1_OPS, ...Object.keys(NEW_EFFECTS)].sort());
-    expect(Object.keys(manifest.operations)).toHaveLength(38);
+    expect(Object.keys(manifest.operations)).toHaveLength(53);
   });
 
   it("declares authenticated healthcheck request", () => {
@@ -222,5 +241,63 @@ describe("SmartRecruiters manifest", () => {
     expect(ops["jobs.update"]!.sideEffect).toBe("write");
     expect(ops["jobs.update"]!.effectPolicy).toBeUndefined();
     expect(ops["jobs.update"]!.reconcile).toBeUndefined();
+  });
+
+  it("G3 selflock: exact op ids, count, effects and reconcile targets", () => {
+    const g3Ids = [
+      "interview_types.list",
+      "interviews.create",
+      "interviews.delete",
+      "interviews.get",
+      "interviews.update",
+      "messages.list",
+      "messages.share",
+      "offers.get",
+      "offers.list",
+      "offers.search",
+      "reviews.get",
+      "reviews.list",
+      "scorecards.criteria.list",
+      "users.get",
+      "users.me",
+    ];
+    expect(Object.keys(G3_EFFECTS).sort()).toEqual(g3Ids);
+    expect(g3Ids).toHaveLength(15);
+    for (const name of g3Ids) expect(ops[name]).toBeTruthy();
+    const effects = Object.fromEntries(
+      g3Ids.map((name) => [name, [ops[name]!.kind, ops[name]!.sideEffect, ops[name]!.effectPolicy ?? null, ops[name]!.reconcile ?? null]]),
+    );
+    expect(effects).toEqual({
+      "interview_types.list": ["action", "read", null, null],
+      "interviews.create": ["action", "write", null, null],
+      "interviews.delete": ["action", "destructive", null, null],
+      "interviews.get": ["action", "read", null, null],
+      "interviews.update": ["action", "write", "Reconcile", "interviews.get"],
+      "messages.list": ["action", "read", null, null],
+      "messages.share": ["action", "write", null, null],
+      "offers.get": ["action", "read", null, null],
+      "offers.list": ["action", "read", null, null],
+      "offers.search": ["action", "read", null, null],
+      "reviews.get": ["action", "read", null, null],
+      "reviews.list": ["action", "read", null, null],
+      "scorecards.criteria.list": ["action", "read", null, null],
+      "users.get": ["action", "read", null, null],
+      "users.me": ["action", "read", null, null],
+    });
+    // The only G3 reconcile target is interviews.get (a read).
+    const targets = g3Ids.filter((n) => ops[n]!.reconcile).map((n) => [n, ops[n]!.reconcile]);
+    expect(targets).toEqual([["interviews.update", "interviews.get"]]);
+    expect(ops["interviews.get"]!.sideEffect).toBe("read");
+  });
+
+  it("interviews.delete is destructive and omits effect keys", () => {
+    expect(ops["interviews.delete"]!.sideEffect).toBe("destructive");
+    expect(ops["interviews.delete"]!.effectPolicy).toBeUndefined();
+    expect(ops["interviews.delete"]!.reconcile).toBeUndefined();
+  });
+
+  it("interviews.update only accepts fields interviews.get returns verbatim", () => {
+    const props = Object.keys((ops["interviews.update"]!.inputSchema as { properties: object }).properties).sort();
+    expect(props).toEqual(["interviewId", "location", "timezone"]);
   });
 });

@@ -35,6 +35,27 @@ export function userIdSegment(value: unknown, field = "userId"): string {
   return stripPrefixedId(value, field, ["sr-user:"]);
 }
 
+/** Interview id for path: accepts raw or `sr-interview:`-prefixed (interviews.list form). */
+export function interviewIdSegment(value: unknown, field = "interviewId"): string {
+  return stripPrefixedId(value, field, ["sr-interview:"]);
+}
+
+function withPrefix(prefix: string, rawId: string): string {
+  return rawId.startsWith(prefix) ? rawId : `${prefix}${rawId}`;
+}
+
 export function withJobPrefix(rawId: string): string {
-  return rawId.startsWith("sr-job:") ? rawId : `sr-job:${rawId}`;
+  return withPrefix("sr-job:", rawId);
+}
+
+export function withCandidatePrefix(rawId: string): string {
+  return withPrefix("sr-candidate:", rawId);
+}
+
+export function withUserPrefix(rawId: string): string {
+  return withPrefix("sr-user:", rawId);
+}
+
+export function withInterviewPrefix(rawId: string): string {
+  return withPrefix("sr-interview:", rawId);
 }
