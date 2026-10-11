@@ -1,17 +1,7 @@
 {
-  "key": "nozbe-teams",
-  "name": "Nozbe",
-  "version": "0.2.0",
-  "runtime": "bun",
-  "visibility": "public",
-  "categories": [
-    "productivity"
-  ],
   "auth": {
-    "type": "api_key",
     "scopes": [],
     "setup": {
-      "mode": "api_key",
       "fields": [
         {
           "key": "apiKey",
@@ -19,81 +9,94 @@
           "required": true,
           "secret": true
         }
-      ]
-    }
+      ],
+      "mode": "api_key"
+    },
+    "type": "api_key"
   },
-  "provenance": {
-    "source": {
-      "url": "https://github.com/oomol-lab/open-connector",
-      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"
-    }
-  },
-  "network": {
-    "allowedHosts": [
-      "api4.nozbe.com"
-    ]
-  },
-  "models": [
-    "team",
-    "project",
-    "task",
-    "comment",
-    "tag",
-    "user"
+  "categories": [
+    "productivity"
   ],
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
+    }
+  },
   "http": {
-    "baseUrl": "https://api4.nozbe.com/v1/api",
     "auth": {
       "field": "apiKey",
       "in": "header",
       "name": "Authorization",
       "value": "apikey {{apiKey}}"
     },
-    "headers": {
-      "Accept": "application/json"
-    },
+    "baseUrl": "https://api4.nozbe.com/v1/api",
     "errors": {
-      "rateLimitStatuses": [
-        429
-      ],
-      "retryAfterHeader": "retry-after",
       "defaultRetryAfterSeconds": 30,
       "messagePaths": [
         "message",
         "error",
         "detail"
-      ]
+      ],
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after"
+    },
+    "headers": {
+      "Accept": "application/json"
     }
+  },
+  "key": "nozbe-teams",
+  "models": [
+    "attachment",
+    "comment",
+    "group_assignment",
+    "project",
+    "project_access",
+    "project_group",
+    "project_section",
+    "reminder",
+    "tag",
+    "tag_assignment",
+    "task",
+    "task_event",
+    "team",
+    "team_member",
+    "user"
+  ],
+  "name": "Nozbe",
+  "network": {
+    "allowedHosts": [
+      "api4.nozbe.com"
+    ]
   },
   "operations": {
     "healthcheck": {
+      "description": "Validate the Nozbe API token by listing one team via GET /teams?limit=1.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {},
+        "type": "object"
+      },
       "kind": "action",
-      "sideEffect": "read",
-      "timeoutMs": 5000,
       "maxInputBytes": 4096,
       "maxResponseBytes": 1048576,
-      "title": "Healthcheck",
-      "description": "Validate the Nozbe API token by listing one team.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {},
-        "additionalProperties": false
-      },
       "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
+        "additionalProperties": false,
         "properties": {
           "data": {
             "type": "array"
           }
         },
-        "additionalProperties": false
+        "required": [
+          "data"
+        ],
+        "type": "object"
       },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json",
       "request": {
         "method": "GET",
         "path": "/teams",
@@ -103,541 +106,305 @@
         "success": [
           200
         ]
-      }
-    },
-    "teams.list": {
-      "kind": "action",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 1048576,
-      "title": "List teams",
-      "description": "List teams accessible with the connected Nozbe API token.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "limit": {
-            "type": "integer",
-            "minimum": 1,
-            "maximum": 10000
-          },
-          "offset": {
-            "type": "integer",
-            "minimum": 0
-          },
-          "sortBy": {
-            "type": "string",
-            "minLength": 1
-          }
-        },
-        "additionalProperties": false
       },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "array"
-          }
-        },
-        "additionalProperties": false
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
       "responseFormat": "json",
-      "request": {
-        "method": "GET",
-        "path": "/teams",
-        "query": {
-          "limit": "{{limit}}",
-          "offset": "{{offset}}",
-          "sortBy": "{{sortBy}}"
-        },
-        "success": [
-          200
-        ]
-      }
-    },
-    "projects.list": {
-      "kind": "action",
       "sideEffect": "read",
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 1048576,
-      "title": "List projects",
-      "description": "List Nozbe projects with pagination, sorting, and team filters.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "limit": {
-            "type": "integer",
-            "minimum": 1,
-            "maximum": 10000
-          },
-          "offset": {
-            "type": "integer",
-            "minimum": 0
-          },
-          "sortBy": {
-            "type": "string",
-            "minLength": 1
-          },
-          "team_id": {
-            "type": "string",
-            "minLength": 1
-          },
-          "is_single_actions": {
-            "type": "boolean"
-          }
-        },
-        "additionalProperties": false
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "array"
-          }
-        },
-        "additionalProperties": false
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json",
-      "request": {
-        "method": "GET",
-        "path": "/projects",
-        "query": {
-          "limit": "{{limit}}",
-          "offset": "{{offset}}",
-          "sortBy": "{{sortBy}}",
-          "team_id": "{{team_id}}",
-          "is_single_actions": "{{is_single_actions}}"
-        },
-        "success": [
-          200
-        ]
-      }
+      "timeoutMs": 5000,
+      "title": "Healthcheck",
+      "validationMode": "strict-generated"
     },
     "projects.get": {
-      "kind": "action",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 1048576,
-      "title": "Get project",
-      "description": "Get a Nozbe project by ID.",
+      "description": "Get a Nozbe project by ID. Covers NOZBE_TEAMS_GET_PROJECT.",
+      "enforceOutputSchema": true,
       "inputSchema": {
-        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "fields": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Comma-separated fields to return."
+          }
+        },
         "required": [
           "id"
         ],
-        "properties": {
-          "id": {
-            "type": "string",
-            "minLength": 1
-          }
-        },
-        "additionalProperties": false
+        "type": "object"
       },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
       "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
+        "additionalProperties": false,
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "additionalProperties": false
+        "required": [
+          "data"
+        ],
+        "type": "object"
       },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json",
       "request": {
         "method": "GET",
         "path": "/projects/{{id}}",
         "success": [
           200
-        ]
-      }
-    },
-    "tasks.list": {
-      "kind": "action",
+        ],
+        "query": {
+          "fields": "{{fields}}"
+        }
+      },
+      "responseFormat": "json",
       "sideEffect": "read",
       "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 1048576,
-      "title": "List tasks",
-      "description": "List Nozbe tasks with pagination, sorting, and project filtering.",
+      "title": "Get project",
+      "validationMode": "strict-generated"
+    },
+    "projects.list": {
+      "description": "List Nozbe projects with pagination, sorting, and team filters. Covers NOZBE_TEAMS_LIST_PROJECTS.",
+      "enforceOutputSchema": true,
       "inputSchema": {
-        "type": "object",
+        "additionalProperties": false,
         "properties": {
+          "is_single_actions": {
+            "type": "boolean"
+          },
           "limit": {
-            "type": "integer",
+            "maximum": 10000,
             "minimum": 1,
-            "maximum": 10000
+            "type": "integer"
           },
           "offset": {
-            "type": "integer",
-            "minimum": 0
+            "minimum": 0,
+            "type": "integer"
           },
           "sortBy": {
-            "type": "string",
-            "minLength": 1
+            "minLength": 1,
+            "type": "string"
           },
-          "project_id": {
+          "team_id": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "fields": {
             "type": "string",
-            "minLength": 1
+            "minLength": 1,
+            "description": "Comma-separated fields to return."
           }
         },
-        "additionalProperties": false
+        "type": "object"
       },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
       "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
+        "additionalProperties": false,
         "properties": {
           "data": {
             "type": "array"
           }
         },
-        "additionalProperties": false
+        "required": [
+          "data"
+        ],
+        "type": "object"
       },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
+      "request": {
+        "method": "GET",
+        "path": "/projects",
+        "query": {
+          "is_single_actions": "{{is_single_actions}}",
+          "limit": "{{limit}}",
+          "offset": "{{offset}}",
+          "sortBy": "{{sortBy}}",
+          "team_id": "{{team_id}}",
+          "fields": "{{fields}}"
+        },
+        "success": [
+          200
+        ]
+      },
       "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List projects",
+      "validationMode": "strict-generated"
+    },
+    "tasks.list": {
+      "description": "List Nozbe tasks with pagination, sorting, and project filtering. Covers NOZBE_TEAMS_LIST_TASKS.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "limit": {
+            "maximum": 10000,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "offset": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "project_id": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "sortBy": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "fields": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Comma-separated fields to return."
+          },
+          "review_reason": {
+            "type": "string",
+            "description": "Review reason for tasks.",
+            "enum": [
+              "due_date",
+              "reminder",
+              "delegated",
+              "mention",
+              "newly_added",
+              "overdue"
+            ]
+          }
+        },
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "array"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
       "request": {
         "method": "GET",
         "path": "/tasks",
         "query": {
           "limit": "{{limit}}",
           "offset": "{{offset}}",
+          "project_id": "{{project_id}}",
           "sortBy": "{{sortBy}}",
-          "project_id": "{{project_id}}"
+          "fields": "{{fields}}",
+          "review_reason": "{{review_reason}}"
         },
         "success": [
           200
         ]
-      }
-    },
-    "teams.get": {
-      "kind": "action",
+      },
+      "responseFormat": "json",
       "sideEffect": "read",
       "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 1048576,
-      "title": "Get team",
-      "description": "Get one Nozbe team by ID.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Team ID."
-          }
-        },
-        "additionalProperties": false,
-        "required": [
-          "id"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "GET",
-        "path": "/teams/{{id}}",
-        "success": [
-          200
-        ]
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
+      "title": "List tasks",
+      "validationMode": "strict-generated"
     },
-    "projects.create": {
-      "kind": "action",
-      "sideEffect": "write",
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 1048576,
-      "title": "Create project",
-      "description": "Create a Nozbe project in a team.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "name": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Project name."
-          },
-          "team_id": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Team ID."
-          },
-          "is_favorite": {
-            "type": "boolean",
-            "description": "Mark the project as favorite."
-          },
-          "description": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Project description."
-          }
-        },
-        "additionalProperties": false,
-        "required": [
-          "name",
-          "team_id"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "POST",
-        "path": "/projects",
-        "success": [
-          200,
-          201
-        ],
-        "body": {
-          "name": "{{name}}",
-          "team_id": "{{team_id}}",
-          "is_favorite": "{{is_favorite}}",
-          "description": "{{description}}"
-        },
-        "headers": {
-          "Content-Type": "application/json"
-        }
-      },
+    "teams.list": {
+      "description": "List teams accessible with the connected Nozbe API token.",
       "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "projects.update": {
-      "kind": "action",
-      "sideEffect": "write",
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 1048576,
-      "title": "Update project",
-      "description": "Update a Nozbe project by ID.",
       "inputSchema": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Project ID."
-          },
-          "name": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Project name."
-          },
-          "is_favorite": {
-            "type": "boolean",
-            "description": "Favorite flag."
-          },
-          "is_open": {
-            "type": "boolean",
-            "description": "Open flag."
-          },
-          "description": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Project description."
-          }
-        },
         "additionalProperties": false,
-        "required": [
-          "id"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
         "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "PUT",
-        "path": "/projects/{{id}}",
-        "success": [
-          200
-        ],
-        "body": {
-          "name": "{{name}}",
-          "is_favorite": "{{is_favorite}}",
-          "is_open": "{{is_open}}",
-          "description": "{{description}}"
-        },
-        "headers": {
-          "Content-Type": "application/json"
-        }
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "projects.delete": {
-      "kind": "action",
-      "sideEffect": "destructive",
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 65536,
-      "title": "Delete project",
-      "description": "Delete a Nozbe project by ID.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Project ID."
-          }
-        },
-        "additionalProperties": false,
-        "required": [
-          "id"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "DELETE",
-        "path": "/projects/{{id}}",
-        "success": [
-          200
-        ]
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "tasks.get": {
-      "kind": "action",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 1048576,
-      "title": "Get task",
-      "description": "Get one Nozbe task by ID.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Task ID."
-          }
-        },
-        "additionalProperties": false,
-        "required": [
-          "id"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "GET",
-        "path": "/tasks/{{id}}",
-        "success": [
-          200
-        ]
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "tasks.create": {
-      "kind": "action",
-      "sideEffect": "write",
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 1048576,
-      "title": "Create task",
-      "description": "Create a Nozbe task.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "name": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Task name."
+          "limit": {
+            "maximum": 10000,
+            "minimum": 1,
+            "type": "integer"
           },
-          "project_id": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Project ID."
-          },
-          "due_at": {
-            "type": "integer",
+          "offset": {
             "minimum": 0,
-            "description": "Due date as millisecond epoch."
+            "type": "integer"
           },
-          "is_all_day": {
-            "type": "boolean",
-            "description": "All-day due date."
+          "sortBy": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "fields": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Comma-separated fields to return."
+          }
+        },
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "array"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/teams",
+        "query": {
+          "limit": "{{limit}}",
+          "offset": "{{offset}}",
+          "sortBy": "{{sortBy}}",
+          "fields": "{{fields}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List teams",
+      "validationMode": "strict-generated"
+    },
+    "attachments.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Create attachment",
+      "description": "Add attachment metadata to a Nozbe comment. Covers NOZBE_TEAMS_CREATE_ATTACHMENT.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "comment_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Comment ID to attach the file to."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Attachment filename shown in the UI."
+          },
+          "mime_type": {
+            "type": "string",
+            "minLength": 1,
+            "description": "MIME type of the file."
           }
         },
         "additionalProperties": false,
         "required": [
+          "comment_id",
           "name"
         ]
       },
@@ -653,194 +420,24 @@
         },
         "additionalProperties": false
       },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
       "request": {
         "method": "POST",
-        "path": "/tasks",
+        "path": "/comments/{{comment_id}}/attachments",
         "success": [
           200,
           201
         ],
         "body": {
           "name": "{{name}}",
-          "project_id": "{{project_id}}",
-          "due_at": "{{due_at}}",
-          "is_all_day": "{{is_all_day}}"
+          "mime_type": "{{mime_type}}"
         },
         "headers": {
           "Content-Type": "application/json"
         }
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "tasks.update": {
-      "kind": "action",
-      "sideEffect": "write",
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 1048576,
-      "title": "Update task",
-      "description": "Update a Nozbe task by ID.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Task ID."
-          },
-          "name": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Task name."
-          },
-          "ended_at": {
-            "type": "integer",
-            "minimum": 0,
-            "description": "Completion timestamp."
-          },
-          "is_followed": {
-            "type": "boolean",
-            "description": "Follow the task."
-          }
-        },
-        "additionalProperties": false,
-        "required": [
-          "id"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "PUT",
-        "path": "/tasks/{{id}}",
-        "success": [
-          200
-        ],
-        "body": {
-          "name": "{{name}}",
-          "ended_at": "{{ended_at}}",
-          "is_followed": "{{is_followed}}"
-        },
-        "headers": {
-          "Content-Type": "application/json"
-        }
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "tasks.delete": {
-      "kind": "action",
-      "sideEffect": "destructive",
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 65536,
-      "title": "Delete task",
-      "description": "Delete a Nozbe task by ID.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Task ID."
-          }
-        },
-        "additionalProperties": false,
-        "required": [
-          "id"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "DELETE",
-        "path": "/tasks/{{id}}",
-        "success": [
-          200
-        ]
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "comments.list": {
-      "kind": "action",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 1048576,
-      "title": "List comments",
-      "description": "List Nozbe comments, optionally filtered by task.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "task_id": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Task ID."
-          },
-          "limit": {
-            "type": "integer",
-            "minimum": 1,
-            "maximum": 10000
-          },
-          "offset": {
-            "type": "integer",
-            "minimum": 0
-          }
-        },
-        "additionalProperties": false
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "array"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "GET",
-        "path": "/comments",
-        "success": [
-          200
-        ],
-        "query": {
-          "task_id": "{{task_id}}",
-          "limit": "{{limit}}",
-          "offset": "{{offset}}"
-        }
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
+      }
     },
     "comments.create": {
       "kind": "action",
@@ -849,19 +446,27 @@
       "maxInputBytes": 65536,
       "maxResponseBytes": 1048576,
       "title": "Create comment",
-      "description": "Create a comment on a Nozbe task.",
+      "description": "Add a comment to a Nozbe task. Covers NOZBE_TEAMS_CREATE_COMMENT.",
       "inputSchema": {
         "type": "object",
         "properties": {
           "body": {
             "type": "string",
             "minLength": 1,
-            "description": "Comment body."
+            "description": "Comment body text."
           },
           "task_id": {
             "type": "string",
             "minLength": 1,
-            "description": "Task ID."
+            "description": "Task ID to comment on."
+          },
+          "is_team": {
+            "type": "boolean",
+            "description": "Whether the comment is visible to the team."
+          },
+          "is_pinned": {
+            "type": "boolean",
+            "description": "Whether the comment is pinned."
           }
         },
         "additionalProperties": false,
@@ -882,6 +487,9 @@
         },
         "additionalProperties": false
       },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
       "request": {
         "method": "POST",
         "path": "/comments",
@@ -891,187 +499,247 @@
         ],
         "body": {
           "body": "{{body}}",
-          "task_id": "{{task_id}}"
+          "task_id": "{{task_id}}",
+          "is_team": "{{is_team}}",
+          "is_pinned": "{{is_pinned}}"
         },
         "headers": {
           "Content-Type": "application/json"
         }
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
+      }
     },
-    "comments.get": {
-      "kind": "action",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 1048576,
-      "title": "Get comment",
-      "description": "Get one Nozbe comment by ID.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Comment ID."
-          }
-        },
-        "additionalProperties": false,
-        "required": [
-          "id"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "GET",
-        "path": "/comments/{{id}}",
-        "success": [
-          200
-        ]
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "comments.delete": {
-      "kind": "action",
-      "sideEffect": "destructive",
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 65536,
-      "title": "Delete comment",
-      "description": "Delete a Nozbe comment by ID.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Comment ID."
-          }
-        },
-        "additionalProperties": false,
-        "required": [
-          "id"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "DELETE",
-        "path": "/comments/{{id}}",
-        "success": [
-          200
-        ]
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "tags.list": {
-      "kind": "action",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 1048576,
-      "title": "List tags",
-      "description": "List Nozbe tags with optional team filter.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "team_id": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Team ID."
-          },
-          "limit": {
-            "type": "integer",
-            "minimum": 1,
-            "maximum": 10000
-          },
-          "offset": {
-            "type": "integer",
-            "minimum": 0
-          }
-        },
-        "additionalProperties": false
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "array"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "GET",
-        "path": "/tags",
-        "success": [
-          200
-        ],
-        "query": {
-          "team_id": "{{team_id}}",
-          "limit": "{{limit}}",
-          "offset": "{{offset}}"
-        }
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "tags.create": {
+    "project_sections.create": {
       "kind": "action",
       "sideEffect": "write",
       "timeoutMs": 15000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 1048576,
-      "title": "Create tag",
-      "description": "Create a Nozbe tag.",
+      "title": "Create project section",
+      "description": "Create a section inside a Nozbe project. Covers NOZBE_TEAMS_CREATE_PROJECT_SECTION.",
       "inputSchema": {
         "type": "object",
         "properties": {
           "name": {
             "type": "string",
             "minLength": 1,
-            "description": "Tag name."
+            "description": "Section name."
           },
-          "team_id": {
+          "project_id": {
             "type": "string",
             "minLength": 1,
-            "description": "Team ID."
+            "description": "Project ID."
           },
-          "color": {
+          "position": {
+            "type": "number",
+            "description": "Section order within the project."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "project_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "POST",
+        "path": "/project_sections",
+        "success": [
+          200,
+          201
+        ],
+        "body": {
+          "name": "{{name}}",
+          "project_id": "{{project_id}}",
+          "position": "{{position}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
+    },
+    "reminders.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Create reminder",
+      "description": "Add a reminder to a Nozbe task. Covers NOZBE_TEAMS_CREATE_REMINDER.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "task_id": {
             "type": "string",
             "minLength": 1,
-            "description": "Tag color."
+            "description": "Task ID to remind about."
+          },
+          "remind_at": {
+            "type": "integer",
+            "description": "Reminder time as millisecond epoch.",
+            "minimum": 0
+          },
+          "is_all_day": {
+            "type": "boolean",
+            "description": "Whether the reminder is all-day."
+          },
+          "is_relative": {
+            "type": "boolean",
+            "description": "Whether remind_at is relative to the task due date."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "task_id",
+          "remind_at",
+          "is_all_day",
+          "is_relative"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "POST",
+        "path": "/reminders",
+        "success": [
+          200,
+          201
+        ],
+        "body": {
+          "task_id": "{{task_id}}",
+          "remind_at": "{{remind_at}}",
+          "is_all_day": "{{is_all_day}}",
+          "is_relative": "{{is_relative}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
+    },
+    "tag_assignments.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Create tag assignment",
+      "description": "Assign a tag to a Nozbe task. Covers NOZBE_TEAMS_CREATE_TAG_ASSIGNMENT.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "tag_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Tag ID."
+          },
+          "task_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Task ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "tag_id",
+          "task_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "POST",
+        "path": "/tag_assignments",
+        "success": [
+          200,
+          201
+        ],
+        "body": {
+          "tag_id": "{{tag_id}}",
+          "task_id": "{{task_id}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
+    },
+    "tasks.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Create task",
+      "description": "Create a Nozbe task. Covers NOZBE_TEAMS_CREATE_TASK.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Task name."
+          },
+          "due_at": {
+            "type": "integer",
+            "description": "Due date as Unix timestamp.",
+            "minimum": 0
+          },
+          "is_all_day": {
+            "type": "boolean",
+            "description": "Whether the task is all-day."
+          },
+          "project_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Project ID or task_me for personal tasks."
+          },
+          "is_followed": {
+            "type": "boolean",
+            "description": "Whether the current user follows the task."
+          },
+          "responsible_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Responsible user ID or author."
           }
         },
         "additionalProperties": false,
@@ -1091,50 +759,1182 @@
         },
         "additionalProperties": false
       },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
       "request": {
         "method": "POST",
-        "path": "/tags",
+        "path": "/tasks",
         "success": [
           200,
           201
         ],
         "body": {
           "name": "{{name}}",
-          "team_id": "{{team_id}}",
-          "color": "{{color}}"
+          "due_at": "{{due_at}}",
+          "is_all_day": "{{is_all_day}}",
+          "project_id": "{{project_id}}",
+          "is_followed": "{{is_followed}}",
+          "responsible_id": "{{responsible_id}}"
         },
         "headers": {
           "Content-Type": "application/json"
         }
+      }
+    },
+    "team_members.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Create team member",
+      "description": "Add an existing user to a Nozbe team. Covers NOZBE_TEAMS_CREATE_TEAM_MEMBER.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "role": {
+            "type": "string",
+            "description": "Team member role.",
+            "enum": [
+              "owner",
+              "admin",
+              "member"
+            ]
+          },
+          "alias": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Display alias for the member."
+          },
+          "status": {
+            "type": "string",
+            "description": "Team member status.",
+            "enum": [
+              "active",
+              "pending",
+              "requesting_join",
+              "archived",
+              "expired"
+            ]
+          },
+          "team_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Team ID."
+          },
+          "user_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Existing user ID."
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Notes about the member."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "role",
+          "status",
+          "team_id",
+          "user_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
       },
       "enforceOutputSchema": true,
       "validationMode": "strict-generated",
-      "responseFormat": "json"
+      "responseFormat": "json",
+      "request": {
+        "method": "POST",
+        "path": "/team_members",
+        "success": [
+          200,
+          201
+        ],
+        "body": {
+          "role": "{{role}}",
+          "alias": "{{alias}}",
+          "status": "{{status}}",
+          "team_id": "{{team_id}}",
+          "user_id": "{{user_id}}",
+          "description": "{{description}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
     },
-    "users.list": {
+    "users.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Create user",
+      "description": "Create a placeholder Nozbe user. Covers NOZBE_TEAMS_CREATE_USER.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "User display name."
+          },
+          "color": {
+            "type": "string",
+            "description": "Avatar color.",
+            "enum": [
+              "avatarColor1",
+              "avatarColor2",
+              "avatarColor3",
+              "avatarColor4",
+              "avatarColor5",
+              "avatarColor6",
+              "avatarColor7",
+              "avatarColor8",
+              "avatarColor9",
+              "avatarColor10",
+              "avatarColor11",
+              "avatarColor12"
+            ]
+          },
+          "time_zone": {
+            "type": "string",
+            "minLength": 1,
+            "description": "IANA time zone."
+          },
+          "is_placeholder": {
+            "type": "boolean",
+            "description": "Must be true; only placeholder users can be created via API."
+          },
+          "invitation_email": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Invitation email address."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "color",
+          "is_placeholder"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "POST",
+        "path": "/users",
+        "success": [
+          200,
+          201
+        ],
+        "body": {
+          "name": "{{name}}",
+          "color": "{{color}}",
+          "time_zone": "{{time_zone}}",
+          "is_placeholder": "{{is_placeholder}}",
+          "invitation_email": "{{invitation_email}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
+    },
+    "comments.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Delete comment",
+      "description": "Permanently delete a Nozbe comment by ID. Covers NOZBE_TEAMS_DELETE_COMMENT.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Comment ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "DELETE",
+        "path": "/comments/{{id}}",
+        "success": [
+          200
+        ]
+      }
+    },
+    "projects.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Delete project",
+      "description": "Delete a Nozbe project by ID. Covers NOZBE_TEAMS_DELETE_PROJECT.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Project ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "DELETE",
+        "path": "/projects/{{id}}",
+        "success": [
+          200,
+          204
+        ],
+        "result": {
+          "data": {
+            "id": "{{input.id}}",
+            "deleted": true
+          }
+        }
+      }
+    },
+    "reminders.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Delete reminder",
+      "description": "Delete a Nozbe reminder by ID. Covers NOZBE_TEAMS_DELETE_REMINDER.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Reminder ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "DELETE",
+        "path": "/reminders/{{id}}",
+        "success": [
+          200,
+          204
+        ],
+        "result": {
+          "data": {
+            "id": "{{input.id}}",
+            "deleted": true
+          }
+        }
+      }
+    },
+    "tag_assignments.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Delete tag assignment",
+      "description": "Remove a tag from a Nozbe task. Covers NOZBE_TEAMS_DELETE_TAG_ASSIGNMENT.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Tag assignment ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "DELETE",
+        "path": "/tag_assignments/{{id}}",
+        "success": [
+          200,
+          204
+        ],
+        "result": {
+          "data": {
+            "id": "{{input.id}}",
+            "deleted": true
+          }
+        }
+      }
+    },
+    "tasks.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Delete task",
+      "description": "Delete a Nozbe task by ID. Covers NOZBE_TEAMS_DELETE_TASK.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Task ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "DELETE",
+        "path": "/tasks/{{id}}",
+        "success": [
+          200,
+          204
+        ],
+        "result": {
+          "data": {
+            "id": "{{input.id}}",
+            "deleted": true
+          }
+        }
+      }
+    },
+    "attachments.get": {
       "kind": "action",
       "sideEffect": "read",
       "timeoutMs": 15000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 1048576,
-      "title": "List users",
-      "description": "List Nozbe users accessible with the connected token.",
+      "title": "Get attachment",
+      "description": "Get attachment metadata by comment and file ID. Covers NOZBE_TEAMS_GET_ATTACHMENT.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "comment_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Comment ID."
+          },
+          "file_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Attachment file ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "comment_id",
+          "file_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/comments/{{comment_id}}/attachments/{{file_id}}",
+        "success": [
+          200
+        ]
+      }
+    },
+    "comments.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get comment",
+      "description": "Get a Nozbe comment by ID. Covers NOZBE_TEAMS_GET_COMMENT.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Comment ID."
+          },
+          "fields": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Comma-separated fields to return."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/comments/{{id}}",
+        "success": [
+          200
+        ],
+        "query": {
+          "fields": "{{fields}}"
+        }
+      }
+    },
+    "project_accesses.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get project access",
+      "description": "Get a Nozbe project access record by ID. Covers NOZBE_TEAMS_GET_PROJECT_ACCESS.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Project access ID."
+          },
+          "fields": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Comma-separated fields to return."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/project_accesses/{{id}}",
+        "success": [
+          200
+        ],
+        "query": {
+          "fields": "{{fields}}"
+        }
+      }
+    },
+    "project_sections.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get project section",
+      "description": "Get a Nozbe project section by ID. Covers NOZBE_TEAMS_GET_PROJECT_SECTION.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Project section ID."
+          },
+          "fields": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Comma-separated fields to return."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/project_sections/{{id}}",
+        "success": [
+          200
+        ],
+        "query": {
+          "fields": "{{fields}}"
+        }
+      }
+    },
+    "reminders.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get reminder",
+      "description": "Get a Nozbe reminder by ID. Covers NOZBE_TEAMS_GET_REMINDER.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Reminder ID."
+          },
+          "fields": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Comma-separated fields to return."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/reminders/{{id}}",
+        "success": [
+          200
+        ],
+        "query": {
+          "fields": "{{fields}}"
+        }
+      }
+    },
+    "tags.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get tag",
+      "description": "Get a Nozbe tag by ID. Covers NOZBE_TEAMS_GET_TAG.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Tag ID."
+          },
+          "fields": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Comma-separated fields to return."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/tags/{{id}}",
+        "success": [
+          200
+        ],
+        "query": {
+          "fields": "{{fields}}"
+        }
+      }
+    },
+    "tag_assignments.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get tag assignment",
+      "description": "Get a Nozbe tag assignment by ID. Covers NOZBE_TEAMS_GET_TAG_ASSIGNMENT.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Tag assignment ID."
+          },
+          "fields": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Comma-separated fields to return."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/tag_assignments/{{id}}",
+        "success": [
+          200
+        ],
+        "query": {
+          "fields": "{{fields}}"
+        }
+      }
+    },
+    "tasks.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get task",
+      "description": "Get a Nozbe task by ID. Covers NOZBE_TEAMS_GET_TASK.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Task ID."
+          },
+          "fields": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Comma-separated fields to return."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/tasks/{{id}}",
+        "success": [
+          200
+        ],
+        "query": {
+          "fields": "{{fields}}"
+        }
+      }
+    },
+    "task_events.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get task event",
+      "description": "Get a Nozbe task event by ID. Covers NOZBE_TEAMS_GET_TASK_EVENT.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Task event ID."
+          },
+          "fields": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Comma-separated fields to return."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/task_events/{{id}}",
+        "success": [
+          200
+        ],
+        "query": {
+          "fields": "{{fields}}"
+        }
+      }
+    },
+    "teams.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get team",
+      "description": "Get a Nozbe team by ID. Covers NOZBE_TEAMS_GET_TEAM.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Team ID."
+          },
+          "fields": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Comma-separated fields to return."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/teams/{{id}}",
+        "success": [
+          200
+        ],
+        "query": {
+          "fields": "{{fields}}"
+        }
+      }
+    },
+    "team_members.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get team member",
+      "description": "Get a Nozbe team member by ID. Covers NOZBE_TEAMS_GET_TEAM_MEMBER.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Team member ID."
+          },
+          "fields": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Comma-separated fields to return."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/team_members/{{id}}",
+        "success": [
+          200
+        ],
+        "query": {
+          "fields": "{{fields}}"
+        }
+      }
+    },
+    "users.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get user",
+      "description": "Get a Nozbe user by ID. Covers NOZBE_TEAMS_GET_USER.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "User ID."
+          },
+          "fields": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Comma-separated fields to return."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/users/{{id}}",
+        "success": [
+          200
+        ],
+        "query": {
+          "fields": "{{fields}}"
+        }
+      }
+    },
+    "attachments.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "List comment attachments",
+      "description": "List attachment metadata for a Nozbe comment. Covers NOZBE_TEAMS_LIST_ATTACHMENTS.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "comment_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Comment ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "comment_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/comments/{{comment_id}}/attachments",
+        "success": [
+          200
+        ]
+      }
+    },
+    "comments.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "List comments",
+      "description": "List Nozbe comments with optional task filter. Covers NOZBE_TEAMS_LIST_COMMENTS.",
       "inputSchema": {
         "type": "object",
         "properties": {
           "limit": {
             "type": "integer",
+            "description": "Max number of objects to return (1-10000).",
             "minimum": 1,
             "maximum": 10000
           },
           "offset": {
             "type": "integer",
+            "description": "Number of objects to skip.",
             "minimum": 0
           },
           "sortBy": {
             "type": "string",
             "minLength": 1,
-            "description": "Sort expression."
+            "description": "Comma-separated sort fields. Prefix with - for descending order."
+          },
+          "fields": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Comma-separated fields to return."
+          },
+          "task_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter comments by task ID."
           }
         },
         "additionalProperties": false
@@ -1151,6 +1951,676 @@
         },
         "additionalProperties": false
       },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/comments",
+        "success": [
+          200
+        ],
+        "query": {
+          "limit": "{{limit}}",
+          "offset": "{{offset}}",
+          "sortBy": "{{sortBy}}",
+          "fields": "{{fields}}",
+          "task_id": "{{task_id}}"
+        }
+      }
+    },
+    "group_assignments.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "List group assignments",
+      "description": "List Nozbe group assignments. Covers NOZBE_TEAMS_LIST_GROUP_ASSIGNMENTS.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "description": "Max number of objects to return (1-10000).",
+            "minimum": 1,
+            "maximum": 10000
+          },
+          "offset": {
+            "type": "integer",
+            "description": "Number of objects to skip.",
+            "minimum": 0
+          },
+          "sortBy": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Comma-separated sort fields. Prefix with - for descending order."
+          },
+          "fields": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Comma-separated fields to return."
+          },
+          "group_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by group ID."
+          },
+          "object_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by assigned object ID."
+          },
+          "group_type": {
+            "type": "string",
+            "description": "Group assignment type.",
+            "enum": [
+              "project",
+              "member"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/group_assignments",
+        "success": [
+          200
+        ],
+        "query": {
+          "limit": "{{limit}}",
+          "offset": "{{offset}}",
+          "sortBy": "{{sortBy}}",
+          "fields": "{{fields}}",
+          "group_id": "{{group_id}}",
+          "object_id": "{{object_id}}",
+          "group_type": "{{group_type}}"
+        }
+      }
+    },
+    "project_accesses.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "List project accesses",
+      "description": "List Nozbe project access records. Covers NOZBE_TEAMS_LIST_PROJECT_ACCESSES.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "description": "Max number of objects to return (1-10000).",
+            "minimum": 1,
+            "maximum": 10000
+          },
+          "offset": {
+            "type": "integer",
+            "description": "Number of objects to skip.",
+            "minimum": 0
+          },
+          "sortBy": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Comma-separated sort fields. Prefix with - for descending order."
+          },
+          "fields": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Comma-separated fields to return."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/project_accesses",
+        "success": [
+          200
+        ],
+        "query": {
+          "limit": "{{limit}}",
+          "offset": "{{offset}}",
+          "sortBy": "{{sortBy}}",
+          "fields": "{{fields}}"
+        }
+      }
+    },
+    "project_groups.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "List project groups",
+      "description": "List Nozbe project groups. Covers NOZBE_TEAMS_LIST_PROJECT_GROUPS.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter project groups by name."
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Max number of objects to return (1-10000).",
+            "minimum": 1,
+            "maximum": 10000
+          },
+          "offset": {
+            "type": "integer",
+            "description": "Number of objects to skip.",
+            "minimum": 0
+          },
+          "sortBy": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Comma-separated sort fields. Prefix with - for descending order."
+          },
+          "fields": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Comma-separated fields to return."
+          },
+          "team_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by team ID."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/project_groups",
+        "success": [
+          200
+        ],
+        "query": {
+          "name": "{{name}}",
+          "limit": "{{limit}}",
+          "offset": "{{offset}}",
+          "sortBy": "{{sortBy}}",
+          "fields": "{{fields}}",
+          "team_id": "{{team_id}}"
+        }
+      }
+    },
+    "project_sections.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "List project sections",
+      "description": "List Nozbe project sections. Covers NOZBE_TEAMS_LIST_PROJECT_SECTIONS.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "description": "Max number of objects to return (1-10000).",
+            "minimum": 1,
+            "maximum": 10000
+          },
+          "offset": {
+            "type": "integer",
+            "description": "Number of objects to skip.",
+            "minimum": 0
+          },
+          "sortBy": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Comma-separated sort fields. Prefix with - for descending order."
+          },
+          "fields": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Comma-separated fields to return."
+          },
+          "project_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter sections by project ID."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/project_sections",
+        "success": [
+          200
+        ],
+        "query": {
+          "limit": "{{limit}}",
+          "offset": "{{offset}}",
+          "sortBy": "{{sortBy}}",
+          "fields": "{{fields}}",
+          "project_id": "{{project_id}}"
+        }
+      }
+    },
+    "reminders.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "List reminders",
+      "description": "List Nozbe reminders. Covers NOZBE_TEAMS_LIST_REMINDERS.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "description": "Max number of objects to return (1-10000).",
+            "minimum": 1,
+            "maximum": 10000
+          },
+          "offset": {
+            "type": "integer",
+            "description": "Number of objects to skip.",
+            "minimum": 0
+          },
+          "sortBy": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Comma-separated sort fields. Prefix with - for descending order."
+          },
+          "fields": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Comma-separated fields to return."
+          },
+          "task_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter reminders by task ID."
+          },
+          "is_all_day": {
+            "type": "boolean",
+            "description": "Filter by all-day status."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/reminders",
+        "success": [
+          200
+        ],
+        "query": {
+          "limit": "{{limit}}",
+          "offset": "{{offset}}",
+          "sortBy": "{{sortBy}}",
+          "fields": "{{fields}}",
+          "task_id": "{{task_id}}",
+          "is_all_day": "{{is_all_day}}"
+        }
+      }
+    },
+    "tag_assignments.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "List tag assignments",
+      "description": "List Nozbe tag assignments. Covers NOZBE_TEAMS_LIST_TAG_ASSIGNMENTS.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "description": "Max number of objects to return (1-10000).",
+            "minimum": 1,
+            "maximum": 10000
+          },
+          "offset": {
+            "type": "integer",
+            "description": "Number of objects to skip.",
+            "minimum": 0
+          },
+          "sortBy": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Comma-separated sort fields. Prefix with - for descending order."
+          },
+          "fields": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Comma-separated fields to return."
+          },
+          "tag_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by tag ID."
+          },
+          "task_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by task ID."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/tag_assignments",
+        "success": [
+          200
+        ],
+        "query": {
+          "limit": "{{limit}}",
+          "offset": "{{offset}}",
+          "sortBy": "{{sortBy}}",
+          "fields": "{{fields}}",
+          "tag_id": "{{tag_id}}",
+          "task_id": "{{task_id}}"
+        }
+      }
+    },
+    "tags.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "List tags",
+      "description": "List Nozbe tags. Covers NOZBE_TEAMS_LIST_TAGS.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter tags by name."
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Max number of objects to return (1-10000).",
+            "minimum": 1,
+            "maximum": 10000
+          },
+          "offset": {
+            "type": "integer",
+            "description": "Number of objects to skip.",
+            "minimum": 0
+          },
+          "sortBy": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Comma-separated sort fields. Prefix with - for descending order."
+          },
+          "fields": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Comma-separated fields to return."
+          },
+          "task_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter tags associated with a task ID."
+          },
+          "is_favorite": {
+            "type": "boolean",
+            "description": "Filter by favorite status."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/tags",
+        "success": [
+          200
+        ],
+        "query": {
+          "name": "{{name}}",
+          "limit": "{{limit}}",
+          "offset": "{{offset}}",
+          "sortBy": "{{sortBy}}",
+          "fields": "{{fields}}",
+          "task_id": "{{task_id}}",
+          "is_favorite": "{{is_favorite}}"
+        }
+      }
+    },
+    "task_events.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "List task events",
+      "description": "List Nozbe task events. Covers NOZBE_TEAMS_LIST_TASK_EVENTS.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "description": "Max number of objects to return (1-10000).",
+            "minimum": 1,
+            "maximum": 10000
+          },
+          "offset": {
+            "type": "integer",
+            "description": "Number of objects to skip.",
+            "minimum": 0
+          },
+          "sortBy": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Comma-separated sort fields. Prefix with - for descending order."
+          },
+          "fields": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Comma-separated fields to return."
+          },
+          "task_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter events by task ID."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/task_events",
+        "success": [
+          200
+        ],
+        "query": {
+          "limit": "{{limit}}",
+          "offset": "{{offset}}",
+          "sortBy": "{{sortBy}}",
+          "fields": "{{fields}}",
+          "task_id": "{{task_id}}"
+        }
+      }
+    },
+    "users.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "List users",
+      "description": "List Nozbe users. Covers NOZBE_TEAMS_LIST_USERS.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter users by name."
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Max number of objects to return (1-10000).",
+            "minimum": 1,
+            "maximum": 10000
+          },
+          "offset": {
+            "type": "integer",
+            "description": "Number of objects to skip.",
+            "minimum": 0
+          },
+          "sortBy": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Comma-separated sort fields. Prefix with - for descending order."
+          },
+          "fields": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Comma-separated fields to return."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
       "request": {
         "method": "GET",
         "path": "/users",
@@ -1158,22 +2628,746 @@
           200
         ],
         "query": {
+          "name": "{{name}}",
           "limit": "{{limit}}",
           "offset": "{{offset}}",
-          "sortBy": "{{sortBy}}"
+          "sortBy": "{{sortBy}}",
+          "fields": "{{fields}}"
         }
+      }
+    },
+    "tasks.poll_new": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Poll new tasks",
+      "description": "Poll for newly created Nozbe tasks since the last call. Covers NOZBE_TEAMS_POLL_NEW_TASKS.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "fields": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Comma-separated fields to return."
+          },
+          "project_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by project ID."
+          },
+          "responsible_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by responsible user ID."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array"
+          }
+        },
+        "additionalProperties": false
       },
       "enforceOutputSchema": true,
       "validationMode": "strict-generated",
-      "responseFormat": "json"
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/poll/tasks/new",
+        "success": [
+          200
+        ],
+        "query": {
+          "fields": "{{fields}}",
+          "project_id": "{{project_id}}",
+          "responsible_id": "{{responsible_id}}"
+        }
+      }
+    },
+    "tasks.poll_updated": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Poll updated tasks",
+      "description": "Poll for recently updated Nozbe tasks. Covers NOZBE_TEAMS_POLL_UPDATED_TASKS.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "fields": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Comma-separated fields to return."
+          },
+          "project_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by project ID."
+          },
+          "responsible_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by responsible user ID."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/poll/tasks/updated",
+        "success": [
+          200
+        ],
+        "query": {
+          "fields": "{{fields}}",
+          "project_id": "{{project_id}}",
+          "responsible_id": "{{responsible_id}}"
+        }
+      }
+    },
+    "comments.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Update comment",
+      "description": "Update a Nozbe comment. Covers NOZBE_TEAMS_UPDATE_COMMENT.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Comment ID."
+          },
+          "body": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Updated comment text."
+          },
+          "extra": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Serialized extra metadata."
+          },
+          "is_pinned": {
+            "type": "boolean",
+            "description": "Pin or unpin the comment."
+          },
+          "is_deleted": {
+            "type": "boolean",
+            "description": "Mark the comment deleted or restore it."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "PUT",
+        "path": "/comments/{{id}}",
+        "success": [
+          200
+        ],
+        "body": {
+          "body": "{{body}}",
+          "extra": "{{extra}}",
+          "is_pinned": "{{is_pinned}}",
+          "is_deleted": "{{is_deleted}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
+    },
+    "projects.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Update project",
+      "description": "Update a Nozbe project. Covers NOZBE_TEAMS_UPDATE_PROJECT.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Project ID."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Project name."
+          },
+          "color": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Predefined project color."
+          },
+          "is_open": {
+            "type": "boolean",
+            "description": "Whether the project is open."
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Project description."
+          },
+          "is_favorite": {
+            "type": "boolean",
+            "description": "Whether the project is a favorite."
+          },
+          "preferences": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Serialized project preferences."
+          },
+          "sidebar_position": {
+            "type": "number",
+            "description": "Sidebar position."
+          },
+          "is_single_actions": {
+            "type": "boolean",
+            "description": "Whether the project contains single actions."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "PUT",
+        "path": "/projects/{{id}}",
+        "success": [
+          200
+        ],
+        "body": {
+          "name": "{{name}}",
+          "color": "{{color}}",
+          "is_open": "{{is_open}}",
+          "description": "{{description}}",
+          "is_favorite": "{{is_favorite}}",
+          "preferences": "{{preferences}}",
+          "sidebar_position": "{{sidebar_position}}",
+          "is_single_actions": "{{is_single_actions}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
+    },
+    "project_accesses.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Update project access",
+      "description": "Update Nozbe project access permissions. Covers NOZBE_TEAMS_UPDATE_PROJECT_ACCESS.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Project access ID."
+          },
+          "member_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Member ID to grant access."
+          },
+          "is_manager": {
+            "type": "boolean",
+            "description": "Whether the member is a project manager."
+          },
+          "project_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Project ID associated with this access."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "PUT",
+        "path": "/project_accesses/{{id}}",
+        "success": [
+          200
+        ],
+        "body": {
+          "member_id": "{{member_id}}",
+          "is_manager": "{{is_manager}}",
+          "project_id": "{{project_id}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
+    },
+    "tasks.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Update task",
+      "description": "Update a Nozbe task. Covers NOZBE_TEAMS_UPDATE_TASK.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Task ID."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Task name."
+          },
+          "extra": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Serialized extra metadata."
+          },
+          "due_at": {
+            "type": "integer",
+            "description": "Due date as Unix timestamp.",
+            "minimum": 0
+          },
+          "is_all_day": {
+            "type": "boolean",
+            "description": "Whether the task is all-day."
+          },
+          "project_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Project ID to move the task to."
+          },
+          "time_spent": {
+            "type": "integer",
+            "description": "Time spent in seconds.",
+            "minimum": 0
+          },
+          "is_followed": {
+            "type": "boolean",
+            "description": "Whether the current user follows the task."
+          },
+          "time_needed": {
+            "type": "integer",
+            "description": "Time needed in seconds.",
+            "minimum": 0
+          },
+          "is_abandoned": {
+            "type": "boolean",
+            "description": "Whether the task is abandoned."
+          },
+          "responsible_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Responsible user ID or author."
+          },
+          "priority_position": {
+            "type": "number",
+            "description": "Priority position."
+          },
+          "project_section_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Project section ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "PUT",
+        "path": "/tasks/{{id}}",
+        "success": [
+          200
+        ],
+        "body": {
+          "name": "{{name}}",
+          "extra": "{{extra}}",
+          "due_at": "{{due_at}}",
+          "is_all_day": "{{is_all_day}}",
+          "project_id": "{{project_id}}",
+          "time_spent": "{{time_spent}}",
+          "is_followed": "{{is_followed}}",
+          "time_needed": "{{time_needed}}",
+          "is_abandoned": "{{is_abandoned}}",
+          "responsible_id": "{{responsible_id}}",
+          "priority_position": "{{priority_position}}",
+          "project_section_id": "{{project_section_id}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
+    },
+    "teams.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Update team",
+      "description": "Update a Nozbe team. Covers NOZBE_TEAMS_UPDATE_TEAM.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Team ID."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Team name."
+          },
+          "color": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Team avatar color."
+          },
+          "sidebar_position": {
+            "type": "integer",
+            "description": "Sidebar position."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "PUT",
+        "path": "/teams/{{id}}",
+        "success": [
+          200
+        ],
+        "body": {
+          "name": "{{name}}",
+          "color": "{{color}}",
+          "sidebar_position": "{{sidebar_position}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
+    },
+    "team_members.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Update team member",
+      "description": "Update a Nozbe team member. Covers NOZBE_TEAMS_UPDATE_TEAM_MEMBER.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Team member ID."
+          },
+          "role": {
+            "type": "string",
+            "description": "Team member role.",
+            "enum": [
+              "owner",
+              "admin",
+              "member"
+            ]
+          },
+          "alias": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Display alias."
+          },
+          "status": {
+            "type": "string",
+            "description": "Team member status.",
+            "enum": [
+              "active",
+              "pending",
+              "requesting_join",
+              "archived",
+              "expired"
+            ]
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Member notes."
+          },
+          "is_favorite": {
+            "type": "boolean",
+            "description": "Whether the member is a favorite."
+          },
+          "sidebar_position": {
+            "type": "number",
+            "description": "Sidebar position."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "PUT",
+        "path": "/team_members/{{id}}",
+        "success": [
+          200
+        ],
+        "body": {
+          "role": "{{role}}",
+          "alias": "{{alias}}",
+          "status": "{{status}}",
+          "description": "{{description}}",
+          "is_favorite": "{{is_favorite}}",
+          "sidebar_position": "{{sidebar_position}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
+    },
+    "users.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Update user",
+      "description": "Update a Nozbe user. Covers NOZBE_TEAMS_UPDATE_USER.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "User ID."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "User display name."
+          },
+          "color": {
+            "type": "string",
+            "description": "Avatar color.",
+            "enum": [
+              "avatarColor1",
+              "avatarColor2",
+              "avatarColor3",
+              "avatarColor4",
+              "avatarColor5",
+              "avatarColor6",
+              "avatarColor7",
+              "avatarColor8",
+              "avatarColor9",
+              "avatarColor10",
+              "avatarColor11",
+              "avatarColor12"
+            ]
+          },
+          "time_zone": {
+            "type": "string",
+            "minLength": 1,
+            "description": "IANA time zone."
+          },
+          "avatar_url": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Avatar image URL."
+          },
+          "is_placeholder": {
+            "type": "boolean",
+            "description": "Whether the user is a placeholder."
+          },
+          "invitation_email": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Invitation email address."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "PUT",
+        "path": "/users/{{id}}",
+        "success": [
+          200
+        ],
+        "body": {
+          "name": "{{name}}",
+          "color": "{{color}}",
+          "time_zone": "{{time_zone}}",
+          "avatar_url": "{{avatar_url}}",
+          "is_placeholder": "{{is_placeholder}}",
+          "invitation_email": "{{invitation_email}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
     }
   },
-  "evidence": {
-    "fixture": {
-      "status": "supplied"
-    },
-    "live": {
-      "status": "unverified"
+  "provenance": {
+    "source": {
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
+      "url": "https://github.com/oomol-lab/open-connector"
     }
-  }
+  },
+  "runtime": "bun",
+  "version": "0.2.0",
+  "visibility": "public"
 }
