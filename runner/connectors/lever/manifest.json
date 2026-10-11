@@ -1,7 +1,7 @@
 {
   "key": "lever",
   "name": "Lever",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "runtime": "bun",
   "categories": [
     "ats-recruitment"
@@ -1617,6 +1617,1268 @@
       "responseFormat": "json",
       "enforceOutputSchema": true,
       "validationMode": "strict-generated"
+    },
+    "panels.list": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "responseFormat": "json",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "sideEffect": "read",
+      "title": "List panels",
+      "description": "List interview panels for an opportunity via authenticated GET /v1/opportunities/{opportunityId}/panels.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "opportunityId"
+        ],
+        "properties": {
+          "opportunityId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Lever opportunity UID."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Page size (1-100)."
+          },
+          "offset": {
+            "type": "string",
+            "description": "Opaque pagination offset token."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/opportunities/{{opportunityId}}/panels",
+        "query": {
+          "limit": "{{limit}}",
+          "offset": "{{offset}}"
+        },
+        "success": [
+          200
+        ]
+      }
+    },
+    "panels.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "responseFormat": "json",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "sideEffect": "read",
+      "title": "Get panel",
+      "description": "Fetch a single interview panel via authenticated GET /v1/opportunities/{opportunityId}/panels/{panelId}. Returns timezone, interviews, applications, note, externalUrl, feedbackReminder and related fields for Reconcile observe.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "opportunityId",
+          "panelId"
+        ],
+        "properties": {
+          "opportunityId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Lever opportunity UID."
+          },
+          "panelId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Lever panel UID."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/opportunities/{{opportunityId}}/panels/{{panelId}}",
+        "success": [
+          200
+        ]
+      }
+    },
+    "panels.create": {
+      "kind": "action",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "responseFormat": "json",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "sideEffect": "write",
+      "title": "Create panel",
+      "description": "Create an externally-managed interview panel via authenticated POST /v1/opportunities/{opportunityId}/panels?perform_as=. Surfaces data.id as id. No EffectPolicy (create omits effect keys).",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "opportunityId",
+          "performAs",
+          "timezone",
+          "interviews"
+        ],
+        "properties": {
+          "opportunityId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Lever opportunity UID."
+          },
+          "performAs": {
+            "type": "string",
+            "minLength": 1,
+            "description": "User UID to perform_as (query; required by Lever)."
+          },
+          "timezone": {
+            "type": "string",
+            "minLength": 1,
+            "description": "IANA timezone for the panel (e.g. America/Los_Angeles)."
+          },
+          "interviews": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": true
+            },
+            "minItems": 1,
+            "description": "Non-empty interview objects for the panel."
+          },
+          "applications": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "description": "Application UIDs; omit for all active."
+          },
+          "feedbackReminder": {
+            "type": "string",
+            "enum": [
+              "once",
+              "daily",
+              "frequently",
+              "never"
+            ],
+            "description": "Feedback reminder cadence."
+          },
+          "note": {
+            "type": "string",
+            "description": "Panel note."
+          },
+          "externalUrl": {
+            "type": "string",
+            "description": "External calendar URL."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "data"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Created resource UID (from data.id)."
+          },
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/opportunities/{{opportunityId}}/panels",
+        "query": {
+          "perform_as": "{{performAs}}"
+        },
+        "body": {
+          "timezone": "{{timezone}}",
+          "interviews": "{{interviews}}",
+          "applications": "{{applications}}",
+          "feedbackReminder": "{{feedbackReminder}}",
+          "note": "{{note}}",
+          "externalUrl": "{{externalUrl}}"
+        },
+        "success": [
+          200,
+          201
+        ],
+        "result": {
+          "id": "{{response.data.id}}",
+          "data": "{{response.data}}"
+        }
+      }
+    },
+    "panels.update": {
+      "kind": "action",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "responseFormat": "json",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "sideEffect": "write",
+      "effectPolicy": "Reconcile",
+      "reconcile": "panels.get",
+      "title": "Update panel",
+      "description": "Update an externally-managed panel via authenticated PUT /v1/opportunities/{opportunityId}/panels/{panelId}?perform_as=. Atomic PUT (omitted fields cleared). EffectPolicy Reconcile observes via panels.get (exact: GET returns timezone/interviews/applications/note/externalUrl/feedbackReminder).",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "opportunityId",
+          "panelId",
+          "performAs",
+          "timezone",
+          "interviews"
+        ],
+        "properties": {
+          "opportunityId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Lever opportunity UID."
+          },
+          "performAs": {
+            "type": "string",
+            "minLength": 1,
+            "description": "User UID to perform_as (query; required by Lever)."
+          },
+          "timezone": {
+            "type": "string",
+            "minLength": 1,
+            "description": "IANA timezone for the panel (e.g. America/Los_Angeles)."
+          },
+          "interviews": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": true
+            },
+            "minItems": 1,
+            "description": "Non-empty interview objects for the panel."
+          },
+          "applications": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "description": "Application UIDs; omit for all active."
+          },
+          "feedbackReminder": {
+            "type": "string",
+            "enum": [
+              "once",
+              "daily",
+              "frequently",
+              "never"
+            ],
+            "description": "Feedback reminder cadence."
+          },
+          "note": {
+            "type": "string",
+            "description": "Panel note."
+          },
+          "externalUrl": {
+            "type": "string",
+            "description": "External calendar URL."
+          },
+          "panelId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Lever panel UID (externallyManaged only)."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/opportunities/{{opportunityId}}/panels/{{panelId}}",
+        "query": {
+          "perform_as": "{{performAs}}"
+        },
+        "body": {
+          "timezone": "{{timezone}}",
+          "interviews": "{{interviews}}",
+          "applications": "{{applications}}",
+          "feedbackReminder": "{{feedbackReminder}}",
+          "note": "{{note}}",
+          "externalUrl": "{{externalUrl}}"
+        },
+        "success": [
+          200
+        ]
+      }
+    },
+    "panels.delete": {
+      "kind": "action",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "responseFormat": "json",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "sideEffect": "destructive",
+      "title": "Delete panel",
+      "description": "Delete an interview panel via authenticated DELETE /v1/opportunities/{opportunityId}/panels/{panelId}?perform_as= (204). Missing panel → CONNECTOR_UPSTREAM_ERROR.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "opportunityId",
+          "panelId",
+          "performAs"
+        ],
+        "properties": {
+          "opportunityId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Lever opportunity UID."
+          },
+          "panelId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Lever panel UID."
+          },
+          "performAs": {
+            "type": "string",
+            "minLength": 1,
+            "description": "User UID to perform_as (query; required by Lever)."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "deleted",
+          "opportunityId",
+          "panelId"
+        ],
+        "properties": {
+          "deleted": {
+            "type": "boolean"
+          },
+          "opportunityId": {
+            "type": "string"
+          },
+          "panelId": {
+            "type": "string"
+          }
+        }
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/opportunities/{{opportunityId}}/panels/{{panelId}}",
+        "query": {
+          "perform_as": "{{performAs}}"
+        },
+        "success": [
+          204
+        ],
+        "result": {
+          "deleted": true,
+          "opportunityId": "{{input.opportunityId}}",
+          "panelId": "{{input.panelId}}"
+        }
+      }
+    },
+    "interviews.create": {
+      "kind": "action",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "responseFormat": "json",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "sideEffect": "write",
+      "title": "Create interview",
+      "description": "Create an interview on a panel via authenticated POST /v1/opportunities/{opportunityId}/interviews?perform_as=. Surfaces data.id as id. No EffectPolicy (create omits effect keys).",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "opportunityId",
+          "performAs",
+          "panel",
+          "interviewers",
+          "date",
+          "duration"
+        ],
+        "properties": {
+          "opportunityId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Lever opportunity UID."
+          },
+          "performAs": {
+            "type": "string",
+            "minLength": 1,
+            "description": "User UID to perform_as (query; required by Lever)."
+          },
+          "panel": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Parent panel UID."
+          },
+          "interviewers": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": true
+            },
+            "minItems": 1,
+            "description": "Non-empty interviewer objects."
+          },
+          "date": {
+            "type": "integer",
+            "description": "Interview start time (ms epoch)."
+          },
+          "duration": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Duration in minutes."
+          },
+          "subject": {
+            "type": "string",
+            "description": "Interview subject."
+          },
+          "note": {
+            "type": "string",
+            "description": "Interview note."
+          },
+          "location": {
+            "type": "string",
+            "description": "Location or meeting URL."
+          },
+          "feedbackTemplate": {
+            "type": "string",
+            "description": "Feedback template UID."
+          },
+          "feedbackReminder": {
+            "type": "string",
+            "enum": [
+              "once",
+              "daily",
+              "frequently",
+              "never"
+            ],
+            "description": "Feedback reminder cadence."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "data"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Created resource UID (from data.id)."
+          },
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/opportunities/{{opportunityId}}/interviews",
+        "query": {
+          "perform_as": "{{performAs}}"
+        },
+        "body": {
+          "panel": "{{panel}}",
+          "interviewers": "{{interviewers}}",
+          "date": "{{date}}",
+          "duration": "{{duration}}",
+          "subject": "{{subject}}",
+          "note": "{{note}}",
+          "location": "{{location}}",
+          "feedbackTemplate": "{{feedbackTemplate}}",
+          "feedbackReminder": "{{feedbackReminder}}"
+        },
+        "success": [
+          200,
+          201
+        ],
+        "result": {
+          "id": "{{response.data.id}}",
+          "data": "{{response.data}}"
+        }
+      }
+    },
+    "interviews.update": {
+      "kind": "action",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "responseFormat": "json",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "sideEffect": "write",
+      "effectPolicy": "Reconcile",
+      "reconcile": "interviews.get",
+      "title": "Update interview",
+      "description": "Update an interview via authenticated PUT /v1/opportunities/{opportunityId}/interviews/{interviewId}?perform_as=. EffectPolicy Reconcile observes via tip interviews.get.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "opportunityId",
+          "interviewId",
+          "performAs",
+          "panel",
+          "interviewers",
+          "date",
+          "duration"
+        ],
+        "properties": {
+          "opportunityId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Lever opportunity UID."
+          },
+          "performAs": {
+            "type": "string",
+            "minLength": 1,
+            "description": "User UID to perform_as (query; required by Lever)."
+          },
+          "panel": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Parent panel UID."
+          },
+          "interviewers": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": true
+            },
+            "minItems": 1,
+            "description": "Non-empty interviewer objects."
+          },
+          "date": {
+            "type": "integer",
+            "description": "Interview start time (ms epoch)."
+          },
+          "duration": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Duration in minutes."
+          },
+          "subject": {
+            "type": "string",
+            "description": "Interview subject."
+          },
+          "note": {
+            "type": "string",
+            "description": "Interview note."
+          },
+          "location": {
+            "type": "string",
+            "description": "Location or meeting URL."
+          },
+          "feedbackTemplate": {
+            "type": "string",
+            "description": "Feedback template UID."
+          },
+          "feedbackReminder": {
+            "type": "string",
+            "enum": [
+              "once",
+              "daily",
+              "frequently",
+              "never"
+            ],
+            "description": "Feedback reminder cadence."
+          },
+          "interviewId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Lever interview UID."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/opportunities/{{opportunityId}}/interviews/{{interviewId}}",
+        "query": {
+          "perform_as": "{{performAs}}"
+        },
+        "body": {
+          "panel": "{{panel}}",
+          "interviewers": "{{interviewers}}",
+          "date": "{{date}}",
+          "duration": "{{duration}}",
+          "subject": "{{subject}}",
+          "note": "{{note}}",
+          "location": "{{location}}",
+          "feedbackTemplate": "{{feedbackTemplate}}",
+          "feedbackReminder": "{{feedbackReminder}}"
+        },
+        "success": [
+          200
+        ]
+      }
+    },
+    "interviews.delete": {
+      "kind": "action",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "responseFormat": "json",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "sideEffect": "destructive",
+      "title": "Delete interview",
+      "description": "Delete an interview via authenticated DELETE /v1/opportunities/{opportunityId}/interviews/{interviewId}?perform_as= (204). Missing interview → CONNECTOR_UPSTREAM_ERROR.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "opportunityId",
+          "interviewId",
+          "performAs"
+        ],
+        "properties": {
+          "opportunityId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Lever opportunity UID."
+          },
+          "interviewId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Lever interview UID."
+          },
+          "performAs": {
+            "type": "string",
+            "minLength": 1,
+            "description": "User UID to perform_as (query; required by Lever)."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "deleted",
+          "opportunityId",
+          "interviewId"
+        ],
+        "properties": {
+          "deleted": {
+            "type": "boolean"
+          },
+          "opportunityId": {
+            "type": "string"
+          },
+          "interviewId": {
+            "type": "string"
+          }
+        }
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/opportunities/{{opportunityId}}/interviews/{{interviewId}}",
+        "query": {
+          "perform_as": "{{performAs}}"
+        },
+        "success": [
+          204
+        ],
+        "result": {
+          "deleted": true,
+          "opportunityId": "{{input.opportunityId}}",
+          "interviewId": "{{input.interviewId}}"
+        }
+      }
+    },
+    "requisitions.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "responseFormat": "json",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "sideEffect": "read",
+      "title": "Get requisition",
+      "description": "Fetch a single requisition via authenticated GET /v1/requisitions/{requisitionId}. Returns requisitionCode/name/headcountTotal/status and related fields for Reconcile observe.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "requisitionId"
+        ],
+        "properties": {
+          "requisitionId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Lever requisition UID."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/requisitions/{{requisitionId}}",
+        "success": [
+          200
+        ]
+      }
+    },
+    "requisitions.create": {
+      "kind": "action",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "responseFormat": "json",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "sideEffect": "write",
+      "title": "Create requisition",
+      "description": "Create a requisition via authenticated POST /v1/requisitions. Surfaces data.id as id. No EffectPolicy (create omits effect keys).",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "requisitionCode",
+          "name",
+          "headcountTotal"
+        ],
+        "properties": {
+          "requisitionCode": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Human requisition code (e.g. ENG-12)."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Requisition name."
+          },
+          "headcountTotal": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Total headcount."
+          },
+          "backfill": {
+            "type": "boolean",
+            "description": "Whether this is a backfill."
+          },
+          "compensationBand": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Compensation band object."
+          },
+          "employmentStatus": {
+            "type": "string",
+            "description": "Employment status (e.g. full-time)."
+          },
+          "hiringManager": {
+            "type": "string",
+            "description": "Hiring manager user UID."
+          },
+          "owner": {
+            "type": "string",
+            "description": "Owner user UID."
+          },
+          "location": {
+            "type": "string",
+            "description": "Location text."
+          },
+          "team": {
+            "type": "string",
+            "description": "Team name."
+          },
+          "department": {
+            "type": "string",
+            "description": "Department name."
+          },
+          "postingIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "description": "Linked posting UIDs."
+          },
+          "customFields": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Custom field map."
+          },
+          "status": {
+            "type": "string",
+            "description": "Requisition status (e.g. open, closed)."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "data"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Created resource UID (from data.id)."
+          },
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/requisitions",
+        "body": {
+          "requisitionCode": "{{requisitionCode}}",
+          "name": "{{name}}",
+          "headcountTotal": "{{headcountTotal}}",
+          "backfill": "{{backfill}}",
+          "compensationBand": "{{compensationBand}}",
+          "employmentStatus": "{{employmentStatus}}",
+          "hiringManager": "{{hiringManager}}",
+          "owner": "{{owner}}",
+          "location": "{{location}}",
+          "team": "{{team}}",
+          "department": "{{department}}",
+          "postingIds": "{{postingIds}}",
+          "customFields": "{{customFields}}"
+        },
+        "success": [
+          200,
+          201
+        ],
+        "result": {
+          "id": "{{response.data.id}}",
+          "data": "{{response.data}}"
+        }
+      }
+    },
+    "requisitions.update": {
+      "kind": "action",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "responseFormat": "json",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "sideEffect": "write",
+      "effectPolicy": "Reconcile",
+      "reconcile": "requisitions.get",
+      "title": "Update requisition",
+      "description": "Update a requisition via authenticated PUT /v1/requisitions/{requisitionId} (atomic). EffectPolicy Reconcile observes via requisitions.get (exact: GET returns all writable fields).",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "requisitionId",
+          "requisitionCode",
+          "name",
+          "headcountTotal"
+        ],
+        "properties": {
+          "requisitionId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Lever requisition UID."
+          },
+          "requisitionCode": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Human requisition code (e.g. ENG-12)."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Requisition name."
+          },
+          "headcountTotal": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Total headcount."
+          },
+          "backfill": {
+            "type": "boolean",
+            "description": "Whether this is a backfill."
+          },
+          "compensationBand": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Compensation band object."
+          },
+          "employmentStatus": {
+            "type": "string",
+            "description": "Employment status (e.g. full-time)."
+          },
+          "hiringManager": {
+            "type": "string",
+            "description": "Hiring manager user UID."
+          },
+          "owner": {
+            "type": "string",
+            "description": "Owner user UID."
+          },
+          "location": {
+            "type": "string",
+            "description": "Location text."
+          },
+          "team": {
+            "type": "string",
+            "description": "Team name."
+          },
+          "department": {
+            "type": "string",
+            "description": "Department name."
+          },
+          "postingIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "description": "Linked posting UIDs."
+          },
+          "customFields": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Custom field map."
+          },
+          "status": {
+            "type": "string",
+            "description": "Requisition status (e.g. open, closed)."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/requisitions/{{requisitionId}}",
+        "body": {
+          "requisitionCode": "{{requisitionCode}}",
+          "name": "{{name}}",
+          "headcountTotal": "{{headcountTotal}}",
+          "backfill": "{{backfill}}",
+          "compensationBand": "{{compensationBand}}",
+          "employmentStatus": "{{employmentStatus}}",
+          "hiringManager": "{{hiringManager}}",
+          "owner": "{{owner}}",
+          "location": "{{location}}",
+          "team": "{{team}}",
+          "department": "{{department}}",
+          "postingIds": "{{postingIds}}",
+          "customFields": "{{customFields}}",
+          "status": "{{status}}"
+        },
+        "success": [
+          200
+        ]
+      }
+    },
+    "requisitions.delete": {
+      "kind": "action",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "responseFormat": "json",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "sideEffect": "destructive",
+      "title": "Delete requisition",
+      "description": "Delete a requisition via authenticated DELETE /v1/requisitions/{requisitionId} (204). Missing requisition → CONNECTOR_UPSTREAM_ERROR.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "requisitionId"
+        ],
+        "properties": {
+          "requisitionId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Lever requisition UID."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "deleted",
+          "requisitionId"
+        ],
+        "properties": {
+          "deleted": {
+            "type": "boolean"
+          },
+          "requisitionId": {
+            "type": "string"
+          }
+        }
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/requisitions/{{requisitionId}}",
+        "success": [
+          204
+        ],
+        "result": {
+          "deleted": true,
+          "requisitionId": "{{input.requisitionId}}"
+        }
+      }
+    },
+    "resumes.list": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "responseFormat": "json",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "sideEffect": "read",
+      "title": "List resumes",
+      "description": "List resume metadata for an opportunity via authenticated GET /v1/opportunities/{opportunityId}/resumes. Binary download is out of scope.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "opportunityId"
+        ],
+        "properties": {
+          "opportunityId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Lever opportunity UID."
+          },
+          "uploadedAtStart": {
+            "type": "integer",
+            "description": "Inclusive uploaded_at lower bound (ms)."
+          },
+          "uploadedAtEnd": {
+            "type": "integer",
+            "description": "Exclusive uploaded_at upper bound (ms)."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/opportunities/{{opportunityId}}/resumes",
+        "query": {
+          "uploaded_at_start": "{{uploadedAtStart}}",
+          "uploaded_at_end": "{{uploadedAtEnd}}"
+        },
+        "success": [
+          200
+        ]
+      }
+    },
+    "files.list": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "responseFormat": "json",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "sideEffect": "read",
+      "title": "List files",
+      "description": "List file metadata for an opportunity via authenticated GET /v1/opportunities/{opportunityId}/files. Binary download is out of scope.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "opportunityId"
+        ],
+        "properties": {
+          "opportunityId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Lever opportunity UID."
+          },
+          "uploadedAtStart": {
+            "type": "integer",
+            "description": "Inclusive uploaded_at lower bound (ms)."
+          },
+          "uploadedAtEnd": {
+            "type": "integer",
+            "description": "Exclusive uploaded_at upper bound (ms)."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/opportunities/{{opportunityId}}/files",
+        "query": {
+          "uploaded_at_start": "{{uploadedAtStart}}",
+          "uploaded_at_end": "{{uploadedAtEnd}}"
+        },
+        "success": [
+          200
+        ]
+      }
+    },
+    "files.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "responseFormat": "json",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "sideEffect": "read",
+      "title": "Get file",
+      "description": "Fetch file metadata (including downloadUrl) via authenticated GET /v1/opportunities/{opportunityId}/files/{fileId}. Does not download bytes.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "opportunityId",
+          "fileId"
+        ],
+        "properties": {
+          "opportunityId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Lever opportunity UID."
+          },
+          "fileId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Lever file UID."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/opportunities/{{opportunityId}}/files/{{fileId}}",
+        "success": [
+          200
+        ]
+      }
     }
   },
   "models": [

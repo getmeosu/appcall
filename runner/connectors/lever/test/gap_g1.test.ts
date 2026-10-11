@@ -81,10 +81,10 @@ function queueFetch(responses: Array<{ status?: number; body?: unknown }>) {
 
 const eu = { apiKey: "fixturekey", region: "eu" };
 
-describe("Lever G1 manifest locks (v0.6.0 / 38)", () => {
+describe("Lever G1 manifest locks (v0.7.0 / 53)", () => {
   test("version and op count", () => {
-    expect(manifest.version).toBe("0.6.0");
-    expect(Object.keys(ops)).toHaveLength(38);
+    expect(manifest.version).toBe("0.7.0");
+    expect(Object.keys(ops)).toHaveLength(53);
     for (const id of G1_OPS) expect(ops[id]).toBeTruthy();
   });
 
