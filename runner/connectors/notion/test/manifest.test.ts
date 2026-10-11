@@ -77,7 +77,7 @@ function dummyInput(schema: { properties?: Record<string, any>; required?: strin
 }
 
 describe("notion manifest", () => {
-  test("compiles a REST connector against api.notion.com with Bearer apiToken", () => {
+  test("compiles a REST connector against api.notion.com with Bearer notionToken", () => {
     expect(manifest.key).toBe("notion");
     expect(manifest.version).toBe("0.3.0");
     expect(manifest.runtime).toBe("bun");
@@ -85,17 +85,17 @@ describe("notion manifest", () => {
     expect(manifest.network.allowedHosts).toEqual(["api.notion.com"]);
     expect(manifest.http.baseUrl).toBe("https://api.notion.com");
     expect(manifest.http.auth).toEqual({
-      field: "apiToken",
+      field: "notionToken",
       in: "header",
       name: "Authorization",
-      value: "Bearer {{apiToken}}",
+      value: "Bearer {{notionToken}}",
     });
     expect(manifest.http.headers["Notion-Version"]).toBe("2026-03-11");
     expect(manifest.http.headers["Content-Type"]).toBeUndefined();
     expect(manifest.auth.type).toBe("api_key");
     expect(Object.keys(manifest.auth).sort()).toEqual([...AUTH_KEYS]);
     expect(manifest.auth.scopes).toEqual([]);
-    expect(manifest.auth.setup.fields.map((field: { key: string }) => field.key)).toEqual(["apiToken"]);
+    expect(manifest.auth.setup.fields.map((field: { key: string }) => field.key)).toEqual(["notionToken"]);
     expect(manifest.auth.setup.fields[0].required).toBe(true);
     expect(manifest.auth.setup.fields[0].secret).toBe(true);
     expect(() => compileDeclarativeConnector(manifest as never)).not.toThrow();
@@ -184,7 +184,7 @@ describe("notion manifest", () => {
     expect(Object.keys(recipe.manifest.auth).sort()).toEqual([...AUTH_KEYS]);
     expect(recipe.auth.type).toBe("api_key");
     expect(recipe.auth.scopes).toEqual([]);
-    expect(recipe.auth.setup.fields.map((field: { key: string }) => field.key)).toEqual(["apiToken"]);
+    expect(recipe.auth.setup.fields.map((field: { key: string }) => field.key)).toEqual(["notionToken"]);
     expect(recipe.auth.setup.fields[0].secret).toBe(true);
     expect(recipe.auth.setup.fields[0].required).toBe(true);
     expect(Object.keys(recipe.manifest.operations).sort()).toEqual(Object.keys(operations).sort());
@@ -207,7 +207,7 @@ describe("notion compiled handlers", () => {
   ) {
     const requests: Request[] = [];
     const result = await compiled.actions[key]!({
-      apiToken: "secret_dummy",
+      notionToken: "secret_dummy",
       ...input,
       fetch: async (url: RequestInfo | URL, init?: RequestInit) => {
         const request = new Request(url, init);
@@ -269,7 +269,7 @@ describe("notion compiled handlers", () => {
     let calls = 0;
     await expect(
       compiled.actions.healthcheck!({
-        apiToken: "secret_dummy",
+        notionToken: "secret_dummy",
         nope: true,
         fetch: async () => {
           calls += 1;
