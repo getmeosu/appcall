@@ -66,7 +66,7 @@ const ADDED = [
 
 describe("github full-depth REST additions", () => {
   test("version and runnable request blocks", () => {
-    expect(manifest.version).toBe("0.80.0");
+    expect(manifest.version).toBe("0.80.1");
     expect(Object.keys(manifest.operations)).toHaveLength(910);
     expect(manifest.network.allowedHosts).toContain("models.github.ai");
     for (const key of ADDED) {
