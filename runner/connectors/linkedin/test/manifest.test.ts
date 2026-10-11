@@ -4,7 +4,7 @@ import manifest from "../manifest.json";
 describe("linkedin manifest", () => {
   it("has correct key and version", () => {
     expect(manifest.key).toBe("linkedin");
-    expect(manifest.version).toBe("0.2.0");
+    expect(manifest.version).toBe("0.2.1");
     expect(manifest.runtime).toBe("bun");
   });
 
@@ -43,6 +43,16 @@ describe("linkedin manifest", () => {
     expect(ops).toContain("posts.publish");
     expect(ops).toContain("profile.whoami");
     expect(ops).toHaveLength(30);
+  });
+
+  it("posts.create is member-only and never defaults to urn:li:person:me", () => {
+    const op = (manifest.operations as Record<string, any>)["posts.create"];
+    const text = JSON.stringify(op);
+    expect(text.includes("urn:li:person:me")).toBe(false);
+    expect(op.description).not.toMatch(/organization posts|member or organization/i);
+    expect(op.inputSchema.properties.authorUrn.description).toContain("urn:li:person:{sub}");
+    for (const key of ["effectPolicy", "reconcile", "observe", "sideEffect"]) expect(key in op).toBe(false);
+    expect(manifest.auth.scopes).not.toContain("w_organization_social");
   });
 
   it("has correct models", () => {
