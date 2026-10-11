@@ -6,8 +6,8 @@ describe("Ashby manifest", () => {
     expect(manifest.key).toBe("ashby");
   });
 
-  it("has version 0.7.0", () => {
-    expect(manifest.version).toBe("0.7.0");
+  it("has version 0.8.0", () => {
+    expect(manifest.version).toBe("0.8.0");
   });
 
   it("uses bun runtime", () => {
@@ -33,7 +33,7 @@ describe("Ashby manifest", () => {
     expect(manifest.operations.healthcheck.kind).toBe("action");
   });
 
-  it("declares P0+P1 reads plus write ops", () => {
+  it("declares tip+G1+G2 operations", () => {
     expect(Object.keys(manifest.operations).sort()).toEqual([
       "application_feedback.list",
       "application_feedback.submit",
@@ -58,6 +58,7 @@ describe("Ashby manifest", () => {
       "candidates.list_notes",
       "candidates.search",
       "candidates.update",
+      "close_reasons.list",
       "departments.list",
       "healthcheck",
       "hiring_team.add_member",
@@ -68,11 +69,25 @@ describe("Ashby manifest", () => {
       "interviews.cancel",
       "interviews.list",
       "interviews.schedule",
+      "job_interview_plans.get",
+      "job_postings.get",
+      "job_postings.list",
+      "job_postings.update",
+      "job_templates.list",
+      "jobs.create",
       "jobs.get",
       "jobs.list",
+      "jobs.list_internal",
+      "jobs.search",
+      "jobs.set_status",
+      "jobs.update",
       "offers.get",
       "offers.list",
+      "openings.create",
+      "openings.get",
       "openings.list",
+      "openings.search",
+      "openings.update",
       "sources.list",
       "users.get",
       "users.list",
@@ -169,8 +184,8 @@ describe("Ashby manifest", () => {
     expect(update.reconcile).toBe("candidates.get");
   });
 
-    it("declares 45 operations (G1 +15) and no interview_schedules.get (Ashby-0 cite-drop)", () => {
-    expect(Object.keys(manifest.operations)).toHaveLength(45);
+  it("declares 60 operations (G2 +15) and no interview_schedules.get (Ashby-0 cite-drop)", () => {
+    expect(Object.keys(manifest.operations)).toHaveLength(60);
     expect(manifest.operations["interview_schedules.get"]).toBeUndefined();
   });
 
@@ -204,13 +219,29 @@ describe("Ashby manifest", () => {
     expect(transfer.reconcile).toBe("applications.get");
   });
 
-  it("omits effect keys on G1 creates/one-shots without exact observe", () => {
+  it("restores Reconcile on G1 fold-in writes after observe widening", () => {
+    for (const [key, observe] of [
+      ["candidates.add_tag", "candidates.get"],
+      ["applications.change_source", "applications.get"],
+      ["applications.update", "applications.get"],
+    ] as const) {
+      const op = manifest.operations[key] as {
+        effectPolicy: string;
+        reconcile: string;
+        kind: string;
+        sideEffect: string;
+      };
+      expect(op.kind).toBe("action");
+      expect(op.sideEffect).toBe("write");
+      expect(op.effectPolicy).toBe("Reconcile");
+      expect(op.reconcile).toBe(observe);
+    }
+  });
+
+  it("omits effect keys on remaining G1 creates/one-shots without exact observe", () => {
     for (const key of [
       "candidates.create_note",
-      "candidates.add_tag",
       "candidate_tags.create",
-      "applications.change_source",
-      "applications.update",
       "application_feedback.submit",
       "hiring_team.add_member",
       "hiring_team.remove_member",
@@ -239,4 +270,39 @@ describe("Ashby manifest", () => {
     }
   });
 
+  it("wires G2 write EffectPolicy and marks G2 reads as agent tools", () => {
+    for (const key of ["jobs.create", "openings.create"] as const) {
+      const op = manifest.operations[key] as Record<string, unknown>;
+      expect(op.effectPolicy).toBeUndefined();
+      expect(op.reconcile).toBeUndefined();
+      expect(op.observe).toBeUndefined();
+      expect(op.kind).toBe("action");
+      expect(op.sideEffect).toBe("write");
+    }
+    expect(manifest.operations["jobs.update"].effectPolicy).toBe("Reconcile");
+    expect(manifest.operations["jobs.update"].reconcile).toBe("jobs.get");
+    expect(manifest.operations["jobs.set_status"].effectPolicy).toBe("Reconcile");
+    expect(manifest.operations["jobs.set_status"].reconcile).toBe("jobs.get");
+    expect(manifest.operations["job_postings.update"].effectPolicy).toBe("Reconcile");
+    expect(manifest.operations["job_postings.update"].reconcile).toBe("job_postings.get");
+    expect(manifest.operations["openings.update"].effectPolicy).toBe("Reconcile");
+    expect(manifest.operations["openings.update"].reconcile).toBe("openings.get");
+
+    for (const key of [
+      "jobs.list_internal",
+      "jobs.search",
+      "job_templates.list",
+      "job_interview_plans.get",
+      "job_postings.list",
+      "job_postings.get",
+      "openings.get",
+      "openings.search",
+      "close_reasons.list",
+    ] as const) {
+      const op = manifest.operations[key] as { kind: string; sideEffect: string };
+      expect(op.kind).toBe("action");
+      expect(op.sideEffect).toBe("read");
+      expect((op as Record<string, unknown>).effectPolicy).toBeUndefined();
+    }
+  });
 });

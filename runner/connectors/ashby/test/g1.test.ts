@@ -87,7 +87,7 @@ describe("Ashby G1 candidates.create_note / list_notes", () => {
 });
 
 describe("Ashby G1 candidate tags", () => {
-  test("add_tag POSTs /candidate.addTag", async () => {
+  test("add_tag POSTs /candidate.addTag and returns null for Reconcile", async () => {
     const { calls, impl } = stubFetch(JSON.stringify(tagAdded));
     const result = await executeCandidatesAddTag({
       ...auth,
@@ -97,7 +97,7 @@ describe("Ashby G1 candidate tags", () => {
     });
     expect(new URL(calls[0]!.url).pathname).toBe("/candidate.addTag");
     expect(JSON.parse(await calls[0]!.text())).toEqual({ candidateId: "cand-1", tagId: "tag-1" });
-    expect((result.candidate as { id?: string })?.id).toBe("e9ed20fd-d45f-4aad-8a00-a19bfba0083e");
+    expect(result.candidate).toBeNull();
   });
 
   test("candidate_tags.list POSTs /candidateTag.list", async () => {
@@ -117,9 +117,9 @@ describe("Ashby G1 candidate tags", () => {
 });
 
 describe("Ashby G1 applications source/transfer/update/history", () => {
-  test("change_source POSTs /application.changeSource", async () => {
+  test("change_source POSTs /application.changeSource and returns null for Reconcile", async () => {
     const { calls, impl } = stubFetch(JSON.stringify(sourceChanged));
-    await executeApplicationsChangeSource({
+    const result = await executeApplicationsChangeSource({
       ...auth,
       applicationId: "app-1",
       sourceId: "src-2",
@@ -127,6 +127,7 @@ describe("Ashby G1 applications source/transfer/update/history", () => {
     });
     expect(new URL(calls[0]!.url).pathname).toBe("/application.changeSource");
     expect(JSON.parse(await calls[0]!.text())).toEqual({ applicationId: "app-1", sourceId: "src-2" });
+    expect(result.application).toBeNull();
   });
 
   test("transfer POSTs /application.transfer and returns null for Reconcile", async () => {
@@ -152,9 +153,9 @@ describe("Ashby G1 applications source/transfer/update/history", () => {
     expect(result.application).toBeNull();
   });
 
-  test("update POSTs /application.update", async () => {
+  test("update POSTs /application.update and returns null for Reconcile", async () => {
     const { calls, impl } = stubFetch(JSON.stringify(appUpdated));
-    await executeApplicationsUpdate({
+    const result = await executeApplicationsUpdate({
       ...auth,
       applicationId: "app-1",
       sourceId: "src-2",
@@ -167,6 +168,7 @@ describe("Ashby G1 applications source/transfer/update/history", () => {
       sourceId: "src-2",
       creditedToUserId: "usr-1",
     });
+    expect(result.application).toBeNull();
   });
 
   test("list_history POSTs /application.listHistory", async () => {
