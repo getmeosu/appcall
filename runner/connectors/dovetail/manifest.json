@@ -1,17 +1,7 @@
 {
-  "key": "dovetail",
-  "name": "Dovetail",
-  "version": "0.2.0",
-  "runtime": "bun",
-  "visibility": "public",
-  "categories": [
-    "productivity"
-  ],
   "auth": {
-    "type": "api_key",
     "scopes": [],
     "setup": {
-      "mode": "api_key",
       "fields": [
         {
           "key": "apiKey",
@@ -19,165 +9,142 @@
           "required": true,
           "secret": true
         }
-      ]
+      ],
+      "mode": "api_key"
+    },
+    "type": "api_key"
+  },
+  "categories": [
+    "productivity"
+  ],
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
     }
   },
-  "network": {
-    "allowedHosts": [
-      "dovetail.com"
-    ]
-  },
-  "models": [
-    "token",
-    "project",
-    "data",
-    "doc",
-    "insight",
-    "folder",
-    "tag",
-    "highlight",
-    "channel",
-    "contact"
-  ],
   "http": {
-    "baseUrl": "https://dovetail.com/api",
     "auth": {
       "field": "apiKey",
       "in": "header",
       "name": "Authorization",
       "value": "Bearer {{apiKey}}"
     },
-    "headers": {
-      "Accept": "application/json"
-    },
+    "baseUrl": "https://dovetail.com/api",
     "errors": {
-      "rateLimitStatuses": [
-        429
-      ],
-      "retryAfterHeader": "retry-after",
       "defaultRetryAfterSeconds": 30,
       "messagePaths": [
         "errors.0.message",
         "errors.0.title",
         "message"
-      ]
+      ],
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after"
+    },
+    "headers": {
+      "Accept": "application/json"
     }
   },
+  "key": "dovetail",
+  "models": [
+    "token",
+    "project",
+    "data",
+    "channel",
+    "contact",
+    "doc",
+    "insight",
+    "note",
+    "topic",
+    "folder",
+    "file",
+    "highlight",
+    "tag",
+    "search"
+  ],
+  "name": "Dovetail",
+  "network": {
+    "allowedHosts": [
+      "dovetail.com"
+    ]
+  },
   "operations": {
-    "healthcheck": {
-      "timeoutMs": 15000,
+    "data.get": {
+      "description": "Get one Dovetail data record by identifier.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "dataId": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "dataId"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
       "maxInputBytes": 65536,
       "maxResponseBytes": 1048576,
-      "kind": "action",
-      "sideEffect": "read",
-      "title": "Healthcheck",
-      "description": "Validate a Dovetail personal API key by reading token metadata.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {},
-        "additionalProperties": false
-      },
       "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
+        "additionalProperties": false,
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "additionalProperties": false
-      },
-      "enforceOutputSchema": true,
-      "responseFormat": "json",
-      "validationMode": "strict-generated",
-      "request": {
-        "method": "GET",
-        "path": "/v1/token/info",
-        "success": [
-          200
-        ]
-      }
-    },
-    "projects.list": {
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 1048576,
-      "kind": "action",
-      "sideEffect": "read",
-      "title": "List projects",
-      "description": "List Dovetail projects.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "limit": {
-            "type": "integer",
-            "minimum": 0,
-            "maximum": 100
-          }
-        },
-        "additionalProperties": false
-      },
-      "outputSchema": {
-        "type": "object",
         "required": [
           "data"
         ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
+        "type": "object"
       },
-      "enforceOutputSchema": true,
-      "responseFormat": "json",
-      "validationMode": "strict-generated",
       "request": {
         "method": "GET",
-        "path": "/v1/projects",
-        "query": {
-          "page[limit]": "{{limit}}"
-        },
+        "path": "/v1/data/{{dataId}}",
         "success": [
           200
         ]
-      }
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get data",
+      "validationMode": "strict-generated"
     },
     "data.list": {
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 1048576,
-      "kind": "action",
-      "sideEffect": "read",
-      "title": "List data",
       "description": "List Dovetail data records.",
+      "enforceOutputSchema": true,
       "inputSchema": {
-        "type": "object",
+        "additionalProperties": false,
         "properties": {
           "projectId": {
-            "type": "string",
-            "minLength": 1
+            "minLength": 1,
+            "type": "string"
           }
         },
-        "additionalProperties": false
+        "type": "object"
       },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
       "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
+        "additionalProperties": false,
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "additionalProperties": false
+        "required": [
+          "data"
+        ],
+        "type": "object"
       },
-      "enforceOutputSchema": true,
-      "responseFormat": "json",
-      "validationMode": "strict-generated",
       "request": {
         "method": "GET",
         "path": "/v1/data",
@@ -187,961 +154,3482 @@
         "success": [
           200
         ]
-      }
-    },
-    "data.get": {
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 1048576,
-      "kind": "action",
-      "sideEffect": "read",
-      "title": "Get data",
-      "description": "Get one Dovetail data record by identifier.",
-      "inputSchema": {
-        "type": "object",
-        "required": [
-          "dataId"
-        ],
-        "properties": {
-          "dataId": {
-            "type": "string",
-            "minLength": 1
-          }
-        },
-        "additionalProperties": false
       },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "enforceOutputSchema": true,
       "responseFormat": "json",
-      "validationMode": "strict-generated",
-      "request": {
-        "method": "GET",
-        "path": "/v1/data/{{dataId}}",
-        "success": [
-          200
-        ]
-      }
-    },
-    "projects.get": {
-      "kind": "action",
       "sideEffect": "read",
       "timeoutMs": 15000,
+      "title": "List data",
+      "validationMode": "strict-generated"
+    },
+    "healthcheck": {
+      "description": "Validate a Dovetail personal API key by reading token metadata.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {},
+        "type": "object"
+      },
+      "kind": "action",
       "maxInputBytes": 65536,
       "maxResponseBytes": 1048576,
-      "title": "Get project",
-      "description": "Get one Dovetail project by identifier.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "projectId": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Project identifier."
-          }
-        },
-        "additionalProperties": false,
-        "required": [
-          "projectId"
-        ]
-      },
       "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
+        "additionalProperties": false,
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "additionalProperties": false
+        "required": [
+          "data"
+        ],
+        "type": "object"
       },
       "request": {
         "method": "GET",
-        "path": "/v1/projects/{{projectId}}",
+        "path": "/v1/token/info",
         "success": [
           200
         ]
       },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "projects.create": {
-      "kind": "action",
-      "sideEffect": "write",
+      "responseFormat": "json",
+      "sideEffect": "read",
       "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 1048576,
-      "title": "Create project",
-      "description": "Create a Dovetail project.",
+      "title": "Healthcheck",
+      "validationMode": "strict-generated"
+    },
+    "projects.list": {
+      "description": "List Dovetail projects.",
+      "enforceOutputSchema": true,
       "inputSchema": {
-        "type": "object",
+        "additionalProperties": false,
         "properties": {
-          "title": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Project title."
-          },
-          "folderId": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Optional parent folder identifier."
-          },
-          "templateId": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Optional project template identifier."
+          "limit": {
+            "maximum": 100,
+            "minimum": 0,
+            "type": "integer"
           }
         },
-        "additionalProperties": false,
-        "required": [
-          "title"
-        ]
+        "type": "object"
       },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
       "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
+        "additionalProperties": false,
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "additionalProperties": false
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/projects",
+        "query": {
+          "page[limit]": "{{limit}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List projects",
+      "validationMode": "strict-generated"
+    },
+    "channels.create": {
+      "description": "Create a Dovetail channel for high-volume feedback such as app reviews, NPS, or support tickets.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "contentType": {
+            "description": "Channel content type.",
+            "type": "string",
+            "minLength": 1,
+            "enum": [
+              "APP_REVIEW",
+              "CHURN_REASONS",
+              "NPS_FEEDBACK",
+              "PRODUCT_REVIEW",
+              "SUPPORT_TICKETS"
+            ]
+          },
+          "projectCategoryId": {
+            "description": "Folder id to save the channel in. Omit to create at workspace root.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": {
+            "description": "Channel title (1-200 characters).",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "title",
+          "contentType"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
       },
       "request": {
         "method": "POST",
-        "path": "/v1/projects",
+        "path": "/v1/channels",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "content_type": "{{contentType}}",
+          "project_category_id": "{{projectCategoryId}}",
+          "title": "{{title}}"
+        },
         "success": [
           200,
           201
-        ],
-        "body": {
-          "title": "{{title}}",
-          "folder_id": "{{folderId}}",
-          "template_id": "{{templateId}}"
-        },
-        "headers": {
-          "Content-Type": "application/json"
-        }
+        ]
       },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "projects.update": {
-      "kind": "action",
+      "responseFormat": "json",
       "sideEffect": "write",
       "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 1048576,
-      "title": "Update project",
-      "description": "Update a Dovetail project title.",
+      "title": "Create channel",
+      "validationMode": "strict-generated"
+    },
+    "contacts.create": {
+      "description": "Create a contact in the Dovetail people database before logging research interactions.",
+      "enforceOutputSchema": true,
       "inputSchema": {
-        "type": "object",
+        "additionalProperties": false,
         "properties": {
-          "projectId": {
-            "type": "string",
+          "email": {
+            "description": "Contact email address.",
             "minLength": 1,
-            "description": "Project identifier."
+            "type": "string"
           },
-          "title": {
-            "type": "string",
+          "name": {
+            "description": "Contact full name.",
             "minLength": 1,
-            "description": "Project title."
+            "type": "string"
           }
         },
-        "additionalProperties": false,
         "required": [
-          "projectId",
-          "title"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
+          "name",
+          "email"
         ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "outputSchema": {
+        "additionalProperties": false,
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "additionalProperties": false
+        "required": [
+          "data"
+        ],
+        "type": "object"
       },
       "request": {
-        "method": "PATCH",
-        "path": "/v1/projects/{{projectId}}",
-        "success": [
-          200
-        ],
-        "body": {
-          "title": "{{title}}"
-        },
+        "method": "POST",
+        "path": "/v1/contacts",
         "headers": {
           "Content-Type": "application/json"
-        }
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "projects.delete": {
-      "kind": "action",
-      "sideEffect": "destructive",
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 1048576,
-      "title": "Delete project",
-      "description": "Delete a Dovetail project by identifier.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "projectId": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Project identifier."
-          }
         },
-        "additionalProperties": false,
-        "required": [
-          "projectId"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
+        "body": {
+          "email": "{{email}}",
+          "name": "{{name}}"
         },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "DELETE",
-        "path": "/v1/projects/{{projectId}}",
         "success": [
-          200
+          200,
+          201
         ]
       },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Create contact",
+      "validationMode": "strict-generated"
     },
     "data.create": {
-      "kind": "action",
-      "sideEffect": "write",
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 1048576,
-      "title": "Create data",
-      "description": "Create a Dovetail data record in a project.",
+      "description": "Create a data entry in a Dovetail project with optional title, HTML/text content, and custom fields.",
+      "enforceOutputSchema": true,
       "inputSchema": {
-        "type": "object",
+        "additionalProperties": false,
         "properties": {
-          "projectId": {
+          "content": {
+            "description": "Initial plain text or HTML content.",
             "type": "string",
+            "minLength": 1
+          },
+          "fields": {
+            "description": "Custom fields (label + value).",
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "label": {
+                  "description": "Existing or new field label.",
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "type": {
+                  "description": "Field type when creating a new field.",
+                  "enum": [
+                    "BOOLEAN",
+                    "DATETIME",
+                    "EMAIL",
+                    "NPS",
+                    "NUMBER",
+                    "PERSON",
+                    "PHONE",
+                    "SELECT",
+                    "TEXT",
+                    "URL"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "description": "Field value.",
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": [
+                    "array",
+                    "boolean",
+                    "null",
+                    "number",
+                    "string"
+                  ]
+                }
+              },
+              "required": [
+                "label",
+                "value"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "project_id": {
+            "description": "Project that owns the data entry.",
             "minLength": 1,
-            "description": "Project identifier."
+            "type": "string"
           },
           "title": {
-            "type": "string",
+            "description": "Data title.",
             "minLength": 1,
-            "description": "Data title."
-          },
-          "content": {
-            "type": "string",
-            "description": "Initial plain text or HTML content."
+            "type": "string"
           }
         },
-        "additionalProperties": false,
         "required": [
-          "projectId"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
+          "project_id"
         ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "outputSchema": {
+        "additionalProperties": false,
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "additionalProperties": false
+        "required": [
+          "data"
+        ],
+        "type": "object"
       },
       "request": {
         "method": "POST",
         "path": "/v1/data",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "content": "{{content}}",
+          "fields": "{{fields}}",
+          "project_id": "{{project_id}}",
+          "title": "{{title}}"
+        },
         "success": [
           200,
           201
-        ],
-        "body": {
-          "project_id": "{{projectId}}",
-          "title": "{{title}}",
-          "content": "{{content}}"
-        },
-        "headers": {
-          "Content-Type": "application/json"
-        }
+        ]
       },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "data.update": {
-      "kind": "action",
+      "responseFormat": "json",
       "sideEffect": "write",
       "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 1048576,
-      "title": "Update data",
-      "description": "Update a Dovetail data record title.",
+      "title": "Create data",
+      "validationMode": "strict-generated"
+    },
+    "channels.data.create": {
+      "description": "Send a data point into a Dovetail channel for automatic topic classification.",
+      "enforceOutputSchema": true,
       "inputSchema": {
-        "type": "object",
+        "additionalProperties": false,
         "properties": {
-          "dataId": {
-            "type": "string",
+          "channel_id": {
+            "description": "Channel that receives the data point.",
             "minLength": 1,
-            "description": "Data identifier."
+            "type": "string"
           },
-          "title": {
-            "type": "string",
+          "metadata": {
+            "additionalProperties": true,
+            "description": "Optional key-value metadata.",
+            "type": "object"
+          },
+          "source_title": {
+            "description": "Original source title.",
             "minLength": 1,
-            "description": "Data title."
+            "type": "string"
+          },
+          "source_url": {
+            "description": "Original source URL.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "text": {
+            "description": "Data point content.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "timestamp": {
+            "description": "ISO 8601 timestamp for when the feedback was received.",
+            "minLength": 1,
+            "type": "string"
           }
         },
-        "additionalProperties": false,
         "required": [
-          "dataId",
-          "title"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
+          "text",
+          "timestamp",
+          "channel_id"
         ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "outputSchema": {
+        "additionalProperties": false,
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "additionalProperties": false
+        "required": [
+          "data"
+        ],
+        "type": "object"
       },
       "request": {
-        "method": "PATCH",
-        "path": "/v1/data/{{dataId}}",
-        "success": [
-          200
-        ],
-        "body": {
-          "title": "{{title}}"
-        },
+        "method": "POST",
+        "path": "/v1/channels/data",
         "headers": {
           "Content-Type": "application/json"
-        }
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "data.delete": {
-      "kind": "action",
-      "sideEffect": "destructive",
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 1048576,
-      "title": "Delete data",
-      "description": "Delete a Dovetail data record by identifier.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "dataId": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Data identifier."
-          }
         },
-        "additionalProperties": false,
-        "required": [
-          "dataId"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
+        "body": {
+          "channel_id": "{{channel_id}}",
+          "metadata": "{{metadata}}",
+          "source_title": "{{source_title}}",
+          "source_url": "{{source_url}}",
+          "text": "{{text}}",
+          "timestamp": "{{timestamp}}"
         },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "DELETE",
-        "path": "/v1/data/{{dataId}}",
         "success": [
-          200
+          200,
+          201
         ]
       },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "docs.list": {
-      "kind": "action",
-      "sideEffect": "read",
+      "responseFormat": "json",
+      "sideEffect": "write",
       "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 1048576,
-      "title": "List docs",
-      "description": "List Dovetail docs.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "limit": {
-            "type": "integer",
-            "description": "Page size, 0-100.",
-            "minimum": 0,
-            "maximum": 100
-          }
-        },
-        "additionalProperties": false
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "GET",
-        "path": "/v1/docs",
-        "success": [
-          200
-        ],
-        "query": {
-          "page[limit]": "{{limit}}"
-        }
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "docs.get": {
-      "kind": "action",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 1048576,
-      "title": "Get doc",
-      "description": "Get one Dovetail doc by identifier.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "docId": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Doc identifier."
-          }
-        },
-        "additionalProperties": false,
-        "required": [
-          "docId"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "GET",
-        "path": "/v1/docs/{{docId}}",
-        "success": [
-          200
-        ]
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
+      "title": "Create data point",
+      "validationMode": "strict-generated"
     },
     "docs.create": {
-      "kind": "action",
-      "sideEffect": "write",
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 1048576,
-      "title": "Create doc",
-      "description": "Create a Dovetail doc.",
+      "description": "Create a doc in a Dovetail project with optional title, HTML/text content, and custom fields.",
+      "enforceOutputSchema": true,
       "inputSchema": {
-        "type": "object",
+        "additionalProperties": false,
         "properties": {
-          "title": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Doc title."
-          },
-          "projectId": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Optional project identifier."
-          },
           "content": {
+            "description": "Initial plain text or HTML content.",
             "type": "string",
-            "description": "Initial HTML, Markdown, or plain text."
+            "minLength": 1
+          },
+          "fields": {
+            "description": "Custom fields (label + value).",
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "label": {
+                  "description": "Existing or new field label.",
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "type": {
+                  "description": "Field type when creating a new field.",
+                  "enum": [
+                    "BOOLEAN",
+                    "DATETIME",
+                    "EMAIL",
+                    "NPS",
+                    "NUMBER",
+                    "PERSON",
+                    "PHONE",
+                    "SELECT",
+                    "TEXT",
+                    "URL"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "description": "Field value.",
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": [
+                    "array",
+                    "boolean",
+                    "null",
+                    "number",
+                    "string"
+                  ]
+                }
+              },
+              "required": [
+                "label",
+                "value"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "project_id": {
+            "description": "Project that owns the doc.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": {
+            "description": "Doc title.",
+            "minLength": 1,
+            "type": "string"
           }
         },
-        "additionalProperties": false,
         "required": [
-          "title"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
+          "project_id"
         ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "outputSchema": {
+        "additionalProperties": false,
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "additionalProperties": false
+        "required": [
+          "data"
+        ],
+        "type": "object"
       },
       "request": {
         "method": "POST",
         "path": "/v1/docs",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "content": "{{content}}",
+          "fields": "{{fields}}",
+          "project_id": "{{project_id}}",
+          "title": "{{title}}"
+        },
         "success": [
           200,
           201
-        ],
-        "body": {
-          "title": "{{title}}",
-          "project_id": "{{projectId}}",
-          "content": "{{content}}"
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Create doc",
+      "validationMode": "strict-generated"
+    },
+    "insights.create": {
+      "description": "Create an insight with a title and body. Body is stored as content and is not returned in the response.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "body": {
+            "description": "Insight body/content. Stored but not returned by the API.",
+            "type": "string",
+            "minLength": 1
+          },
+          "project_id": {
+            "description": "Optional project to associate with the insight.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": {
+            "description": "Insight title.",
+            "type": "string"
+          }
         },
+        "required": [
+          "body",
+          "title"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/insights",
         "headers": {
           "Content-Type": "application/json"
-        }
+        },
+        "body": {
+          "content": "{{body}}",
+          "project_id": "{{project_id}}",
+          "title": "{{title}}"
+        },
+        "success": [
+          200,
+          201
+        ]
       },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "insights.list": {
-      "kind": "action",
-      "sideEffect": "read",
+      "responseFormat": "json",
+      "sideEffect": "write",
       "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 1048576,
-      "title": "List insights",
-      "description": "List Dovetail insights.",
+      "title": "Create insight",
+      "validationMode": "strict-generated"
+    },
+    "notes.create": {
+      "description": "Create a note (legacy data entry) in a Dovetail project with optional title, content, and custom fields.",
+      "enforceOutputSchema": true,
       "inputSchema": {
-        "type": "object",
+        "additionalProperties": false,
         "properties": {
-          "limit": {
-            "type": "integer",
-            "description": "Page size, 0-100.",
-            "minimum": 0,
-            "maximum": 100
+          "content": {
+            "description": "Initial plain text or HTML content.",
+            "type": "string",
+            "minLength": 1
+          },
+          "fields": {
+            "description": "Custom fields (label + value).",
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "label": {
+                  "description": "Existing or new field label.",
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "type": {
+                  "description": "Field type when creating a new field.",
+                  "enum": [
+                    "BOOLEAN",
+                    "DATETIME",
+                    "EMAIL",
+                    "NPS",
+                    "NUMBER",
+                    "PERSON",
+                    "PHONE",
+                    "SELECT",
+                    "TEXT",
+                    "URL"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "description": "Field value.",
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": [
+                    "array",
+                    "boolean",
+                    "null",
+                    "number",
+                    "string"
+                  ]
+                }
+              },
+              "required": [
+                "label",
+                "value"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "project_id": {
+            "description": "Project that owns the note.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": {
+            "description": "Note title.",
+            "minLength": 1,
+            "type": "string"
           }
         },
-        "additionalProperties": false
-      },
-      "outputSchema": {
-        "type": "object",
         "required": [
-          "data"
+          "project_id"
         ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "outputSchema": {
+        "additionalProperties": false,
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "additionalProperties": false
+        "required": [
+          "data"
+        ],
+        "type": "object"
       },
       "request": {
-        "method": "GET",
-        "path": "/v1/insights",
+        "method": "POST",
+        "path": "/v1/notes",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "content": "{{content}}",
+          "fields": "{{fields}}",
+          "project_id": "{{project_id}}",
+          "title": "{{title}}"
+        },
         "success": [
-          200
-        ],
-        "query": {
-          "page[limit]": "{{limit}}"
-        }
+          200,
+          201
+        ]
       },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "insights.get": {
-      "kind": "action",
-      "sideEffect": "read",
+      "responseFormat": "json",
+      "sideEffect": "write",
       "timeoutMs": 15000,
+      "title": "Create note",
+      "validationMode": "strict-generated"
+    },
+    "projects.create": {
+      "description": "Create a project in the Dovetail workspace to organize research data.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "title": {
+            "description": "Project title.",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "kind": "action",
       "maxInputBytes": 65536,
       "maxResponseBytes": 1048576,
-      "title": "Get insight",
-      "description": "Get one Dovetail insight by identifier.",
-      "inputSchema": {
-        "type": "object",
+      "outputSchema": {
+        "additionalProperties": false,
         "properties": {
-          "insightId": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/projects",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "title": "{{title}}"
+        },
+        "success": [
+          200,
+          201
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Create project",
+      "validationMode": "strict-generated"
+    },
+    "channels.topics.create": {
+      "description": "Create a topic inside a Dovetail channel to classify incoming data points.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "channel_id": {
+            "description": "Channel that owns the topic.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "description": {
+            "description": "Topic description used during classification.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": {
+            "description": "Topic title.",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "title",
+          "channel_id",
+          "description"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/channels/topic",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "channel_id": "{{channel_id}}",
+          "description": "{{description}}",
+          "title": "{{title}}"
+        },
+        "success": [
+          200,
+          201
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Create topic",
+      "validationMode": "strict-generated"
+    },
+    "channels.delete": {
+      "description": "Move a channel to trash. Restorable for 30 days.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "channel_id": {
+            "description": "Channel to delete.",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "channel_id"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/v1/channels/{{channel_id}}",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Delete channel",
+      "validationMode": "strict-generated"
+    },
+    "data.delete": {
+      "description": "Move a data entry to trash. Restorable for 30 days.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data_id": {
+            "description": "Data entry to delete.",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "data_id"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/v1/data/{{data_id}}",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Delete data",
+      "validationMode": "strict-generated"
+    },
+    "docs.delete": {
+      "description": "Move a doc to trash. Restorable for 30 days.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "doc_id": {
+            "description": "Doc to delete.",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "doc_id"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/v1/docs/{{doc_id}}",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Delete doc",
+      "validationMode": "strict-generated"
+    },
+    "insights.delete": {
+      "description": "Move an insight to trash. Restorable for 30 days.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "insight_id": {
+            "description": "Insight to delete.",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "insight_id"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/v1/insights/{{insight_id}}",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Delete insight",
+      "validationMode": "strict-generated"
+    },
+    "notes.delete": {
+      "description": "Move a note to trash. Restorable for 30 days.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "note_id": {
+            "description": "Note to delete.",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "note_id"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/v1/notes/{{note_id}}",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Delete note",
+      "validationMode": "strict-generated"
+    },
+    "channels.topics.delete": {
+      "description": "Move a channel topic to trash. Restorable for 30 days.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "topic_id": {
+            "description": "Topic to delete.",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "topic_id"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/v1/channels/topic/{{topic_id}}",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Delete topic",
+      "validationMode": "strict-generated"
+    },
+    "data.export": {
+      "description": "Export a data entry body as HTML or Markdown. List/get data return metadata only.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data_id": {
+            "description": "Data entry to export.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "type": {
+            "description": "Export format.",
             "type": "string",
             "minLength": 1,
-            "description": "Insight identifier."
+            "enum": [
+              "html",
+              "markdown"
+            ]
           }
         },
-        "additionalProperties": false,
         "required": [
-          "insightId"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
+          "type",
+          "data_id"
         ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
+        "type": "object"
       },
-      "request": {
-        "method": "GET",
-        "path": "/v1/insights/{{insightId}}",
-        "success": [
-          200
-        ]
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "folders.list": {
       "kind": "action",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 1048576,
-      "title": "List folders",
-      "description": "List Dovetail folders.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "limit": {
-            "type": "integer",
-            "description": "Page size, 0-100.",
-            "minimum": 0,
-            "maximum": 100
-          }
-        },
-        "additionalProperties": false
-      },
       "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
+        "additionalProperties": false,
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "additionalProperties": false
+        "required": [
+          "data"
+        ],
+        "type": "object"
       },
       "request": {
         "method": "GET",
-        "path": "/v1/folders",
+        "path": "/v1/data/{{data_id}}/export/{{type}}",
         "success": [
           200
-        ],
-        "query": {
-          "page[limit]": "{{limit}}"
-        }
+        ]
       },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Export data",
+      "validationMode": "strict-generated"
+    },
+    "docs.export": {
+      "description": "Export a doc body as HTML or Markdown.",
       "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "doc_id": {
+            "description": "Doc to export.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "type": {
+            "description": "Export format.",
+            "type": "string",
+            "minLength": 1,
+            "enum": [
+              "html",
+              "markdown"
+            ]
+          }
+        },
+        "required": [
+          "type",
+          "doc_id"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/docs/{{doc_id}}/export/{{type}}",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Export doc",
+      "validationMode": "strict-generated"
+    },
+    "insights.export": {
+      "description": "Export an insight body as HTML or Markdown.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "insight_id": {
+            "description": "Insight to export.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "type": {
+            "description": "Export format.",
+            "type": "string",
+            "minLength": 1,
+            "enum": [
+              "html",
+              "markdown"
+            ]
+          }
+        },
+        "required": [
+          "type",
+          "insight_id"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/insights/{{insight_id}}/export/{{type}}",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Export insight",
+      "validationMode": "strict-generated"
+    },
+    "notes.export": {
+      "description": "Export a note body as HTML or Markdown.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "note_id": {
+            "description": "Note to export.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "type": {
+            "description": "Export format.",
+            "type": "string",
+            "minLength": 1,
+            "enum": [
+              "html",
+              "markdown"
+            ]
+          }
+        },
+        "required": [
+          "type",
+          "note_id"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/notes/{{note_id}}/export/{{type}}",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Export note",
+      "validationMode": "strict-generated"
+    },
+    "contacts.get": {
+      "description": "Retrieve one contact by id, including name and custom fields.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "contact_id": {
+            "description": "Contact to retrieve.",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "contact_id"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/contacts/{{contact_id}}",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get contact",
+      "validationMode": "strict-generated"
+    },
+    "docs.get": {
+      "description": "Retrieve doc metadata by id. Use export to read the body.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "doc_id": {
+            "description": "Doc to retrieve.",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "doc_id"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/docs/{{doc_id}}",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get doc",
+      "validationMode": "strict-generated"
+    },
+    "files.get": {
+      "description": "Retrieve file metadata, processing status, and download details by id.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "file_id": {
+            "description": "File to retrieve.",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "file_id"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/files/{{file_id}}",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get file",
+      "validationMode": "strict-generated"
     },
     "folders.get": {
-      "kind": "action",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 1048576,
-      "title": "Get folder",
-      "description": "Get one Dovetail folder by identifier.",
+      "description": "Retrieve a folder and its immediate child folder ids.",
+      "enforceOutputSchema": true,
       "inputSchema": {
-        "type": "object",
-        "properties": {
-          "folderId": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Folder identifier."
-          }
-        },
         "additionalProperties": false,
+        "properties": {
+          "folder_id": {
+            "description": "Folder to retrieve.",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
         "required": [
-          "folderId"
+          "folder_id"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/folders/{{folder_id}}",
+        "success": [
+          200
         ]
       },
-      "outputSchema": {
-        "type": "object",
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get folder",
+      "validationMode": "strict-generated"
+    },
+    "insights.get": {
+      "description": "Retrieve insight metadata by id. Use export to read the body.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "insight_id": {
+            "description": "Insight to retrieve.",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
         "required": [
-          "data"
+          "insight_id"
         ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "outputSchema": {
+        "additionalProperties": false,
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "additionalProperties": false
+        "required": [
+          "data"
+        ],
+        "type": "object"
       },
       "request": {
         "method": "GET",
-        "path": "/v1/folders/{{folderId}}",
+        "path": "/v1/insights/{{insight_id}}",
         "success": [
           200
         ]
       },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "tags.list": {
-      "kind": "action",
+      "responseFormat": "json",
       "sideEffect": "read",
       "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 1048576,
-      "title": "List tags",
-      "description": "List Dovetail tags.",
+      "title": "Get insight",
+      "validationMode": "strict-generated"
+    },
+    "notes.get": {
+      "description": "Retrieve note metadata by id. Use export to read the body.",
+      "enforceOutputSchema": true,
       "inputSchema": {
-        "type": "object",
+        "additionalProperties": false,
         "properties": {
-          "limit": {
-            "type": "integer",
-            "description": "Page size, 0-100.",
-            "minimum": 0,
-            "maximum": 100
+          "note_id": {
+            "description": "Note to retrieve.",
+            "minLength": 1,
+            "type": "string"
           }
         },
-        "additionalProperties": false
-      },
-      "outputSchema": {
-        "type": "object",
         "required": [
-          "data"
+          "note_id"
         ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "outputSchema": {
+        "additionalProperties": false,
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "GET",
-        "path": "/v1/tags",
-        "success": [
-          200
-        ],
-        "query": {
-          "page[limit]": "{{limit}}"
-        }
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "highlights.list": {
-      "kind": "action",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 1048576,
-      "title": "List highlights",
-      "description": "List Dovetail highlights.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "limit": {
-            "type": "integer",
-            "description": "Page size, 0-100.",
-            "minimum": 0,
-            "maximum": 100
-          }
-        },
-        "additionalProperties": false
-      },
-      "outputSchema": {
-        "type": "object",
         "required": [
           "data"
         ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/notes/{{note_id}}",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get note",
+      "validationMode": "strict-generated"
+    },
+    "projects.get": {
+      "description": "Retrieve a project by id, including title, author, and folder.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "project_id": {
+            "description": "Project to retrieve.",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "project_id"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "outputSchema": {
+        "additionalProperties": false,
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "GET",
-        "path": "/v1/highlights",
-        "success": [
-          200
-        ],
-        "query": {
-          "page[limit]": "{{limit}}"
-        }
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "channels.list": {
-      "kind": "action",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 1048576,
-      "title": "List channels",
-      "description": "List Dovetail channels.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "limit": {
-            "type": "integer",
-            "description": "Page size, 0-100.",
-            "minimum": 0,
-            "maximum": 100
-          }
-        },
-        "additionalProperties": false
-      },
-      "outputSchema": {
-        "type": "object",
         "required": [
           "data"
         ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/projects/{{project_id}}",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get project",
+      "validationMode": "strict-generated"
+    },
+    "data.import_file": {
+      "description": "Import a publicly reachable file URL as a new data entry in a project.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "author_id": {
+            "description": "User to associate with the imported file.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "created_at": {
+            "description": "ISO 8601 created_at to stamp on the imported entry.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "fields": {
+            "description": "Custom fields (label + value).",
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "label": {
+                  "description": "Existing or new field label.",
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "type": {
+                  "description": "Field type when creating a new field.",
+                  "enum": [
+                    "BOOLEAN",
+                    "DATETIME",
+                    "EMAIL",
+                    "NPS",
+                    "NUMBER",
+                    "PERSON",
+                    "PHONE",
+                    "SELECT",
+                    "TEXT",
+                    "URL"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "description": "Field value.",
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": [
+                    "array",
+                    "boolean",
+                    "null",
+                    "number",
+                    "string"
+                  ]
+                }
+              },
+              "required": [
+                "label",
+                "value"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "mime_type": {
+            "description": "MIME type when the URL has no file extension.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "project_id": {
+            "description": "Project that owns the imported data.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": {
+            "description": "Data title.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "url": {
+            "description": "Public URL Dovetail can download.",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "url",
+          "title",
+          "project_id"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "outputSchema": {
+        "additionalProperties": false,
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "additionalProperties": false
+        "required": [
+          "data"
+        ],
+        "type": "object"
       },
       "request": {
-        "method": "GET",
-        "path": "/v1/channels",
+        "method": "POST",
+        "path": "/v1/data/import/file",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "author_id": "{{author_id}}",
+          "created_at": "{{created_at}}",
+          "fields": "{{fields}}",
+          "mime_type": "{{mime_type}}",
+          "project_id": "{{project_id}}",
+          "title": "{{title}}",
+          "url": "{{url}}"
+        },
         "success": [
-          200
-        ],
-        "query": {
-          "page[limit]": "{{limit}}"
-        }
+          200,
+          201
+        ]
       },
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Import data file",
+      "validationMode": "strict-generated"
+    },
+    "docs.import_file": {
+      "description": "Import a publicly reachable file URL as a new doc.",
       "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "fields": {
+            "description": "Custom fields (label + value).",
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "label": {
+                  "description": "Existing or new field label.",
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "type": {
+                  "description": "Field type when creating a new field.",
+                  "enum": [
+                    "BOOLEAN",
+                    "DATETIME",
+                    "EMAIL",
+                    "NPS",
+                    "NUMBER",
+                    "PERSON",
+                    "PHONE",
+                    "SELECT",
+                    "TEXT",
+                    "URL"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "description": "Field value.",
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": [
+                    "array",
+                    "boolean",
+                    "null",
+                    "number",
+                    "string"
+                  ]
+                }
+              },
+              "required": [
+                "label",
+                "value"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "mime_type": {
+            "description": "MIME type when the URL has no file extension.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "project_id": {
+            "description": "Optional project for the imported doc.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": {
+            "description": "Doc title.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "url": {
+            "description": "Public URL Dovetail can download.",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "url",
+          "title"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/docs/import/file",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "fields": "{{fields}}",
+          "mime_type": "{{mime_type}}",
+          "project_id": "{{project_id}}",
+          "title": "{{title}}",
+          "url": "{{url}}"
+        },
+        "success": [
+          200,
+          201
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Import doc file",
+      "validationMode": "strict-generated"
+    },
+    "insights.import_file": {
+      "description": "Import a publicly reachable file URL as a new insight.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "fields": {
+            "description": "Custom fields (label + value).",
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "label": {
+                  "description": "Existing or new field label.",
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "type": {
+                  "description": "Field type when creating a new field.",
+                  "enum": [
+                    "BOOLEAN",
+                    "DATETIME",
+                    "EMAIL",
+                    "NPS",
+                    "NUMBER",
+                    "PERSON",
+                    "PHONE",
+                    "SELECT",
+                    "TEXT",
+                    "URL"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "description": "Field value.",
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": [
+                    "array",
+                    "boolean",
+                    "null",
+                    "number",
+                    "string"
+                  ]
+                }
+              },
+              "required": [
+                "label",
+                "value"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "mime_type": {
+            "description": "MIME type when the URL has no file extension.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "project_id": {
+            "description": "Optional project for the imported insight.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": {
+            "description": "Insight title.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "url": {
+            "description": "Public URL Dovetail can download.",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "url",
+          "title"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/insights/import/file",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "fields": "{{fields}}",
+          "mime_type": "{{mime_type}}",
+          "project_id": "{{project_id}}",
+          "title": "{{title}}",
+          "url": "{{url}}"
+        },
+        "success": [
+          200,
+          201
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Import insight file",
+      "validationMode": "strict-generated"
+    },
+    "notes.import_file": {
+      "description": "Import a publicly reachable file URL as a new note in a project.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "fields": {
+            "description": "Custom fields (label + value).",
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "label": {
+                  "description": "Existing or new field label.",
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "type": {
+                  "description": "Field type when creating a new field.",
+                  "enum": [
+                    "BOOLEAN",
+                    "DATETIME",
+                    "EMAIL",
+                    "NPS",
+                    "NUMBER",
+                    "PERSON",
+                    "PHONE",
+                    "SELECT",
+                    "TEXT",
+                    "URL"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "description": "Field value.",
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": [
+                    "array",
+                    "boolean",
+                    "null",
+                    "number",
+                    "string"
+                  ]
+                }
+              },
+              "required": [
+                "label",
+                "value"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "mime_type": {
+            "description": "MIME type when the URL has no file extension.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "project_id": {
+            "description": "Project that owns the imported note.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": {
+            "description": "Note title.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "url": {
+            "description": "Public URL Dovetail can download.",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "url",
+          "title",
+          "project_id"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/notes/import/file",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "fields": "{{fields}}",
+          "mime_type": "{{mime_type}}",
+          "project_id": "{{project_id}}",
+          "title": "{{title}}",
+          "url": "{{url}}"
+        },
+        "success": [
+          200,
+          201
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Import note file",
+      "validationMode": "strict-generated"
     },
     "contacts.list": {
-      "kind": "action",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 1048576,
-      "title": "List contacts",
-      "description": "List Dovetail contacts.",
+      "description": "List contacts with cursor pagination.",
+      "enforceOutputSchema": true,
       "inputSchema": {
-        "type": "object",
+        "additionalProperties": false,
         "properties": {
           "limit": {
-            "type": "integer",
-            "description": "Page size, 0-100.",
-            "minimum": 0,
-            "maximum": 100
+            "description": "Page size (1-100).",
+            "maximum": 100,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "start_cursor": {
+            "description": "Opaque cursor from a previous next_cursor.",
+            "minLength": 1,
+            "type": "string"
           }
         },
-        "additionalProperties": false
+        "type": "object"
       },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
       "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
+        "additionalProperties": false,
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "additionalProperties": false
+        "required": [
+          "data"
+        ],
+        "type": "object"
       },
       "request": {
         "method": "GET",
         "path": "/v1/contacts",
+        "query": {
+          "page[limit]": "{{limit}}",
+          "page[start_cursor]": "{{start_cursor}}"
+        },
         "success": [
           200
-        ],
-        "query": {
-          "page[limit]": "{{limit}}"
-        }
+        ]
       },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List contacts",
+      "validationMode": "strict-generated"
+    },
+    "docs.list": {
+      "description": "List docs with optional project, title, content, created_at filters and cursor pagination.",
       "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "content": {
+            "description": "Filter docs whose content contains this text.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "created_at": {
+            "description": "Filter docs by created_at (ISO 8601 date or timestamp).",
+            "minLength": 1,
+            "type": "string"
+          },
+          "limit": {
+            "description": "Page size (1-100).",
+            "maximum": 100,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "project_id": {
+            "description": "Filter docs by project.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "sort": {
+            "description": "Sort order as field:direction.",
+            "type": "string",
+            "minLength": 1,
+            "enum": [
+              "created_at:asc",
+              "created_at:desc",
+              "title:asc",
+              "title:desc"
+            ]
+          },
+          "start_cursor": {
+            "description": "Opaque cursor from a previous next_cursor.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": {
+            "description": "Filter docs by title.",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/docs",
+        "query": {
+          "filter[content]": "{{content}}",
+          "filter[created_at]": "{{created_at}}",
+          "filter[project_id]": "{{project_id}}",
+          "filter[title]": "{{title}}",
+          "page[limit]": "{{limit}}",
+          "page[start_cursor]": "{{start_cursor}}",
+          "sort": "{{sort}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List docs",
+      "validationMode": "strict-generated"
+    },
+    "folders.list": {
+      "description": "List folders. Use filter_parent_folder_id=null (string) for root folders.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "filter_parent_folder_id": {
+            "description": "Parent folder id, or the string null for root folders.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "filter_title_contains": {
+            "description": "Case-insensitive title substring.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "filter_title_equal_to": {
+            "description": "Exact title match.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "limit": {
+            "description": "Page size (1-100).",
+            "maximum": 100,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "sort": {
+            "description": "Sort order as field:direction.",
+            "type": "string",
+            "minLength": 1,
+            "enum": [
+              "created_at:asc",
+              "created_at:desc",
+              "title:asc",
+              "title:desc"
+            ]
+          },
+          "start_cursor": {
+            "description": "Opaque cursor from a previous next_cursor.",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/folders",
+        "query": {
+          "filter[parent_folder_id]": "{{filter_parent_folder_id}}",
+          "filter[title][contains]": "{{filter_title_contains}}",
+          "filter[title][equal_to]": "{{filter_title_equal_to}}",
+          "page[limit]": "{{limit}}",
+          "page[start_cursor]": "{{start_cursor}}",
+          "sort": "{{sort}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List folders",
+      "validationMode": "strict-generated"
+    },
+    "highlights.list": {
+      "description": "List highlights, optionally filtered by project or note, with cursor pagination.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "limit": {
+            "description": "Page size (1-100).",
+            "maximum": 100,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "note_id": {
+            "description": "Filter highlights by note/data id.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "project_id": {
+            "description": "Filter highlights by project.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "start_cursor": {
+            "description": "Opaque cursor from a previous next_cursor.",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/highlights",
+        "query": {
+          "filter[note_id]": "{{note_id}}",
+          "filter[project_id]": "{{project_id}}",
+          "page[limit]": "{{limit}}",
+          "page[start_cursor]": "{{start_cursor}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List highlights",
+      "validationMode": "strict-generated"
+    },
+    "insights.list": {
+      "description": "List insights with optional project and published filters and cursor pagination.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "filter_project_id": {
+            "description": "Filter insights by project.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "filter_published": {
+            "description": "True for published insights, false for unpublished.",
+            "type": "boolean"
+          },
+          "limit": {
+            "description": "Page size (1-100).",
+            "maximum": 100,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "sort": {
+            "description": "Sort order as field:direction.",
+            "type": "string",
+            "minLength": 1,
+            "enum": [
+              "created_at:asc",
+              "created_at:desc",
+              "title:asc",
+              "title:desc"
+            ]
+          },
+          "start_cursor": {
+            "description": "Opaque cursor from a previous next_cursor.",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/insights",
+        "query": {
+          "filter[project_id]": "{{filter_project_id}}",
+          "filter[published]": "{{filter_published}}",
+          "page[limit]": "{{limit}}",
+          "page[start_cursor]": "{{start_cursor}}",
+          "sort": "{{sort}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List insights",
+      "validationMode": "strict-generated"
+    },
+    "notes.list": {
+      "description": "List notes (legacy data entries) with sort and cursor pagination.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "limit": {
+            "description": "Page size (1-100).",
+            "maximum": 100,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "sort": {
+            "description": "Sort order as field:direction.",
+            "type": "string",
+            "minLength": 1,
+            "enum": [
+              "created_at:asc",
+              "created_at:desc",
+              "title:asc",
+              "title:desc"
+            ]
+          },
+          "start_cursor": {
+            "description": "Opaque cursor from a previous next_cursor.",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/notes",
+        "query": {
+          "page[limit]": "{{limit}}",
+          "page[start_cursor]": "{{start_cursor}}",
+          "sort": "{{sort}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List notes",
+      "validationMode": "strict-generated"
+    },
+    "tags.list": {
+      "description": "List tags in the workspace with cursor pagination.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "page_limit": {
+            "description": "Page size (1-100).",
+            "maximum": 100,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "page_start_cursor": {
+            "description": "Opaque cursor from a previous next_cursor.",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/tags",
+        "query": {
+          "page[limit]": "{{page_limit}}",
+          "page[start_cursor]": "{{page_start_cursor}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List tags",
+      "validationMode": "strict-generated"
+    },
+    "docs.list_user": {
+      "description": "List docs associated with a user. Pass me as user_id for the authenticated user.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "limit": {
+            "description": "Page size (1-100).",
+            "maximum": 100,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "sort": {
+            "description": "Sort order as field:direction.",
+            "type": "string",
+            "minLength": 1,
+            "enum": [
+              "created_at:asc",
+              "created_at:desc",
+              "title:asc",
+              "title:desc"
+            ]
+          },
+          "start_cursor": {
+            "description": "Opaque cursor from a previous next_cursor.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "user_id": {
+            "description": "User id, or me for the authenticated user.",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "user_id"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/docs/user/{{user_id}}",
+        "query": {
+          "page[limit]": "{{limit}}",
+          "page[start_cursor]": "{{start_cursor}}",
+          "sort": "{{sort}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List user docs",
+      "validationMode": "strict-generated"
+    },
+    "insights.list_user": {
+      "description": "List personal insights for a user. Use token info to obtain a user id.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "user_id": {
+            "description": "User whose insights to list.",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "user_id"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/insights/user/{{user_id}}",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List user insights",
+      "validationMode": "strict-generated"
+    },
+    "search.magic": {
+      "description": "Full-text Magic Search across highlights, notes/data, insights, channels, tags, and themes.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "filter": {
+            "additionalProperties": true,
+            "description": "Structured Magic Search filter object. Types omitted from the filter are excluded.",
+            "type": "object"
+          },
+          "limit": {
+            "description": "Maximum results per type (max 250).",
+            "maximum": 250,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "offset": {
+            "description": "Result offset (default 0).",
+            "maximum": 100000,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "page": {
+            "description": "Composio 1-based page alias; send offset for the official pagination parameter.",
+            "maximum": 100000,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "query": {
+            "description": "Search query.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "types": {
+            "description": "Composio type names accepted for compatibility. Official filtering uses the filter object.",
+            "items": {
+              "enum": [
+                "channels",
+                "highlights",
+                "insights",
+                "notes",
+                "tags",
+                "themes"
+              ],
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "query"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/search",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "filter": "{{filter}}",
+          "limit": "{{limit}}",
+          "offset": "{{offset}}",
+          "query": "{{query}}"
+        },
+        "success": [
+          200,
+          201
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Magic search",
+      "validationMode": "strict-generated"
+    },
+    "channels.update": {
+      "description": "Patch a channel title or context. Omitted fields are left unchanged.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "channel_id": {
+            "description": "Channel to update.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "context": {
+            "description": "Channel goal/context used during classification.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": {
+            "description": "Channel title.",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "channel_id"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/v1/channels/{{channel_id}}",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "context": "{{context}}",
+          "title": "{{title}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Update channel",
+      "validationMode": "strict-generated"
+    },
+    "contacts.update": {
+      "description": "Patch a contact name, email, or custom fields.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "contact_id": {
+            "description": "Contact to update.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "email": {
+            "description": "Updated email.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "fields": {
+            "description": "Custom fields (label + value).",
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "label": {
+                  "description": "Existing or new field label.",
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "type": {
+                  "description": "Field type when creating a new field.",
+                  "enum": [
+                    "BOOLEAN",
+                    "DATETIME",
+                    "EMAIL",
+                    "NPS",
+                    "NUMBER",
+                    "PERSON",
+                    "PHONE",
+                    "SELECT",
+                    "TEXT",
+                    "URL"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "description": "Field value.",
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": [
+                    "array",
+                    "boolean",
+                    "null",
+                    "number",
+                    "string"
+                  ]
+                }
+              },
+              "required": [
+                "label",
+                "value"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "name": {
+            "description": "Updated name.",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "contact_id"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/v1/contacts/{{contact_id}}",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "email": "{{email}}",
+          "fields": "{{fields}}",
+          "name": "{{name}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Update contact",
+      "validationMode": "strict-generated"
+    },
+    "data.update": {
+      "description": "Patch a data entry title or custom fields.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data_id": {
+            "description": "Data entry to update.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "fields": {
+            "description": "Custom fields (label + value).",
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "label": {
+                  "description": "Existing or new field label.",
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "type": {
+                  "description": "Field type when creating a new field.",
+                  "enum": [
+                    "BOOLEAN",
+                    "DATETIME",
+                    "EMAIL",
+                    "NPS",
+                    "NUMBER",
+                    "PERSON",
+                    "PHONE",
+                    "SELECT",
+                    "TEXT",
+                    "URL"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "description": "Field value.",
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": [
+                    "array",
+                    "boolean",
+                    "null",
+                    "number",
+                    "string"
+                  ]
+                }
+              },
+              "required": [
+                "label",
+                "value"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "title": {
+            "description": "Updated title.",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "data_id"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/v1/data/{{data_id}}",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "fields": "{{fields}}",
+          "title": "{{title}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Update data",
+      "validationMode": "strict-generated"
+    },
+    "docs.update": {
+      "description": "Patch a doc title or custom fields. Content body is not writable here.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "doc_id": {
+            "description": "Doc to update.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "fields": {
+            "description": "Custom fields (label + value).",
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "label": {
+                  "description": "Existing or new field label.",
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "type": {
+                  "description": "Field type when creating a new field.",
+                  "enum": [
+                    "BOOLEAN",
+                    "DATETIME",
+                    "EMAIL",
+                    "NPS",
+                    "NUMBER",
+                    "PERSON",
+                    "PHONE",
+                    "SELECT",
+                    "TEXT",
+                    "URL"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "description": "Field value.",
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": [
+                    "array",
+                    "boolean",
+                    "null",
+                    "number",
+                    "string"
+                  ]
+                }
+              },
+              "required": [
+                "label",
+                "value"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "title": {
+            "description": "Updated title.",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "doc_id"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/v1/docs/{{doc_id}}",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "fields": "{{fields}}",
+          "title": "{{title}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Update doc",
+      "validationMode": "strict-generated"
+    },
+    "insights.update": {
+      "description": "Patch an insight title or custom fields.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "fields": {
+            "description": "Custom fields (label + value).",
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "label": {
+                  "description": "Existing or new field label.",
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "type": {
+                  "description": "Field type when creating a new field.",
+                  "enum": [
+                    "BOOLEAN",
+                    "DATETIME",
+                    "EMAIL",
+                    "NPS",
+                    "NUMBER",
+                    "PERSON",
+                    "PHONE",
+                    "SELECT",
+                    "TEXT",
+                    "URL"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "description": "Field value.",
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": [
+                    "array",
+                    "boolean",
+                    "null",
+                    "number",
+                    "string"
+                  ]
+                }
+              },
+              "required": [
+                "label",
+                "value"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "insight_id": {
+            "description": "Insight to update.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": {
+            "description": "Updated title.",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "insight_id"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/v1/insights/{{insight_id}}",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "fields": "{{fields}}",
+          "title": "{{title}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Update insight",
+      "validationMode": "strict-generated"
+    },
+    "notes.update": {
+      "description": "Patch a note title or custom fields. Optional content is forwarded when provided.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "content": {
+            "description": "Updated note content.",
+            "type": "string",
+            "minLength": 1
+          },
+          "fields": {
+            "description": "Custom fields (label + value).",
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "label": {
+                  "description": "Existing or new field label.",
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "type": {
+                  "description": "Field type when creating a new field.",
+                  "enum": [
+                    "BOOLEAN",
+                    "DATETIME",
+                    "EMAIL",
+                    "NPS",
+                    "NUMBER",
+                    "PERSON",
+                    "PHONE",
+                    "SELECT",
+                    "TEXT",
+                    "URL"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "description": "Field value.",
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": [
+                    "array",
+                    "boolean",
+                    "null",
+                    "number",
+                    "string"
+                  ]
+                }
+              },
+              "required": [
+                "label",
+                "value"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "note_id": {
+            "description": "Note to update.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": {
+            "description": "Updated title.",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "note_id"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/v1/notes/{{note_id}}",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "content": "{{content}}",
+          "fields": "{{fields}}",
+          "title": "{{title}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Update note",
+      "validationMode": "strict-generated"
+    },
+    "channels.topics.update": {
+      "description": "Patch a topic title or description.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "description": {
+            "description": "Updated topic description.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": {
+            "description": "Updated topic title.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "topic_id": {
+            "description": "Topic to update.",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "topic_id"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/v1/channels/topic/{{topic_id}}",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "description": "{{description}}",
+          "title": "{{title}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Update topic",
+      "validationMode": "strict-generated"
     }
   },
   "provenance": {
     "source": {
-      "url": "https://github.com/oomol-lab/open-connector",
-      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
+      "url": "https://github.com/oomol-lab/open-connector"
     }
   },
-  "evidence": {
-    "fixture": {
-      "status": "supplied"
-    },
-    "live": {
-      "status": "unverified"
-    }
-  }
+  "runtime": "bun",
+  "version": "0.2.0",
+  "visibility": "public"
 }
