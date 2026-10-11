@@ -1,7 +1,7 @@
 {
   "key": "intercom",
   "name": "Intercom",
-  "version": "0.4.1",
+  "version": "0.5.0",
   "runtime": "bun",
   "visibility": "public",
   "categories": [
@@ -1423,6 +1423,859 @@
       "request": {
         "method": "GET",
         "path": "/admins/{{id}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "conversations.reopen": {
+      "kind": "action",
+      "sideEffect": "write",
+      "effectPolicy": "Reconcile",
+      "reconcile": "conversations.get",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Reopen conversation",
+      "description": "Reopen an Intercom conversation as an admin (POST /conversations/{id}/parts with message_type=open). Reconciles against conversations.get.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "id",
+          "adminId"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Intercom conversation id."
+          },
+          "adminId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Admin performing the reopen (maps to admin_id)."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/conversations/{{id}}/parts",
+        "body": {
+          "message_type": "open",
+          "admin_id": "{{adminId}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "conversations.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create conversation",
+      "description": "Create a contact-initiated Intercom conversation (POST /conversations). Returns the provider message JSON, including conversation_id.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "fromType",
+          "fromContactId",
+          "body"
+        ],
+        "properties": {
+          "fromType": {
+            "type": "string",
+            "enum": [
+              "user",
+              "lead",
+              "contact"
+            ],
+            "description": "Initiating contact role (maps to from.type)."
+          },
+          "fromContactId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Initiating contact id (maps to from.id)."
+          },
+          "body": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Message body."
+          },
+          "subject": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Optional subject (email-style conversations)."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/conversations",
+        "body": {
+          "from": {
+            "type": "{{fromType}}",
+            "id": "{{fromContactId}}"
+          },
+          "body": "{{body}}",
+          "subject": "{{subject}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "conversations.untag": {
+      "kind": "action",
+      "sideEffect": "write",
+      "effectPolicy": "Reconcile",
+      "reconcile": "conversations.get",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Untag conversation",
+      "description": "Remove a tag from an Intercom conversation (DELETE /conversations/{id}/tags/{tagId} with admin_id body). Reconciles against conversations.get.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "id",
+          "tagId",
+          "adminId"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Intercom conversation id."
+          },
+          "tagId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Tag id to remove."
+          },
+          "adminId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Admin removing the tag (maps to admin_id)."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/conversations/{{id}}/tags/{{tagId}}",
+        "body": {
+          "admin_id": "{{adminId}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "contacts.search": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Search contacts",
+      "description": "Search Intercom contacts (POST /contacts/search) with a query object and cursor pagination.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "query"
+        ],
+        "properties": {
+          "query": {
+            "type": "object",
+            "description": "Intercom Search query (single filter {field,operator,value} or AND/OR tree)."
+          },
+          "perPage": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 150,
+            "description": "Results per page (maps to pagination.per_page)."
+          },
+          "startingAfter": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Cursor (maps to pagination.starting_after)."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/contacts/search",
+        "body": {
+          "query": "{{query}}",
+          "pagination": {
+            "per_page": "{{perPage}}",
+            "starting_after": "{{startingAfter}}"
+          }
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "contacts.archive": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Archive contact",
+      "description": "Archive an Intercom contact (POST /contacts/{id}/archive). No EffectPolicy: the contact object returned by contacts.get has no archived field.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Intercom contact id."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/contacts/{{id}}/archive",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "contacts.unarchive": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Unarchive contact",
+      "description": "Unarchive an Intercom contact (POST /contacts/{id}/unarchive). No EffectPolicy: the contact object returned by contacts.get has no archived field.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Intercom contact id."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/contacts/{{id}}/unarchive",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "contacts.untag": {
+      "kind": "action",
+      "sideEffect": "write",
+      "effectPolicy": "Reconcile",
+      "reconcile": "contacts.get",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Untag contact",
+      "description": "Remove a tag from an Intercom contact (DELETE /contacts/{id}/tags/{tagId}). Reconciles against contacts.get.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "id",
+          "tagId"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Intercom contact id."
+          },
+          "tagId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Tag id to remove."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/contacts/{{id}}/tags/{{tagId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "contacts.attach_company": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Attach company to contact",
+      "description": "Attach an Intercom company to a contact (POST /contacts/{id}/companies).",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "id",
+          "companyId"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Intercom contact id."
+          },
+          "companyId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Intercom company id (maps to body id)."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/contacts/{{id}}/companies",
+        "body": {
+          "id": "{{companyId}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "contacts.detach_company": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Detach company from contact",
+      "description": "Detach an Intercom company from a contact (DELETE /contacts/{id}/companies/{companyId}).",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "id",
+          "companyId"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Intercom contact id."
+          },
+          "companyId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Intercom company id."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/contacts/{{id}}/companies/{{companyId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "companies.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "effectPolicy": "Reconcile",
+      "reconcile": "companies.get",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Update company",
+      "description": "Update an Intercom company (PUT /companies/{id}). Reconciles against companies.get.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Intercom company id (the Intercom-assigned id, not company_id)."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Company name."
+          },
+          "plan": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Plan name."
+          },
+          "size": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Number of employees."
+          },
+          "website": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Company website."
+          },
+          "industry": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Industry."
+          },
+          "monthlySpend": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Monthly spend in whole units (maps to monthly_spend)."
+          },
+          "customAttributes": {
+            "type": "object",
+            "description": "Custom attributes object (maps to custom_attributes)."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/companies/{{id}}",
+        "body": {
+          "name": "{{name}}",
+          "plan": "{{plan}}",
+          "size": "{{size}}",
+          "website": "{{website}}",
+          "industry": "{{industry}}",
+          "monthly_spend": "{{monthlySpend}}",
+          "custom_attributes": "{{customAttributes}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "companies.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Delete company",
+      "description": "Delete an Intercom company (DELETE /companies/{id}).",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Intercom company id."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/companies/{{id}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "tickets.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get ticket",
+      "description": "Get an Intercom ticket by id (GET /tickets/{id}).",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Intercom ticket id."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/tickets/{{id}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "tickets.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "effectPolicy": "Reconcile",
+      "reconcile": "tickets.get",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Update ticket",
+      "description": "Update an Intercom ticket (PUT /tickets/{id}): attributes, state, open/snoozed, assignment. Reconciles against tickets.get.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Intercom ticket id."
+          },
+          "ticketAttributes": {
+            "type": "object",
+            "description": "Ticket attributes object (maps to ticket_attributes)."
+          },
+          "ticketStateId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Ticket state id (maps to ticket_state_id)."
+          },
+          "open": {
+            "type": "boolean",
+            "description": "Open (true) or close (false) the ticket."
+          },
+          "snoozedUntil": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Unix timestamp to snooze until (maps to snoozed_until)."
+          },
+          "assignment": {
+            "type": "object",
+            "properties": {
+              "admin_id": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Admin performing the assignment."
+              },
+              "assignee_id": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Admin or team id to assign; \"0\" unassigns."
+              }
+            },
+            "additionalProperties": false,
+            "description": "Provider assignment object, passed through as-is when given."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/tickets/{{id}}",
+        "body": {
+          "ticket_attributes": "{{ticketAttributes}}",
+          "ticket_state_id": "{{ticketStateId}}",
+          "open": "{{open}}",
+          "snoozed_until": "{{snoozedUntil}}",
+          "assignment": "{{assignment}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "tickets.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Delete ticket",
+      "description": "Delete an Intercom ticket (DELETE /tickets/{id}).",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Intercom ticket id."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/tickets/{{id}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "teams.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List teams",
+      "description": "List Intercom teams (GET /teams).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/teams",
         "success": [
           200
         ]
