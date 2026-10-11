@@ -20,6 +20,9 @@ import {
   createGetBusinessProfileClient, validateGetBusinessProfileInput,
   createUpdateBusinessProfileClient, validateUpdateBusinessProfileInput,
   createGetPhoneNumberClient, validateGetPhoneNumberInput,
+  createSendMediaClient, validateSendMediaInput,
+  createSendMediaByIdClient, validateSendMediaByIdInput,
+  createUpdateFlowJsonClient, validateUpdateFlowJsonInput,
 } from "./cloud";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -350,4 +353,43 @@ export function getPhoneNumber(input: unknown): Record<string, unknown> | Promis
     });
   }
   return { connector: "whatsapp", action: "phoneNumbers.get", source: "connector", validated: validateGetPhoneNumberInput(input) };
+}
+
+export function sendMedia(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return createSendMediaClient({
+      accessToken: input.accessToken,
+      fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
+    }).sendMedia(input).then((result) => {
+      if (!result.ok) throwUpstream(result);
+      return { connector: "whatsapp", action: "messages.sendMedia", source: "connector", providerMessageId: result.providerMessageId, channelId: result.channelId, raw: result.raw };
+    });
+  }
+  return { connector: "whatsapp", action: "messages.sendMedia", source: "connector", validated: validateSendMediaInput(input) };
+}
+
+export function sendMediaById(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return createSendMediaByIdClient({
+      accessToken: input.accessToken,
+      fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
+    }).sendMediaById(input).then((result) => {
+      if (!result.ok) throwUpstream(result);
+      return { connector: "whatsapp", action: "messages.sendMediaById", source: "connector", providerMessageId: result.providerMessageId, channelId: result.channelId, raw: result.raw };
+    });
+  }
+  return { connector: "whatsapp", action: "messages.sendMediaById", source: "connector", validated: validateSendMediaByIdInput(input) };
+}
+
+export function updateFlowJson(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return createUpdateFlowJsonClient({
+      accessToken: input.accessToken,
+      fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
+    }).updateFlowJson(input).then((result) => {
+      if (!result.ok) throwUpstream(result);
+      return { connector: "whatsapp", action: "flows.updateJson", source: "connector", success: result.success, raw: result.raw };
+    });
+  }
+  return { connector: "whatsapp", action: "flows.updateJson", source: "connector", validated: validateUpdateFlowJsonInput(input) };
 }

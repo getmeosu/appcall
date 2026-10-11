@@ -1,17 +1,7 @@
 {
-  "key": "postalytics",
-  "name": "Postalytics",
-  "version": "0.2.0",
-  "runtime": "bun",
-  "visibility": "public",
-  "categories": [
-    "utility"
-  ],
   "auth": {
-    "type": "api_key",
     "scopes": [],
     "setup": {
-      "mode": "api_key",
       "fields": [
         {
           "key": "apiKey",
@@ -19,113 +9,563 @@
           "required": true,
           "secret": true
         }
-      ]
+      ],
+      "mode": "api_key"
+    },
+    "type": "api_key"
+  },
+  "categories": [
+    "utility"
+  ],
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
     }
   },
-  "network": {
-    "allowedHosts": [
-      "api.postalytics.com"
-    ]
+  "http": {
+    "auth": {
+      "basic": {
+        "password": "",
+        "username": "{{apiKey}}"
+      },
+      "field": "apiKey",
+      "in": "header",
+      "name": "Authorization"
+    },
+    "baseUrl": "https://api.postalytics.com/api/v1",
+    "errors": {
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "error.message",
+        "message",
+        "error"
+      ],
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after"
+    },
+    "headers": {
+      "Accept": "application/json"
+    }
   },
+  "key": "postalytics",
   "models": [
     "account",
     "campaign",
     "contact_list",
     "contact",
     "template",
-    "webhook"
+    "suppression_list",
+    "webhook",
+    "flow",
+    "integration"
   ],
-  "http": {
-    "baseUrl": "https://api.postalytics.com/api/v1",
-    "auth": {
-      "field": "apiKey",
-      "in": "header",
-      "name": "Authorization",
-      "basic": {
-        "username": "{{apiKey}}",
-        "password": ""
-      }
-    },
-    "headers": {
-      "Accept": "application/json"
-    },
-    "errors": {
-      "rateLimitStatuses": [
-        429
-      ],
-      "retryAfterHeader": "retry-after",
-      "defaultRetryAfterSeconds": 30,
-      "messagePaths": [
-        "error.message",
-        "message",
-        "error"
-      ]
-    }
+  "name": "Postalytics",
+  "network": {
+    "allowedHosts": [
+      "api.postalytics.com"
+    ]
   },
   "operations": {
-    "healthcheck": {
-      "timeoutMs": 5000,
-      "maxInputBytes": 4096,
-      "maxResponseBytes": 65536,
+    "accounts.create": {
+      "description": "Create a Postalytics sub-account. Returns the new account id and API key. Maps to POSTALYTICS_ADD_ACCOUNT.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "address_city": {
+            "description": "City associated with the account address.",
+            "type": "string"
+          },
+          "address_state": {
+            "description": "State associated with the account address.",
+            "type": "string"
+          },
+          "address_street": {
+            "description": "Street address associated with the account.",
+            "type": "string"
+          },
+          "address_zip": {
+            "description": "Zip code associated with the account address.",
+            "type": "string"
+          },
+          "company": {
+            "description": "Company name associated with the account.",
+            "type": "string"
+          },
+          "created_date": {
+            "description": "Created date for the account (ISO 8601).",
+            "type": "string"
+          },
+          "email_address": {
+            "description": "Email address associated with the account.",
+            "type": "string"
+          },
+          "first_name": {
+            "description": "The first name of the account holder.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "last_name": {
+            "description": "The last name of the account holder.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "password": {
+            "description": "Account password. Minimum 8 characters including 1 uppercase, 1 lowercase, 1 number, and 1 special character.",
+            "minLength": 8,
+            "type": "string"
+          },
+          "phone": {
+            "description": "Phone number associated with the account.",
+            "type": "string"
+          },
+          "username": {
+            "description": "Unique username for the account.",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "first_name",
+          "last_name",
+          "password",
+          "username"
+        ],
+        "type": "object"
+      },
       "kind": "action",
-      "sideEffect": "read",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
       "outputSchema": {
-        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
         "required": [
           "data"
         ],
-        "properties": {
-          "data": {
-            "type": "array"
-          }
-        },
-        "additionalProperties": false
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json",
-      "title": "Healthcheck",
-      "description": "Validate the Postalytics API key with GET /account/me.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {},
-        "additionalProperties": false
+        "type": "object"
       },
       "request": {
-        "method": "GET",
-        "path": "/account/me",
+        "body": {
+          "address_city": "{{address_city}}",
+          "address_state": "{{address_state}}",
+          "address_street": "{{address_street}}",
+          "address_zip": "{{address_zip}}",
+          "company": "{{company}}",
+          "created_date": "{{created_date}}",
+          "email_address": "{{email_address}}",
+          "first_name": "{{first_name}}",
+          "last_name": "{{last_name}}",
+          "password": "{{password}}",
+          "phone": "{{phone}}",
+          "username": "{{username}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "method": "POST",
+        "path": "/account",
         "success": [
           200
         ]
-      }
-    },
-    "campaigns.list": {
+      },
+      "responseFormat": "json",
+      "sideEffect": "write",
       "timeoutMs": 15000,
+      "title": "Create account",
+      "validationMode": "strict-generated"
+    },
+    "accounts.delete": {
+      "description": "Delete a Postalytics sub-account or sub-user by id. Parent accounts cannot be deleted. Maps to POSTALYTICS_DELETE_ACCOUNT.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "description": "Integer id of the sub-account to delete.",
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
-      "kind": "action",
-      "sideEffect": "read",
       "outputSchema": {
-        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
         "required": [
           "data"
         ],
+        "type": "object"
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/account/{{id}}",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "title": "Delete account",
+      "validationMode": "strict-generated"
+    },
+    "accounts.update": {
+      "description": "Update the authenticated Postalytics account profile. Official update is PUT /account (no path id). Maps to POSTALYTICS_UPDATE_ACCOUNT.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "address_city": {
+            "description": "City associated with the account address.",
+            "type": "string"
+          },
+          "address_state": {
+            "description": "State associated with the account address.",
+            "type": "string"
+          },
+          "address_street": {
+            "description": "Street address associated with the account.",
+            "type": "string"
+          },
+          "address_zip": {
+            "description": "Zip code associated with the account address.",
+            "type": "string"
+          },
+          "company": {
+            "description": "Company name associated with the account.",
+            "type": "string"
+          },
+          "created_date": {
+            "description": "Created date for the account (ISO 8601).",
+            "type": "string"
+          },
+          "email_address": {
+            "description": "Email address associated with the account.",
+            "type": "string"
+          },
+          "first_name": {
+            "description": "The first name of the account holder.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "last_name": {
+            "description": "The last name of the account holder.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "password": {
+            "description": "Account password. Minimum 8 characters including 1 uppercase, 1 lowercase, 1 number, and 1 special character.",
+            "minLength": 8,
+            "type": "string"
+          },
+          "phone": {
+            "description": "Phone number associated with the account.",
+            "type": "string"
+          },
+          "username": {
+            "description": "Unique username for the account.",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "first_name",
+          "last_name",
+          "password",
+          "username"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "body": {
+          "address_city": "{{address_city}}",
+          "address_state": "{{address_state}}",
+          "address_street": "{{address_street}}",
+          "address_zip": "{{address_zip}}",
+          "company": "{{company}}",
+          "created_date": "{{created_date}}",
+          "email_address": "{{email_address}}",
+          "first_name": "{{first_name}}",
+          "last_name": "{{last_name}}",
+          "password": "{{password}}",
+          "phone": "{{phone}}",
+          "username": "{{username}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "method": "PUT",
+        "path": "/account",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Update account",
+      "validationMode": "strict-generated"
+    },
+    "campaigns.create": {
+      "description": "Create a direct-mail campaign from a proofed template and sender details. Maps to POSTALYTICS_CREATE_NEW_CAMPAIGN.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "CreditTypeId": {
+            "description": "Media type. 21=4x6 postcard first class, 22=6x9 postcard first class, 23=6x11 postcard first class, 24=letter first class, 28=bifold 12x9, 29=bifold 6x18, 32=6x9 postcard standard, 33=6x11 postcard standard, 34=letter standard.",
+            "minimum": 1,
+            "type": "integer"
+          },
+          "DirectMailName": {
+            "description": "Name for this campaign.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "PostageType": {
+            "description": "Postage type. 0=first class, 1=standard.",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "SenderAddress1": {
+            "description": "Sender primary street address.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "SenderAddress2": {
+            "description": "Sender secondary address line.",
+            "type": "string"
+          },
+          "SenderCity": {
+            "description": "Sender city.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "SenderCountry": {
+            "description": "Sender country code. Defaults to US.",
+            "type": "string"
+          },
+          "SenderName": {
+            "description": "Sender name printed on the mail piece.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "SenderState": {
+            "description": "Sender state abbreviation.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "SenderZip": {
+            "description": "Sender postal code.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "TemplateEnvelopeId": {
+            "description": "Custom envelope template id for letter campaigns.",
+            "minimum": 1,
+            "type": "integer"
+          },
+          "TemplateFrontId": {
+            "description": "Id of a created and proofed template.",
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "CreditTypeId",
+          "DirectMailName",
+          "PostageType",
+          "SenderAddress1",
+          "SenderCity",
+          "SenderName",
+          "SenderState",
+          "SenderZip",
+          "TemplateFrontId"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "body": {
+          "CreditTypeId": "{{CreditTypeId}}",
+          "DirectMailName": "{{DirectMailName}}",
+          "PostageType": "{{PostageType}}",
+          "SenderAddress1": "{{SenderAddress1}}",
+          "SenderAddress2": "{{SenderAddress2}}",
+          "SenderCity": "{{SenderCity}}",
+          "SenderCountry": "{{SenderCountry}}",
+          "SenderName": "{{SenderName}}",
+          "SenderState": "{{SenderState}}",
+          "SenderZip": "{{SenderZip}}",
+          "TemplateEnvelopeId": "{{TemplateEnvelopeId}}",
+          "TemplateFrontId": "{{TemplateFrontId}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "method": "POST",
+        "path": "/campaigns",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Create campaign",
+      "validationMode": "strict-generated"
+    },
+    "campaigns.delete": {
+      "description": "Delete a Postalytics campaign by id. Maps to POSTALYTICS_DELETE_CAMPAIGN.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "description": "Integer id of the campaign to delete.",
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/campaigns/{{id}}",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "title": "Delete campaign",
+      "validationMode": "strict-generated"
+    },
+    "campaigns.drips.list": {
+      "description": "List triggered drip campaign names and endpoint ids. Maps to POSTALYTICS_GET_ALL_DRIP_CAMPAIGNS.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {},
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
         "properties": {
           "data": {
             "type": "array"
           }
         },
-        "additionalProperties": false
+        "required": [
+          "data"
+        ],
+        "type": "object"
       },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
+      "request": {
+        "method": "GET",
+        "path": "/campaigns/drips",
+        "success": [
+          200
+        ]
+      },
       "responseFormat": "json",
-      "title": "List campaigns",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List drip campaigns",
+      "validationMode": "strict-generated"
+    },
+    "campaigns.list": {
       "description": "List direct-mail campaigns in the authenticated Postalytics account.",
+      "enforceOutputSchema": true,
       "inputSchema": {
-        "type": "object",
+        "additionalProperties": false,
         "properties": {},
-        "additionalProperties": false
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "array"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
       },
       "request": {
         "method": "GET",
@@ -133,35 +573,35 @@
         "success": [
           200
         ]
-      }
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List campaigns",
+      "validationMode": "strict-generated"
     },
     "contact_lists.list": {
-      "timeoutMs": 15000,
+      "description": "List contact lists in the authenticated Postalytics account.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {},
+        "type": "object"
+      },
+      "kind": "action",
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
-      "kind": "action",
-      "sideEffect": "read",
       "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
+        "additionalProperties": false,
         "properties": {
           "data": {
             "type": "array"
           }
         },
-        "additionalProperties": false
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json",
-      "title": "List contact lists",
-      "description": "List contact lists in the authenticated Postalytics account.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {},
-        "additionalProperties": false
+        "required": [
+          "data"
+        ],
+        "type": "object"
       },
       "request": {
         "method": "GET",
@@ -169,52 +609,354 @@
         "success": [
           200
         ]
-      }
-    },
-    "contacts.list": {
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
       "timeoutMs": 15000,
+      "title": "List contact lists",
+      "validationMode": "strict-generated"
+    },
+    "contacts.create": {
+      "description": "Create or update a contact on a Postalytics contact list. Maps to POSTALYTICS_ADD_CONTACT.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "address_city": {
+            "description": "City of the contact.",
+            "type": "string"
+          },
+          "address_state": {
+            "description": "State of the contact.",
+            "type": "string"
+          },
+          "address_street": {
+            "description": "Street address of the contact.",
+            "type": "string"
+          },
+          "address_street2": {
+            "description": "Secondary street address of the contact.",
+            "type": "string"
+          },
+          "address_zip": {
+            "description": "Zip code of the contact.",
+            "type": "string"
+          },
+          "company": {
+            "description": "Company name of the contact.",
+            "type": "string"
+          },
+          "contact_id": {
+            "description": "The unique id of the contact. Required when updating, omitted when inserting.",
+            "minimum": 1,
+            "type": "integer"
+          },
+          "contact_list_id": {
+            "description": "The id of the contact list to add this contact to.",
+            "minimum": 1,
+            "type": "integer"
+          },
+          "created_date": {
+            "description": "Date and time when the contact was created (ISO 8601).",
+            "type": "string"
+          },
+          "email_address": {
+            "description": "Email address of the contact.",
+            "type": "string"
+          },
+          "first_name": {
+            "description": "First name of the contact.",
+            "type": "string"
+          },
+          "last_name": {
+            "description": "Last name of the contact.",
+            "type": "string"
+          },
+          "mobile_phone": {
+            "description": "Mobile phone number of the contact.",
+            "type": "string"
+          },
+          "occupation": {
+            "description": "Occupation of the contact.",
+            "type": "string"
+          },
+          "phone": {
+            "description": "Phone number of the contact.",
+            "type": "string"
+          },
+          "var_field_1": {
+            "description": "Custom variable field 1 for additional data.",
+            "type": "string"
+          },
+          "var_field_10": {
+            "description": "Custom variable field 10 for additional data.",
+            "type": "string"
+          },
+          "var_field_11": {
+            "description": "Custom variable field 11 for additional data.",
+            "type": "string"
+          },
+          "var_field_12": {
+            "description": "Custom variable field 12 for additional data.",
+            "type": "string"
+          },
+          "var_field_13": {
+            "description": "Custom variable field 13 for additional data.",
+            "type": "string"
+          },
+          "var_field_14": {
+            "description": "Custom variable field 14 for additional data.",
+            "type": "string"
+          },
+          "var_field_15": {
+            "description": "Custom variable field 15 for additional data.",
+            "type": "string"
+          },
+          "var_field_16": {
+            "description": "Custom variable field 16 for additional data.",
+            "type": "string"
+          },
+          "var_field_17": {
+            "description": "Custom variable field 17 for additional data.",
+            "type": "string"
+          },
+          "var_field_18": {
+            "description": "Custom variable field 18 for additional data.",
+            "type": "string"
+          },
+          "var_field_19": {
+            "description": "Custom variable field 19 for additional data.",
+            "type": "string"
+          },
+          "var_field_2": {
+            "description": "Custom variable field 2 for additional data.",
+            "type": "string"
+          },
+          "var_field_20": {
+            "description": "Custom variable field 20 for additional data.",
+            "type": "string"
+          },
+          "var_field_21": {
+            "description": "Custom variable field 21 for additional data.",
+            "type": "string"
+          },
+          "var_field_22": {
+            "description": "Custom variable field 22 for additional data.",
+            "type": "string"
+          },
+          "var_field_23": {
+            "description": "Custom variable field 23 for additional data.",
+            "type": "string"
+          },
+          "var_field_24": {
+            "description": "Custom variable field 24 for additional data.",
+            "type": "string"
+          },
+          "var_field_25": {
+            "description": "Custom variable field 25 for additional data.",
+            "type": "string"
+          },
+          "var_field_26": {
+            "description": "Custom variable field 26 for additional data.",
+            "type": "string"
+          },
+          "var_field_27": {
+            "description": "Custom variable field 27 for additional data.",
+            "type": "string"
+          },
+          "var_field_28": {
+            "description": "Custom variable field 28 for additional data.",
+            "type": "string"
+          },
+          "var_field_29": {
+            "description": "Custom variable field 29 for additional data.",
+            "type": "string"
+          },
+          "var_field_3": {
+            "description": "Custom variable field 3 for additional data.",
+            "type": "string"
+          },
+          "var_field_30": {
+            "description": "Custom variable field 30 for additional data.",
+            "type": "string"
+          },
+          "var_field_31": {
+            "description": "Custom variable field 31 for additional data.",
+            "type": "string"
+          },
+          "var_field_32": {
+            "description": "Custom variable field 32 for additional data.",
+            "type": "string"
+          },
+          "var_field_33": {
+            "description": "Custom variable field 33 for additional data.",
+            "type": "string"
+          },
+          "var_field_34": {
+            "description": "Custom variable field 34 for additional data.",
+            "type": "string"
+          },
+          "var_field_35": {
+            "description": "Custom variable field 35 for additional data.",
+            "type": "string"
+          },
+          "var_field_4": {
+            "description": "Custom variable field 4 for additional data.",
+            "type": "string"
+          },
+          "var_field_5": {
+            "description": "Custom variable field 5 for additional data.",
+            "type": "string"
+          },
+          "var_field_6": {
+            "description": "Custom variable field 6 for additional data.",
+            "type": "string"
+          },
+          "var_field_7": {
+            "description": "Custom variable field 7 for additional data.",
+            "type": "string"
+          },
+          "var_field_8": {
+            "description": "Custom variable field 8 for additional data.",
+            "type": "string"
+          },
+          "var_field_9": {
+            "description": "Custom variable field 9 for additional data.",
+            "type": "string"
+          },
+          "website": {
+            "description": "Website of the contact.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "contact_list_id"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
-      "kind": "action",
-      "sideEffect": "read",
       "outputSchema": {
-        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
         "required": [
           "data"
         ],
+        "type": "object"
+      },
+      "request": {
+        "body": {
+          "address_city": "{{address_city}}",
+          "address_state": "{{address_state}}",
+          "address_street": "{{address_street}}",
+          "address_street2": "{{address_street2}}",
+          "address_zip": "{{address_zip}}",
+          "company": "{{company}}",
+          "contact_id": "{{contact_id}}",
+          "contact_list_id": "{{contact_list_id}}",
+          "created_date": "{{created_date}}",
+          "email_address": "{{email_address}}",
+          "first_name": "{{first_name}}",
+          "last_name": "{{last_name}}",
+          "mobile_phone": "{{mobile_phone}}",
+          "occupation": "{{occupation}}",
+          "phone": "{{phone}}",
+          "var_field_1": "{{var_field_1}}",
+          "var_field_10": "{{var_field_10}}",
+          "var_field_11": "{{var_field_11}}",
+          "var_field_12": "{{var_field_12}}",
+          "var_field_13": "{{var_field_13}}",
+          "var_field_14": "{{var_field_14}}",
+          "var_field_15": "{{var_field_15}}",
+          "var_field_16": "{{var_field_16}}",
+          "var_field_17": "{{var_field_17}}",
+          "var_field_18": "{{var_field_18}}",
+          "var_field_19": "{{var_field_19}}",
+          "var_field_2": "{{var_field_2}}",
+          "var_field_20": "{{var_field_20}}",
+          "var_field_21": "{{var_field_21}}",
+          "var_field_22": "{{var_field_22}}",
+          "var_field_23": "{{var_field_23}}",
+          "var_field_24": "{{var_field_24}}",
+          "var_field_25": "{{var_field_25}}",
+          "var_field_26": "{{var_field_26}}",
+          "var_field_27": "{{var_field_27}}",
+          "var_field_28": "{{var_field_28}}",
+          "var_field_29": "{{var_field_29}}",
+          "var_field_3": "{{var_field_3}}",
+          "var_field_30": "{{var_field_30}}",
+          "var_field_31": "{{var_field_31}}",
+          "var_field_32": "{{var_field_32}}",
+          "var_field_33": "{{var_field_33}}",
+          "var_field_34": "{{var_field_34}}",
+          "var_field_35": "{{var_field_35}}",
+          "var_field_4": "{{var_field_4}}",
+          "var_field_5": "{{var_field_5}}",
+          "var_field_6": "{{var_field_6}}",
+          "var_field_7": "{{var_field_7}}",
+          "var_field_8": "{{var_field_8}}",
+          "var_field_9": "{{var_field_9}}",
+          "website": "{{website}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "method": "POST",
+        "path": "/contacts",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Add contact",
+      "validationMode": "strict-generated"
+    },
+    "contacts.list": {
+      "description": "List a bounded page of contacts from one Postalytics contact list.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "contactListId": {
+            "minimum": 1,
+            "type": "integer"
+          },
+          "limit": {
+            "maximum": 100,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "start": {
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "contactListId"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
         "properties": {
           "data": {
             "type": "array"
           }
         },
-        "additionalProperties": false
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json",
-      "title": "List contacts",
-      "description": "List a bounded page of contacts from one Postalytics contact list.",
-      "inputSchema": {
-        "type": "object",
         "required": [
-          "contactListId"
+          "data"
         ],
-        "properties": {
-          "contactListId": {
-            "type": "integer",
-            "minimum": 1
-          },
-          "limit": {
-            "type": "integer",
-            "minimum": 1,
-            "maximum": 100
-          },
-          "start": {
-            "type": "integer",
-            "minimum": 1
-          }
-        },
-        "additionalProperties": false
+        "type": "object"
       },
       "request": {
         "method": "GET",
@@ -226,35 +968,1211 @@
         "success": [
           200
         ]
-      }
-    },
-    "templates.list": {
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
       "timeoutMs": 15000,
+      "title": "List contacts",
+      "validationMode": "strict-generated"
+    },
+    "flows.list": {
+      "description": "List all flows for the authenticated Postalytics account. Maps to POSTALYTICS_GET_ALL_FLOWS.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {},
+        "type": "object"
+      },
+      "kind": "action",
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
-      "kind": "action",
-      "sideEffect": "read",
       "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
+        "additionalProperties": false,
         "properties": {
           "data": {
             "type": "array"
           }
         },
-        "additionalProperties": false
+        "required": [
+          "data"
+        ],
+        "type": "object"
       },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
+      "request": {
+        "method": "GET",
+        "path": "/flow",
+        "success": [
+          200
+        ]
+      },
       "responseFormat": "json",
-      "title": "List templates",
-      "description": "List direct-mail templates in the authenticated Postalytics account.",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List flows",
+      "validationMode": "strict-generated"
+    },
+    "healthcheck": {
+      "description": "Validate the Postalytics API key with GET /account/me.",
+      "enforceOutputSchema": true,
       "inputSchema": {
-        "type": "object",
+        "additionalProperties": false,
         "properties": {},
-        "additionalProperties": false
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "array"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/account/me",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 5000,
+      "title": "Healthcheck",
+      "validationMode": "strict-generated"
+    },
+    "integrations.list": {
+      "description": "List Connect integrations for the authenticated account. Maps to POSTALYTICS_GET_INTEGRATIONS.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {},
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "array"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/account/integrations",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List integrations",
+      "validationMode": "strict-generated"
+    },
+    "suppression_list_contacts.create": {
+      "description": "Add a contact to a suppression list. Maps to POSTALYTICS_CREATE_SUPPRESSION_LIST_CONTACT.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "Address": {
+            "description": "Primary street address.",
+            "type": "string"
+          },
+          "Address2": {
+            "description": "Secondary street address.",
+            "type": "string"
+          },
+          "City": {
+            "description": "City.",
+            "type": "string"
+          },
+          "Company": {
+            "description": "Company name.",
+            "type": "string"
+          },
+          "Country": {
+            "description": "Country code (for example US).",
+            "type": "string"
+          },
+          "Email": {
+            "description": "Email address.",
+            "type": "string"
+          },
+          "FirstName": {
+            "description": "First name.",
+            "type": "string"
+          },
+          "LastName": {
+            "description": "Last name.",
+            "type": "string"
+          },
+          "Mobile": {
+            "description": "Mobile phone number.",
+            "type": "string"
+          },
+          "Occupation": {
+            "description": "Occupation.",
+            "type": "string"
+          },
+          "Phone": {
+            "description": "Phone number.",
+            "type": "string"
+          },
+          "State": {
+            "description": "State.",
+            "type": "string"
+          },
+          "VarField1": {
+            "description": "Custom variable field 1.",
+            "type": "string"
+          },
+          "VarField10": {
+            "description": "Custom variable field 10.",
+            "type": "string"
+          },
+          "VarField11": {
+            "description": "Custom variable field 11.",
+            "type": "string"
+          },
+          "VarField12": {
+            "description": "Custom variable field 12.",
+            "type": "string"
+          },
+          "VarField13": {
+            "description": "Custom variable field 13.",
+            "type": "string"
+          },
+          "VarField14": {
+            "description": "Custom variable field 14.",
+            "type": "string"
+          },
+          "VarField15": {
+            "description": "Custom variable field 15.",
+            "type": "string"
+          },
+          "VarField16": {
+            "description": "Custom variable field 16.",
+            "type": "string"
+          },
+          "VarField17": {
+            "description": "Custom variable field 17.",
+            "type": "string"
+          },
+          "VarField18": {
+            "description": "Custom variable field 18.",
+            "type": "string"
+          },
+          "VarField19": {
+            "description": "Custom variable field 19.",
+            "type": "string"
+          },
+          "VarField2": {
+            "description": "Custom variable field 2.",
+            "type": "string"
+          },
+          "VarField20": {
+            "description": "Custom variable field 20.",
+            "type": "string"
+          },
+          "VarField21": {
+            "description": "Custom variable field 21.",
+            "type": "string"
+          },
+          "VarField22": {
+            "description": "Custom variable field 22.",
+            "type": "string"
+          },
+          "VarField23": {
+            "description": "Custom variable field 23.",
+            "type": "string"
+          },
+          "VarField24": {
+            "description": "Custom variable field 24.",
+            "type": "string"
+          },
+          "VarField25": {
+            "description": "Custom variable field 25.",
+            "type": "string"
+          },
+          "VarField26": {
+            "description": "Custom variable field 26.",
+            "type": "string"
+          },
+          "VarField27": {
+            "description": "Custom variable field 27.",
+            "type": "string"
+          },
+          "VarField28": {
+            "description": "Custom variable field 28.",
+            "type": "string"
+          },
+          "VarField29": {
+            "description": "Custom variable field 29.",
+            "type": "string"
+          },
+          "VarField3": {
+            "description": "Custom variable field 3.",
+            "type": "string"
+          },
+          "VarField30": {
+            "description": "Custom variable field 30.",
+            "type": "string"
+          },
+          "VarField31": {
+            "description": "Custom variable field 31.",
+            "type": "string"
+          },
+          "VarField32": {
+            "description": "Custom variable field 32.",
+            "type": "string"
+          },
+          "VarField33": {
+            "description": "Custom variable field 33.",
+            "type": "string"
+          },
+          "VarField34": {
+            "description": "Custom variable field 34.",
+            "type": "string"
+          },
+          "VarField35": {
+            "description": "Custom variable field 35.",
+            "type": "string"
+          },
+          "VarField4": {
+            "description": "Custom variable field 4.",
+            "type": "string"
+          },
+          "VarField5": {
+            "description": "Custom variable field 5.",
+            "type": "string"
+          },
+          "VarField6": {
+            "description": "Custom variable field 6.",
+            "type": "string"
+          },
+          "VarField7": {
+            "description": "Custom variable field 7.",
+            "type": "string"
+          },
+          "VarField8": {
+            "description": "Custom variable field 8.",
+            "type": "string"
+          },
+          "VarField9": {
+            "description": "Custom variable field 9.",
+            "type": "string"
+          },
+          "Website": {
+            "description": "Website URL.",
+            "type": "string"
+          },
+          "Zip": {
+            "description": "Zip/postal code.",
+            "type": "string"
+          },
+          "listId": {
+            "description": "The id of the suppression list.",
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "listId"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "body": {
+          "Address": "{{Address}}",
+          "Address2": "{{Address2}}",
+          "City": "{{City}}",
+          "Company": "{{Company}}",
+          "Country": "{{Country}}",
+          "Email": "{{Email}}",
+          "FirstName": "{{FirstName}}",
+          "LastName": "{{LastName}}",
+          "Mobile": "{{Mobile}}",
+          "Occupation": "{{Occupation}}",
+          "Phone": "{{Phone}}",
+          "State": "{{State}}",
+          "VarField1": "{{VarField1}}",
+          "VarField10": "{{VarField10}}",
+          "VarField11": "{{VarField11}}",
+          "VarField12": "{{VarField12}}",
+          "VarField13": "{{VarField13}}",
+          "VarField14": "{{VarField14}}",
+          "VarField15": "{{VarField15}}",
+          "VarField16": "{{VarField16}}",
+          "VarField17": "{{VarField17}}",
+          "VarField18": "{{VarField18}}",
+          "VarField19": "{{VarField19}}",
+          "VarField2": "{{VarField2}}",
+          "VarField20": "{{VarField20}}",
+          "VarField21": "{{VarField21}}",
+          "VarField22": "{{VarField22}}",
+          "VarField23": "{{VarField23}}",
+          "VarField24": "{{VarField24}}",
+          "VarField25": "{{VarField25}}",
+          "VarField26": "{{VarField26}}",
+          "VarField27": "{{VarField27}}",
+          "VarField28": "{{VarField28}}",
+          "VarField29": "{{VarField29}}",
+          "VarField3": "{{VarField3}}",
+          "VarField30": "{{VarField30}}",
+          "VarField31": "{{VarField31}}",
+          "VarField32": "{{VarField32}}",
+          "VarField33": "{{VarField33}}",
+          "VarField34": "{{VarField34}}",
+          "VarField35": "{{VarField35}}",
+          "VarField4": "{{VarField4}}",
+          "VarField5": "{{VarField5}}",
+          "VarField6": "{{VarField6}}",
+          "VarField7": "{{VarField7}}",
+          "VarField8": "{{VarField8}}",
+          "VarField9": "{{VarField9}}",
+          "Website": "{{Website}}",
+          "Zip": "{{Zip}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "method": "POST",
+        "path": "/lists/suppression/contacts/{{listId}}",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Create suppression list contact",
+      "validationMode": "strict-generated"
+    },
+    "suppression_list_contacts.delete": {
+      "description": "Remove a contact from a suppression list. Maps to POSTALYTICS_DELETE_SUPPRESSION_LIST_CONTACT.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "contactId": {
+            "description": "Id of the contact to delete from the list.",
+            "minimum": 1,
+            "type": "integer"
+          },
+          "listId": {
+            "description": "Id of the suppression list.",
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "listId",
+          "contactId"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/lists/suppression/contacts/{{listId}}/{{contactId}}",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "title": "Delete suppression list contact",
+      "validationMode": "strict-generated"
+    },
+    "suppression_list_contacts.get": {
+      "description": "Get one contact on a suppression list. Maps to POSTALYTICS_GET_SUPPRESSION_LIST_CONTACT.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "contactId": {
+            "description": "Id of the suppression list contact.",
+            "minimum": 1,
+            "type": "integer"
+          },
+          "listId": {
+            "description": "Id of the suppression list.",
+            "minimum": 1,
+            "type": "integer"
+          },
+          "offset": {
+            "description": "Pagination offset.",
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "listId",
+          "contactId"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/lists/suppression/contacts/{{listId}}/{{contactId}}",
+        "query": {
+          "offset": "{{offset}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get suppression list contact",
+      "validationMode": "strict-generated"
+    },
+    "suppression_list_contacts.list": {
+      "description": "List contacts on a suppression list. Maps to POSTALYTICS_GET_SUPPRESSION_LIST_CONTACTS.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "listId": {
+            "description": "Id of the suppression list.",
+            "minimum": 1,
+            "type": "integer"
+          },
+          "offset": {
+            "description": "Offset count for paging.",
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "listId"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/lists/suppression/contacts/{{listId}}",
+        "query": {
+          "offset": "{{offset}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List suppression list contacts",
+      "validationMode": "strict-generated"
+    },
+    "suppression_list_contacts.update": {
+      "description": "Update a contact on a suppression list. Maps to POSTALYTICS_UPDATE_SUPPRESSION_LIST_CONTACT.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "Address": {
+            "description": "Primary street address.",
+            "type": "string"
+          },
+          "Address2": {
+            "description": "Secondary street address.",
+            "type": "string"
+          },
+          "City": {
+            "description": "City.",
+            "type": "string"
+          },
+          "Company": {
+            "description": "Company name.",
+            "type": "string"
+          },
+          "Country": {
+            "description": "Country code (for example US).",
+            "type": "string"
+          },
+          "Email": {
+            "description": "Email address.",
+            "type": "string"
+          },
+          "FirstName": {
+            "description": "First name.",
+            "type": "string"
+          },
+          "LastName": {
+            "description": "Last name.",
+            "type": "string"
+          },
+          "Mobile": {
+            "description": "Mobile phone number.",
+            "type": "string"
+          },
+          "Occupation": {
+            "description": "Occupation.",
+            "type": "string"
+          },
+          "Phone": {
+            "description": "Phone number.",
+            "type": "string"
+          },
+          "State": {
+            "description": "State.",
+            "type": "string"
+          },
+          "VarField1": {
+            "description": "Custom variable field 1.",
+            "type": "string"
+          },
+          "VarField10": {
+            "description": "Custom variable field 10.",
+            "type": "string"
+          },
+          "VarField11": {
+            "description": "Custom variable field 11.",
+            "type": "string"
+          },
+          "VarField12": {
+            "description": "Custom variable field 12.",
+            "type": "string"
+          },
+          "VarField13": {
+            "description": "Custom variable field 13.",
+            "type": "string"
+          },
+          "VarField14": {
+            "description": "Custom variable field 14.",
+            "type": "string"
+          },
+          "VarField15": {
+            "description": "Custom variable field 15.",
+            "type": "string"
+          },
+          "VarField16": {
+            "description": "Custom variable field 16.",
+            "type": "string"
+          },
+          "VarField17": {
+            "description": "Custom variable field 17.",
+            "type": "string"
+          },
+          "VarField18": {
+            "description": "Custom variable field 18.",
+            "type": "string"
+          },
+          "VarField19": {
+            "description": "Custom variable field 19.",
+            "type": "string"
+          },
+          "VarField2": {
+            "description": "Custom variable field 2.",
+            "type": "string"
+          },
+          "VarField20": {
+            "description": "Custom variable field 20.",
+            "type": "string"
+          },
+          "VarField21": {
+            "description": "Custom variable field 21.",
+            "type": "string"
+          },
+          "VarField22": {
+            "description": "Custom variable field 22.",
+            "type": "string"
+          },
+          "VarField23": {
+            "description": "Custom variable field 23.",
+            "type": "string"
+          },
+          "VarField24": {
+            "description": "Custom variable field 24.",
+            "type": "string"
+          },
+          "VarField25": {
+            "description": "Custom variable field 25.",
+            "type": "string"
+          },
+          "VarField26": {
+            "description": "Custom variable field 26.",
+            "type": "string"
+          },
+          "VarField27": {
+            "description": "Custom variable field 27.",
+            "type": "string"
+          },
+          "VarField28": {
+            "description": "Custom variable field 28.",
+            "type": "string"
+          },
+          "VarField29": {
+            "description": "Custom variable field 29.",
+            "type": "string"
+          },
+          "VarField3": {
+            "description": "Custom variable field 3.",
+            "type": "string"
+          },
+          "VarField30": {
+            "description": "Custom variable field 30.",
+            "type": "string"
+          },
+          "VarField31": {
+            "description": "Custom variable field 31.",
+            "type": "string"
+          },
+          "VarField32": {
+            "description": "Custom variable field 32.",
+            "type": "string"
+          },
+          "VarField33": {
+            "description": "Custom variable field 33.",
+            "type": "string"
+          },
+          "VarField34": {
+            "description": "Custom variable field 34.",
+            "type": "string"
+          },
+          "VarField35": {
+            "description": "Custom variable field 35.",
+            "type": "string"
+          },
+          "VarField4": {
+            "description": "Custom variable field 4.",
+            "type": "string"
+          },
+          "VarField5": {
+            "description": "Custom variable field 5.",
+            "type": "string"
+          },
+          "VarField6": {
+            "description": "Custom variable field 6.",
+            "type": "string"
+          },
+          "VarField7": {
+            "description": "Custom variable field 7.",
+            "type": "string"
+          },
+          "VarField8": {
+            "description": "Custom variable field 8.",
+            "type": "string"
+          },
+          "VarField9": {
+            "description": "Custom variable field 9.",
+            "type": "string"
+          },
+          "Website": {
+            "description": "Website URL.",
+            "type": "string"
+          },
+          "Zip": {
+            "description": "Zip/postal code.",
+            "type": "string"
+          },
+          "contactId": {
+            "description": "The id of the suppression list contact.",
+            "minimum": 1,
+            "type": "integer"
+          },
+          "listId": {
+            "description": "The id of the suppression list.",
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "listId",
+          "contactId"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "body": {
+          "Address": "{{Address}}",
+          "Address2": "{{Address2}}",
+          "City": "{{City}}",
+          "Company": "{{Company}}",
+          "Country": "{{Country}}",
+          "Email": "{{Email}}",
+          "FirstName": "{{FirstName}}",
+          "LastName": "{{LastName}}",
+          "Mobile": "{{Mobile}}",
+          "Occupation": "{{Occupation}}",
+          "Phone": "{{Phone}}",
+          "State": "{{State}}",
+          "VarField1": "{{VarField1}}",
+          "VarField10": "{{VarField10}}",
+          "VarField11": "{{VarField11}}",
+          "VarField12": "{{VarField12}}",
+          "VarField13": "{{VarField13}}",
+          "VarField14": "{{VarField14}}",
+          "VarField15": "{{VarField15}}",
+          "VarField16": "{{VarField16}}",
+          "VarField17": "{{VarField17}}",
+          "VarField18": "{{VarField18}}",
+          "VarField19": "{{VarField19}}",
+          "VarField2": "{{VarField2}}",
+          "VarField20": "{{VarField20}}",
+          "VarField21": "{{VarField21}}",
+          "VarField22": "{{VarField22}}",
+          "VarField23": "{{VarField23}}",
+          "VarField24": "{{VarField24}}",
+          "VarField25": "{{VarField25}}",
+          "VarField26": "{{VarField26}}",
+          "VarField27": "{{VarField27}}",
+          "VarField28": "{{VarField28}}",
+          "VarField29": "{{VarField29}}",
+          "VarField3": "{{VarField3}}",
+          "VarField30": "{{VarField30}}",
+          "VarField31": "{{VarField31}}",
+          "VarField32": "{{VarField32}}",
+          "VarField33": "{{VarField33}}",
+          "VarField34": "{{VarField34}}",
+          "VarField35": "{{VarField35}}",
+          "VarField4": "{{VarField4}}",
+          "VarField5": "{{VarField5}}",
+          "VarField6": "{{VarField6}}",
+          "VarField7": "{{VarField7}}",
+          "VarField8": "{{VarField8}}",
+          "VarField9": "{{VarField9}}",
+          "Website": "{{Website}}",
+          "Zip": "{{Zip}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "method": "PUT",
+        "path": "/lists/suppression/contacts/{{listId}}/{{contactId}}",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Update suppression list contact",
+      "validationMode": "strict-generated"
+    },
+    "suppression_lists.create": {
+      "description": "Create an empty suppression list. Add contacts separately. Maps to POSTALYTICS_CREATE_SUPPRESSION_LIST.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "Country": {
+            "description": "Country associated with the list (for example US or CA).",
+            "type": "string"
+          },
+          "Name": {
+            "description": "Name of the suppression list.",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "array"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "body": {
+          "Country": "{{Country}}",
+          "Name": "{{Name}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "method": "POST",
+        "path": "/lists/suppression",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Create suppression list",
+      "validationMode": "strict-generated"
+    },
+    "suppression_lists.delete": {
+      "description": "Delete a suppression list by id. Maps to POSTALYTICS_DELETE_SUPPRESSION_LIST.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "description": "Id of the suppression list to delete.",
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/lists/suppression/{{id}}",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "title": "Delete suppression list",
+      "validationMode": "strict-generated"
+    },
+    "suppression_lists.get": {
+      "description": "Get one suppression list by id. Maps to POSTALYTICS_GET_SUPPRESSION_LIST.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "description": "Id of the suppression list to retrieve.",
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "array"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/lists/suppression/{{id}}",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get suppression list",
+      "validationMode": "strict-generated"
+    },
+    "suppression_lists.list": {
+      "description": "List suppression lists, or one list when id is supplied as a query parameter. Maps to POSTALYTICS_GET_SUPPRESSION_LISTS.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "description": "Optional suppression list id to retrieve a single list.",
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "array"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/lists/suppression",
+        "query": {
+          "id": "{{id}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List suppression lists",
+      "validationMode": "strict-generated"
+    },
+    "templates.create": {
+      "description": "Create a postcard or letter template from HTML or front/back image URLs. Maps to POSTALYTICS_CREATE_TEMPLATE.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "back": {
+            "description": "URL for the full-sized back image or letter back content.",
+            "type": "string"
+          },
+          "count": {
+            "description": "Page count for letter templates.",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "created_date": {
+            "description": "Created date (ISO 8601).",
+            "type": "string"
+          },
+          "font_family": {
+            "description": "CSS font family, for example sans-serif.",
+            "type": "string"
+          },
+          "front": {
+            "description": "URL for the full-sized front image or letter front content.",
+            "type": "string"
+          },
+          "html": {
+            "description": "Complete HTML markup for the template when is_full_html is true.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "is_double_sided": {
+            "description": "Whether a letter template is double-sided.",
+            "type": "boolean"
+          },
+          "is_full_html": {
+            "description": "If true, html is complete markup. If false, use front and back image URLs.",
+            "type": "boolean"
+          },
+          "is_proofed": {
+            "description": "If true, skip web-app proofing safeguards.",
+            "type": "boolean"
+          },
+          "name": {
+            "description": "Template identifier name.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "size": {
+            "description": "Template size. 0=letter, 1=4x6 postcard, 2=6x9 postcard, 3=6x11 postcard, 6=12x9 bifold, 7=6x18 bifold.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "template_id": {
+            "description": "Template id. Returned on GET, not required for POST.",
+            "minimum": 1,
+            "type": "integer"
+          },
+          "thumbnail": {
+            "description": "Thumbnail path of the template front.",
+            "type": "string"
+          },
+          "thumbnail_back": {
+            "description": "Thumbnail path of the template back.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "html",
+          "name",
+          "size"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "body": {
+          "back": "{{back}}",
+          "count": "{{count}}",
+          "created_date": "{{created_date}}",
+          "font_family": "{{font_family}}",
+          "front": "{{front}}",
+          "html": "{{html}}",
+          "is_double_sided": "{{is_double_sided}}",
+          "is_full_html": "{{is_full_html}}",
+          "is_proofed": "{{is_proofed}}",
+          "name": "{{name}}",
+          "size": "{{size}}",
+          "template_id": "{{template_id}}",
+          "thumbnail": "{{thumbnail}}",
+          "thumbnail_back": "{{thumbnail_back}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "method": "POST",
+        "path": "/templates",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Create template",
+      "validationMode": "strict-generated"
+    },
+    "templates.list": {
+      "description": "List direct-mail templates in the authenticated Postalytics account.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {},
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "array"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
       },
       "request": {
         "method": "GET",
@@ -262,859 +2180,137 @@
         "success": [
           200
         ]
-      }
-    },
-    "campaigns.get": {
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "kind": "action",
+      },
+      "responseFormat": "json",
       "sideEffect": "read",
-      "title": "Get campaign",
-      "description": "Get basic campaign information for one Postalytics campaign.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "integer",
-            "description": "Campaign id.",
-            "minimum": 1
-          }
-        },
-        "additionalProperties": false,
-        "required": [
-          "id"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "GET",
-        "path": "/campaigns/{{id}}/details",
-        "success": [
-          200
-        ]
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "campaigns.stats": {
       "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "kind": "action",
-      "sideEffect": "read",
-      "title": "Get campaign stats",
-      "description": "Get detailed stats for one Postalytics campaign drop.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "integer",
-            "description": "Campaign drop id.",
-            "minimum": 1
-          }
-        },
-        "additionalProperties": false,
-        "required": [
-          "id"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "array"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "GET",
-        "path": "/campaigns/{{id}}",
-        "success": [
-          200
-        ]
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "campaigns.drips.list": {
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "kind": "action",
-      "sideEffect": "read",
-      "title": "List drip campaigns",
-      "description": "List triggered drip campaign names and endpoint ids.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {},
-        "additionalProperties": false
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "array"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "GET",
-        "path": "/campaigns/drips",
-        "success": [
-          200
-        ]
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "campaigns.create": {
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "kind": "action",
-      "sideEffect": "write",
-      "title": "Create campaign",
-      "description": "Create a Postalytics direct-mail campaign from a proofed template.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "creditTypeId": {
-            "type": "integer",
-            "description": "Media type id for the campaign."
-          },
-          "directMailName": {
-            "type": "string",
-            "description": "Campaign name.",
-            "minLength": 1
-          },
-          "postageType": {
-            "type": "integer",
-            "description": "Postage type id."
-          },
-          "senderCity": {
-            "type": "string",
-            "description": "Sender city.",
-            "minLength": 1
-          },
-          "senderState": {
-            "type": "string",
-            "description": "Sender state.",
-            "minLength": 1
-          },
-          "senderZip": {
-            "type": "string",
-            "description": "Sender zip code.",
-            "minLength": 1
-          },
-          "templateFrontId": {
-            "type": "integer",
-            "description": "Proofed template id."
-          }
-        },
-        "additionalProperties": false,
-        "required": [
-          "creditTypeId",
-          "directMailName",
-          "postageType",
-          "senderCity",
-          "senderState",
-          "senderZip",
-          "templateFrontId"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "POST",
-        "path": "/campaigns",
-        "success": [
-          200,
-          201
-        ],
-        "headers": {
-          "Content-Type": "application/json"
-        },
-        "body": {
-          "CreditTypeId": "{{creditTypeId}}",
-          "DirectMailName": "{{directMailName}}",
-          "PostageType": "{{postageType}}",
-          "SenderCity": "{{senderCity}}",
-          "SenderState": "{{senderState}}",
-          "SenderZip": "{{senderZip}}",
-          "TemplateFrontId": "{{templateFrontId}}"
-        }
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "campaigns.delete": {
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "kind": "action",
-      "sideEffect": "destructive",
-      "title": "Delete campaign",
-      "description": "Delete a Postalytics campaign.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "integer",
-            "description": "Campaign id to delete.",
-            "minimum": 1
-          }
-        },
-        "additionalProperties": false,
-        "required": [
-          "id"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "DELETE",
-        "path": "/campaigns/{{id}}",
-        "success": [
-          200
-        ]
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "contacts.create": {
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "kind": "action",
-      "sideEffect": "write",
-      "title": "Create contact",
-      "description": "Create a contact on a Postalytics contact list.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "contactListId": {
-            "type": "integer",
-            "description": "Destination contact list id.",
-            "minimum": 1
-          },
-          "firstName": {
-            "type": "string",
-            "description": "Contact first name."
-          },
-          "lastName": {
-            "type": "string",
-            "description": "Contact last name."
-          },
-          "emailAddress": {
-            "type": "string",
-            "description": "Contact email address."
-          },
-          "addressStreet": {
-            "type": "string",
-            "description": "Street address."
-          },
-          "addressCity": {
-            "type": "string",
-            "description": "City."
-          },
-          "addressState": {
-            "type": "string",
-            "description": "State."
-          },
-          "addressZip": {
-            "type": "string",
-            "description": "Zip code."
-          }
-        },
-        "additionalProperties": false,
-        "required": [
-          "contactListId"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "POST",
-        "path": "/contacts",
-        "success": [
-          200,
-          201
-        ],
-        "headers": {
-          "Content-Type": "application/json"
-        },
-        "body": {
-          "contact_list_id": "{{contactListId}}",
-          "first_name": "{{firstName}}",
-          "last_name": "{{lastName}}",
-          "email_address": "{{emailAddress}}",
-          "address_street": "{{addressStreet}}",
-          "address_city": "{{addressCity}}",
-          "address_state": "{{addressState}}",
-          "address_zip": "{{addressZip}}"
-        }
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "contacts.update": {
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "kind": "action",
-      "sideEffect": "write",
-      "title": "Update contact",
-      "description": "Update a contact on a Postalytics contact list.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "contactId": {
-            "type": "integer",
-            "description": "Contact id to update.",
-            "minimum": 1
-          },
-          "contactListId": {
-            "type": "integer",
-            "description": "Contact list id.",
-            "minimum": 1
-          },
-          "firstName": {
-            "type": "string",
-            "description": "Contact first name."
-          },
-          "lastName": {
-            "type": "string",
-            "description": "Contact last name."
-          },
-          "emailAddress": {
-            "type": "string",
-            "description": "Contact email address."
-          }
-        },
-        "additionalProperties": false,
-        "required": [
-          "contactId",
-          "contactListId"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "PUT",
-        "path": "/contacts",
-        "success": [
-          200
-        ],
-        "headers": {
-          "Content-Type": "application/json"
-        },
-        "body": {
-          "contact_id": "{{contactId}}",
-          "contact_list_id": "{{contactListId}}",
-          "first_name": "{{firstName}}",
-          "last_name": "{{lastName}}",
-          "email_address": "{{emailAddress}}"
-        }
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "contacts.delete": {
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "kind": "action",
-      "sideEffect": "destructive",
-      "title": "Delete contact",
-      "description": "Delete a Postalytics contact.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "integer",
-            "description": "Contact id to delete.",
-            "minimum": 1
-          }
-        },
-        "additionalProperties": false,
-        "required": [
-          "id"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "DELETE",
-        "path": "/contacts/{{id}}",
-        "success": [
-          200
-        ]
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "templates.get": {
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "kind": "action",
-      "sideEffect": "read",
-      "title": "Get template",
-      "description": "Get details for one Postalytics template.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "integer",
-            "description": "Template id.",
-            "minimum": 1
-          }
-        },
-        "additionalProperties": false,
-        "required": [
-          "id"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "array"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "GET",
-        "path": "/templates/{{id}}",
-        "success": [
-          200
-        ]
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "templates.delete": {
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "kind": "action",
-      "sideEffect": "destructive",
-      "title": "Delete template",
-      "description": "Delete a Postalytics template.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "integer",
-            "description": "Template id to delete.",
-            "minimum": 1
-          }
-        },
-        "additionalProperties": false,
-        "required": [
-          "id"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "DELETE",
-        "path": "/templates/{{id}}",
-        "success": [
-          200
-        ]
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "webhooks.list": {
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "kind": "action",
-      "sideEffect": "read",
-      "title": "List webhooks",
-      "description": "List campaign event webhooks for the authenticated account.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {},
-        "additionalProperties": false
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "array"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "GET",
-        "path": "/webhooks",
-        "success": [
-          200
-        ]
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "webhooks.get": {
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "kind": "action",
-      "sideEffect": "read",
-      "title": "Get webhook",
-      "description": "Get one Postalytics campaign webhook.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "integer",
-            "description": "Webhook id.",
-            "minimum": 1
-          }
-        },
-        "additionalProperties": false,
-        "required": [
-          "id"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "array"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "GET",
-        "path": "/webhooks/{{id}}",
-        "success": [
-          200
-        ]
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
+      "title": "List templates",
+      "validationMode": "strict-generated"
     },
     "webhooks.create": {
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "kind": "action",
-      "sideEffect": "write",
-      "title": "Create webhook",
-      "description": "Create a campaign event webhook URL for Postalytics to POST events to.",
+      "description": "Register an outbound webhook URL for campaign events. Event filters are configured in the Postalytics app. Maps to POSTALYTICS_CREATE_WEBHOOK.",
+      "enforceOutputSchema": true,
       "inputSchema": {
-        "type": "object",
+        "additionalProperties": false,
         "properties": {
-          "campaignId": {
-            "type": "integer",
-            "description": "Campaign id to attach the webhook to.",
-            "minimum": 1
+          "campaign_id": {
+            "description": "Campaign id this webhook is assigned to.",
+            "minimum": 1,
+            "type": "integer"
+          },
+          "campaign_name": {
+            "description": "Human-readable webhook/campaign name. Composio name maps here.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "created_date": {
+            "description": "Created date of the webhook.",
+            "type": "string"
+          },
+          "endpoint_id": {
+            "description": "Campaign endpoint associated with the webhook.",
+            "type": "string"
+          },
+          "is_subscribed": {
+            "description": "1=active and sending, 0=not active.",
+            "minimum": 0,
+            "type": "integer"
           },
           "url": {
-            "type": "string",
-            "description": "Destination URL that receives campaign events.",
-            "minLength": 1
-          },
-          "isSubscribed": {
-            "type": "integer",
-            "description": "1 to enable the webhook, 0 to leave it inactive."
+            "description": "Destination URL that receives campaign event notifications.",
+            "minLength": 1,
+            "type": "string"
           }
         },
-        "additionalProperties": false,
         "required": [
-          "campaignId",
-          "url"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
+          "url",
+          "campaign_name"
         ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "additionalProperties": false
+        "required": [
+          "data"
+        ],
+        "type": "object"
       },
       "request": {
-        "method": "POST",
-        "path": "/webhooks",
-        "success": [
-          200,
-          201
-        ],
+        "body": {
+          "campaign_id": "{{campaign_id}}",
+          "campaign_name": "{{campaign_name}}",
+          "created_date": "{{created_date}}",
+          "endpoint_id": "{{endpoint_id}}",
+          "is_subscribed": "{{is_subscribed}}",
+          "url": "{{url}}"
+        },
         "headers": {
           "Content-Type": "application/json"
         },
-        "body": {
-          "campaign_id": "{{campaignId}}",
-          "url": "{{url}}",
-          "is_subscribed": "{{isSubscribed}}"
-        }
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "webhooks.delete": {
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "kind": "action",
-      "sideEffect": "destructive",
-      "title": "Delete webhook",
-      "description": "Delete a Postalytics campaign webhook.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "integer",
-            "description": "Webhook id to delete.",
-            "minimum": 1
-          }
-        },
-        "additionalProperties": false,
-        "required": [
-          "id"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "DELETE",
-        "path": "/webhooks/{{id}}",
+        "method": "POST",
+        "path": "/webhooks",
         "success": [
           200
         ]
       },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "send.mail": {
+      "responseFormat": "json",
+      "sideEffect": "write",
       "timeoutMs": 15000,
+      "title": "Create webhook",
+      "validationMode": "strict-generated"
+    },
+    "webhooks.list": {
+      "description": "List webhooks configured for the authenticated account. Maps to POSTALYTICS_GET_ALL_WEBHOOKS.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {},
+        "type": "object"
+      },
+      "kind": "action",
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
-      "kind": "action",
-      "sideEffect": "write",
-      "title": "Send mail",
-      "description": "Trigger a Postalytics drip send to one recipient using a campaign endpoint.",
-      "inputSchema": {
-        "type": "object",
+      "outputSchema": {
+        "additionalProperties": false,
         "properties": {
-          "endPoint": {
-            "type": "string",
-            "description": "Campaign send endpoint id.",
-            "minLength": 1
-          },
-          "firstName": {
-            "type": "string",
-            "description": "Recipient first name.",
-            "minLength": 1
-          },
-          "lastName": {
-            "type": "string",
-            "description": "Recipient last name."
-          },
-          "addressStreet": {
-            "type": "string",
-            "description": "Recipient street address.",
-            "minLength": 1
-          },
-          "addressCity": {
-            "type": "string",
-            "description": "Recipient city.",
-            "minLength": 1
-          },
-          "addressState": {
-            "type": "string",
-            "description": "Recipient state.",
-            "minLength": 1
-          },
-          "addressZip": {
-            "type": "string",
-            "description": "Recipient zip code.",
-            "minLength": 1
+          "data": {
+            "type": "array"
           }
         },
-        "additionalProperties": false,
-        "required": [
-          "endPoint",
-          "firstName",
-          "addressStreet",
-          "addressCity",
-          "addressState",
-          "addressZip"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
         "required": [
           "data"
         ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
+        "type": "object"
       },
       "request": {
-        "method": "POST",
-        "path": "/send/{{endPoint}}",
+        "method": "GET",
+        "path": "/webhooks",
         "success": [
-          200,
-          201
-        ],
-        "headers": {
-          "Content-Type": "application/json"
-        },
-        "body": {
-          "first_name": "{{firstName}}",
-          "last_name": "{{lastName}}",
-          "address_street": "{{addressStreet}}",
-          "address_city": "{{addressCity}}",
-          "address_state": "{{addressState}}",
-          "address_zip": "{{addressZip}}"
-        }
+          200
+        ]
       },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List webhooks",
+      "validationMode": "strict-generated"
     }
   },
   "provenance": {
     "source": {
-      "url": "https://github.com/oomol-lab/open-connector",
-      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
+      "url": "https://github.com/oomol-lab/open-connector"
     }
   },
-  "evidence": {
-    "fixture": {
-      "status": "supplied"
-    },
-    "live": {
-      "status": "unverified"
-    }
-  }
+  "runtime": "bun",
+  "version": "0.2.0",
+  "visibility": "public"
 }

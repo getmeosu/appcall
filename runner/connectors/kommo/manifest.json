@@ -1,17 +1,7 @@
 {
-  "key": "kommo",
-  "name": "Kommo",
-  "version": "0.2.0",
-  "runtime": "bun",
-  "visibility": "public",
-  "categories": [
-    "crm"
-  ],
   "auth": {
-    "type": "api_key",
     "scopes": [],
     "setup": {
-      "mode": "api_key",
       "fields": [
         {
           "key": "apiKey",
@@ -25,41 +15,31 @@
           "required": true,
           "secret": false
         }
-      ]
+      ],
+      "mode": "api_key"
+    },
+    "type": "api_key"
+  },
+  "categories": [
+    "crm"
+  ],
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
     }
   },
-  "network": {
-    "allowedHosts": [
-      "*.kommo.com"
-    ]
-  },
-  "models": [
-    "account",
-    "lead",
-    "contact",
-    "pipeline",
-    "user",
-    "company",
-    "task",
-    "note",
-    "webhook"
-  ],
   "http": {
-    "baseUrl": "https://{{subdomain}}.kommo.com",
     "auth": {
       "field": "apiKey",
       "in": "header",
       "name": "Authorization",
       "value": "Bearer {{apiKey}}"
     },
-    "headers": {
-      "Accept": "application/json"
-    },
+    "baseUrl": "https://{{subdomain}}.kommo.com",
     "errors": {
-      "rateLimitStatuses": [
-        429
-      ],
-      "retryAfterHeader": "retry-after",
       "defaultRetryAfterSeconds": 30,
       "messagePaths": [
         "detail",
@@ -67,214 +47,805 @@
         "message",
         "error",
         "error_description"
-      ]
+      ],
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after"
+    },
+    "headers": {
+      "Accept": "application/json"
     }
   },
+  "key": "kommo",
+  "models": [
+    "account",
+    "lead",
+    "contact",
+    "company",
+    "pipeline",
+    "user",
+    "task",
+    "catalog",
+    "note",
+    "event",
+    "file",
+    "webhook",
+    "widget",
+    "tag",
+    "source"
+  ],
+  "name": "Kommo",
+  "network": {
+    "allowedHosts": [
+      "*.kommo.com"
+    ]
+  },
   "operations": {
-    "healthcheck": {
-      "kind": "action",
-      "sideEffect": "read",
-      "timeoutMs": 10000,
-      "maxInputBytes": 4096,
-      "maxResponseBytes": 1048576,
-      "title": "Healthcheck",
-      "description": "Validate the Kommo long-lived token by reading account parameters.",
+    "contacts.list": {
+      "description": "List Kommo contacts with pagination, search, and official filter/order query params. Covers KOMMO_LIST_CONTACTS.",
+      "enforceOutputSchema": true,
       "inputSchema": {
-        "type": "object",
-        "properties": {},
-        "additionalProperties": false
+        "additionalProperties": false,
+        "properties": {
+          "limit": {
+            "maximum": 250,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "page": {
+            "minimum": 1,
+            "type": "integer"
+          },
+          "query": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "filter_ids": {
+            "type": "array",
+            "items": {
+              "type": "integer"
+            },
+            "description": "List of numeric identifiers."
+          },
+          "order_by_id": {
+            "type": "string",
+            "enum": [
+              "asc",
+              "desc"
+            ],
+            "description": "Sort direction."
+          },
+          "with_params": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "leads",
+                "catalog_elements"
+              ]
+            },
+            "description": "Embedded data to include."
+          },
+          "filter_names": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "List of strings."
+          },
+          "filter_created_at": {
+            "type": "integer",
+            "description": "Created at or after this Unix timestamp."
+          },
+          "filter_created_by": {
+            "type": "array",
+            "items": {
+              "type": "integer"
+            },
+            "description": "List of numeric identifiers."
+          },
+          "filter_updated_at": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Unix timestamp range with optional from/to.",
+            "properties": {
+              "from": {
+                "type": "integer",
+                "description": "Range start (Unix timestamp)."
+              },
+              "to": {
+                "type": "integer",
+                "description": "Range end (Unix timestamp)."
+              }
+            }
+          },
+          "filter_updated_by": {
+            "type": "array",
+            "items": {
+              "type": "integer"
+            },
+            "description": "List of numeric identifiers."
+          },
+          "order_by_updated_at": {
+            "type": "string",
+            "enum": [
+              "asc",
+              "desc"
+            ],
+            "description": "Sort direction."
+          },
+          "filter_closest_task_at": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Unix timestamp range with optional from/to.",
+            "properties": {
+              "from": {
+                "type": "integer",
+                "description": "Range start (Unix timestamp)."
+              },
+              "to": {
+                "type": "integer",
+                "description": "Range end (Unix timestamp)."
+              }
+            }
+          },
+          "filter_responsible_user_ids": {
+            "type": "array",
+            "items": {
+              "type": "integer"
+            },
+            "description": "List of numeric identifiers."
+          }
+        },
+        "type": "object"
       },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
       "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
+        "additionalProperties": false,
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "additionalProperties": false
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v4/contacts",
+        "query": {
+          "limit": "{{limit}}",
+          "page": "{{page}}",
+          "query": "{{query}}"
+        },
+        "success": [
+          200,
+          204
+        ],
+        "parameters": [
+          {
+            "wireName": "filter[id][]",
+            "inputName": "filter_ids",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "allowReserved": true
+          },
+          {
+            "wireName": "order[id]",
+            "inputName": "order_by_id",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "allowReserved": true
+          },
+          {
+            "wireName": "with",
+            "inputName": "with_params",
+            "in": "query",
+            "style": "form",
+            "explode": false,
+            "allowReserved": true
+          },
+          {
+            "wireName": "filter[name][]",
+            "inputName": "filter_names",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "allowReserved": true
+          },
+          {
+            "wireName": "filter[created_at][from]",
+            "inputName": "filter_created_at",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "allowReserved": true
+          },
+          {
+            "wireName": "filter[created_by][]",
+            "inputName": "filter_created_by",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "allowReserved": true
+          },
+          {
+            "wireName": "filter[updated_at]",
+            "inputName": "filter_updated_at",
+            "in": "query",
+            "style": "deepObject",
+            "explode": true,
+            "allowReserved": true
+          },
+          {
+            "wireName": "filter[updated_by][]",
+            "inputName": "filter_updated_by",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "allowReserved": true
+          },
+          {
+            "wireName": "order[updated_at]",
+            "inputName": "order_by_updated_at",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "allowReserved": true
+          },
+          {
+            "wireName": "filter[closest_task_at]",
+            "inputName": "filter_closest_task_at",
+            "in": "query",
+            "style": "deepObject",
+            "explode": true,
+            "allowReserved": true
+          },
+          {
+            "wireName": "filter[responsible_user_id][]",
+            "inputName": "filter_responsible_user_ids",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "allowReserved": true
+          }
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List contacts",
+      "validationMode": "strict-generated"
+    },
+    "healthcheck": {
+      "description": "Validate the Kommo long-lived token by reading account parameters. Covers KOMMO_GET_ACCOUNT.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "with_params": {
+            "type": "string",
+            "description": "Comma-separated extra account data: amojo_id, amojo_rights, users_groups, task_types, version, entity_names, datetime_settings, drive_url."
+          }
+        },
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
       },
       "request": {
         "method": "GET",
         "path": "/api/v4/account",
         "success": [
           200
-        ]
+        ],
+        "query": {
+          "with": "{{with_params}}"
+        }
       },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "title": "Healthcheck",
+      "validationMode": "strict-generated"
     },
     "leads.list": {
-      "kind": "action",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "title": "List leads",
-      "description": "List Kommo leads with optional page, limit, and search query.",
+      "description": "List Kommo leads with pagination, search, and official filter/order query params. Covers KOMMO_LIST_LEADS.",
+      "enforceOutputSchema": true,
       "inputSchema": {
-        "type": "object",
+        "additionalProperties": false,
         "properties": {
-          "page": {
-            "type": "integer",
-            "minimum": 1
-          },
           "limit": {
-            "type": "integer",
+            "maximum": 250,
             "minimum": 1,
-            "maximum": 250
+            "type": "integer"
+          },
+          "page": {
+            "minimum": 1,
+            "type": "integer"
           },
           "query": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "filter_ids": {
+            "type": "array",
+            "items": {
+              "type": "integer"
+            },
+            "description": "List of numeric identifiers."
+          },
+          "order_by_id": {
             "type": "string",
-            "minLength": 1
+            "enum": [
+              "asc",
+              "desc"
+            ],
+            "description": "Sort direction."
+          },
+          "with_params": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Embeds: contacts, only_deleted, loss_reason, is_price_modified_by_robot, catalog_elements, source_id."
+          },
+          "filter_names": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "List of strings."
+          },
+          "filter_price": {
+            "type": "integer",
+            "description": "Filter by lead price."
+          },
+          "filter_status": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Status filters keyed by pipeline ID."
+          },
+          "filter_closed_at": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Unix timestamp range with optional from/to.",
+            "properties": {
+              "from": {
+                "type": "integer",
+                "description": "Range start (Unix timestamp)."
+              },
+              "to": {
+                "type": "integer",
+                "description": "Range end (Unix timestamp)."
+              }
+            }
+          },
+          "filter_created_at": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Unix timestamp range with optional from/to.",
+            "properties": {
+              "from": {
+                "type": "integer",
+                "description": "Range start (Unix timestamp)."
+              },
+              "to": {
+                "type": "integer",
+                "description": "Range end (Unix timestamp)."
+              }
+            }
+          },
+          "filter_created_by": {
+            "type": "array",
+            "items": {
+              "type": "integer"
+            },
+            "description": "List of numeric identifiers."
+          },
+          "filter_updated_at": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Unix timestamp range with optional from/to.",
+            "properties": {
+              "from": {
+                "type": "integer",
+                "description": "Range start (Unix timestamp)."
+              },
+              "to": {
+                "type": "integer",
+                "description": "Range end (Unix timestamp)."
+              }
+            }
+          },
+          "filter_updated_by": {
+            "type": "array",
+            "items": {
+              "type": "integer"
+            },
+            "description": "List of numeric identifiers."
+          },
+          "filter_pipeline_ids": {
+            "type": "array",
+            "items": {
+              "type": "integer"
+            },
+            "description": "List of numeric identifiers."
+          },
+          "order_by_created_at": {
+            "type": "string",
+            "enum": [
+              "asc",
+              "desc"
+            ],
+            "description": "Sort direction."
+          },
+          "order_by_updated_at": {
+            "type": "string",
+            "enum": [
+              "asc",
+              "desc"
+            ],
+            "description": "Sort direction."
+          },
+          "filter_closest_task_at": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Unix timestamp range with optional from/to.",
+            "properties": {
+              "from": {
+                "type": "integer",
+                "description": "Range start (Unix timestamp)."
+              },
+              "to": {
+                "type": "integer",
+                "description": "Range end (Unix timestamp)."
+              }
+            }
+          },
+          "filter_responsible_user_ids": {
+            "type": "array",
+            "items": {
+              "type": "integer"
+            },
+            "description": "List of numeric identifiers."
           }
         },
-        "additionalProperties": false
+        "type": "object"
       },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
       "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
+        "additionalProperties": false,
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "additionalProperties": false
+        "required": [
+          "data"
+        ],
+        "type": "object"
       },
       "request": {
         "method": "GET",
         "path": "/api/v4/leads",
-        "success": [
-          200
-        ],
         "query": {
-          "page": "{{page}}",
           "limit": "{{limit}}",
+          "page": "{{page}}",
           "query": "{{query}}"
-        }
+        },
+        "success": [
+          200,
+          204
+        ],
+        "parameters": [
+          {
+            "wireName": "filter[id][]",
+            "inputName": "filter_ids",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "allowReserved": true
+          },
+          {
+            "wireName": "order[id]",
+            "inputName": "order_by_id",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "allowReserved": true
+          },
+          {
+            "wireName": "with",
+            "inputName": "with_params",
+            "in": "query",
+            "style": "form",
+            "explode": false,
+            "allowReserved": true
+          },
+          {
+            "wireName": "filter[name][]",
+            "inputName": "filter_names",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "allowReserved": true
+          },
+          {
+            "wireName": "filter[price]",
+            "inputName": "filter_price",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "allowReserved": true
+          },
+          {
+            "wireName": "filter[statuses]",
+            "inputName": "filter_status",
+            "in": "query",
+            "style": "deepObject",
+            "explode": true,
+            "allowReserved": true
+          },
+          {
+            "wireName": "filter[closed_at]",
+            "inputName": "filter_closed_at",
+            "in": "query",
+            "style": "deepObject",
+            "explode": true,
+            "allowReserved": true
+          },
+          {
+            "wireName": "filter[created_at]",
+            "inputName": "filter_created_at",
+            "in": "query",
+            "style": "deepObject",
+            "explode": true,
+            "allowReserved": true
+          },
+          {
+            "wireName": "filter[created_by][]",
+            "inputName": "filter_created_by",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "allowReserved": true
+          },
+          {
+            "wireName": "filter[updated_at]",
+            "inputName": "filter_updated_at",
+            "in": "query",
+            "style": "deepObject",
+            "explode": true,
+            "allowReserved": true
+          },
+          {
+            "wireName": "filter[updated_by][]",
+            "inputName": "filter_updated_by",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "allowReserved": true
+          },
+          {
+            "wireName": "filter[pipeline_id][]",
+            "inputName": "filter_pipeline_ids",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "allowReserved": true
+          },
+          {
+            "wireName": "order[created_at]",
+            "inputName": "order_by_created_at",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "allowReserved": true
+          },
+          {
+            "wireName": "order[updated_at]",
+            "inputName": "order_by_updated_at",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "allowReserved": true
+          },
+          {
+            "wireName": "filter[closest_task_at]",
+            "inputName": "filter_closest_task_at",
+            "in": "query",
+            "style": "deepObject",
+            "explode": true,
+            "allowReserved": true
+          },
+          {
+            "wireName": "filter[responsible_user_id][]",
+            "inputName": "filter_responsible_user_ids",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "allowReserved": true
+          }
+        ]
       },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "contacts.list": {
-      "kind": "action",
+      "responseFormat": "json",
       "sideEffect": "read",
       "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "title": "List contacts",
-      "description": "List Kommo contacts with optional page, limit, and search query.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "page": {
-            "type": "integer",
-            "minimum": 1
-          },
-          "limit": {
-            "type": "integer",
-            "minimum": 1,
-            "maximum": 250
-          },
-          "query": {
-            "type": "string",
-            "minLength": 1
-          }
-        },
-        "additionalProperties": false
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "GET",
-        "path": "/api/v4/contacts",
-        "success": [
-          200
-        ],
-        "query": {
-          "page": "{{page}}",
-          "limit": "{{limit}}",
-          "query": "{{query}}"
-        }
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
+      "title": "List leads",
+      "validationMode": "strict-generated"
     },
     "pipelines.list": {
+      "description": "List Kommo lead pipelines. Covers KOMMO_LIST_LEADS_PIPELINES.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {},
+        "type": "object"
+      },
       "kind": "action",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
-      "title": "List pipelines",
-      "description": "List Kommo lead pipelines.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {},
-        "additionalProperties": false
-      },
       "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
+        "additionalProperties": false,
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "additionalProperties": false
+        "required": [
+          "data"
+        ],
+        "type": "object"
       },
       "request": {
         "method": "GET",
         "path": "/api/v4/leads/pipelines",
         "success": [
-          200
+          200,
+          204
         ]
       },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List pipelines",
+      "validationMode": "strict-generated"
     },
     "users.list": {
+      "description": "List Kommo users with optional page and limit. Covers KOMMO_LIST_USERS.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "limit": {
+            "maximum": 250,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "page": {
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
       "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v4/users",
+        "query": {
+          "limit": "{{limit}}",
+          "page": "{{page}}"
+        },
+        "success": [
+          200,
+          204
+        ]
+      },
+      "responseFormat": "json",
       "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List users",
+      "validationMode": "strict-generated"
+    },
+    "ai.sources.file.add": {
+      "kind": "action",
+      "sideEffect": "write",
       "timeoutMs": 15000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
-      "title": "List users",
-      "description": "List Kommo users with optional page and limit.",
+      "title": "Add AI source file",
+      "description": "Add a knowledge source file to Kommo AI for the agent or suggested-reply feature. Covers KOMMO_ADD_AI_SOURCE_FILE.",
       "inputSchema": {
         "type": "object",
+        "additionalProperties": false,
         "properties": {
-          "page": {
-            "type": "integer",
-            "minimum": 1
+          "url": {
+            "type": "string",
+            "minLength": 1,
+            "description": "HTTP(S) link to the file on the Kommo drive service."
           },
-          "limit": {
-            "type": "integer",
-            "minimum": 1,
-            "maximum": 250
+          "code": {
+            "type": "string",
+            "enum": [
+              "contact_information",
+              "privacy_policy",
+              "return_and_refund_policy",
+              "shipping_policy",
+              "terms_of_service"
+            ],
+            "description": "Source usage category for the AI agent."
+          },
+          "lang": {
+            "type": "string",
+            "enum": [
+              "en",
+              "es",
+              "pt",
+              "ru"
+            ],
+            "description": "Language code."
+          },
+          "file_uuid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "UUID of the file."
+          },
+          "available_functions": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string",
+              "enum": [
+                "agent",
+                "suggested_reply"
+              ]
+            },
+            "description": "Exactly one of agent or suggested_reply."
           }
         },
-        "additionalProperties": false
+        "required": [
+          "url",
+          "lang",
+          "file_uuid",
+          "available_functions"
+        ]
       },
       "outputSchema": {
         "type": "object",
@@ -289,40 +860,95 @@
         "additionalProperties": false
       },
       "request": {
-        "method": "GET",
-        "path": "/api/v4/users",
+        "method": "POST",
+        "path": "/api/v2/sources/file",
         "success": [
-          200
+          200,
+          201,
+          202
         ],
-        "query": {
-          "page": "{{page}}",
-          "limit": "{{limit}}"
+        "baseUrl": "https://airewriter.kommo.com",
+        "body": {
+          "url": "{{url}}",
+          "code": "{{code}}",
+          "lang": "{{lang}}",
+          "file_uuid": "{{file_uuid}}",
+          "available_functions": "{{available_functions}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
         }
       },
       "enforceOutputSchema": true,
       "validationMode": "strict-generated",
       "responseFormat": "json"
     },
-    "leads.get": {
+    "companies.create": {
       "kind": "action",
-      "sideEffect": "read",
+      "sideEffect": "write",
       "timeoutMs": 15000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
-      "title": "Get lead",
-      "description": "Get one Kommo lead by identifier.",
+      "title": "Create companies",
+      "description": "Add one or more companies to the Kommo account. Covers KOMMO_CREATE_COMPANY.",
       "inputSchema": {
         "type": "object",
+        "additionalProperties": false,
         "properties": {
-          "leadId": {
+          "name": {
+            "type": "string",
+            "description": "Company name."
+          },
+          "created_at": {
             "type": "integer",
-            "description": "Lead identifier.",
-            "minimum": 1
+            "description": "Company creation date (Unix timestamp)."
+          },
+          "created_by": {
+            "type": "integer",
+            "description": "ID of the user who created the company."
+          },
+          "request_id": {
+            "type": "string",
+            "description": "Echoed unchanged in the response."
+          },
+          "updated_at": {
+            "type": "integer",
+            "description": "Company update date (Unix timestamp)."
+          },
+          "updated_by": {
+            "type": "integer",
+            "description": "ID of the user who last updated the company."
+          },
+          "_embedded": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Embedded associations. Send tags as {\"tags\": [{\"id\": 1}]} (Composio tags_to_add).",
+            "properties": {
+              "tags": {
+                "type": "array",
+                "description": "Tags as objects with name or id.",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "responsible_user_id": {
+            "type": "integer",
+            "description": "Company responsible user ID."
+          },
+          "custom_fields_values": {
+            "type": "array",
+            "description": "Custom field values with field_id or field_code and values.",
+            "items": {
+              "type": "object",
+              "additionalProperties": true
+            }
           }
         },
-        "additionalProperties": false,
         "required": [
-          "leadId"
+          "name"
         ]
       },
       "outputSchema": {
@@ -338,11 +964,86 @@
         "additionalProperties": false
       },
       "request": {
-        "method": "GET",
-        "path": "/api/v4/leads/{{leadId}}",
+        "method": "POST",
+        "path": "/api/v4/companies",
         "success": [
-          200
+          200,
+          201,
+          202,
+          204
+        ],
+        "body": [
+          {
+            "name": "{{name}}",
+            "created_at": "{{created_at}}",
+            "created_by": "{{created_by}}",
+            "request_id": "{{request_id}}",
+            "updated_at": "{{updated_at}}",
+            "updated_by": "{{updated_by}}",
+            "responsible_user_id": "{{responsible_user_id}}",
+            "custom_fields_values": "{{custom_fields_values}}",
+            "_embedded": "{{_embedded}}"
+          }
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "contacts.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create contacts",
+      "description": "Create one or more contacts in Kommo CRM. Covers KOMMO_CREATE_CONTACT.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "contacts": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "additionalProperties": true
+            },
+            "description": "List of contacts to create."
+          }
+        },
+        "required": [
+          "contacts"
         ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/api/v4/contacts",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ],
+        "body": "{{contacts}}",
+        "headers": {
+          "Content-Type": "application/json"
+        }
       },
       "enforceOutputSchema": true,
       "validationMode": "strict-generated",
@@ -355,32 +1056,84 @@
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
       "title": "Create lead",
-      "description": "Create a Kommo lead.",
+      "description": "Create a lead in Kommo CRM. Covers KOMMO_CREATE_LEAD.",
       "inputSchema": {
         "type": "object",
+        "additionalProperties": false,
         "properties": {
           "name": {
             "type": "string",
             "minLength": 1,
-            "description": "Lead name."
+            "description": "Name of the lead/deal."
           },
           "price": {
             "type": "integer",
-            "description": "Lead sale amount.",
-            "minimum": 0
+            "description": "Lead sale amount (deal value)."
           },
-          "pipelineId": {
+          "closed_at": {
             "type": "integer",
-            "description": "Pipeline identifier.",
-            "minimum": 1
+            "description": "Lead closure date (Unix timestamp)."
           },
-          "statusId": {
+          "status_id": {
             "type": "integer",
-            "description": "Pipeline stage identifier.",
-            "minimum": 1
+            "description": "Stage ID the lead is added to."
+          },
+          "created_at": {
+            "type": "integer",
+            "description": "Lead creation date (Unix timestamp)."
+          },
+          "created_by": {
+            "type": "integer",
+            "description": "User ID creating the lead. 0 = robot."
+          },
+          "updated_at": {
+            "type": "integer",
+            "description": "Lead update date (Unix timestamp)."
+          },
+          "updated_by": {
+            "type": "integer",
+            "description": "User ID updating the lead. 0 = robot."
+          },
+          "pipeline_id": {
+            "type": "integer",
+            "description": "Pipeline ID the lead is added to."
+          },
+          "_embedded": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Embedded associations. Send tags as {\"tags\": [{\"id\": 1}]} (Composio tags_to_add).",
+            "properties": {
+              "tags": {
+                "type": "array",
+                "description": "Tags as objects with name or id.",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "loss_reason_id": {
+            "type": "integer",
+            "description": "Lead loss reason ID."
+          },
+          "responsible_user_id": {
+            "type": "integer",
+            "description": "Lead responsible user ID."
+          },
+          "custom_fields_values": {
+            "type": "array",
+            "description": "Custom field values with field_id or field_code and values.",
+            "items": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          },
+          "request_id": {
+            "type": "string",
+            "description": "Echoed unchanged in the response."
           }
         },
-        "additionalProperties": false,
         "required": [
           "name"
         ]
@@ -401,14 +1154,27 @@
         "method": "POST",
         "path": "/api/v4/leads",
         "success": [
-          200
+          200,
+          201,
+          202,
+          204
         ],
         "body": [
           {
             "name": "{{name}}",
             "price": "{{price}}",
-            "pipeline_id": "{{pipelineId}}",
-            "status_id": "{{statusId}}"
+            "closed_at": "{{closed_at}}",
+            "status_id": "{{status_id}}",
+            "created_at": "{{created_at}}",
+            "created_by": "{{created_by}}",
+            "updated_at": "{{updated_at}}",
+            "updated_by": "{{updated_by}}",
+            "pipeline_id": "{{pipeline_id}}",
+            "loss_reason_id": "{{loss_reason_id}}",
+            "responsible_user_id": "{{responsible_user_id}}",
+            "request_id": "{{request_id}}",
+            "custom_fields_values": "{{custom_fields_values}}",
+            "_embedded": "{{_embedded}}"
           }
         ],
         "headers": {
@@ -419,139 +1185,74 @@
       "validationMode": "strict-generated",
       "responseFormat": "json"
     },
-    "leads.update": {
+    "tasks.create": {
       "kind": "action",
       "sideEffect": "write",
       "timeoutMs": 15000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
-      "title": "Update lead",
-      "description": "Update a Kommo lead by identifier.",
+      "title": "Create task",
+      "description": "Create a task in Kommo CRM. Covers KOMMO_CREATE_TASK.",
       "inputSchema": {
         "type": "object",
+        "additionalProperties": false,
         "properties": {
-          "leadId": {
-            "type": "integer",
-            "description": "Lead identifier.",
-            "minimum": 1
-          },
-          "name": {
+          "text": {
             "type": "string",
             "minLength": 1,
-            "description": "Lead name."
+            "description": "Task description or notes."
           },
-          "price": {
+          "duration": {
             "type": "integer",
-            "description": "Lead sale amount.",
-            "minimum": 0
+            "description": "Task duration in seconds."
           },
-          "statusId": {
+          "entity_id": {
             "type": "integer",
-            "description": "Pipeline stage identifier.",
-            "minimum": 1
-          }
-        },
-        "additionalProperties": false,
-        "required": [
-          "leadId"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "PATCH",
-        "path": "/api/v4/leads/{{leadId}}",
-        "success": [
-          200
-        ],
-        "body": {
-          "name": "{{name}}",
-          "price": "{{price}}",
-          "status_id": "{{statusId}}"
-        },
-        "headers": {
-          "Content-Type": "application/json"
-        }
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "contacts.get": {
-      "kind": "action",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "title": "Get contact",
-      "description": "Get one Kommo contact by identifier.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "contactId": {
+            "description": "ID of the linked lead, contact, or company."
+          },
+          "created_at": {
             "type": "integer",
-            "description": "Contact identifier.",
-            "minimum": 1
-          }
-        },
-        "additionalProperties": false,
-        "required": [
-          "contactId"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "GET",
-        "path": "/api/v4/contacts/{{contactId}}",
-        "success": [
-          200
-        ]
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "contacts.create": {
-      "kind": "action",
-      "sideEffect": "write",
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "title": "Create contact",
-      "description": "Create a Kommo contact.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "name": {
+            "description": "Task creation date (Unix timestamp)."
+          },
+          "created_by": {
+            "type": "integer",
+            "description": "ID of the user who created the task."
+          },
+          "updated_at": {
+            "type": "integer",
+            "description": "Task edit date (Unix timestamp)."
+          },
+          "updated_by": {
+            "type": "integer",
+            "description": "ID of the user who last edited the task."
+          },
+          "entity_type": {
             "type": "string",
-            "minLength": 1,
-            "description": "Contact name."
+            "enum": [
+              "leads",
+              "contacts",
+              "companies"
+            ],
+            "description": "Type of the entity the task is linked to."
+          },
+          "task_type_id": {
+            "type": "integer",
+            "description": "Task type ID. 1 = Follow-up, 2 = Meeting."
+          },
+          "complete_till": {
+            "type": "integer",
+            "description": "Task deadline (Unix timestamp)."
+          },
+          "responsible_user_id": {
+            "type": "integer",
+            "description": "Task responsible user ID."
           }
         },
-        "additionalProperties": false,
         "required": [
-          "name"
+          "text",
+          "entity_id",
+          "entity_type",
+          "complete_till"
         ]
       },
       "outputSchema": {
@@ -568,13 +1269,26 @@
       },
       "request": {
         "method": "POST",
-        "path": "/api/v4/contacts",
+        "path": "/api/v4/tasks",
         "success": [
-          200
+          200,
+          201,
+          202,
+          204
         ],
         "body": [
           {
-            "name": "{{name}}"
+            "text": "{{text}}",
+            "duration": "{{duration}}",
+            "entity_id": "{{entity_id}}",
+            "created_at": "{{created_at}}",
+            "created_by": "{{created_by}}",
+            "updated_at": "{{updated_at}}",
+            "updated_by": "{{updated_by}}",
+            "entity_type": "{{entity_type}}",
+            "task_type_id": "{{task_type_id}}",
+            "complete_till": "{{complete_till}}",
+            "responsible_user_id": "{{responsible_user_id}}"
           }
         ],
         "headers": {
@@ -585,31 +1299,35 @@
       "validationMode": "strict-generated",
       "responseFormat": "json"
     },
-    "contacts.update": {
+    "files.delete": {
       "kind": "action",
-      "sideEffect": "write",
+      "sideEffect": "destructive",
       "timeoutMs": 15000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
-      "title": "Update contact",
-      "description": "Update a Kommo contact by identifier.",
+      "title": "Delete files",
+      "description": "Move files to trash in Kommo Drive. Covers KOMMO_DELETE_FILES.",
       "inputSchema": {
         "type": "object",
+        "additionalProperties": false,
         "properties": {
-          "contactId": {
-            "type": "integer",
-            "description": "Contact identifier.",
-            "minimum": 1
-          },
-          "name": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Contact name."
+          "files": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "uuid": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Files to delete. Each object must include uuid."
           }
         },
-        "additionalProperties": false,
         "required": [
-          "contactId"
+          "files"
         ]
       },
       "outputSchema": {
@@ -625,14 +1343,16 @@
         "additionalProperties": false
       },
       "request": {
-        "method": "PATCH",
-        "path": "/api/v4/contacts/{{contactId}}",
+        "method": "DELETE",
+        "path": "/v1.0/files",
         "success": [
-          200
+          200,
+          201,
+          202,
+          204
         ],
-        "body": {
-          "name": "{{name}}"
-        },
+        "baseUrl": "https://drive-c.kommo.com",
+        "body": "{{files}}",
         "headers": {
           "Content-Type": "application/json"
         }
@@ -641,35 +1361,29 @@
       "validationMode": "strict-generated",
       "responseFormat": "json"
     },
-    "companies.list": {
+    "ai.products.import": {
       "kind": "action",
-      "sideEffect": "read",
+      "sideEffect": "write",
       "timeoutMs": 15000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
-      "title": "List companies",
-      "description": "List Kommo companies with optional page, limit, and search query.",
+      "title": "Import products to AI",
+      "description": "Launch import of CRM products into the Kommo AI knowledge base. Covers KOMMO_IMPORT_PRODUCTS_TO_AI.",
       "inputSchema": {
         "type": "object",
+        "additionalProperties": false,
         "properties": {
-          "page": {
-            "type": "integer",
-            "description": "Page number, starting at 1.",
-            "minimum": 1
-          },
-          "limit": {
-            "type": "integer",
-            "description": "Page size, maximum 250.",
-            "minimum": 1,
-            "maximum": 250
-          },
-          "query": {
+          "language": {
             "type": "string",
-            "minLength": 1,
-            "description": "Search query."
+            "enum": [
+              "en",
+              "es",
+              "pt",
+              "ru"
+            ],
+            "description": "Language code."
           }
-        },
-        "additionalProperties": false
+        }
       },
       "outputSchema": {
         "type": "object",
@@ -684,15 +1398,16 @@
         "additionalProperties": false
       },
       "request": {
-        "method": "GET",
-        "path": "/api/v4/companies",
+        "method": "POST",
+        "path": "/api/v2/agent/knowledges/products/import",
         "success": [
-          200
+          200,
+          201,
+          202
         ],
-        "query": {
-          "page": "{{page}}",
-          "limit": "{{limit}}",
-          "query": "{{query}}"
+        "baseUrl": "https://airewriter.kommo.com",
+        "headers": {
+          "X-Language": "{{language}}"
         }
       },
       "enforceOutputSchema": true,
@@ -706,19 +1421,22 @@
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
       "title": "Get company",
-      "description": "Get one Kommo company by identifier.",
+      "description": "Get a company by ID, optionally embedding contacts, leads, or catalog elements. Covers KOMMO_GET_COMPANY.",
       "inputSchema": {
         "type": "object",
+        "additionalProperties": false,
         "properties": {
-          "companyId": {
+          "id": {
             "type": "integer",
-            "description": "Company identifier.",
-            "minimum": 1
+            "description": "Company identifier."
+          },
+          "with_params": {
+            "type": "string",
+            "description": "Comma-separated embeds, e.g. contacts,leads."
           }
         },
-        "additionalProperties": false,
         "required": [
-          "companyId"
+          "id"
         ]
       },
       "outputSchema": {
@@ -735,92 +1453,50 @@
       },
       "request": {
         "method": "GET",
-        "path": "/api/v4/companies/{{companyId}}",
+        "path": "/api/v4/companies/{{id}}",
         "success": [
-          200
-        ]
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "companies.create": {
-      "kind": "action",
-      "sideEffect": "write",
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "title": "Create company",
-      "description": "Create a Kommo company.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "name": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Company name."
-          }
-        },
-        "additionalProperties": false,
-        "required": [
-          "name"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
+          200,
+          204
         ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "POST",
-        "path": "/api/v4/companies",
-        "success": [
-          200
-        ],
-        "body": [
-          {
-            "name": "{{name}}"
-          }
-        ],
-        "headers": {
-          "Content-Type": "application/json"
+        "query": {
+          "with": "{{with_params}}"
         }
       },
       "enforceOutputSchema": true,
       "validationMode": "strict-generated",
       "responseFormat": "json"
     },
-    "tasks.list": {
+    "contacts.get": {
       "kind": "action",
       "sideEffect": "read",
       "timeoutMs": 15000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
-      "title": "List tasks",
-      "description": "List Kommo tasks with optional page and limit.",
+      "title": "Get contact",
+      "description": "Get a contact by ID, optionally embedding leads or catalog elements. Covers KOMMO_GET_CONTACT.",
       "inputSchema": {
         "type": "object",
+        "additionalProperties": false,
         "properties": {
-          "page": {
+          "id": {
             "type": "integer",
-            "description": "Page number, starting at 1.",
-            "minimum": 1
+            "description": "Contact identifier."
           },
-          "limit": {
-            "type": "integer",
-            "description": "Page size, maximum 250.",
-            "minimum": 1,
-            "maximum": 250
+          "with_params": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "leads",
+                "catalog_elements"
+              ]
+            },
+            "description": "Embedded data to include."
           }
         },
-        "additionalProperties": false
+        "required": [
+          "id"
+        ]
       },
       "outputSchema": {
         "type": "object",
@@ -836,14 +1512,519 @@
       },
       "request": {
         "method": "GET",
-        "path": "/api/v4/tasks",
+        "path": "/api/v4/contacts/{{id}}",
         "success": [
-          200
+          200,
+          204
+        ],
+        "parameters": [
+          {
+            "wireName": "with",
+            "inputName": "with_params",
+            "in": "query",
+            "style": "form",
+            "explode": false,
+            "allowReserved": true
+          }
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "custom_fields.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get custom field",
+      "description": "Get a custom field by ID for leads, contacts, or companies. Covers KOMMO_GET_CUSTOM_FIELD.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "integer",
+            "description": "Custom field identifier."
+          },
+          "entity_type": {
+            "type": "string",
+            "enum": [
+              "leads",
+              "contacts",
+              "companies"
+            ],
+            "description": "Entity type: leads, contacts, or companies."
+          }
+        },
+        "required": [
+          "id",
+          "entity_type"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v4/{{entity_type}}/custom_fields/{{id}}",
+        "success": [
+          200,
+          204
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "events.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get event",
+      "description": "Get a Kommo event by ID, including before/after entity state. Covers KOMMO_GET_EVENT.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique event identifier."
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v4/events/{{id}}",
+        "success": [
+          200,
+          204
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "field_groups.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get field group",
+      "description": "Get a custom field group by ID (or 'default') for an entity type. Covers KOMMO_GET_FIELD_GROUP.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Field group ID or 'default'."
+          },
+          "entity_type": {
+            "type": "string",
+            "enum": [
+              "leads",
+              "contacts",
+              "companies"
+            ],
+            "description": "Entity type: leads, contacts, or companies."
+          }
+        },
+        "required": [
+          "id",
+          "entity_type"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v4/{{entity_type}}/custom_fields/groups/{{id}}",
+        "success": [
+          200,
+          204
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "files.links.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get file links",
+      "description": "List entities linked to a file UUID. Covers KOMMO_GET_FILE_LINKS.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "file_uuid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "File UUID."
+          }
+        },
+        "required": [
+          "file_uuid"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v4/files/{{file_uuid}}/links",
+        "success": [
+          200,
+          204
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "incoming_leads.summary": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get incoming leads summary",
+      "description": "Retrieve unsorted incoming-lead summary statistics. Covers KOMMO_GET_INCOMING_LEADS_SUMMARY.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "filter_uid": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "List of strings."
+          },
+          "filter_created_at": {
+            "type": "integer",
+            "description": "Created-after Unix timestamp."
+          },
+          "filter_pipeline_id": {
+            "type": "integer",
+            "description": "Pipeline ID filter."
+          },
+          "filter_created_at_to": {
+            "type": "integer",
+            "description": "Created-at range end (Unix timestamp)."
+          },
+          "filter_created_at_from": {
+            "type": "integer",
+            "description": "Created-at range start (Unix timestamp)."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v4/leads/unsorted/summary",
+        "success": [
+          200,
+          204
+        ],
+        "parameters": [
+          {
+            "wireName": "filter[created_at]",
+            "inputName": "filter_created_at",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "allowReserved": true
+          },
+          {
+            "wireName": "filter[pipeline_id]",
+            "inputName": "filter_pipeline_id",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "allowReserved": true
+          },
+          {
+            "wireName": "filter[created_at][to]",
+            "inputName": "filter_created_at_to",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "allowReserved": true
+          },
+          {
+            "wireName": "filter[created_at][from]",
+            "inputName": "filter_created_at_from",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "allowReserved": true
+          },
+          {
+            "wireName": "filter[uid][]",
+            "inputName": "filter_uid",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "allowReserved": true
+          }
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "leads.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get lead",
+      "description": "Get a lead by ID, optionally embedding contacts, catalog elements, or loss reason. Covers KOMMO_GET_LEAD.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "integer",
+            "description": "Lead identifier."
+          },
+          "with_params": {
+            "type": "string",
+            "description": "Comma-separated embeds: contacts, catalog_elements, loss_reason, source_id, is_price_modified_by_robot."
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v4/leads/{{id}}",
+        "success": [
+          200,
+          204
         ],
         "query": {
-          "page": "{{page}}",
-          "limit": "{{limit}}"
+          "with": "{{with_params}}"
         }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "loss_reasons.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get loss reason",
+      "description": "Get a lead loss reason by ID. Covers KOMMO_GET_LOSS_REASON.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "integer",
+            "description": "Loss reason identifier."
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v4/leads/loss_reasons/{{id}}",
+        "success": [
+          200,
+          204
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "pipelines.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get pipeline",
+      "description": "Get a lead pipeline by ID, including its stages. Covers KOMMO_GET_PIPELINE.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "integer",
+            "description": "Pipeline identifier."
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v4/leads/pipelines/{{id}}",
+        "success": [
+          200,
+          204
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "pipeline_statuses.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get pipeline status",
+      "description": "Get a pipeline stage by ID. Covers KOMMO_GET_PIPELINE_STATUS.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "integer",
+            "description": "Stage ID."
+          },
+          "pipeline_id": {
+            "type": "integer",
+            "description": "Pipeline ID containing the stage."
+          }
+        },
+        "required": [
+          "id",
+          "pipeline_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v4/leads/pipelines/{{pipeline_id}}/statuses/{{id}}",
+        "success": [
+          200,
+          204
+        ]
       },
       "enforceOutputSchema": true,
       "validationMode": "strict-generated",
@@ -856,19 +2037,18 @@
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
       "title": "Get task",
-      "description": "Get one Kommo task by identifier.",
+      "description": "Get a task by ID. Covers KOMMO_GET_TASK.",
       "inputSchema": {
         "type": "object",
+        "additionalProperties": false,
         "properties": {
-          "taskId": {
+          "id": {
             "type": "integer",
-            "description": "Task identifier.",
-            "minimum": 1
+            "description": "Task identifier."
           }
         },
-        "additionalProperties": false,
         "required": [
-          "taskId"
+          "id"
         ]
       },
       "outputSchema": {
@@ -885,86 +2065,11 @@
       },
       "request": {
         "method": "GET",
-        "path": "/api/v4/tasks/{{taskId}}",
+        "path": "/api/v4/tasks/{{id}}",
         "success": [
-          200
+          200,
+          204
         ]
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "tasks.create": {
-      "kind": "action",
-      "sideEffect": "write",
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "title": "Create task",
-      "description": "Create a Kommo task.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "text": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Task text."
-          },
-          "completeTill": {
-            "type": "integer",
-            "description": "Unix timestamp when the task is due."
-          },
-          "entityId": {
-            "type": "integer",
-            "description": "Linked entity identifier.",
-            "minimum": 1
-          },
-          "entityType": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Linked entity type.",
-            "enum": [
-              "leads",
-              "contacts",
-              "companies"
-            ]
-          }
-        },
-        "additionalProperties": false,
-        "required": [
-          "text",
-          "completeTill"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "POST",
-        "path": "/api/v4/tasks",
-        "success": [
-          200
-        ],
-        "body": [
-          {
-            "text": "{{text}}",
-            "complete_till": "{{completeTill}}",
-            "entity_id": "{{entityId}}",
-            "entity_type": "{{entityType}}"
-          }
-        ],
-        "headers": {
-          "Content-Type": "application/json"
-        }
       },
       "enforceOutputSchema": true,
       "validationMode": "strict-generated",
@@ -977,19 +2082,18 @@
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
       "title": "Get user",
-      "description": "Get one Kommo user by identifier.",
+      "description": "Get a user by ID, including role, group, and rights. Covers KOMMO_GET_USER.",
       "inputSchema": {
         "type": "object",
+        "additionalProperties": false,
         "properties": {
-          "userId": {
+          "id": {
             "type": "integer",
-            "description": "User identifier.",
-            "minimum": 1
+            "description": "User identifier."
           }
         },
-        "additionalProperties": false,
         "required": [
-          "userId"
+          "id"
         ]
       },
       "outputSchema": {
@@ -1006,9 +2110,1070 @@
       },
       "request": {
         "method": "GET",
-        "path": "/api/v4/users/{{userId}}",
+        "path": "/api/v4/users/{{id}}",
         "success": [
-          200
+          200,
+          204
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "widgets.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get widget",
+      "description": "Get widget metadata by its code. Covers KOMMO_GET_WIDGET.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Widget code, e.g. amo_dropbox."
+          }
+        },
+        "required": [
+          "code"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v4/widgets/{{code}}",
+        "success": [
+          200,
+          204
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "catalogs.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List catalogs",
+      "description": "List catalogs (lists) in the Kommo account. Covers KOMMO_LIST_CATALOGS.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v4/catalogs",
+        "success": [
+          200,
+          204
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "companies.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List companies",
+      "description": "List companies with pagination, search, order, and filters. Covers KOMMO_LIST_COMPANIES.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Page number starting from 1."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 250,
+            "description": "Number of entities to return (max 250)."
+          },
+          "query": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Search query over custom field values."
+          },
+          "order": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Sorting map, e.g. {updated_at: asc} or {field, direction}."
+          },
+          "filter": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Company filter object forwarded as filter[...]."
+          },
+          "with_params": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "leads",
+                "contacts",
+                "catalog_elements"
+              ]
+            },
+            "description": "Embedded data to include."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v4/companies",
+        "success": [
+          200,
+          204
+        ],
+        "query": {
+          "page": "{{page}}",
+          "limit": "{{limit}}",
+          "query": "{{query}}"
+        },
+        "parameters": [
+          {
+            "wireName": "with",
+            "inputName": "with_params",
+            "in": "query",
+            "style": "form",
+            "explode": false,
+            "allowReserved": true
+          },
+          {
+            "wireName": "order",
+            "inputName": "order",
+            "in": "query",
+            "style": "deepObject",
+            "explode": true,
+            "allowReserved": true
+          },
+          {
+            "wireName": "filter",
+            "inputName": "filter",
+            "in": "query",
+            "style": "deepObject",
+            "explode": true,
+            "allowReserved": true
+          }
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "conversations.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List conversations",
+      "description": "List Kommo conversations (talks) with pagination. Covers KOMMO_LIST_CONVERSATIONS.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Page number starting from 1."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 250,
+            "description": "Number of entities to return (max 250)."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v4/talks",
+        "success": [
+          200,
+          204
+        ],
+        "query": {
+          "page": "{{page}}",
+          "limit": "{{limit}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "custom_fields.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List custom fields",
+      "description": "List custom fields for an entity type. Covers KOMMO_LIST_CUSTOM_FIELDS.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "entity_type": {
+            "type": "string",
+            "enum": [
+              "leads",
+              "contacts",
+              "companies",
+              "catalogs"
+            ],
+            "description": "Entity type: leads, contacts, companies, or catalogs."
+          }
+        },
+        "required": [
+          "entity_type"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v4/{{entity_type}}/custom_fields",
+        "success": [
+          200,
+          204
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "entity_files.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List entity files",
+      "description": "List files attached to a lead, contact, or company. Covers KOMMO_LIST_ENTITY_FILES.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "entity_id": {
+            "type": "integer",
+            "description": "Entity identifier."
+          },
+          "entity_type": {
+            "type": "string",
+            "enum": [
+              "leads",
+              "contacts",
+              "companies"
+            ],
+            "description": "Entity type: leads, contacts, or companies."
+          }
+        },
+        "required": [
+          "entity_id",
+          "entity_type"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v4/{{entity_type}}/{{entity_id}}/files",
+        "success": [
+          200,
+          204
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "entity_links.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List entity links",
+      "description": "List entities linked to a lead, contact, or company. Covers KOMMO_LIST_ENTITY_LINKS.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "entity_id": {
+            "type": "integer",
+            "description": "Entity identifier."
+          },
+          "entity_type": {
+            "type": "string",
+            "enum": [
+              "leads",
+              "contacts",
+              "companies"
+            ],
+            "description": "Entity type: leads, contacts, or companies."
+          }
+        },
+        "required": [
+          "entity_id",
+          "entity_type"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v4/{{entity_type}}/{{entity_id}}/links",
+        "success": [
+          200,
+          204
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "entity_notes.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List entity notes",
+      "description": "List notes across all entities of a type. Covers KOMMO_LIST_ENTITY_NOTES.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Page number starting from 1."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 250,
+            "description": "Number of entities to return (max 250)."
+          },
+          "entity_type": {
+            "type": "string",
+            "enum": [
+              "leads",
+              "contacts",
+              "companies"
+            ],
+            "description": "Entity type: leads, contacts, or companies."
+          }
+        },
+        "required": [
+          "entity_type"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v4/{{entity_type}}/notes",
+        "success": [
+          200,
+          204
+        ],
+        "query": {
+          "page": "{{page}}",
+          "limit": "{{limit}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "entity_tags.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List entity tags",
+      "description": "List tags available for an entity type. Covers KOMMO_LIST_ENTITY_TAGS.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "entity_type": {
+            "type": "string",
+            "enum": [
+              "leads",
+              "contacts",
+              "companies"
+            ],
+            "description": "Entity type: leads, contacts, or companies."
+          }
+        },
+        "required": [
+          "entity_type"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v4/{{entity_type}}/tags",
+        "success": [
+          200,
+          204
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "events.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List events",
+      "description": "List account events with type and entity filters. Covers KOMMO_LIST_EVENTS.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Page number starting from 1."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 250,
+            "description": "Number of entities to return (max 250)."
+          },
+          "filter_type": {
+            "type": "string",
+            "description": "Event type, e.g. lead_status_changed."
+          },
+          "filter_entity": {
+            "type": "string",
+            "enum": [
+              "lead",
+              "contact",
+              "company"
+            ],
+            "description": "Entity type to filter events."
+          },
+          "filter_value_after": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "filter_value_before": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v4/events",
+        "success": [
+          200,
+          204
+        ],
+        "query": {
+          "page": "{{page}}",
+          "limit": "{{limit}}"
+        },
+        "parameters": [
+          {
+            "wireName": "filter[type]",
+            "inputName": "filter_type",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "allowReserved": true
+          },
+          {
+            "wireName": "filter[entity]",
+            "inputName": "filter_entity",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "allowReserved": true
+          },
+          {
+            "wireName": "filter[value_after]",
+            "inputName": "filter_value_after",
+            "in": "query",
+            "style": "deepObject",
+            "explode": true,
+            "allowReserved": true
+          },
+          {
+            "wireName": "filter[value_before]",
+            "inputName": "filter_value_before",
+            "in": "query",
+            "style": "deepObject",
+            "explode": true,
+            "allowReserved": true
+          }
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "event_types.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List event types",
+      "description": "List available Kommo event types. Covers KOMMO_LIST_EVENT_TYPES.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v4/events/types",
+        "success": [
+          200,
+          204
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "field_groups.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List field groups",
+      "description": "List custom field groups for an entity type. Covers KOMMO_LIST_FIELD_GROUPS.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "entity_type": {
+            "type": "string",
+            "enum": [
+              "leads",
+              "contacts",
+              "companies"
+            ],
+            "description": "Entity type: leads, contacts, or companies."
+          }
+        },
+        "required": [
+          "entity_type"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v4/{{entity_type}}/custom_fields/groups",
+        "success": [
+          200,
+          204
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "files.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List files",
+      "description": "List files in Kommo Drive with name, size, date, and creator filters. Covers KOMMO_LIST_FILES.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Page number starting from 1."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 50,
+            "description": "Number of files to return per page (max 50)."
+          },
+          "filter_date": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Date range filter (type, date_preset, from, to)."
+          },
+          "filter_name": {
+            "type": "string",
+            "description": "Exact file name."
+          },
+          "filter_size": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Size range filter (unit, from, to)."
+          },
+          "filter_term": {
+            "type": "string",
+            "description": "Substring search in file or related entity names."
+          },
+          "filter_uuid": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "List of strings."
+          },
+          "filter_deleted": {
+            "type": "string",
+            "description": "Include deleted files when passed (JSON string)."
+          },
+          "filter_source_id": {
+            "type": "integer",
+            "description": "Source ID the file originated from."
+          },
+          "filter_created_by": {
+            "type": "array",
+            "items": {
+              "type": "integer"
+            },
+            "description": "List of numeric identifiers."
+          },
+          "filter_extensions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "List of strings."
+          },
+          "filter_updated_by": {
+            "type": "array",
+            "items": {
+              "type": "integer"
+            },
+            "description": "List of numeric identifiers."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1.0/files",
+        "success": [
+          200,
+          204
+        ],
+        "baseUrl": "https://drive-c.kommo.com",
+        "query": {
+          "page": "{{page}}",
+          "limit": "{{limit}}"
+        },
+        "parameters": [
+          {
+            "wireName": "filter[name]",
+            "inputName": "filter_name",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "allowReserved": true
+          },
+          {
+            "wireName": "filter[term]",
+            "inputName": "filter_term",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "allowReserved": true
+          },
+          {
+            "wireName": "filter[deleted]",
+            "inputName": "filter_deleted",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "allowReserved": true
+          },
+          {
+            "wireName": "filter[source_id]",
+            "inputName": "filter_source_id",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "allowReserved": true
+          },
+          {
+            "wireName": "filter[uuid]",
+            "inputName": "filter_uuid",
+            "in": "query",
+            "style": "form",
+            "explode": false,
+            "allowReserved": true
+          },
+          {
+            "wireName": "filter[date]",
+            "inputName": "filter_date",
+            "in": "query",
+            "style": "deepObject",
+            "explode": true,
+            "allowReserved": true
+          },
+          {
+            "wireName": "filter[size]",
+            "inputName": "filter_size",
+            "in": "query",
+            "style": "deepObject",
+            "explode": true,
+            "allowReserved": true
+          },
+          {
+            "wireName": "filter[created_by][]",
+            "inputName": "filter_created_by",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "allowReserved": true
+          },
+          {
+            "wireName": "filter[extensions][]",
+            "inputName": "filter_extensions",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "allowReserved": true
+          },
+          {
+            "wireName": "filter[updated_by][]",
+            "inputName": "filter_updated_by",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "allowReserved": true
+          }
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "incoming_leads.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List incoming leads",
+      "description": "List unsorted incoming leads (sip, mail, forms, chats). Covers KOMMO_LIST_INCOMING_LEADS.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Page number starting from 1."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 250,
+            "description": "Number of entities to return (max 250)."
+          },
+          "filter_uid": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "List of strings."
+          },
+          "filter_category": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "sip",
+                "mail",
+                "forms",
+                "chats"
+              ]
+            },
+            "description": "Incoming lead categories."
+          },
+          "order_created_at": {
+            "type": "string",
+            "enum": [
+              "asc",
+              "desc"
+            ],
+            "description": "Sort direction."
+          },
+          "filter_pipeline_id": {
+            "type": "integer",
+            "description": "Pipeline ID filter."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v4/leads/unsorted",
+        "success": [
+          200,
+          204
+        ],
+        "query": {
+          "page": "{{page}}",
+          "limit": "{{limit}}"
+        },
+        "parameters": [
+          {
+            "wireName": "filter[uid][]",
+            "inputName": "filter_uid",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "allowReserved": true
+          },
+          {
+            "wireName": "filter[category][]",
+            "inputName": "filter_category",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "allowReserved": true
+          },
+          {
+            "wireName": "order[created_at]",
+            "inputName": "order_created_at",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "allowReserved": true
+          },
+          {
+            "wireName": "filter[pipeline_id]",
+            "inputName": "filter_pipeline_id",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "allowReserved": true
+          }
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "loss_reasons.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List loss reasons",
+      "description": "List lead loss reasons. Covers KOMMO_LIST_LOSS_REASONS.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v4/leads/loss_reasons",
+        "success": [
+          200,
+          204
         ]
       },
       "enforceOutputSchema": true,
@@ -1021,31 +3186,40 @@
       "timeoutMs": 15000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
-      "title": "List lead notes",
-      "description": "List notes on one Kommo lead.",
+      "title": "List notes by entity",
+      "description": "List notes for a specific lead, contact, or company. Covers KOMMO_LIST_NOTES_BY_ENTITY.",
       "inputSchema": {
         "type": "object",
+        "additionalProperties": false,
         "properties": {
-          "leadId": {
-            "type": "integer",
-            "description": "Lead identifier.",
-            "minimum": 1
-          },
           "page": {
             "type": "integer",
-            "description": "Page number, starting at 1.",
-            "minimum": 1
+            "minimum": 1,
+            "description": "Page number starting from 1."
           },
           "limit": {
             "type": "integer",
-            "description": "Page size, maximum 250.",
             "minimum": 1,
-            "maximum": 250
+            "maximum": 250,
+            "description": "Number of entities to return (max 250)."
+          },
+          "entity_id": {
+            "type": "integer",
+            "description": "Entity identifier."
+          },
+          "entity_type": {
+            "type": "string",
+            "enum": [
+              "leads",
+              "contacts",
+              "companies"
+            ],
+            "description": "Entity type: leads, contacts, or companies."
           }
         },
-        "additionalProperties": false,
         "required": [
-          "leadId"
+          "entity_id",
+          "entity_type"
         ]
       },
       "outputSchema": {
@@ -1062,9 +3236,403 @@
       },
       "request": {
         "method": "GET",
-        "path": "/api/v4/leads/{{leadId}}/notes",
+        "path": "/api/v4/{{entity_type}}/{{entity_id}}/notes",
         "success": [
-          200
+          200,
+          204
+        ],
+        "query": {
+          "page": "{{page}}",
+          "limit": "{{limit}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "pipeline_stages.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List pipeline stages",
+      "description": "List stages of a lead pipeline. Covers KOMMO_LIST_PIPELINE_STAGES.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "pipeline_id": {
+            "type": "integer",
+            "description": "Pipeline ID."
+          },
+          "with_description": {
+            "type": "boolean",
+            "description": "When true, request stage descriptions via with=descriptions."
+          }
+        },
+        "required": [
+          "pipeline_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v4/leads/pipelines/{{pipeline_id}}/statuses",
+        "success": [
+          200,
+          204
+        ],
+        "query": {
+          "with": "{{with_description}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "roles.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List user roles",
+      "description": "List user roles and their permissions. Covers KOMMO_LIST_ROLES.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v4/roles",
+        "success": [
+          200,
+          204
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "sources.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List lead sources",
+      "description": "List lead sources that can be assigned to leads. Covers KOMMO_LIST_SOURCES.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v4/sources",
+        "success": [
+          200,
+          204
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "tasks.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List tasks",
+      "description": "List tasks with entity, type, completion, and responsible-user filters. Covers KOMMO_LIST_TASKS.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Page number starting from 1."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 250,
+            "description": "Number of entities to return (max 250)."
+          },
+          "filter_ids": {
+            "type": "array",
+            "items": {
+              "type": "integer"
+            },
+            "description": "List of numeric identifiers."
+          },
+          "order_by_id": {
+            "type": "string",
+            "enum": [
+              "asc",
+              "desc"
+            ],
+            "description": "Sort direction."
+          },
+          "filter_entity_ids": {
+            "type": "array",
+            "items": {
+              "type": "integer"
+            },
+            "description": "List of numeric identifiers."
+          },
+          "filter_task_types": {
+            "type": "array",
+            "items": {
+              "type": "integer"
+            },
+            "description": "List of numeric identifiers."
+          },
+          "filter_updated_at": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Unix timestamp range with optional from/to.",
+            "properties": {
+              "from": {
+                "type": "integer",
+                "description": "Range start (Unix timestamp)."
+              },
+              "to": {
+                "type": "integer",
+                "description": "Range end (Unix timestamp)."
+              }
+            }
+          },
+          "filter_entity_type": {
+            "type": "string",
+            "description": "Linked entity type filter."
+          },
+          "filter_is_completed": {
+            "type": "integer",
+            "enum": [
+              0,
+              1
+            ],
+            "description": "1 = completed, 0 = open."
+          },
+          "order_by_created_at": {
+            "type": "string",
+            "enum": [
+              "asc",
+              "desc"
+            ],
+            "description": "Sort direction."
+          },
+          "order_by_complete_till": {
+            "type": "string",
+            "enum": [
+              "asc",
+              "desc"
+            ],
+            "description": "Sort direction."
+          },
+          "filter_responsible_user_ids": {
+            "type": "array",
+            "items": {
+              "type": "integer"
+            },
+            "description": "List of numeric identifiers."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v4/tasks",
+        "success": [
+          200,
+          204
+        ],
+        "query": {
+          "page": "{{page}}",
+          "limit": "{{limit}}"
+        },
+        "parameters": [
+          {
+            "wireName": "filter[id][]",
+            "inputName": "filter_ids",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "allowReserved": true
+          },
+          {
+            "wireName": "order[id]",
+            "inputName": "order_by_id",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "allowReserved": true
+          },
+          {
+            "wireName": "filter[entity_id][]",
+            "inputName": "filter_entity_ids",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "allowReserved": true
+          },
+          {
+            "wireName": "filter[task_type][]",
+            "inputName": "filter_task_types",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "allowReserved": true
+          },
+          {
+            "wireName": "filter[entity_type]",
+            "inputName": "filter_entity_type",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "allowReserved": true
+          },
+          {
+            "wireName": "filter[is_completed]",
+            "inputName": "filter_is_completed",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "allowReserved": true
+          },
+          {
+            "wireName": "order[created_at]",
+            "inputName": "order_by_created_at",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "allowReserved": true
+          },
+          {
+            "wireName": "order[complete_till]",
+            "inputName": "order_by_complete_till",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "allowReserved": true
+          },
+          {
+            "wireName": "filter[responsible_user_id][]",
+            "inputName": "filter_responsible_user_ids",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "allowReserved": true
+          },
+          {
+            "wireName": "filter[updated_at]",
+            "inputName": "filter_updated_at",
+            "in": "query",
+            "style": "deepObject",
+            "explode": true,
+            "allowReserved": true
+          }
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "templates.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List templates",
+      "description": "List chat message templates. Covers KOMMO_LIST_TEMPLATES.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Page number starting from 1."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 250,
+            "description": "Number of entities to return (max 250)."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v4/chats/templates",
+        "success": [
+          200,
+          204
         ],
         "query": {
           "page": "{{page}}",
@@ -1082,11 +3650,11 @@
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
       "title": "List webhooks",
-      "description": "List Kommo webhook subscriptions.",
+      "description": "List registered webhooks for the account. Covers KOMMO_LIST_WEBHOOKS.",
       "inputSchema": {
         "type": "object",
-        "properties": {},
-        "additionalProperties": false
+        "additionalProperties": false,
+        "properties": {}
       },
       "outputSchema": {
         "type": "object",
@@ -1104,8 +3672,533 @@
         "method": "GET",
         "path": "/api/v4/webhooks",
         "success": [
-          200
+          200,
+          204
         ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "website_buttons.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List website buttons",
+      "description": "List website chat button (CRM Plugin) objects. Covers KOMMO_LIST_WEBSITE_BUTTONS.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Page number starting from 1."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 250,
+            "description": "Number of entities to return (max 250)."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v4/website_buttons",
+        "success": [
+          200,
+          204
+        ],
+        "query": {
+          "page": "{{page}}",
+          "limit": "{{limit}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "widgets.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List widgets",
+      "description": "List installed widgets and their status. Covers KOMMO_LIST_WIDGETS.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v4/widgets",
+        "success": [
+          200,
+          204
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "companies.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Update company",
+      "description": "Update a single company by ID. Covers KOMMO_UPDATE_COMPANY.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Company name."
+          },
+          "created_at": {
+            "type": "integer",
+            "description": "Company creation date (Unix timestamp)."
+          },
+          "created_by": {
+            "type": "integer",
+            "description": "ID of the user who created the company."
+          },
+          "request_id": {
+            "type": "string",
+            "description": "Echoed unchanged in the response."
+          },
+          "updated_at": {
+            "type": "integer",
+            "description": "Company update date (Unix timestamp)."
+          },
+          "updated_by": {
+            "type": "integer",
+            "description": "ID of the user who last updated the company."
+          },
+          "_embedded": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Embedded associations. Send tags as {\"tags\": [{\"id\": 1}]} (Composio tags_to_add).",
+            "properties": {
+              "tags": {
+                "type": "array",
+                "description": "Tags as objects with name or id.",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "responsible_user_id": {
+            "type": "integer",
+            "description": "Company responsible user ID."
+          },
+          "custom_fields_values": {
+            "type": "array",
+            "description": "Custom field values with field_id or field_code and values.",
+            "items": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          },
+          "company_id": {
+            "type": "integer",
+            "description": "ID of the company to update."
+          }
+        },
+        "required": [
+          "company_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/api/v4/companies/{{company_id}}",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ],
+        "body": {
+          "name": "{{name}}",
+          "created_at": "{{created_at}}",
+          "created_by": "{{created_by}}",
+          "request_id": "{{request_id}}",
+          "updated_at": "{{updated_at}}",
+          "updated_by": "{{updated_by}}",
+          "responsible_user_id": "{{responsible_user_id}}",
+          "custom_fields_values": "{{custom_fields_values}}",
+          "_embedded": "{{_embedded}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "contacts.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Update contact",
+      "description": "Update a contact by ID. Covers KOMMO_UPDATE_CONTACT.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "integer",
+            "description": "Contact identifier."
+          },
+          "name": {
+            "type": "string",
+            "description": "Contact full name."
+          },
+          "last_name": {
+            "type": "string",
+            "description": "Contact last name."
+          },
+          "first_name": {
+            "type": "string",
+            "description": "Contact first name."
+          },
+          "request_id": {
+            "type": "string",
+            "description": "Echoed unchanged in the response."
+          },
+          "responsible_user_id": {
+            "type": "integer",
+            "description": "Responsible user ID."
+          },
+          "custom_fields_values": {
+            "type": "array",
+            "description": "Custom field values with field_id or field_code and values.",
+            "items": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/api/v4/contacts/{{id}}",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ],
+        "body": {
+          "name": "{{name}}",
+          "last_name": "{{last_name}}",
+          "first_name": "{{first_name}}",
+          "request_id": "{{request_id}}",
+          "responsible_user_id": "{{responsible_user_id}}",
+          "custom_fields_values": "{{custom_fields_values}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "leads.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Update lead",
+      "description": "Update an existing lead's name, price, stage, tags, and custom fields. Covers KOMMO_UPDATE_LEAD.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Name of the lead/deal."
+          },
+          "price": {
+            "type": "integer",
+            "description": "Lead sale amount (deal value)."
+          },
+          "closed_at": {
+            "type": "integer",
+            "description": "Lead closure date (Unix timestamp)."
+          },
+          "status_id": {
+            "type": "integer",
+            "description": "Stage ID the lead is added to."
+          },
+          "created_at": {
+            "type": "integer",
+            "description": "Lead creation date (Unix timestamp)."
+          },
+          "created_by": {
+            "type": "integer",
+            "description": "User ID creating the lead. 0 = robot."
+          },
+          "updated_at": {
+            "type": "integer",
+            "description": "Lead update date (Unix timestamp)."
+          },
+          "updated_by": {
+            "type": "integer",
+            "description": "User ID updating the lead. 0 = robot."
+          },
+          "pipeline_id": {
+            "type": "integer",
+            "description": "Pipeline ID the lead is added to."
+          },
+          "_embedded": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Embedded associations. Send tags as {\"tags\": [{\"id\": 1}]} (Composio tags_to_add).",
+            "properties": {
+              "tags": {
+                "type": "array",
+                "description": "Tags as objects with name or id.",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "loss_reason_id": {
+            "type": "integer",
+            "description": "Lead loss reason ID."
+          },
+          "responsible_user_id": {
+            "type": "integer",
+            "description": "Lead responsible user ID."
+          },
+          "custom_fields_values": {
+            "type": "array",
+            "description": "Custom field values with field_id or field_code and values.",
+            "items": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          },
+          "request_id": {
+            "type": "string",
+            "description": "Echoed unchanged in the response."
+          },
+          "id": {
+            "type": "integer",
+            "description": "Lead identifier."
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/api/v4/leads/{{id}}",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ],
+        "body": {
+          "name": "{{name}}",
+          "price": "{{price}}",
+          "closed_at": "{{closed_at}}",
+          "status_id": "{{status_id}}",
+          "created_at": "{{created_at}}",
+          "created_by": "{{created_by}}",
+          "updated_at": "{{updated_at}}",
+          "updated_by": "{{updated_by}}",
+          "pipeline_id": "{{pipeline_id}}",
+          "loss_reason_id": "{{loss_reason_id}}",
+          "responsible_user_id": "{{responsible_user_id}}",
+          "request_id": "{{request_id}}",
+          "custom_fields_values": "{{custom_fields_values}}",
+          "_embedded": "{{_embedded}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "tasks.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Update task",
+      "description": "Update a task by ID, including completion and result. Covers KOMMO_UPDATE_TASK.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "integer",
+            "description": "Task identifier."
+          },
+          "text": {
+            "type": "string",
+            "description": "Task description."
+          },
+          "result": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Task result payload."
+          },
+          "duration": {
+            "type": "integer",
+            "description": "Task duration in seconds."
+          },
+          "entity_id": {
+            "type": "integer",
+            "description": "Linked entity ID."
+          },
+          "entity_type": {
+            "type": "string",
+            "description": "Linked entity type (leads, contacts, companies)."
+          },
+          "is_completed": {
+            "type": "boolean",
+            "description": "Whether the task is completed."
+          },
+          "task_type_id": {
+            "type": "integer",
+            "description": "Task type ID."
+          },
+          "complete_till": {
+            "type": "integer",
+            "description": "Deadline (Unix timestamp)."
+          },
+          "responsible_user_id": {
+            "type": "integer",
+            "description": "Responsible user ID."
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/api/v4/tasks/{{id}}",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ],
+        "body": {
+          "text": "{{text}}",
+          "result": "{{result}}",
+          "duration": "{{duration}}",
+          "entity_id": "{{entity_id}}",
+          "entity_type": "{{entity_type}}",
+          "is_completed": "{{is_completed}}",
+          "task_type_id": "{{task_type_id}}",
+          "complete_till": "{{complete_till}}",
+          "responsible_user_id": "{{responsible_user_id}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
       },
       "enforceOutputSchema": true,
       "validationMode": "strict-generated",
@@ -1114,16 +4207,11 @@
   },
   "provenance": {
     "source": {
-      "url": "https://github.com/oomol-lab/open-connector",
-      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
+      "url": "https://github.com/oomol-lab/open-connector"
     }
   },
-  "evidence": {
-    "fixture": {
-      "status": "supplied"
-    },
-    "live": {
-      "status": "unverified"
-    }
-  }
+  "runtime": "bun",
+  "version": "0.2.0",
+  "visibility": "public"
 }

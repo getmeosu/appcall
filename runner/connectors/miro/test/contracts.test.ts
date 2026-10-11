@@ -7,10 +7,14 @@ const actions = compileDeclarativeConnector(manifest as never).actions;
 const fixture = { data: [{ id: "b/1", name: "Board" }], limit: 1, offset: 0, size: 1, cursor: "next" };
 const actionKeys = Object.keys(manifest.operations).filter((key) => (manifest.operations as Record<string, { kind: string }>)[key].kind === "action");
 
+function expectedUrl(c: { url?: string; path: string }): string {
+  return c.url ?? `https://api.miro.com/v2${c.path}`;
+}
+
 describe("miro declarative fixture contracts", () => {
   it("compiles every action and uses official OAuth metadata", () => {
     expect(Object.keys(actions).sort()).toEqual(actionKeys.sort());
-    expect(manifest.version).toBe("0.2.0");
+    expect(manifest.version).toBe("0.3.0");
     expect(manifest.auth.scopes).toEqual(["boards:read", "boards:write"]);
     expect(manifest.auth.oauth.supportsRefresh).toBe(true);
     expect(manifest.provenance.source).toEqual({ url: "https://github.com/oomol-lab/open-connector", revision: "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a" });
@@ -28,7 +32,7 @@ describe("miro declarative fixture contracts", () => {
           return new Response(JSON.stringify(c.response), { status: c.status, headers: { "content-type": "application/json" } });
         },
       });
-      expect(seen!.url).toBe(`https://api.miro.com/v2${c.path}`);
+      expect(seen!.url).toBe(expectedUrl(c));
       expect(seen!.init.method).toBe(c.method);
       expect(new Headers(seen!.init.headers).get("authorization")).toBe("Bearer secret");
       expect(seen!.init.body === undefined ? null : JSON.parse(String(seen!.init.body))).toEqual(c.body);

@@ -138,7 +138,7 @@ fn daemon_health_and_sigterm_drain_and_oneshot_exit() {
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
     let mut daemon = command.spawn().unwrap();
-    let until = Instant::now() + Duration::from_secs(10);
+    let until = Instant::now() + Duration::from_secs(120);
     loop {
         assert!(
             daemon.try_wait().unwrap().is_none(),

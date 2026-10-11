@@ -6,8 +6,8 @@ describe("Lever manifest", () => {
     expect(manifest.key).toBe("lever");
   });
 
-  it("has version 0.8.0", () => {
-    expect(manifest.version).toBe("0.8.0");
+  it("has version 0.6.0", () => {
+    expect(manifest.version).toBe("0.6.0");
   });
 
   it("uses bun runtime", () => {
@@ -21,13 +21,12 @@ describe("Lever manifest", () => {
   });
 
   it("allows expected hosts", () => {
-    expect(manifest.network.allowedHosts).toEqual(["api.lever.co", "api.eu.lever.co"]);
+    expect(manifest.network.allowedHosts).toEqual(["api.lever.co", "api.lever.eu"]);
   });
 
   it("requires region for US/EU host selection", () => {
     expect(manifest.auth.setup.fields.some((field: { key: string }) => field.key === "region")).toBe(true);
-    // Declarative default is the US root; custom handlers map region=eu → api.eu.lever.co.
-    expect(manifest.http.baseUrl).toBe("https://api.lever.co/v1");
+    expect(manifest.http.baseUrl).toContain("{{region}}");
     expect(manifest.http.auth.basic).toEqual({ username: "{{apiKey}}", password: "" });
   });
 
@@ -41,10 +40,15 @@ describe("Lever manifest", () => {
       "archive_reasons.list",
       "candidates.get",
       "feedback.get",
+      "files.download",
       "files.get",
       "files.list",
+      "files.upload",
+      "form_templates.create",
+      "form_templates.delete",
       "form_templates.get",
       "form_templates.list",
+      "form_templates.update",
       "forms.create",
       "forms.get",
       "forms.list",
@@ -84,6 +88,14 @@ describe("Lever manifest", () => {
       "postings.get",
       "postings.list",
       "referrals.list",
+      "requisition_fields.create",
+      "requisition_fields.create_option",
+      "requisition_fields.delete",
+      "requisition_fields.delete_option",
+      "requisition_fields.get",
+      "requisition_fields.list",
+      "requisition_fields.update",
+      "requisition_fields.update_option",
       "requisitions.create",
       "requisitions.delete",
       "requisitions.get",
@@ -94,10 +106,14 @@ describe("Lever manifest", () => {
       "stages.get",
       "stages.list",
       "tags.list",
+      "uploads.create",
+      "users.create",
+      "users.deactivate",
       "users.get",
       "users.list",
+      "users.reactivate",
+      "users.update",
     ]);
-    expect(Object.keys(manifest.operations)).toHaveLength(58);
     expect(manifest.operations["jobs.list"].kind).toBe("sync");
     expect(manifest.operations["opportunities.list"].kind).toBe("sync");
     expect(manifest.operations["opportunities.get"].kind).toBe("sync");

@@ -22,15 +22,10 @@
       ]
     }
   },
-  "provenance": {
-    "source": {
-      "url": "https://github.com/oomol-lab/open-connector",
-      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"
-    }
-  },
   "network": {
     "allowedHosts": [
-      "circleci.com"
+      "circleci.com",
+      "runner.circleci.com"
     ]
   },
   "models": [
@@ -39,8 +34,12 @@
     "pipeline",
     "workflow",
     "job",
-    "envvar",
-    "context"
+    "context",
+    "organization",
+    "orb",
+    "runner",
+    "schedule",
+    "group"
   ],
   "http": {
     "baseUrl": "https://circleci.com/api/v2",
@@ -57,11 +56,16 @@
       "rateLimitStatuses": [
         429
       ],
-      "retryAfterHeader": "retry-after",
+      "retryAfterHeader": "Retry-After",
+      "retryAfterKind": "seconds",
       "defaultRetryAfterSeconds": 30,
       "messagePaths": [
         "message",
-        "error"
+        "error",
+        "errors.0.message"
+      ],
+      "bodyErrorPaths": [
+        "errors"
       ]
     }
   },
@@ -73,7 +77,7 @@
       "maxInputBytes": 4096,
       "maxResponseBytes": 65536,
       "title": "Healthcheck",
-      "description": "Validate the CircleCI personal API token by retrieving the authenticated user.",
+      "description": "Validate a CircleCI personal API token with GET /me (CIRCLECI_GET_CURRENT_USER).",
       "inputSchema": {
         "type": "object",
         "properties": {},
@@ -82,38 +86,42 @@
       "outputSchema": {
         "type": "object",
         "required": [
-          "data"
+          "user"
         ],
         "properties": {
-          "data": {}
-        },
-        "additionalProperties": false
+          "user": {
+            "type": "object"
+          }
+        }
       },
       "request": {
         "method": "GET",
         "path": "/me",
         "success": [
           200
-        ]
+        ],
+        "result": {
+          "user": "{{response}}"
+        }
       },
       "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
       "responseFormat": "json"
     },
     "projects.get": {
       "kind": "action",
       "sideEffect": "read",
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "title": "Get project",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "title": "Get Project",
       "description": "Get CircleCI project details by project slug.",
       "inputSchema": {
         "type": "object",
         "properties": {
           "projectSlug": {
             "type": "string",
-            "minLength": 1
+            "minLength": 1,
+            "description": "Project slug in the form vcs-slug/org-name/repo-name."
           }
         },
         "additionalProperties": false,
@@ -124,22 +132,25 @@
       "outputSchema": {
         "type": "object",
         "required": [
-          "data"
+          "project"
         ],
         "properties": {
-          "data": {}
-        },
-        "additionalProperties": false
+          "project": {
+            "type": "object"
+          }
+        }
       },
       "request": {
         "method": "GET",
         "path": "/project/{{projectSlug}}",
         "success": [
           200
-        ]
+        ],
+        "result": {
+          "project": "{{response}}"
+        }
       },
       "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
       "responseFormat": "json"
     },
     "pipelines.list": {
@@ -148,22 +159,29 @@
       "timeoutMs": 15000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
-      "title": "List pipelines",
-      "description": "List CircleCI pipelines for a project with optional branch and pagination.",
+      "title": "List Pipelines",
+      "description": "List CircleCI pipelines for a project with explicit page token handling.",
       "inputSchema": {
         "type": "object",
         "properties": {
           "projectSlug": {
             "type": "string",
-            "minLength": 1
+            "minLength": 1,
+            "description": "Project slug in the form vcs-slug/org-name/repo-name."
           },
           "branch": {
             "type": "string",
-            "minLength": 1
+            "minLength": 1,
+            "description": "VCS branch name."
           },
           "pageToken": {
             "type": "string",
-            "minLength": 1
+            "minLength": 1,
+            "description": "Pagination token returned by CircleCI."
+          },
+          "mine": {
+            "type": "boolean",
+            "description": "Only include pipelines created by the authenticated user."
           }
         },
         "additionalProperties": false,
@@ -174,12 +192,22 @@
       "outputSchema": {
         "type": "object",
         "required": [
-          "data"
+          "items"
         ],
         "properties": {
-          "data": {}
-        },
-        "additionalProperties": false
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "nextPageToken": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
       },
       "request": {
         "method": "GET",
@@ -189,27 +217,32 @@
         ],
         "query": {
           "branch": "{{branch}}",
-          "page-token": "{{pageToken}}"
+          "page-token": "{{pageToken}}",
+          "mine": "{{mine}}"
+        },
+        "result": {
+          "items": "{{response.items}}",
+          "nextPageToken": "{{response.next_page_token}}"
         }
       },
       "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
       "responseFormat": "json"
     },
     "pipelines.get": {
       "kind": "action",
       "sideEffect": "read",
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "title": "Get pipeline",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "title": "Get Pipeline",
       "description": "Get a CircleCI pipeline by pipeline ID.",
       "inputSchema": {
         "type": "object",
         "properties": {
           "pipelineId": {
             "type": "string",
-            "minLength": 1
+            "minLength": 1,
+            "description": "CircleCI pipeline ID."
           }
         },
         "additionalProperties": false,
@@ -220,83 +253,25 @@
       "outputSchema": {
         "type": "object",
         "required": [
-          "data"
+          "pipeline"
         ],
         "properties": {
-          "data": {}
-        },
-        "additionalProperties": false
+          "pipeline": {
+            "type": "object"
+          }
+        }
       },
       "request": {
         "method": "GET",
         "path": "/pipeline/{{pipelineId}}",
         "success": [
           200
-        ]
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "pipelines.trigger": {
-      "kind": "action",
-      "sideEffect": "write",
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "title": "Trigger pipeline",
-      "description": "Trigger a new CircleCI pipeline for a project.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "projectSlug": {
-            "type": "string",
-            "minLength": 1,
-            "description": "CircleCI project slug, for example gh/org/repo."
-          },
-          "branch": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Git branch to build."
-          },
-          "tag": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Git tag to build."
-          }
-        },
-        "additionalProperties": false,
-        "required": [
-          "projectSlug"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
         ],
-        "properties": {
-          "data": {}
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "POST",
-        "path": "/project/{{projectSlug}}/pipeline",
-        "success": [
-          201,
-          200
-        ],
-        "body": {
-          "branch": "{{branch}}",
-          "tag": "{{tag}}"
-        },
-        "headers": {
-          "Content-Type": "application/json"
+        "result": {
+          "pipeline": "{{response}}"
         }
       },
       "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
       "responseFormat": "json"
     },
     "workflows.list": {
@@ -305,18 +280,26 @@
       "timeoutMs": 15000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
-      "title": "List workflows",
+      "title": "List Workflows",
       "description": "List workflows for a CircleCI pipeline.",
       "inputSchema": {
         "type": "object",
         "properties": {
           "pipelineId": {
             "type": "string",
-            "minLength": 1
+            "minLength": 1,
+            "description": "CircleCI pipeline ID."
           },
           "pageToken": {
             "type": "string",
-            "minLength": 1
+            "minLength": 1,
+            "description": "Pagination token returned by CircleCI."
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Maximum workflows to return.",
+            "minimum": 1,
+            "maximum": 100
           }
         },
         "additionalProperties": false,
@@ -331,8 +314,7 @@
         ],
         "properties": {
           "data": {}
-        },
-        "additionalProperties": false
+        }
       },
       "request": {
         "method": "GET",
@@ -341,124 +323,38 @@
           200
         ],
         "query": {
-          "page-token": "{{pageToken}}"
+          "page-token": "{{pageToken}}",
+          "limit": "{{limit}}"
         }
       },
       "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
       "responseFormat": "json"
     },
-    "workflows.get": {
-      "kind": "action",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "title": "Get workflow",
-      "description": "Get a CircleCI workflow by id.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "workflowId": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Workflow UUID."
-          }
-        },
-        "additionalProperties": false,
-        "required": [
-          "workflowId"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {}
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "GET",
-        "path": "/workflow/{{workflowId}}",
-        "success": [
-          200
-        ]
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "workflows.cancel": {
+    "contexts.create": {
       "kind": "action",
       "sideEffect": "write",
       "timeoutMs": 15000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
-      "title": "Cancel workflow",
-      "description": "Cancel a running CircleCI workflow.",
+      "title": "Create Context",
+      "description": "Create a CircleCI context used to share environment variables.",
       "inputSchema": {
         "type": "object",
         "properties": {
-          "workflowId": {
+          "name": {
             "type": "string",
             "minLength": 1,
-            "description": "Workflow UUID."
-          }
-        },
-        "additionalProperties": false,
-        "required": [
-          "workflowId"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {}
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "POST",
-        "path": "/workflow/{{workflowId}}/cancel",
-        "success": [
-          202,
-          200
-        ]
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "workflows.rerun": {
-      "kind": "action",
-      "sideEffect": "write",
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "title": "Rerun workflow",
-      "description": "Rerun a CircleCI workflow, optionally from failed jobs.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "workflowId": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Workflow UUID."
+            "description": "User-defined context name. Must be unique within the owner scope."
           },
-          "fromFailed": {
-            "type": "boolean",
-            "description": "Rerun from failed jobs."
+          "owner": {
+            "type": "object",
+            "description": "Owner of the context (organization id/slug or account)."
           }
         },
         "additionalProperties": false,
         "required": [
-          "workflowId"
+          "name",
+          "owner"
         ]
       },
       "outputSchema": {
@@ -468,52 +364,61 @@
         ],
         "properties": {
           "data": {}
-        },
-        "additionalProperties": false
+        }
       },
       "request": {
         "method": "POST",
-        "path": "/workflow/{{workflowId}}/rerun",
+        "path": "/context",
         "success": [
-          202,
-          200
+          200,
+          201,
+          202
         ],
         "body": {
-          "from_failed": "{{fromFailed}}"
+          "name": "{{name}}",
+          "owner": "{{owner}}"
         },
         "headers": {
           "Content-Type": "application/json"
         }
       },
       "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
       "responseFormat": "json"
     },
-    "jobs.list": {
+    "contexts.create_graphql": {
       "kind": "action",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
+      "sideEffect": "write",
+      "timeoutMs": 20000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
-      "title": "List jobs",
-      "description": "List jobs for a CircleCI workflow.",
+      "title": "Create Context (GraphQL)",
+      "description": "Create a CircleCI context using the GraphQL unstable API.",
       "inputSchema": {
         "type": "object",
         "properties": {
-          "workflowId": {
+          "ownerId": {
             "type": "string",
             "minLength": 1,
-            "description": "Workflow UUID."
+            "description": "Owner organization UUID."
           },
-          "pageToken": {
+          "ownerType": {
+            "type": "string",
+            "enum": [
+              "ORGANIZATION"
+            ],
+            "description": "Owner type. Must be ORGANIZATION."
+          },
+          "contextName": {
             "type": "string",
             "minLength": 1,
-            "description": "Pagination token."
+            "description": "Name of the context to create."
           }
         },
         "additionalProperties": false,
         "required": [
-          "workflowId"
+          "ownerId",
+          "ownerType",
+          "contextName"
         ]
       },
       "outputSchema": {
@@ -523,228 +428,301 @@
         ],
         "properties": {
           "data": {}
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "GET",
-        "path": "/workflow/{{workflowId}}/job",
-        "success": [
-          200
-        ],
-        "query": {
-          "page-token": "{{pageToken}}"
         }
       },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "jobs.get": {
-      "kind": "action",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "title": "Get job",
-      "description": "Get a CircleCI job by project slug and job number.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "projectSlug": {
-            "type": "string",
-            "minLength": 1,
-            "description": "CircleCI project slug, for example gh/org/repo."
-          },
-          "jobNumber": {
-            "type": "integer",
-            "minimum": 1,
-            "description": "Job number."
-          }
-        },
-        "additionalProperties": false,
-        "required": [
-          "projectSlug",
-          "jobNumber"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {}
-        },
-        "additionalProperties": false
-      },
       "request": {
-        "method": "GET",
-        "path": "/project/{{projectSlug}}/job/{{jobNumber}}",
+        "method": "POST",
+        "path": "/graphql-unstable",
         "success": [
           200
-        ]
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "artifacts.list": {
-      "kind": "action",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "title": "List artifacts",
-      "description": "List artifacts produced by a CircleCI job.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "projectSlug": {
-            "type": "string",
-            "minLength": 1,
-            "description": "CircleCI project slug, for example gh/org/repo."
-          },
-          "jobNumber": {
-            "type": "integer",
-            "minimum": 1,
-            "description": "Job number."
+        ],
+        "body": {
+          "query": "mutation($ownerId: UUID!, $ownerType: OwnerType!, $contextName: String!) { createContext(input: {ownerId: $ownerId, ownerType: $ownerType, contextName: $contextName}) { error { type } context { id name createdAt } } }",
+          "variables": {
+            "ownerId": "{{ownerId}}",
+            "ownerType": "{{ownerType}}",
+            "contextName": "{{contextName}}"
           }
         },
-        "additionalProperties": false,
-        "required": [
-          "projectSlug",
-          "jobNumber"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {}
+        "headers": {
+          "Content-Type": "application/json"
         },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "GET",
-        "path": "/project/{{projectSlug}}/{{jobNumber}}/artifacts",
-        "success": [
-          200
-        ]
+        "baseUrl": "https://circleci.com"
       },
       "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
       "responseFormat": "json"
     },
-    "tests.list": {
-      "kind": "action",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "title": "List tests",
-      "description": "List test metadata for a CircleCI job.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "projectSlug": {
-            "type": "string",
-            "minLength": 1,
-            "description": "CircleCI project slug, for example gh/org/repo."
-          },
-          "jobNumber": {
-            "type": "integer",
-            "minimum": 1,
-            "description": "Job number."
-          }
-        },
-        "additionalProperties": false,
-        "required": [
-          "projectSlug",
-          "jobNumber"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {}
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "GET",
-        "path": "/project/{{projectSlug}}/{{jobNumber}}/tests",
-        "success": [
-          200
-        ]
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "envvars.list": {
-      "kind": "action",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "title": "List env vars",
-      "description": "List project environment variables.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "projectSlug": {
-            "type": "string",
-            "minLength": 1,
-            "description": "CircleCI project slug, for example gh/org/repo."
-          }
-        },
-        "additionalProperties": false,
-        "required": [
-          "projectSlug"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {}
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "GET",
-        "path": "/project/{{projectSlug}}/envvar",
-        "success": [
-          200
-        ]
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "envvars.create": {
+    "contexts.restrictions.create": {
       "kind": "action",
       "sideEffect": "write",
       "timeoutMs": 15000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
-      "title": "Create env var",
-      "description": "Create or update a CircleCI project environment variable.",
+      "title": "Create Context Restriction",
+      "description": "Limit context access by project, expression, or group.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "contextId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Opaque CircleCI context ID."
+          },
+          "restrictionType": {
+            "type": "string",
+            "enum": [
+              "project",
+              "expression",
+              "group"
+            ],
+            "description": "Restriction type."
+          },
+          "restrictionValue": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Project UUID, expression rule, or group id."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "contextId",
+          "restrictionType",
+          "restrictionValue"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/context/{{contextId}}/restrictions",
+        "success": [
+          200,
+          201,
+          202
+        ],
+        "body": {
+          "restriction_type": "{{restrictionType}}",
+          "restriction_value": "{{restrictionValue}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json"
+    },
+    "organizations.orb_allowlist.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create Organization Orb Allowlist",
+      "description": "Allow URL-based orb references from a prefix for an organization.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "orgSlugOrId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Org UUID or slug in the form vcs-slug/org-name."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Allow-list entry name."
+          },
+          "prefix": {
+            "type": "string",
+            "minLength": 1,
+            "description": "URL prefix that matching orb references must start with."
+          },
+          "auth": {
+            "type": "string",
+            "enum": [
+              "github-oauth",
+              "none",
+              "bitbucket-oauth",
+              "github-app"
+            ],
+            "description": "Auth method used to fetch matching URL orbs."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "orgSlugOrId",
+          "name",
+          "prefix",
+          "auth"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/organization/{{orgSlugOrId}}/url-orb-allow-list",
+        "success": [
+          200,
+          201,
+          202
+        ],
+        "body": {
+          "name": "{{name}}",
+          "prefix": "{{prefix}}",
+          "auth": "{{auth}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json"
+    },
+    "organizations.projects.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create Organization Project",
+      "description": "Create a project in a CircleCI organization.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "orgSlugOrId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Org UUID or slug in the form vcs-slug/org-name."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Name of the project to create."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "orgSlugOrId",
+          "name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/organization/{{orgSlugOrId}}/project",
+        "success": [
+          200,
+          201,
+          202
+        ],
+        "body": {
+          "name": "{{name}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json"
+    },
+    "organizations.groups.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create Organization Group",
+      "description": "Create a group in a CircleCI organization.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "orgId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Organization UUID."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Group name."
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Group description."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "orgId",
+          "name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/organizations/{{orgId}}/groups",
+        "success": [
+          200,
+          201,
+          202
+        ],
+        "body": {
+          "name": "{{name}}",
+          "description": "{{description}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json"
+    },
+    "projects.env_vars.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create Project Environment Variable",
+      "description": "Create a project-level environment variable.",
       "inputSchema": {
         "type": "object",
         "properties": {
           "projectSlug": {
             "type": "string",
             "minLength": 1,
-            "description": "CircleCI project slug, for example gh/org/repo."
+            "description": "Project slug in the form vcs-slug/org-name/repo-name."
           },
           "name": {
             "type": "string",
@@ -771,15 +749,15 @@
         ],
         "properties": {
           "data": {}
-        },
-        "additionalProperties": false
+        }
       },
       "request": {
         "method": "POST",
         "path": "/project/{{projectSlug}}/envvar",
         "success": [
+          200,
           201,
-          200
+          202
         ],
         "body": {
           "name": "{{name}}",
@@ -790,29 +768,441 @@
         }
       },
       "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
       "responseFormat": "json"
     },
-    "envvars.delete": {
+    "organizations.usage_export.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create Usage Export Job",
+      "description": "Create an organization usage export (max 32-day window).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "orgId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Organization UUID."
+          },
+          "start": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Start timestamp in ISO 8601."
+          },
+          "end": {
+            "type": "string",
+            "minLength": 1,
+            "description": "End timestamp in ISO 8601."
+          },
+          "sharedOrgIds": {
+            "type": "array",
+            "description": "Additional organization IDs to include.",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "orgId",
+          "start",
+          "end"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/organizations/{{orgId}}/usage_export_job",
+        "success": [
+          200,
+          201,
+          202
+        ],
+        "body": {
+          "start": "{{start}}",
+          "end": "{{end}}",
+          "shared_org_ids": "{{sharedOrgIds}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json"
+    },
+    "contexts.delete_graphql": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Delete Context (GraphQL)",
+      "description": "Permanently delete a CircleCI context by UUID using GraphQL.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "contextId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Opaque CircleCI context ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "contextId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/graphql-unstable",
+        "success": [
+          200
+        ],
+        "body": {
+          "query": "mutation($contextId: UUID!) { deleteContext(contextId: $contextId) { ok error { type } } }",
+          "variables": {
+            "contextId": "{{contextId}}"
+          }
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "baseUrl": "https://circleci.com"
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json"
+    },
+    "contexts.restrictions.delete": {
       "kind": "action",
       "sideEffect": "destructive",
       "timeoutMs": 15000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
-      "title": "Delete env var",
-      "description": "Delete a CircleCI project environment variable.",
+      "title": "Delete Context Restriction",
+      "description": "Remove a restriction from a CircleCI context.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "contextId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Opaque CircleCI context ID."
+          },
+          "restrictionId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Context restriction ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "contextId",
+          "restrictionId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        }
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/context/{{contextId}}/restrictions/{{restrictionId}}",
+        "success": [
+          200,
+          202,
+          204
+        ]
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json"
+    },
+    "namespaces.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Delete Namespace and Related Orbs",
+      "description": "Delete a registry namespace and all associated orbs.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "namespaceId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Namespace UUID to delete."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "namespaceId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/graphql-unstable",
+        "success": [
+          200
+        ],
+        "body": {
+          "query": "mutation($id: UUID!) { deleteNamespaceAndRelatedOrbs(namespaceId: $id) { deleted errors { type message } } }",
+          "variables": {
+            "id": "{{namespaceId}}"
+          }
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "baseUrl": "https://circleci.com"
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json"
+    },
+    "namespaces.aliases.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Delete Namespace Alias",
+      "description": "Remove a CircleCI registry namespace alias by name.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Namespace alias to delete."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/graphql-unstable",
+        "success": [
+          200
+        ],
+        "body": {
+          "query": "mutation($name: String!) { deleteNamespaceAlias(name: $name) { deleted errors { type message } } }",
+          "variables": {
+            "name": "{{name}}"
+          }
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "baseUrl": "https://circleci.com"
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json"
+    },
+    "organizations.orb_allowlist.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Delete Organization Orb Allowlist Entry",
+      "description": "Remove a URL orb allow-list entry from an organization.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "orgSlugOrId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Org UUID or slug in the form vcs-slug/org-name."
+          },
+          "allowListEntryId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Allow-list entry UUID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "orgSlugOrId",
+          "allowListEntryId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        }
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/organization/{{orgSlugOrId}}/url-orb-allow-list/{{allowListEntryId}}",
+        "success": [
+          200,
+          202,
+          204
+        ]
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json"
+    },
+    "organizations.groups.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Delete Organization Group",
+      "description": "Permanently delete a group from a CircleCI organization.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "orgId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Organization UUID."
+          },
+          "groupId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Group ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "orgId",
+          "groupId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        }
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/organizations/{{orgId}}/groups/{{groupId}}",
+        "success": [
+          200,
+          202,
+          204
+        ]
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json"
+    },
+    "projects.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Delete Project",
+      "description": "Permanently delete a CircleCI project and its settings.",
       "inputSchema": {
         "type": "object",
         "properties": {
           "projectSlug": {
             "type": "string",
             "minLength": 1,
-            "description": "CircleCI project slug, for example gh/org/repo."
+            "description": "Project slug in the form vcs-slug/org-name/repo-name."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "projectSlug"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        }
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/project/{{projectSlug}}",
+        "success": [
+          200,
+          202,
+          204
+        ]
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json"
+    },
+    "projects.env_vars.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Delete Project Environment Variable",
+      "description": "Delete a project environment variable by name.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "projectSlug": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Project slug in the form vcs-slug/org-name/repo-name."
           },
           "name": {
             "type": "string",
             "minLength": 1,
-            "description": "Environment variable name."
+            "description": "Environment variable name to delete."
           }
         },
         "additionalProperties": false,
@@ -824,59 +1214,80 @@
       "outputSchema": {
         "type": "object",
         "required": [
-          "deleted"
+          "data"
         ],
         "properties": {
-          "deleted": {
-            "type": "boolean"
-          },
-          "id": {},
-          "key": {
-            "type": "string"
-          },
-          "name": {
-            "type": "string"
-          },
-          "domain": {
-            "type": "string"
-          },
-          "profileId": {
-            "type": "string"
-          }
-        },
-        "additionalProperties": false
+          "data": {}
+        }
       },
       "request": {
         "method": "DELETE",
         "path": "/project/{{projectSlug}}/envvar/{{name}}",
         "success": [
-          204,
-          200
-        ],
-        "result": {
-          "deleted": true,
-          "name": "{{input.name}}"
-        }
+          200,
+          202,
+          204
+        ]
       },
       "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
       "responseFormat": "json"
     },
-    "checkoutkeys.list": {
+    "contexts.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "title": "Get Context",
+      "description": "Retrieve a CircleCI context by ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "contextId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Opaque CircleCI context ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "contextId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/context/{{contextId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json"
+    },
+    "insights.flaky_tests.get": {
       "kind": "action",
       "sideEffect": "read",
       "timeoutMs": 15000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
-      "title": "List checkout keys",
-      "description": "List checkout keys for a CircleCI project.",
+      "title": "Get Flaky Tests",
+      "description": "Get flaky tests for a project (passed and failed on the same commit).",
       "inputSchema": {
         "type": "object",
         "properties": {
           "projectSlug": {
             "type": "string",
             "minLength": 1,
-            "description": "CircleCI project slug, for example gh/org/repo."
+            "description": "Project slug in the form vcs-slug/org-name/repo-name."
           }
         },
         "additionalProperties": false,
@@ -891,100 +1302,49 @@
         ],
         "properties": {
           "data": {}
-        },
-        "additionalProperties": false
+        }
       },
       "request": {
         "method": "GET",
-        "path": "/project/{{projectSlug}}/checkout-key",
+        "path": "/insights/{{projectSlug}}/flaky-tests",
         "success": [
           200
         ]
       },
       "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
       "responseFormat": "json"
     },
-    "contexts.list": {
+    "jobs.artifacts.list": {
       "kind": "action",
       "sideEffect": "read",
       "timeoutMs": 15000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
-      "title": "List contexts",
-      "description": "List CircleCI contexts for an organization owner.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "ownerId": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Organization UUID."
-          },
-          "ownerSlug": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Organization slug."
-          },
-          "ownerType": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Owner type, typically account or organization."
-          }
-        },
-        "additionalProperties": false
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {}
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "GET",
-        "path": "/context",
-        "success": [
-          200
-        ],
-        "query": {
-          "owner-id": "{{ownerId}}",
-          "owner-slug": "{{ownerSlug}}",
-          "owner-type": "{{ownerType}}"
-        }
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "insights.workflows": {
-      "kind": "action",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "title": "Workflow insights",
-      "description": "Get CircleCI workflow insight summaries for a project.",
+      "title": "Get Job Artifacts",
+      "description": "List artifacts produced by a CircleCI job.",
       "inputSchema": {
         "type": "object",
         "properties": {
           "projectSlug": {
             "type": "string",
             "minLength": 1,
-            "description": "CircleCI project slug, for example gh/org/repo."
+            "description": "Project slug in the form vcs-slug/org-name/repo-name."
+          },
+          "jobNumber": {
+            "type": "integer",
+            "description": "CircleCI job number.",
+            "minimum": 1
           },
           "pageToken": {
             "type": "string",
             "minLength": 1,
-            "description": "Pagination token."
+            "description": "Pagination token returned by CircleCI."
           }
         },
         "additionalProperties": false,
         "required": [
-          "projectSlug"
+          "projectSlug",
+          "jobNumber"
         ]
       },
       "outputSchema": {
@@ -994,12 +1354,11 @@
         ],
         "properties": {
           "data": {}
-        },
-        "additionalProperties": false
+        }
       },
       "request": {
         "method": "GET",
-        "path": "/insights/{{projectSlug}}/workflows",
+        "path": "/project/{{projectSlug}}/{{jobNumber}}/artifacts",
         "success": [
           200
         ],
@@ -1008,35 +1367,34 @@
         }
       },
       "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
       "responseFormat": "json"
     },
-    "webhooks.list": {
+    "jobs.get": {
       "kind": "action",
       "sideEffect": "read",
-      "timeoutMs": 15000,
+      "timeoutMs": 10000,
       "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "title": "List outbound webhooks",
-      "description": "List CircleCI outbound webhooks for a project or organization scope.",
+      "maxResponseBytes": 1048576,
+      "title": "Get Job Details",
+      "description": "Fetch status, timing, and executor information for a job.",
       "inputSchema": {
         "type": "object",
         "properties": {
-          "scopeId": {
+          "projectSlug": {
             "type": "string",
             "minLength": 1,
-            "description": "Scope UUID."
+            "description": "Project slug in the form vcs-slug/org-name/repo-name."
           },
-          "scopeType": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Scope type, typically project."
+          "jobNumber": {
+            "type": "integer",
+            "description": "CircleCI job number.",
+            "minimum": 1
           }
         },
         "additionalProperties": false,
         "required": [
-          "scopeId",
-          "scopeType"
+          "projectSlug",
+          "jobNumber"
         ]
       },
       "outputSchema": {
@@ -1046,23 +1404,2276 @@
         ],
         "properties": {
           "data": {}
-        },
-        "additionalProperties": false
+        }
       },
       "request": {
         "method": "GET",
-        "path": "/webhook",
+        "path": "/project/{{projectSlug}}/job/{{jobNumber}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json"
+    },
+    "orbs.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get Orb Details",
+      "description": "Query orb metadata, versions, and usage statistics.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Orb reference in the form namespace/orbname."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/graphql-unstable",
+        "success": [
+          200
+        ],
+        "body": {
+          "query": "query($name: String!) { orb(name: $name) { id name description isPrivate createdAt statistics { last30DaysBuildCount last30DaysProjectCount last30DaysOrganizationCount } versions(count: 20) { version createdAt } } }",
+          "variables": {
+            "name": "{{name}}"
+          }
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "baseUrl": "https://circleci.com"
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json"
+    },
+    "orbs.versions.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get Orb Version",
+      "description": "Retrieve a specific CircleCI orb version, including source.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "orbVersionRef": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Orb version reference namespace/orb-name@version."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "orbVersionRef"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/graphql-unstable",
+        "success": [
+          200
+        ],
+        "body": {
+          "query": "query($orbVersionRef: String!) { orbVersion(orbVersionRef: $orbVersionRef) { id version createdAt source orb { id name namespace { name } statistics { last30DaysBuildCount last30DaysProjectCount last30DaysOrganizationCount } versions(count: 50) { version createdAt } } } }",
+          "variables": {
+            "orbVersionRef": "{{orbVersionRef}}"
+          }
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "baseUrl": "https://circleci.com"
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json"
+    },
+    "organizations.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get Organization",
+      "description": "Retrieve organization details by ID or by name and VCS type.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "orgId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Organization UUID. Provide this or both orgName and vcsType."
+          },
+          "orgName": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Organization name. Provide together with vcsType when orgId is omitted."
+          },
+          "vcsType": {
+            "type": "string",
+            "enum": [
+              "GITHUB",
+              "BITBUCKET"
+            ],
+            "description": "VCS type."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/graphql-unstable",
+        "success": [
+          200
+        ],
+        "body": {
+          "query": "query($orgId: ID, $orgName: String, $vcsType: VCSType) { organization(id: $orgId, name: $orgName, vcsType: $vcsType) { id name vcsType } }",
+          "variables": {
+            "orgId": "{{orgId}}",
+            "orgName": "{{orgName}}",
+            "vcsType": "{{vcsType}}"
+          }
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "baseUrl": "https://circleci.com"
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json"
+    },
+    "organizations.groups.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get Organization Group",
+      "description": "Retrieve a group in a CircleCI organization.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "orgId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Organization UUID."
+          },
+          "groupId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Group ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "orgId",
+          "groupId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/organizations/{{orgId}}/groups/{{groupId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json"
+    },
+    "pipelines.config.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get Pipeline Config",
+      "description": "Fetch source and compiled YAML for a pipeline.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "pipelineId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "CircleCI pipeline ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "pipelineId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/pipeline/{{pipelineId}}/config",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json"
+    },
+    "pipeline_definitions.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get Pipeline Definition",
+      "description": "Retrieve a pipeline definition by project and definition ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "projectId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Project UUID."
+          },
+          "pipelineDefinitionId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Pipeline definition UUID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "projectId",
+          "pipelineDefinitionId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/projects/{{projectId}}/pipeline-definitions/{{pipelineDefinitionId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json"
+    },
+    "insights.workflows.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get Project Workflows",
+      "description": "Get summary metrics for all workflows of a project.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "projectSlug": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Project slug in the form vcs-slug/org-name/repo-name."
+          },
+          "branch": {
+            "type": "string",
+            "minLength": 1,
+            "description": "VCS branch name."
+          },
+          "pageToken": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Pagination token returned by CircleCI."
+          },
+          "allBranches": {
+            "type": "boolean",
+            "description": "Aggregate across all branches instead of a single branch."
+          },
+          "reportingWindow": {
+            "type": "string",
+            "enum": [
+              "last-7-days",
+              "last-24-hours",
+              "last-30-days",
+              "last-60-days",
+              "last-90-days"
+            ],
+            "description": "Insights reporting window."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "projectSlug"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/insights/{{projectSlug}}/workflows",
         "success": [
           200
         ],
         "query": {
-          "scope-id": "{{scopeId}}",
-          "scope-type": "{{scopeType}}"
+          "branch": "{{branch}}",
+          "page-token": "{{pageToken}}",
+          "all-branches": "{{allBranches}}",
+          "reporting-window": "{{reportingWindow}}"
         }
       },
       "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
       "responseFormat": "json"
+    },
+    "jobs.tests.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get Test Metadata",
+      "description": "Fetch test metadata for a completed job.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "projectSlug": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Project slug in the form vcs-slug/org-name/repo-name."
+          },
+          "jobNumber": {
+            "type": "integer",
+            "description": "CircleCI job number.",
+            "minimum": 1
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Maximum test results to return.",
+            "minimum": 1
+          },
+          "pageToken": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Pagination token returned by CircleCI."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "projectSlug",
+          "jobNumber"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/project/{{projectSlug}}/{{jobNumber}}/tests",
+        "success": [
+          200
+        ],
+        "query": {
+          "limit": "{{limit}}",
+          "page-token": "{{pageToken}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json"
+    },
+    "organizations.usage_export.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get Usage Export Job",
+      "description": "Retrieve a usage export job by organization and job ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "orgId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Organization UUID."
+          },
+          "usageExportJobId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Usage export job UUID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "orgId",
+          "usageExportJobId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/organizations/{{orgId}}/usage_export_job/{{usageExportJobId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json"
+    },
+    "users.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "title": "Get User Information",
+      "description": "Retrieve a CircleCI user by ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "User UUID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "userId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/user/{{userId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json"
+    },
+    "insights.workflows.summary.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get Workflow Summary",
+      "description": "Get metrics and trends for a named workflow.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "projectSlug": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Project slug in the form vcs-slug/org-name/repo-name."
+          },
+          "workflowName": {
+            "type": "string",
+            "minLength": 1,
+            "description": "CircleCI workflow name."
+          },
+          "branch": {
+            "type": "string",
+            "minLength": 1,
+            "description": "VCS branch name."
+          },
+          "allBranches": {
+            "type": "boolean",
+            "description": "Aggregate across all branches instead of a single branch."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "projectSlug",
+          "workflowName"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/insights/{{projectSlug}}/workflows/{{workflowName}}/summary",
+        "success": [
+          200
+        ],
+        "query": {
+          "branch": "{{branch}}",
+          "all-branches": "{{allBranches}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json"
+    },
+    "contexts.env_vars.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List Context Environment Variables",
+      "description": "List environment variables stored in a context (values are masked).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "contextId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Opaque CircleCI context ID."
+          },
+          "pageToken": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Pagination token returned by CircleCI."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "contextId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/context/{{contextId}}/environment-variable",
+        "success": [
+          200
+        ],
+        "query": {
+          "page-token": "{{pageToken}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json"
+    },
+    "insights.branches.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List Insights Branches",
+      "description": "List branches that have workflow runs for a project.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "projectSlug": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Project slug in the form vcs-slug/org-name/repo-name."
+          },
+          "workflowName": {
+            "type": "string",
+            "minLength": 1,
+            "description": "CircleCI workflow name."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "projectSlug"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/insights/{{projectSlug}}/branches",
+        "success": [
+          200
+        ],
+        "query": {
+          "workflow-name": "{{workflowName}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json"
+    },
+    "insights.summary.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List Insights Summary",
+      "description": "Get organization-wide summary metrics with per-project trends.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "orgSlug": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Organization slug in the form vcs-slug/org-name."
+          },
+          "projectNames": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Optional project name filter."
+          },
+          "reportingWindow": {
+            "type": "string",
+            "enum": [
+              "last-7-days",
+              "last-24-hours",
+              "last-30-days",
+              "last-60-days",
+              "last-90-days"
+            ],
+            "description": "Insights reporting window."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "orgSlug"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/insights/{{orgSlug}}/summary",
+        "success": [
+          200
+        ],
+        "query": {
+          "project-names": "{{projectNames}}",
+          "reporting-window": "{{reportingWindow}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json"
+    },
+    "namespaces.orbs.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List Namespace Orbs",
+      "description": "List orbs in a CircleCI registry namespace.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "namespace": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Registry namespace (for example circleci)."
+          },
+          "after": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Pagination cursor. Use an empty string for the first page."
+          },
+          "view": {
+            "type": "string",
+            "enum": [
+              "PUBLIC_ONLY",
+              "PRIVATE_ONLY"
+            ],
+            "description": "Orb visibility filter."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/graphql-unstable",
+        "success": [
+          200
+        ],
+        "body": {
+          "query": "query($namespace: String, $after: String, $view: OrbListViewType) { registryNamespace(name: $namespace) { id name orbs(first: 20, after: $after, view: $view) { totalCount edges { cursor node { name id statistics { last30DaysBuildCount last30DaysProjectCount last30DaysOrganizationCount } versions(count: 1) { version } } } pageInfo { hasNextPage } } } }",
+          "variables": {
+            "namespace": "{{namespace}}",
+            "after": "{{after}}",
+            "view": "{{view}}"
+          }
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "baseUrl": "https://circleci.com"
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json"
+    },
+    "orbs.categories.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List Orb Categories",
+      "description": "List CircleCI orb categories with cursor pagination.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "after": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Pagination cursor. Use an empty string for the first page."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/graphql-unstable",
+        "success": [
+          200
+        ],
+        "body": {
+          "query": "query($after: String) { orbCategories(first: 20, after: $after) { totalCount edges { cursor node { id name } } pageInfo { hasNextPage } } }",
+          "variables": {
+            "after": "{{after}}"
+          }
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "baseUrl": "https://circleci.com"
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json"
+    },
+    "orbs.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List Orbs",
+      "description": "List CircleCI orbs with optional certified-only filter.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "after": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Pagination cursor. Use an empty string for the first page."
+          },
+          "certifiedOnly": {
+            "type": "boolean",
+            "description": "When true, only certified orbs are returned."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/graphql-unstable",
+        "success": [
+          200
+        ],
+        "body": {
+          "query": "query($after: String, $certifiedOnly: Boolean) { orbs(first: 20, after: $after, certifiedOnly: $certifiedOnly) { totalCount edges { cursor node { name statistics { last30DaysBuildCount last30DaysProjectCount last30DaysOrganizationCount } versions(count: 1) { version } } } pageInfo { hasNextPage } } }",
+          "variables": {
+            "after": "{{after}}",
+            "certifiedOnly": "{{certifiedOnly}}"
+          }
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "baseUrl": "https://circleci.com"
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json"
+    },
+    "organizations.groups.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List Organization Groups",
+      "description": "List groups in a CircleCI organization.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "orgId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Organization UUID."
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Results per page.",
+            "minimum": 1
+          },
+          "pageToken": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Pagination token returned by CircleCI."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "orgId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/organizations/{{orgId}}/groups",
+        "success": [
+          200
+        ],
+        "query": {
+          "limit": "{{limit}}",
+          "page-token": "{{pageToken}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json"
+    },
+    "insights.pages.summary.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List Pages Summary",
+      "description": "Get project summary metrics across workflows and branches.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "projectSlug": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Project slug in the form vcs-slug/org-name/repo-name."
+          },
+          "branches": {
+            "type": "array",
+            "description": "VCS branches to include.",
+            "items": {
+              "type": "string"
+            }
+          },
+          "workflowNames": {
+            "type": "array",
+            "description": "Workflow names to include.",
+            "items": {
+              "type": "string"
+            }
+          },
+          "reportingWindow": {
+            "type": "string",
+            "enum": [
+              "last-7-days",
+              "last-24-hours",
+              "last-30-days",
+              "last-60-days",
+              "last-90-days"
+            ],
+            "description": "Insights reporting window."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "projectSlug"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/insights/pages/{{projectSlug}}/summary",
+        "success": [
+          200
+        ],
+        "query": {
+          "branches": "{{branches}}",
+          "workflow-names": "{{workflowNames}}",
+          "reporting-window": "{{reportingWindow}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json"
+    },
+    "pipeline_definitions.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List Pipeline Definitions",
+      "description": "List pipeline definitions for a project.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "projectId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Project UUID."
+          },
+          "pageToken": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Pagination token returned by CircleCI."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "projectId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/projects/{{projectId}}/pipeline-definitions",
+        "success": [
+          200
+        ],
+        "query": {
+          "page-token": "{{pageToken}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json"
+    },
+    "pipelines.list_org": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List Pipelines",
+      "description": "List recent pipelines across an organization.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "orgSlug": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Organization slug in the form vcs-slug/org-name."
+          },
+          "pageToken": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Pagination token returned by CircleCI."
+          },
+          "mine": {
+            "type": "boolean",
+            "description": "Only include pipelines created by the authenticated user."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/pipeline",
+        "success": [
+          200
+        ],
+        "query": {
+          "org-slug": "{{orgSlug}}",
+          "page-token": "{{pageToken}}",
+          "mine": "{{mine}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json"
+    },
+    "projects.env_vars.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List Project Environment Variables",
+      "description": "List masked project-level environment variables.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "projectSlug": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Project slug in the form vcs-slug/org-name/repo-name."
+          },
+          "pageToken": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Pagination token returned by CircleCI."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "projectSlug"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/project/{{projectSlug}}/envvar",
+        "success": [
+          200
+        ],
+        "query": {
+          "page-token": "{{pageToken}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json"
+    },
+    "projects.schedules.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List Project Schedules",
+      "description": "List scheduled pipeline triggers for a project.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "projectSlug": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Project slug in the form vcs-slug/org-name/repo-name."
+          },
+          "pageToken": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Pagination token returned by CircleCI."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "projectSlug"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/project/{{projectSlug}}/schedule",
+        "success": [
+          200
+        ],
+        "query": {
+          "page-token": "{{pageToken}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json"
+    },
+    "runners.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "List Self-Hosted Runners",
+      "description": "List self-hosted runners filtered by namespace or resource class.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "namespace": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter runners by namespace."
+          },
+          "resourceClass": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter runners by resource class (namespace/class)."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v3/runner",
+        "success": [
+          200
+        ],
+        "query": {
+          "namespace": "{{namespace}}",
+          "resource-class": "{{resourceClass}}"
+        },
+        "baseUrl": "https://runner.circleci.com"
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json"
+    },
+    "users.collaborations.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "title": "List User Collaborations",
+      "description": "List organizations the authenticated user can collaborate on.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/me/collaborations",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json"
+    },
+    "insights.workflows.jobs.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List Workflow Jobs Metrics",
+      "description": "Get summary metrics for jobs in a project workflow.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "projectSlug": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Project slug in the form vcs-slug/org-name/repo-name."
+          },
+          "workflowName": {
+            "type": "string",
+            "minLength": 1,
+            "description": "CircleCI workflow name."
+          },
+          "branch": {
+            "type": "string",
+            "minLength": 1,
+            "description": "VCS branch name."
+          },
+          "jobName": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Optional job name or substring filter."
+          },
+          "pageToken": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Pagination token returned by CircleCI."
+          },
+          "allBranches": {
+            "type": "boolean",
+            "description": "Aggregate across all branches instead of a single branch."
+          },
+          "reportingWindow": {
+            "type": "string",
+            "enum": [
+              "last-7-days",
+              "last-24-hours",
+              "last-30-days",
+              "last-60-days",
+              "last-90-days"
+            ],
+            "description": "Insights reporting window."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "projectSlug",
+          "workflowName"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/insights/{{projectSlug}}/workflows/{{workflowName}}/jobs",
+        "success": [
+          200
+        ],
+        "query": {
+          "branch": "{{branch}}",
+          "job-name": "{{jobName}}",
+          "page-token": "{{pageToken}}",
+          "all-branches": "{{allBranches}}",
+          "reporting-window": "{{reportingWindow}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json"
+    },
+    "insights.workflows.test_metrics.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List Workflow Test Metrics",
+      "description": "Get test metrics for a project's workflow.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "projectSlug": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Project slug in the form vcs-slug/org-name/repo-name."
+          },
+          "workflowName": {
+            "type": "string",
+            "minLength": 1,
+            "description": "CircleCI workflow name."
+          },
+          "branch": {
+            "type": "string",
+            "minLength": 1,
+            "description": "VCS branch name."
+          },
+          "allBranches": {
+            "type": "boolean",
+            "description": "Aggregate across all branches instead of a single branch."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "projectSlug",
+          "workflowName"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/insights/{{projectSlug}}/workflows/{{workflowName}}/test-metrics",
+        "success": [
+          200
+        ],
+        "query": {
+          "branch": "{{branch}}",
+          "all-branches": "{{allBranches}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json"
+    },
+    "contexts.query": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Query Context",
+      "description": "Retrieve a context by UUID using GraphQL.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Context UUID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/graphql-unstable",
+        "success": [
+          200
+        ],
+        "body": {
+          "query": "query($id: ID!) { context(id: $id) { id name createdAt } }",
+          "variables": {
+            "id": "{{id}}"
+          }
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "baseUrl": "https://circleci.com"
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json"
+    },
+    "namespaces.exists": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Query Namespace Exists",
+      "description": "Check whether a registry namespace exists.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Namespace name (for example circleci)."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/graphql-unstable",
+        "success": [
+          200
+        ],
+        "body": {
+          "query": "query($name: String!) { registryNamespace(name: $name) { id } }",
+          "variables": {
+            "name": "{{name}}"
+          }
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "baseUrl": "https://circleci.com"
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json"
+    },
+    "orbs.categories.query": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Query Orb Category ID",
+      "description": "Fetch an orb category ID by name.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Orb category name (for example Deployment)."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/graphql-unstable",
+        "success": [
+          200
+        ],
+        "body": {
+          "query": "query($name: String!) { orbCategoryByName(name: $name) { id name } }",
+          "variables": {
+            "name": "{{name}}"
+          }
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "baseUrl": "https://circleci.com"
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json"
+    },
+    "orbs.exists": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Query Orb Exists",
+      "description": "Check whether an orb exists and whether it is private.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Full orb name namespace/orb."
+          },
+          "namespace": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Optional namespace to verify alongside the orb."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/graphql-unstable",
+        "success": [
+          200
+        ],
+        "body": {
+          "query": "query($name: String!, $namespace: String) { orb(name: $name) { id isPrivate } registryNamespace(name: $namespace) { id } }",
+          "variables": {
+            "name": "{{name}}",
+            "namespace": "{{namespace}}"
+          }
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "baseUrl": "https://circleci.com"
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json"
+    },
+    "orbs.id.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Query Orb ID",
+      "description": "Fetch an orb ID and optional namespace ID by name.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Full orb reference namespace/orbname."
+          },
+          "namespace": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Optional namespace name used to also return the namespace ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/graphql-unstable",
+        "success": [
+          200
+        ],
+        "body": {
+          "query": "query($name: String!, $namespace: String) { orb(name: $name) { id } registryNamespace(name: $namespace) { id } }",
+          "variables": {
+            "name": "{{name}}",
+            "namespace": "{{namespace}}"
+          }
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "baseUrl": "https://circleci.com"
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json"
+    },
+    "orbs.latest_version.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Query Orb Latest Version",
+      "description": "Fetch the latest published version of an orb.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Orb reference namespace/orbname."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/graphql-unstable",
+        "success": [
+          200
+        ],
+        "body": {
+          "query": "query($name: String!) { orb(name: $name) { versions(count: 1) { version } } }",
+          "variables": {
+            "name": "{{name}}"
+          }
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "baseUrl": "https://circleci.com"
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json"
+    },
+    "orbs.source.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Query Orb Source",
+      "description": "Retrieve YAML source for a specific orb version.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "orbVersionRef": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Orb version reference namespace/orb-name@version."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "orbVersionRef"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/graphql-unstable",
+        "success": [
+          200
+        ],
+        "body": {
+          "query": "query($orbVersionRef: String!) { orbVersion(orbVersionRef: $orbVersionRef) { id version source orb { id } } }",
+          "variables": {
+            "orbVersionRef": "{{orbVersionRef}}"
+          }
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "baseUrl": "https://circleci.com"
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json"
+    },
+    "organizations.plan_metrics.query": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Query Plan Metrics",
+      "description": "Query organization plan metrics for a date range.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "orgId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Organization UUID."
+          },
+          "dateRange": {
+            "type": "object",
+            "description": "Inclusive date range (YYYY-MM-DD).",
+            "properties": {
+              "start": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Start date YYYY-MM-DD."
+              },
+              "end": {
+                "type": "string",
+                "minLength": 1,
+                "description": "End date YYYY-MM-DD."
+              }
+            },
+            "required": [
+              "start",
+              "end"
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "orgId",
+          "dateRange"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/graphql-unstable",
+        "success": [
+          200
+        ],
+        "body": {
+          "query": "query QueryPlanMetrics($orgId: ID!, $startDate: Date!, $endDate: Date!) { organization(id: $orgId) { id name plan { metrics(startDate: $startDate, endDate: $endDate) { creditsUsed computeCredits } } } }",
+          "variables": {
+            "orgId": "{{orgId}}",
+            "startDate": "{{dateRange.start}}",
+            "endDate": "{{dateRange.end}}"
+          }
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "baseUrl": "https://circleci.com"
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json"
+    },
+    "contexts.env_vars.delete_graphql": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Remove Context Environment Variable (GraphQL)",
+      "description": "Delete a context environment variable by name using GraphQL.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "contextId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Opaque CircleCI context ID."
+          },
+          "variable": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Environment variable name to remove."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "contextId",
+          "variable"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/graphql-unstable",
+        "success": [
+          200
+        ],
+        "body": {
+          "query": "mutation($contextId: UUID!, $variable: String!) { deleteContextEnvironmentVariable(input: {contextId: $contextId, variable: $variable}) { ok error { type } } }",
+          "variables": {
+            "contextId": "{{contextId}}",
+            "variable": "{{variable}}"
+          }
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "baseUrl": "https://circleci.com"
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json"
+    },
+    "namespaces.rename": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Rename Namespace",
+      "description": "Rename a CircleCI registry namespace by UUID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "namespaceId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Namespace UUID."
+          },
+          "newName": {
+            "type": "string",
+            "minLength": 1,
+            "description": "New namespace name."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "namespaceId",
+          "newName"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/graphql-unstable",
+        "success": [
+          200
+        ],
+        "body": {
+          "query": "mutation($namespaceId: UUID!, $newName: String!) { renameNamespace(namespaceId: $namespaceId, newName: $newName) { namespace { id } errors { message type } } }",
+          "variables": {
+            "namespaceId": "{{namespaceId}}",
+            "newName": "{{newName}}"
+          }
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "baseUrl": "https://circleci.com"
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json"
+    },
+    "contexts.env_vars.store_graphql": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Store Environment Variable",
+      "description": "Add or update a context environment variable using GraphQL.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "contextId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Opaque CircleCI context ID."
+          },
+          "variable": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Environment variable name."
+          },
+          "value": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Environment variable value."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "contextId",
+          "variable",
+          "value"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/graphql-unstable",
+        "success": [
+          200
+        ],
+        "body": {
+          "query": "mutation($contextId: UUID!, $variable: String!, $value: String!) { createContextEnvironmentVariable(input: {contextId: $contextId, variable: $variable, value: $value}) { ok error { type } } }",
+          "variables": {
+            "contextId": "{{contextId}}",
+            "variable": "{{variable}}",
+            "value": "{{value}}"
+          }
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "baseUrl": "https://circleci.com"
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json"
+    },
+    "pipelines.trigger": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Trigger Pipeline",
+      "description": "Trigger a new pipeline for a project on a branch or tag.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "projectSlug": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Project slug in the form vcs-slug/org-name/repo-name."
+          },
+          "branch": {
+            "type": "string",
+            "minLength": 1,
+            "description": "VCS branch name."
+          },
+          "tag": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Git tag to trigger. Mutually exclusive with branch."
+          },
+          "parameters": {
+            "type": "object",
+            "description": "Pipeline parameters declared in .circleci/config.yml."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "projectSlug"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/project/{{projectSlug}}/pipeline",
+        "success": [
+          200,
+          201,
+          202
+        ],
+        "body": {
+          "branch": "{{branch}}",
+          "tag": "{{tag}}",
+          "parameters": "{{parameters}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json"
+    },
+    "contexts.env_vars.upsert": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Upsert Context Environment Variable",
+      "description": "Add or update an environment variable in a context.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "contextId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Opaque CircleCI context ID."
+          },
+          "envVarName": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Environment variable name."
+          },
+          "value": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Environment variable value."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "contextId",
+          "envVarName",
+          "value"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/context/{{contextId}}/environment-variable/{{envVarName}}",
+        "success": [
+          200,
+          201
+        ],
+        "body": {
+          "value": "{{value}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json"
+    },
+    "orbs.config.validate": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Validate Orb Config",
+      "description": "Validate CircleCI orb YAML using the orbConfig GraphQL query.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "orbYaml": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Orb YAML definition to validate."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "orbYaml"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/graphql-unstable",
+        "success": [
+          200
+        ],
+        "body": {
+          "query": "query($orbYaml: String!) { orbConfig(orbYaml: $orbYaml) { valid errors { message } sourceYaml outputYaml } }",
+          "variables": {
+            "orbYaml": "{{orbYaml}}"
+          }
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "baseUrl": "https://circleci.com"
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json"
+    }
+  },
+  "provenance": {
+    "source": {
+      "url": "https://github.com/oomol-lab/open-connector",
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"
     }
   },
   "evidence": {
@@ -1071,6 +3682,10 @@
     },
     "live": {
       "status": "unverified"
+    },
+    "breach": {
+      "status": "confirmed-historical",
+      "waiver": "explicit user policy 2026-09-13 for non-China historical incidents"
     }
   }
 }

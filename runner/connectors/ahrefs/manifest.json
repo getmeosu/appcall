@@ -1,17 +1,7 @@
 {
-  "key": "ahrefs",
-  "name": "Ahrefs",
-  "version": "0.2.0",
-  "runtime": "bun",
-  "visibility": "public",
-  "categories": [
-    "utility"
-  ],
   "auth": {
-    "type": "api_key",
     "scopes": [],
     "setup": {
-      "mode": "api_key",
       "fields": [
         {
           "key": "apiKey",
@@ -19,46 +9,31 @@
           "required": true,
           "secret": true
         }
-      ]
-    }
+      ],
+      "mode": "api_key"
+    },
+    "type": "api_key"
   },
-  "provenance": {
-    "source": {
-      "url": "https://github.com/oomol-lab/open-connector",
-      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"
-    }
-  },
-  "network": {
-    "allowedHosts": [
-      "api.ahrefs.com"
-    ]
-  },
-  "models": [
-    "subscription",
-    "metrics",
-    "keyword",
-    "backlink",
-    "serp"
+  "categories": [
+    "utility"
   ],
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
+    }
+  },
   "http": {
-    "baseUrl": "https://api.ahrefs.com/v3",
     "auth": {
       "field": "apiKey",
       "in": "header",
       "name": "Authorization",
       "value": "Bearer {{apiKey}}"
     },
-    "headers": {
-      "Accept": "application/json"
-    },
-    "query": {
-      "output": "json"
-    },
+    "baseUrl": "https://api.ahrefs.com/v3",
     "errors": {
-      "rateLimitStatuses": [
-        429
-      ],
-      "retryAfterHeader": "retry-after",
       "defaultRetryAfterSeconds": 30,
       "messagePaths": [
         "error",
@@ -66,34 +41,60 @@
         "detail",
         "title",
         "errors.0.message"
-      ]
+      ],
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after"
+    },
+    "headers": {
+      "Accept": "application/json"
+    },
+    "query": {
+      "output": "json"
     }
+  },
+  "key": "ahrefs",
+  "models": [
+    "subscription",
+    "metrics",
+    "keyword",
+    "backlink",
+    "domain",
+    "project",
+    "serp",
+    "page",
+    "public"
+  ],
+  "name": "Ahrefs",
+  "network": {
+    "allowedHosts": [
+      "api.ahrefs.com"
+    ]
   },
   "operations": {
     "healthcheck": {
+      "description": "Validate an Ahrefs API key by reading subscription limits and usage.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {},
+        "type": "object"
+      },
       "kind": "action",
-      "sideEffect": "read",
-      "timeoutMs": 5000,
       "maxInputBytes": 4096,
       "maxResponseBytes": 65536,
-      "title": "Healthcheck",
-      "description": "Validate an Ahrefs API key by reading subscription limits and usage.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {},
-        "additionalProperties": false
-      },
       "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
+        "additionalProperties": false,
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "additionalProperties": false
+        "required": [
+          "data"
+        ],
+        "type": "object"
       },
       "request": {
         "method": "GET",
@@ -102,341 +103,319 @@
           200
         ]
       },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "site-explorer.metrics": {
-      "kind": "action",
+      "responseFormat": "json",
       "sideEffect": "read",
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "title": "Site Explorer metrics",
-      "description": "Retrieve Ahrefs Site Explorer metrics for a domain or URL.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "target": {
-            "type": "string",
-            "minLength": 1
-          },
-          "date": {
-            "type": "string",
-            "minLength": 1
-          },
-          "mode": {
-            "type": "string",
-            "enum": [
-              "exact",
-              "prefix",
-              "domain",
-              "subdomains"
-            ]
-          },
-          "country": {
-            "type": "string",
-            "minLength": 1
-          },
-          "protocol": {
-            "type": "string",
-            "enum": [
-              "both",
-              "http",
-              "https"
-            ]
-          },
-          "volumeMode": {
-            "type": "string",
-            "enum": [
-              "monthly",
-              "average"
-            ]
-          }
-        },
-        "required": [
-          "target",
-          "date"
-        ],
-        "additionalProperties": false
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "GET",
-        "path": "/site-explorer/metrics",
-        "query": {
-          "target": "{{target}}",
-          "date": "{{date}}",
-          "mode": "{{mode}}",
-          "country": "{{country}}",
-          "protocol": "{{protocol}}",
-          "volume_mode": "{{volumeMode}}"
-        },
-        "success": [
-          200
-        ]
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "site-explorer.metrics-by-country": {
-      "kind": "action",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "title": "Site Explorer metrics by country",
-      "description": "Retrieve Ahrefs Site Explorer metrics grouped by country.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "target": {
-            "type": "string",
-            "minLength": 1
-          },
-          "date": {
-            "type": "string",
-            "minLength": 1
-          },
-          "mode": {
-            "type": "string",
-            "enum": [
-              "exact",
-              "prefix",
-              "domain",
-              "subdomains"
-            ]
-          },
-          "select": {
-            "type": "string",
-            "minLength": 1
-          },
-          "protocol": {
-            "type": "string",
-            "enum": [
-              "both",
-              "http",
-              "https"
-            ]
-          },
-          "volumeMode": {
-            "type": "string",
-            "enum": [
-              "monthly",
-              "average"
-            ]
-          }
-        },
-        "required": [
-          "target",
-          "date"
-        ],
-        "additionalProperties": false
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "GET",
-        "path": "/site-explorer/metrics-by-country",
-        "query": {
-          "target": "{{target}}",
-          "date": "{{date}}",
-          "mode": "{{mode}}",
-          "select": "{{select}}",
-          "protocol": "{{protocol}}",
-          "volume_mode": "{{volumeMode}}"
-        },
-        "success": [
-          200
-        ]
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
+      "timeoutMs": 5000,
+      "title": "Healthcheck",
+      "validationMode": "strict-generated"
     },
     "keywords-explorer.overview": {
-      "kind": "action",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "title": "Keywords Explorer overview",
       "description": "Retrieve Ahrefs Keywords Explorer overview rows.",
+      "enforceOutputSchema": true,
       "inputSchema": {
-        "type": "object",
+        "additionalProperties": false,
         "properties": {
           "country": {
-            "type": "string",
-            "minLength": 1
-          },
-          "select": {
-            "type": "string",
-            "minLength": 1
+            "minLength": 1,
+            "type": "string"
           },
           "keywords": {
-            "type": "string",
-            "minLength": 1
-          },
-          "target": {
-            "type": "string",
-            "minLength": 1
+            "minLength": 1,
+            "type": "string"
           },
           "limit": {
-            "type": "integer",
-            "minimum": 1
+            "minimum": 1,
+            "type": "integer"
+          },
+          "select": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "target": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "where": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "offset": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "timeout": {
+            "minimum": 1,
+            "type": "integer"
+          },
+          "order_by": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "target_mode": {
+            "enum": [
+              "exact",
+              "prefix",
+              "domain",
+              "subdomains"
+            ],
+            "type": "string"
+          },
+          "search_engine": {
+            "enum": [
+              "google"
+            ],
+            "type": "string"
+          },
+          "keyword_list_id": {
+            "minimum": 1,
+            "type": "integer"
+          },
+          "target_position": {
+            "enum": [
+              "in_top10",
+              "in_top100"
+            ],
+            "type": "string"
           }
         },
         "required": [
           "country",
           "select"
         ],
-        "additionalProperties": false
+        "type": "object"
       },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
       "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
+        "additionalProperties": false,
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "additionalProperties": false
+        "required": [
+          "data"
+        ],
+        "type": "object"
       },
       "request": {
         "method": "GET",
         "path": "/keywords-explorer/overview",
         "query": {
           "country": "{{country}}",
-          "select": "{{select}}",
           "keywords": "{{keywords}}",
+          "limit": "{{limit}}",
+          "select": "{{select}}",
           "target": "{{target}}",
+          "where": "{{where}}",
+          "offset": "{{offset}}",
+          "timeout": "{{timeout}}",
+          "order_by": "{{order_by}}",
+          "target_mode": "{{target_mode}}",
+          "search_engine": "{{search_engine}}",
+          "keyword_list_id": "{{keyword_list_id}}",
+          "target_position": "{{target_position}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Keywords Explorer overview",
+      "validationMode": "strict-generated"
+    },
+    "site-explorer.metrics": {
+      "description": "Retrieve Ahrefs Site Explorer metrics for a domain or URL.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "country": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "date": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "mode": {
+            "enum": [
+              "exact",
+              "prefix",
+              "domain",
+              "subdomains"
+            ],
+            "type": "string"
+          },
+          "protocol": {
+            "enum": [
+              "both",
+              "http",
+              "https"
+            ],
+            "type": "string"
+          },
+          "target": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "volumeMode": {
+            "enum": [
+              "monthly",
+              "average"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "target",
+          "date"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/site-explorer/metrics",
+        "query": {
+          "country": "{{country}}",
+          "date": "{{date}}",
+          "mode": "{{mode}}",
+          "protocol": "{{protocol}}",
+          "target": "{{target}}",
+          "volume_mode": "{{volumeMode}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Site Explorer metrics",
+      "validationMode": "strict-generated"
+    },
+    "site-explorer.metrics-by-country": {
+      "description": "Retrieve Ahrefs Site Explorer metrics grouped by country.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "date": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "mode": {
+            "enum": [
+              "exact",
+              "prefix",
+              "domain",
+              "subdomains"
+            ],
+            "type": "string"
+          },
+          "protocol": {
+            "enum": [
+              "both",
+              "http",
+              "https"
+            ],
+            "type": "string"
+          },
+          "select": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "target": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "volumeMode": {
+            "enum": [
+              "monthly",
+              "average"
+            ],
+            "type": "string"
+          },
+          "limit": {
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "target",
+          "date"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/site-explorer/metrics-by-country",
+        "query": {
+          "date": "{{date}}",
+          "mode": "{{mode}}",
+          "protocol": "{{protocol}}",
+          "select": "{{select}}",
+          "target": "{{target}}",
+          "volume_mode": "{{volumeMode}}",
           "limit": "{{limit}}"
         },
         "success": [
           200
         ]
       },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "site-explorer.domain-rating": {
-      "kind": "action",
+      "responseFormat": "json",
       "sideEffect": "read",
       "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "title": "Site Explorer domain rating",
-      "description": "Retrieve Ahrefs Domain Rating for a domain or URL.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "target": {
-            "type": "string",
-            "minLength": 1
-          },
-          "date": {
-            "type": "string",
-            "minLength": 1
-          },
-          "mode": {
-            "type": "string",
-            "enum": [
-              "exact",
-              "prefix",
-              "domain",
-              "subdomains"
-            ]
-          },
-          "protocol": {
-            "type": "string",
-            "enum": [
-              "both",
-              "http",
-              "https"
-            ]
-          }
-        },
-        "additionalProperties": false,
-        "required": [
-          "target",
-          "date"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "GET",
-        "path": "/site-explorer/domain-rating",
-        "success": [
-          200
-        ],
-        "query": {
-          "target": "{{target}}",
-          "date": "{{date}}",
-          "mode": "{{mode}}",
-          "protocol": "{{protocol}}"
-        }
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
+      "title": "Site Explorer metrics by country",
+      "validationMode": "strict-generated"
     },
     "site-explorer.backlinks-stats": {
-      "kind": "action",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "title": "Site Explorer backlinks stats",
-      "description": "Retrieve Ahrefs backlink statistics for a domain or URL.",
+      "description": "Retrieve backlink statistics for a domain or URL from Ahrefs Site Explorer.",
+      "enforceOutputSchema": true,
       "inputSchema": {
-        "type": "object",
+        "additionalProperties": false,
         "properties": {
-          "target": {
-            "type": "string",
-            "minLength": 1
-          },
           "date": {
             "type": "string",
+            "description": "Date to report metrics on in YYYY-MM-DD format.",
             "minLength": 1
           },
           "mode": {
             "type": "string",
+            "description": "Scope of the search based on the target.",
             "enum": [
               "exact",
               "prefix",
@@ -444,8 +423,24 @@
               "subdomains"
             ]
           },
+          "output": {
+            "type": "string",
+            "description": "Output format.",
+            "enum": [
+              "json",
+              "csv",
+              "xml",
+              "php"
+            ]
+          },
+          "target": {
+            "type": "string",
+            "description": "Domain or URL to analyze.",
+            "minLength": 1
+          },
           "protocol": {
             "type": "string",
+            "description": "Protocol of the target.",
             "enum": [
               "both",
               "http",
@@ -453,23 +448,26 @@
             ]
           }
         },
-        "additionalProperties": false,
         "required": [
-          "target",
-          "date"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
+          "date",
+          "target"
         ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "additionalProperties": false
+        "required": [
+          "data"
+        ],
+        "type": "object"
       },
       "request": {
         "method": "GET",
@@ -478,46 +476,177 @@
           200
         ],
         "query": {
-          "target": "{{target}}",
           "date": "{{date}}",
           "mode": "{{mode}}",
+          "output": "{{output}}",
+          "target": "{{target}}",
           "protocol": "{{protocol}}"
         }
       },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "site-explorer.outlinks-stats": {
-      "kind": "action",
+      "responseFormat": "json",
       "sideEffect": "read",
       "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "title": "Site Explorer outlinks stats",
-      "description": "Retrieve Ahrefs outlink statistics for a domain or URL.",
+      "title": "Backlinks stats",
+      "validationMode": "strict-generated"
+    },
+    "batch-analysis.batch-analysis": {
+      "description": "Run batch analysis for up to 100 targets and return selected Ahrefs metrics.",
+      "enforceOutputSchema": true,
       "inputSchema": {
-        "type": "object",
+        "additionalProperties": false,
         "properties": {
-          "target": {
+          "output": {
             "type": "string",
+            "description": "Output format.",
+            "enum": [
+              "json",
+              "php"
+            ]
+          },
+          "select": {
+            "type": "array",
+            "description": "Fields to return for each target.",
+            "minItems": 1,
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Column or target identifier."
+            }
+          },
+          "country": {
+            "type": "string",
+            "description": "Two-letter country code (ISO 3166-1 alpha-2).",
             "minLength": 1
           },
+          "targets": {
+            "type": "array",
+            "description": "Targets to analyze. Each item needs url; mode and protocol default on Ahrefs when omitted.",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "description": "One batch-analysis target.",
+              "additionalProperties": false,
+              "required": [
+                "url"
+              ],
+              "properties": {
+                "url": {
+                  "type": "string",
+                  "description": "URL of the analyzed target.",
+                  "minLength": 1
+                },
+                "mode": {
+                  "type": "string",
+                  "description": "Scope of the search based on the target.",
+                  "enum": [
+                    "exact",
+                    "prefix",
+                    "domain",
+                    "subdomains"
+                  ]
+                },
+                "protocol": {
+                  "type": "string",
+                  "description": "Protocol of the target.",
+                  "enum": [
+                    "both",
+                    "http",
+                    "https"
+                  ]
+                }
+              }
+            }
+          },
+          "order_by": {
+            "type": "string",
+            "description": "Column ordering expression accepted by Ahrefs.",
+            "minLength": 1
+          },
+          "volume_mode": {
+            "type": "string",
+            "description": "Search volume calculation mode: monthly or average.",
+            "enum": [
+              "monthly",
+              "average"
+            ]
+          }
+        },
+        "required": [
+          "select",
+          "targets"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 262144,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "POST",
+        "path": "/batch-analysis/batch-analysis",
+        "success": [
+          200
+        ],
+        "query": {
+          "output": "{{output}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "select": "{{select}}",
+          "targets": "{{targets}}",
+          "country": "{{country}}",
+          "order_by": "{{order_by}}",
+          "volume_mode": "{{volume_mode}}"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "title": "Batch URL analysis",
+      "validationMode": "strict-generated"
+    },
+    "site-explorer.domain-rating": {
+      "description": "Retrieve Domain Rating and Ahrefs rank for a domain or URL.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
           "date": {
             "type": "string",
+            "description": "Date to report metrics on in YYYY-MM-DD format.",
             "minLength": 1
           },
-          "mode": {
+          "output": {
             "type": "string",
+            "description": "Output format.",
             "enum": [
-              "exact",
-              "prefix",
-              "domain",
-              "subdomains"
+              "json",
+              "csv",
+              "xml",
+              "php"
             ]
+          },
+          "target": {
+            "type": "string",
+            "description": "Domain or URL to analyze.",
+            "minLength": 1
           },
           "protocol": {
             "type": "string",
+            "description": "Protocol of the target.",
             "enum": [
               "both",
               "http",
@@ -525,841 +654,181 @@
             ]
           }
         },
-        "additionalProperties": false,
         "required": [
-          "target",
-          "date"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
+          "date",
+          "target"
         ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "additionalProperties": false
+        "required": [
+          "data"
+        ],
+        "type": "object"
       },
       "request": {
         "method": "GET",
-        "path": "/site-explorer/outlinks-stats",
+        "path": "/site-explorer/domain-rating",
         "success": [
           200
         ],
         "query": {
-          "target": "{{target}}",
           "date": "{{date}}",
-          "mode": "{{mode}}",
+          "output": "{{output}}",
+          "target": "{{target}}",
           "protocol": "{{protocol}}"
         }
       },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "site-explorer.organic-keywords": {
-      "kind": "action",
+      "responseFormat": "json",
       "sideEffect": "read",
       "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "title": "Site Explorer organic keywords",
-      "description": "Retrieve Ahrefs organic keyword rows for a domain or URL.",
+      "title": "Domain rating",
+      "validationMode": "strict-generated"
+    },
+    "site-explorer.domain-rating-history": {
+      "description": "Retrieve historical Domain Rating values for a domain or URL.",
+      "enforceOutputSchema": true,
       "inputSchema": {
-        "type": "object",
+        "additionalProperties": false,
         "properties": {
-          "target": {
+          "output": {
             "type": "string",
-            "minLength": 1
-          },
-          "date": {
-            "type": "string",
-            "minLength": 1
-          },
-          "country": {
-            "type": "string",
-            "minLength": 1
-          },
-          "select": {
-            "type": "string",
-            "minLength": 1
-          },
-          "mode": {
-            "type": "string",
+            "description": "Output format.",
             "enum": [
-              "exact",
-              "prefix",
-              "domain",
-              "subdomains"
+              "json",
+              "csv",
+              "xml",
+              "php"
             ]
           },
-          "limit": {
-            "type": "integer",
-            "minimum": 1
-          }
-        },
-        "additionalProperties": false,
-        "required": [
-          "target",
-          "country",
-          "select"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "GET",
-        "path": "/site-explorer/organic-keywords",
-        "success": [
-          200
-        ],
-        "query": {
-          "target": "{{target}}",
-          "date": "{{date}}",
-          "country": "{{country}}",
-          "select": "{{select}}",
-          "mode": "{{mode}}",
-          "limit": "{{limit}}"
-        }
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "site-explorer.referring-domains": {
-      "kind": "action",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "title": "Site Explorer referring domains",
-      "description": "Retrieve Ahrefs referring domain rows for a domain or URL.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
           "target": {
             "type": "string",
+            "description": "Domain or URL to analyze.",
             "minLength": 1
           },
-          "select": {
+          "date_to": {
             "type": "string",
+            "description": "End date of the historical period in YYYY-MM-DD format.",
             "minLength": 1
           },
-          "mode": {
+          "date_from": {
             "type": "string",
+            "description": "Start date of the historical period in YYYY-MM-DD format.",
+            "minLength": 1
+          },
+          "history_grouping": {
+            "type": "string",
+            "description": "Time interval used to group historical data.",
             "enum": [
-              "exact",
-              "prefix",
-              "domain",
-              "subdomains"
+              "daily",
+              "weekly",
+              "monthly"
             ]
-          },
-          "limit": {
-            "type": "integer",
-            "minimum": 1
           }
         },
-        "additionalProperties": false,
         "required": [
           "target",
-          "select"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
+          "date_from"
         ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "additionalProperties": false
+        "required": [
+          "data"
+        ],
+        "type": "object"
       },
       "request": {
         "method": "GET",
-        "path": "/site-explorer/referring-domains",
+        "path": "/site-explorer/domain-rating-history",
         "success": [
           200
         ],
         "query": {
+          "output": "{{output}}",
           "target": "{{target}}",
-          "select": "{{select}}",
-          "mode": "{{mode}}",
-          "limit": "{{limit}}"
+          "date_to": "{{date_to}}",
+          "date_from": "{{date_from}}",
+          "history_grouping": "{{history_grouping}}"
         }
       },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "site-explorer.all-backlinks": {
-      "kind": "action",
+      "responseFormat": "json",
       "sideEffect": "read",
       "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "title": "Site Explorer backlinks",
-      "description": "Retrieve Ahrefs backlink rows for a domain or URL.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "target": {
-            "type": "string",
-            "minLength": 1
-          },
-          "select": {
-            "type": "string",
-            "minLength": 1
-          },
-          "mode": {
-            "type": "string",
-            "enum": [
-              "exact",
-              "prefix",
-              "domain",
-              "subdomains"
-            ]
-          },
-          "limit": {
-            "type": "integer",
-            "minimum": 1
-          }
-        },
-        "additionalProperties": false,
-        "required": [
-          "target",
-          "select"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "GET",
-        "path": "/site-explorer/all-backlinks",
-        "success": [
-          200
-        ],
-        "query": {
-          "target": "{{target}}",
-          "select": "{{select}}",
-          "mode": "{{mode}}",
-          "limit": "{{limit}}"
-        }
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "site-explorer.top-pages": {
-      "kind": "action",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "title": "Site Explorer top pages",
-      "description": "Retrieve Ahrefs top pages by organic traffic for a domain or URL.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "target": {
-            "type": "string",
-            "minLength": 1
-          },
-          "date": {
-            "type": "string",
-            "minLength": 1
-          },
-          "country": {
-            "type": "string",
-            "minLength": 1
-          },
-          "select": {
-            "type": "string",
-            "minLength": 1
-          },
-          "mode": {
-            "type": "string",
-            "enum": [
-              "exact",
-              "prefix",
-              "domain",
-              "subdomains"
-            ]
-          },
-          "limit": {
-            "type": "integer",
-            "minimum": 1
-          }
-        },
-        "additionalProperties": false,
-        "required": [
-          "target",
-          "select"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "GET",
-        "path": "/site-explorer/top-pages",
-        "success": [
-          200
-        ],
-        "query": {
-          "target": "{{target}}",
-          "date": "{{date}}",
-          "country": "{{country}}",
-          "select": "{{select}}",
-          "mode": "{{mode}}",
-          "limit": "{{limit}}"
-        }
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "site-explorer.organic-competitors": {
-      "kind": "action",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "title": "Site Explorer organic competitors",
-      "description": "Retrieve Ahrefs organic competitor rows for a domain or URL.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "target": {
-            "type": "string",
-            "minLength": 1
-          },
-          "country": {
-            "type": "string",
-            "minLength": 1
-          },
-          "select": {
-            "type": "string",
-            "minLength": 1
-          },
-          "mode": {
-            "type": "string",
-            "enum": [
-              "exact",
-              "prefix",
-              "domain",
-              "subdomains"
-            ]
-          },
-          "limit": {
-            "type": "integer",
-            "minimum": 1
-          }
-        },
-        "additionalProperties": false,
-        "required": [
-          "target",
-          "country",
-          "select"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "GET",
-        "path": "/site-explorer/organic-competitors",
-        "success": [
-          200
-        ],
-        "query": {
-          "target": "{{target}}",
-          "country": "{{country}}",
-          "select": "{{select}}",
-          "mode": "{{mode}}",
-          "limit": "{{limit}}"
-        }
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "site-explorer.anchors": {
-      "kind": "action",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "title": "Site Explorer anchors",
-      "description": "Retrieve Ahrefs anchor-text rows for a domain or URL.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "target": {
-            "type": "string",
-            "minLength": 1
-          },
-          "select": {
-            "type": "string",
-            "minLength": 1
-          },
-          "mode": {
-            "type": "string",
-            "enum": [
-              "exact",
-              "prefix",
-              "domain",
-              "subdomains"
-            ]
-          },
-          "limit": {
-            "type": "integer",
-            "minimum": 1
-          }
-        },
-        "additionalProperties": false,
-        "required": [
-          "target",
-          "select"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "GET",
-        "path": "/site-explorer/anchors",
-        "success": [
-          200
-        ],
-        "query": {
-          "target": "{{target}}",
-          "select": "{{select}}",
-          "mode": "{{mode}}",
-          "limit": "{{limit}}"
-        }
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "site-explorer.pages-by-traffic": {
-      "kind": "action",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "title": "Site Explorer pages by traffic",
-      "description": "Retrieve Ahrefs pages ranked by organic traffic for a domain or URL.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "target": {
-            "type": "string",
-            "minLength": 1
-          },
-          "date": {
-            "type": "string",
-            "minLength": 1
-          },
-          "country": {
-            "type": "string",
-            "minLength": 1
-          },
-          "select": {
-            "type": "string",
-            "minLength": 1
-          },
-          "mode": {
-            "type": "string",
-            "enum": [
-              "exact",
-              "prefix",
-              "domain",
-              "subdomains"
-            ]
-          },
-          "limit": {
-            "type": "integer",
-            "minimum": 1
-          }
-        },
-        "additionalProperties": false,
-        "required": [
-          "target",
-          "date",
-          "select"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "GET",
-        "path": "/site-explorer/pages-by-traffic",
-        "success": [
-          200
-        ],
-        "query": {
-          "target": "{{target}}",
-          "date": "{{date}}",
-          "country": "{{country}}",
-          "select": "{{select}}",
-          "mode": "{{mode}}",
-          "limit": "{{limit}}"
-        }
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "keywords-explorer.related-terms": {
-      "kind": "action",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "title": "Keywords Explorer related terms",
-      "description": "Retrieve Ahrefs related keyword ideas.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "keywords": {
-            "type": "string",
-            "minLength": 1
-          },
-          "country": {
-            "type": "string",
-            "minLength": 1
-          },
-          "select": {
-            "type": "string",
-            "minLength": 1
-          },
-          "limit": {
-            "type": "integer",
-            "minimum": 1
-          }
-        },
-        "additionalProperties": false,
-        "required": [
-          "keywords",
-          "country",
-          "select"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "GET",
-        "path": "/keywords-explorer/related-terms",
-        "success": [
-          200
-        ],
-        "query": {
-          "keywords": "{{keywords}}",
-          "country": "{{country}}",
-          "select": "{{select}}",
-          "limit": "{{limit}}"
-        }
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "keywords-explorer.matching-terms": {
-      "kind": "action",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "title": "Keywords Explorer matching terms",
-      "description": "Retrieve Ahrefs matching keyword ideas.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "keywords": {
-            "type": "string",
-            "minLength": 1
-          },
-          "country": {
-            "type": "string",
-            "minLength": 1
-          },
-          "select": {
-            "type": "string",
-            "minLength": 1
-          },
-          "limit": {
-            "type": "integer",
-            "minimum": 1
-          }
-        },
-        "additionalProperties": false,
-        "required": [
-          "keywords",
-          "country",
-          "select"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "GET",
-        "path": "/keywords-explorer/matching-terms",
-        "success": [
-          200
-        ],
-        "query": {
-          "keywords": "{{keywords}}",
-          "country": "{{country}}",
-          "select": "{{select}}",
-          "limit": "{{limit}}"
-        }
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "keywords-explorer.search-suggestions": {
-      "kind": "action",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "title": "Keywords Explorer search suggestions",
-      "description": "Retrieve Ahrefs search-suggestion keyword ideas.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "keywords": {
-            "type": "string",
-            "minLength": 1
-          },
-          "country": {
-            "type": "string",
-            "minLength": 1
-          },
-          "select": {
-            "type": "string",
-            "minLength": 1
-          },
-          "limit": {
-            "type": "integer",
-            "minimum": 1
-          }
-        },
-        "additionalProperties": false,
-        "required": [
-          "keywords",
-          "country",
-          "select"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "GET",
-        "path": "/keywords-explorer/search-suggestions",
-        "success": [
-          200
-        ],
-        "query": {
-          "keywords": "{{keywords}}",
-          "country": "{{country}}",
-          "select": "{{select}}",
-          "limit": "{{limit}}"
-        }
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "keywords-explorer.volume-history": {
-      "kind": "action",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "title": "Keywords Explorer volume history",
-      "description": "Retrieve Ahrefs search-volume history for keywords.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "keywords": {
-            "type": "string",
-            "minLength": 1
-          },
-          "country": {
-            "type": "string",
-            "minLength": 1
-          },
-          "select": {
-            "type": "string",
-            "minLength": 1
-          }
-        },
-        "additionalProperties": false,
-        "required": [
-          "keywords",
-          "country"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "GET",
-        "path": "/keywords-explorer/volume-history",
-        "success": [
-          200
-        ],
-        "query": {
-          "keywords": "{{keywords}}",
-          "country": "{{country}}",
-          "select": "{{select}}"
-        }
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
+      "title": "Domain rating history",
+      "validationMode": "strict-generated"
     },
     "keywords-explorer.volume-by-country": {
-      "kind": "action",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "title": "Keywords Explorer volume by country",
-      "description": "Retrieve Ahrefs search volume grouped by country.",
+      "description": "Retrieve search volume for a keyword broken down by country.",
+      "enforceOutputSchema": true,
       "inputSchema": {
-        "type": "object",
+        "additionalProperties": false,
         "properties": {
-          "keywords": {
+          "limit": {
+            "type": "integer",
+            "description": "Number of results to return.",
+            "minimum": 1
+          },
+          "output": {
             "type": "string",
+            "description": "Output format.",
+            "enum": [
+              "json",
+              "csv",
+              "xml",
+              "php"
+            ]
+          },
+          "keyword": {
+            "type": "string",
+            "description": "Keyword to show metrics for.",
             "minLength": 1
           },
-          "select": {
+          "search_engine": {
             "type": "string",
-            "minLength": 1
+            "description": "Deprecated search engine filter.",
+            "enum": [
+              "google"
+            ]
           }
         },
-        "additionalProperties": false,
         "required": [
-          "keywords"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
+          "keyword"
         ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "additionalProperties": false
+        "required": [
+          "data"
+        ],
+        "type": "object"
       },
       "request": {
         "method": "GET",
@@ -1368,65 +837,1292 @@
           200
         ],
         "query": {
-          "keywords": "{{keywords}}",
-          "select": "{{select}}"
+          "limit": "{{limit}}",
+          "output": "{{output}}",
+          "keyword": "{{keyword}}",
+          "search_engine": "{{search_engine}}"
         }
       },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "serp-overview.serp-overview": {
-      "kind": "action",
+      "responseFormat": "json",
       "sideEffect": "read",
       "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "title": "SERP Overview",
-      "description": "Retrieve Ahrefs SERP overview rows for a keyword.",
+      "title": "Keyword volume by country",
+      "validationMode": "strict-generated"
+    },
+    "site-explorer.linked-domains": {
+      "description": "List external domains that a target website or URL links to.",
+      "enforceOutputSchema": true,
       "inputSchema": {
-        "type": "object",
+        "additionalProperties": false,
         "properties": {
-          "keyword": {
+          "mode": {
             "type": "string",
-            "minLength": 1
-          },
-          "country": {
-            "type": "string",
-            "minLength": 1
-          },
-          "date": {
-            "type": "string",
-            "minLength": 1
-          },
-          "select": {
-            "type": "string",
-            "minLength": 1
+            "description": "Scope of the search based on the target.",
+            "enum": [
+              "exact",
+              "prefix",
+              "domain",
+              "subdomains"
+            ]
           },
           "limit": {
             "type": "integer",
+            "description": "Number of results to return.",
             "minimum": 1
+          },
+          "where": {
+            "type": "string",
+            "description": "Ahrefs filter expression.",
+            "minLength": 1
+          },
+          "offset": {
+            "type": "integer",
+            "description": "Deprecated offset into the result set.",
+            "minimum": 0
+          },
+          "output": {
+            "type": "string",
+            "description": "Output format.",
+            "enum": [
+              "json",
+              "csv",
+              "xml",
+              "php"
+            ]
+          },
+          "timeout": {
+            "type": "integer",
+            "description": "Manual timeout duration in seconds.",
+            "minimum": 1
+          },
+          "order_by": {
+            "type": "string",
+            "description": "Column ordering expression accepted by Ahrefs.",
+            "minLength": 1
+          },
+          "protocol": {
+            "type": "string",
+            "description": "Protocol of the target.",
+            "enum": [
+              "both",
+              "http",
+              "https"
+            ]
+          },
+          "select": {
+            "type": "string",
+            "description": "Comma-separated list of columns to return.",
+            "minLength": 1
+          },
+          "target": {
+            "type": "string",
+            "description": "Domain or URL to analyze.",
+            "minLength": 1
           }
         },
-        "additionalProperties": false,
         "required": [
-          "keyword",
-          "country",
-          "date",
-          "select"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
+          "select",
+          "target"
         ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "additionalProperties": false
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/site-explorer/linkeddomains",
+        "success": [
+          200
+        ],
+        "query": {
+          "mode": "{{mode}}",
+          "limit": "{{limit}}",
+          "where": "{{where}}",
+          "offset": "{{offset}}",
+          "output": "{{output}}",
+          "timeout": "{{timeout}}",
+          "order_by": "{{order_by}}",
+          "protocol": "{{protocol}}",
+          "select": "{{select}}",
+          "target": "{{target}}"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Linked domains",
+      "validationMode": "strict-generated"
+    },
+    "keywords-explorer.matching-terms": {
+      "description": "Retrieve keyword phrases that match or contain the specified keywords.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "description": "Number of results to return.",
+            "minimum": 1
+          },
+          "terms": {
+            "type": "string",
+            "description": "Return all keyword ideas or only questions.",
+            "enum": [
+              "all",
+              "questions"
+            ]
+          },
+          "where": {
+            "type": "string",
+            "description": "Ahrefs filter expression.",
+            "minLength": 1
+          },
+          "offset": {
+            "type": "integer",
+            "description": "Deprecated offset into the result set.",
+            "minimum": 0
+          },
+          "output": {
+            "type": "string",
+            "description": "Output format.",
+            "enum": [
+              "json",
+              "csv",
+              "xml",
+              "php"
+            ]
+          },
+          "select": {
+            "type": "string",
+            "description": "Comma-separated list of columns to return.",
+            "minLength": 1
+          },
+          "country": {
+            "type": "string",
+            "description": "Two-letter country code (ISO 3166-1 alpha-2).",
+            "minLength": 1
+          },
+          "timeout": {
+            "type": "integer",
+            "description": "Manual timeout duration in seconds.",
+            "minimum": 1
+          },
+          "keywords": {
+            "type": "string",
+            "description": "Comma-separated list of keywords to show metrics for.",
+            "minLength": 1
+          },
+          "order_by": {
+            "type": "string",
+            "description": "Column ordering expression accepted by Ahrefs.",
+            "minLength": 1
+          },
+          "match_mode": {
+            "type": "string",
+            "description": "Match words in any order (terms) or exact order (phrase).",
+            "enum": [
+              "terms",
+              "phrase"
+            ]
+          },
+          "search_engine": {
+            "type": "string",
+            "description": "Deprecated search engine filter.",
+            "enum": [
+              "google"
+            ]
+          },
+          "keyword_list_id": {
+            "type": "integer",
+            "description": "Id of an existing keyword list.",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "select",
+          "country"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/keywords-explorer/matching-terms",
+        "success": [
+          200
+        ],
+        "query": {
+          "limit": "{{limit}}",
+          "terms": "{{terms}}",
+          "where": "{{where}}",
+          "offset": "{{offset}}",
+          "output": "{{output}}",
+          "select": "{{select}}",
+          "country": "{{country}}",
+          "timeout": "{{timeout}}",
+          "keywords": "{{keywords}}",
+          "order_by": "{{order_by}}",
+          "match_mode": "{{match_mode}}",
+          "search_engine": "{{search_engine}}",
+          "keyword_list_id": "{{keyword_list_id}}"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Matching terms",
+      "validationMode": "strict-generated"
+    },
+    "site-explorer.all-backlinks": {
+      "description": "Retrieve backlinks for a domain or URL from Ahrefs Site Explorer.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "mode": {
+            "type": "string",
+            "description": "Scope of the search based on the target.",
+            "enum": [
+              "exact",
+              "prefix",
+              "domain",
+              "subdomains"
+            ]
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Number of results to return.",
+            "minimum": 1
+          },
+          "where": {
+            "type": "string",
+            "description": "Ahrefs filter expression.",
+            "minLength": 1
+          },
+          "offset": {
+            "type": "integer",
+            "description": "Deprecated offset into the result set.",
+            "minimum": 0
+          },
+          "output": {
+            "type": "string",
+            "description": "Output format.",
+            "enum": [
+              "json",
+              "csv",
+              "xml",
+              "php"
+            ]
+          },
+          "timeout": {
+            "type": "integer",
+            "description": "Manual timeout duration in seconds.",
+            "minimum": 1
+          },
+          "order_by": {
+            "type": "string",
+            "description": "Column ordering expression accepted by Ahrefs.",
+            "minLength": 1
+          },
+          "protocol": {
+            "type": "string",
+            "description": "Protocol of the target.",
+            "enum": [
+              "both",
+              "http",
+              "https"
+            ]
+          },
+          "select": {
+            "type": "string",
+            "description": "Comma-separated list of columns to return.",
+            "minLength": 1
+          },
+          "target": {
+            "type": "string",
+            "description": "Domain or URL to analyze.",
+            "minLength": 1
+          },
+          "history": {
+            "type": "string",
+            "description": "History window: live, since:YYYY-MM-DD, or all_time.",
+            "minLength": 1
+          },
+          "aggregation": {
+            "type": "string",
+            "description": "Backlinks grouping mode.",
+            "enum": [
+              "similar_links",
+              "1_per_domain",
+              "all"
+            ]
+          }
+        },
+        "required": [
+          "select",
+          "target"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/site-explorer/all-backlinks",
+        "success": [
+          200
+        ],
+        "query": {
+          "mode": "{{mode}}",
+          "limit": "{{limit}}",
+          "where": "{{where}}",
+          "offset": "{{offset}}",
+          "output": "{{output}}",
+          "timeout": "{{timeout}}",
+          "order_by": "{{order_by}}",
+          "protocol": "{{protocol}}",
+          "select": "{{select}}",
+          "target": "{{target}}",
+          "history": "{{history}}",
+          "aggregation": "{{aggregation}}"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "All backlinks",
+      "validationMode": "strict-generated"
+    },
+    "site-explorer.broken-backlinks": {
+      "description": "Retrieve broken backlinks pointing at a domain or URL.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "mode": {
+            "type": "string",
+            "description": "Scope of the search based on the target.",
+            "enum": [
+              "exact",
+              "prefix",
+              "domain",
+              "subdomains"
+            ]
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Number of results to return.",
+            "minimum": 1
+          },
+          "where": {
+            "type": "string",
+            "description": "Ahrefs filter expression.",
+            "minLength": 1
+          },
+          "offset": {
+            "type": "integer",
+            "description": "Deprecated offset into the result set.",
+            "minimum": 0
+          },
+          "output": {
+            "type": "string",
+            "description": "Output format.",
+            "enum": [
+              "json",
+              "csv",
+              "xml",
+              "php"
+            ]
+          },
+          "timeout": {
+            "type": "integer",
+            "description": "Manual timeout duration in seconds.",
+            "minimum": 1
+          },
+          "order_by": {
+            "type": "string",
+            "description": "Column ordering expression accepted by Ahrefs.",
+            "minLength": 1
+          },
+          "protocol": {
+            "type": "string",
+            "description": "Protocol of the target.",
+            "enum": [
+              "both",
+              "http",
+              "https"
+            ]
+          },
+          "select": {
+            "type": "string",
+            "description": "Comma-separated list of columns to return.",
+            "minLength": 1
+          },
+          "target": {
+            "type": "string",
+            "description": "Domain or URL to analyze.",
+            "minLength": 1
+          },
+          "aggregation": {
+            "type": "string",
+            "description": "Backlinks grouping mode.",
+            "enum": [
+              "similar_links",
+              "1_per_domain",
+              "all"
+            ]
+          }
+        },
+        "required": [
+          "select",
+          "target"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/site-explorer/broken-backlinks",
+        "success": [
+          200
+        ],
+        "query": {
+          "mode": "{{mode}}",
+          "limit": "{{limit}}",
+          "where": "{{where}}",
+          "offset": "{{offset}}",
+          "output": "{{output}}",
+          "timeout": "{{timeout}}",
+          "order_by": "{{order_by}}",
+          "protocol": "{{protocol}}",
+          "select": "{{select}}",
+          "target": "{{target}}",
+          "aggregation": "{{aggregation}}"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Broken backlinks",
+      "validationMode": "strict-generated"
+    },
+    "rank-tracker.competitors-overview": {
+      "description": "Retrieve Rank Tracker competitor overview rows for a project.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "date": {
+            "type": "string",
+            "description": "Date to report metrics on in YYYY-MM-DD format.",
+            "minLength": 1
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Number of results to return.",
+            "minimum": 1
+          },
+          "where": {
+            "type": "string",
+            "description": "Ahrefs filter expression.",
+            "minLength": 1
+          },
+          "device": {
+            "type": "string",
+            "description": "Device used to collect rank tracker data.",
+            "enum": [
+              "desktop",
+              "mobile"
+            ]
+          },
+          "offset": {
+            "type": "integer",
+            "description": "Deprecated offset into the result set.",
+            "minimum": 0
+          },
+          "output": {
+            "type": "string",
+            "description": "Output format.",
+            "enum": [
+              "json",
+              "csv",
+              "xml",
+              "php"
+            ]
+          },
+          "select": {
+            "type": "string",
+            "description": "Comma-separated list of columns to return.",
+            "minLength": 1
+          },
+          "timeout": {
+            "type": "integer",
+            "description": "Manual timeout duration in seconds.",
+            "minimum": 1
+          },
+          "order_by": {
+            "type": "string",
+            "description": "Column ordering expression accepted by Ahrefs.",
+            "minLength": 1
+          },
+          "project_id": {
+            "type": "integer",
+            "description": "Rank Tracker project id.",
+            "minimum": 1
+          },
+          "volume_mode": {
+            "type": "string",
+            "description": "Search volume calculation mode: monthly or average.",
+            "enum": [
+              "monthly",
+              "average"
+            ]
+          },
+          "date_compared": {
+            "type": "string",
+            "description": "Comparison date in YYYY-MM-DD format.",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "date",
+          "select",
+          "project_id"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/rank-tracker/competitors-overview",
+        "success": [
+          200
+        ],
+        "query": {
+          "date": "{{date}}",
+          "limit": "{{limit}}",
+          "where": "{{where}}",
+          "device": "{{device}}",
+          "offset": "{{offset}}",
+          "output": "{{output}}",
+          "select": "{{select}}",
+          "timeout": "{{timeout}}",
+          "order_by": "{{order_by}}",
+          "project_id": "{{project_id}}",
+          "volume_mode": "{{volume_mode}}",
+          "date_compared": "{{date_compared}}"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "title": "Rank Tracker competitors overview",
+      "validationMode": "strict-generated"
+    },
+    "rank-tracker.overview": {
+      "description": "Retrieve Rank Tracker overview rows for a project.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "date": {
+            "type": "string",
+            "description": "Date to report metrics on in YYYY-MM-DD format.",
+            "minLength": 1
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Number of results to return.",
+            "minimum": 1
+          },
+          "where": {
+            "type": "string",
+            "description": "Ahrefs filter expression.",
+            "minLength": 1
+          },
+          "device": {
+            "type": "string",
+            "description": "Device used to collect rank tracker data.",
+            "enum": [
+              "desktop",
+              "mobile"
+            ]
+          },
+          "offset": {
+            "type": "integer",
+            "description": "Deprecated offset into the result set.",
+            "minimum": 0
+          },
+          "output": {
+            "type": "string",
+            "description": "Output format.",
+            "enum": [
+              "json",
+              "csv",
+              "xml",
+              "php"
+            ]
+          },
+          "select": {
+            "type": "string",
+            "description": "Comma-separated list of columns to return.",
+            "minLength": 1
+          },
+          "timeout": {
+            "type": "integer",
+            "description": "Manual timeout duration in seconds.",
+            "minimum": 1
+          },
+          "order_by": {
+            "type": "string",
+            "description": "Column ordering expression accepted by Ahrefs.",
+            "minLength": 1
+          },
+          "project_id": {
+            "type": "integer",
+            "description": "Rank Tracker project id.",
+            "minimum": 1
+          },
+          "volume_mode": {
+            "type": "string",
+            "description": "Search volume calculation mode: monthly or average.",
+            "enum": [
+              "monthly",
+              "average"
+            ]
+          },
+          "date_compared": {
+            "type": "string",
+            "description": "Comparison date in YYYY-MM-DD format.",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "date",
+          "select",
+          "project_id"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/rank-tracker/overview",
+        "success": [
+          200
+        ],
+        "query": {
+          "date": "{{date}}",
+          "limit": "{{limit}}",
+          "where": "{{where}}",
+          "device": "{{device}}",
+          "offset": "{{offset}}",
+          "output": "{{output}}",
+          "select": "{{select}}",
+          "timeout": "{{timeout}}",
+          "order_by": "{{order_by}}",
+          "project_id": "{{project_id}}",
+          "volume_mode": "{{volume_mode}}",
+          "date_compared": "{{date_compared}}"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "title": "Rank Tracker overview",
+      "validationMode": "strict-generated"
+    },
+    "site-explorer.refdomains": {
+      "description": "Retrieve referring domains for a target from Site Explorer.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "mode": {
+            "type": "string",
+            "description": "Scope of the search based on the target.",
+            "enum": [
+              "exact",
+              "prefix",
+              "domain",
+              "subdomains"
+            ]
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Number of results to return.",
+            "minimum": 1
+          },
+          "where": {
+            "type": "string",
+            "description": "Ahrefs filter expression.",
+            "minLength": 1
+          },
+          "offset": {
+            "type": "integer",
+            "description": "Deprecated offset into the result set.",
+            "minimum": 0
+          },
+          "output": {
+            "type": "string",
+            "description": "Output format.",
+            "enum": [
+              "json",
+              "csv",
+              "xml",
+              "php"
+            ]
+          },
+          "timeout": {
+            "type": "integer",
+            "description": "Manual timeout duration in seconds.",
+            "minimum": 1
+          },
+          "order_by": {
+            "type": "string",
+            "description": "Column ordering expression accepted by Ahrefs.",
+            "minLength": 1
+          },
+          "protocol": {
+            "type": "string",
+            "description": "Protocol of the target.",
+            "enum": [
+              "both",
+              "http",
+              "https"
+            ]
+          },
+          "select": {
+            "type": "string",
+            "description": "Comma-separated list of columns to return.",
+            "minLength": 1
+          },
+          "target": {
+            "type": "string",
+            "description": "Domain or URL to analyze.",
+            "minLength": 1
+          },
+          "history": {
+            "type": "string",
+            "description": "History window: live, since:YYYY-MM-DD, or all_time.",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "select",
+          "target"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/site-explorer/refdomains",
+        "success": [
+          200
+        ],
+        "query": {
+          "mode": "{{mode}}",
+          "limit": "{{limit}}",
+          "where": "{{where}}",
+          "offset": "{{offset}}",
+          "output": "{{output}}",
+          "timeout": "{{timeout}}",
+          "order_by": "{{order_by}}",
+          "protocol": "{{protocol}}",
+          "select": "{{select}}",
+          "target": "{{target}}",
+          "history": "{{history}}"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Referring domains",
+      "validationMode": "strict-generated"
+    },
+    "site-explorer.total-search-volume-history": {
+      "description": "Retrieve historical total search volume for a target.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "mode": {
+            "type": "string",
+            "description": "Scope of the search based on the target.",
+            "enum": [
+              "exact",
+              "prefix",
+              "domain",
+              "subdomains"
+            ]
+          },
+          "output": {
+            "type": "string",
+            "description": "Output format.",
+            "enum": [
+              "json",
+              "csv",
+              "xml",
+              "php"
+            ]
+          },
+          "target": {
+            "type": "string",
+            "description": "Domain or URL to analyze.",
+            "minLength": 1
+          },
+          "country": {
+            "type": "string",
+            "description": "Two-letter country code (ISO 3166-1 alpha-2).",
+            "minLength": 1
+          },
+          "date_to": {
+            "type": "string",
+            "description": "End date of the historical period in YYYY-MM-DD format.",
+            "minLength": 1
+          },
+          "protocol": {
+            "type": "string",
+            "description": "Protocol of the target.",
+            "enum": [
+              "both",
+              "http",
+              "https"
+            ]
+          },
+          "date_from": {
+            "type": "string",
+            "description": "Start date of the historical period in YYYY-MM-DD format.",
+            "minLength": 1
+          },
+          "volume_mode": {
+            "type": "string",
+            "description": "Search volume calculation mode: monthly or average.",
+            "enum": [
+              "monthly",
+              "average"
+            ]
+          },
+          "top_positions": {
+            "type": "string",
+            "description": "Restrict volume to top 10 or top 100 positions.",
+            "enum": [
+              "top_10",
+              "top_100"
+            ]
+          },
+          "history_grouping": {
+            "type": "string",
+            "description": "Time interval used to group historical data.",
+            "enum": [
+              "daily",
+              "weekly",
+              "monthly"
+            ]
+          }
+        },
+        "required": [
+          "target",
+          "date_from"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/site-explorer/total-search-volume-history",
+        "success": [
+          200
+        ],
+        "query": {
+          "mode": "{{mode}}",
+          "output": "{{output}}",
+          "target": "{{target}}",
+          "country": "{{country}}",
+          "date_to": "{{date_to}}",
+          "protocol": "{{protocol}}",
+          "date_from": "{{date_from}}",
+          "volume_mode": "{{volume_mode}}",
+          "top_positions": "{{top_positions}}",
+          "history_grouping": "{{history_grouping}}"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Total search volume history",
+      "validationMode": "strict-generated"
+    },
+    "content-helper.topics": {
+      "description": "Retrieve topics covered by top-ranking pages for a keyword.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "output": {
+            "type": "string",
+            "description": "Output format.",
+            "enum": [
+              "json",
+              "php"
+            ]
+          },
+          "country": {
+            "type": "string",
+            "description": "Two-letter country code (ISO 3166-1 alpha-2).",
+            "minLength": 1
+          },
+          "keyword": {
+            "type": "string",
+            "description": "Keyword to show metrics for.",
+            "minLength": 1
+          },
+          "target_url": {
+            "type": "string",
+            "description": "Page to fetch live when scoring topic coverage.",
+            "minLength": 1
+          },
+          "top_competitors": {
+            "type": "integer",
+            "description": "Number of competitor pages to include.",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "keyword"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/content-helper/topics",
+        "success": [
+          200
+        ],
+        "query": {
+          "output": "{{output}}",
+          "country": "{{country}}",
+          "keyword": "{{keyword}}",
+          "target_url": "{{target_url}}",
+          "top_competitors": "{{top_competitors}}"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "title": "Content Helper topics",
+      "validationMode": "strict-generated"
+    },
+    "public.domain-rating-free": {
+      "description": "Retrieve free Domain Rating for a single domain or URL.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "output": {
+            "type": "string",
+            "description": "Output format.",
+            "enum": [
+              "json",
+              "csv",
+              "xml",
+              "php"
+            ]
+          },
+          "target": {
+            "type": "string",
+            "description": "Domain or URL to analyze.",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "target"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/public/domain-rating-free",
+        "success": [
+          200
+        ],
+        "query": {
+          "output": "{{output}}",
+          "target": "{{target}}"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Domain rating (free)",
+      "validationMode": "strict-generated"
+    },
+    "public.domain-rating-top-domains": {
+      "description": "Retrieve domains ranked by Domain Rating. from/to select a rank window.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "to": {
+            "type": "integer",
+            "description": "End rank position. At most 250000 rows per request.",
+            "minimum": 1
+          },
+          "from": {
+            "type": "integer",
+            "description": "Start rank position.",
+            "minimum": 1
+          },
+          "output": {
+            "type": "string",
+            "description": "Output format.",
+            "enum": [
+              "json",
+              "csv",
+              "xml",
+              "php"
+            ]
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 10485760,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/public/domain-rating-top-domains",
+        "success": [
+          200
+        ],
+        "query": {
+          "to": "{{to}}",
+          "from": "{{from}}",
+          "output": "{{output}}"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Domain rating top domains",
+      "validationMode": "strict-generated"
+    },
+    "serp-overview.serp-overview": {
+      "description": "Retrieve top SERP results for a keyword.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "date": {
+            "type": "string",
+            "description": "Date to report metrics on in YYYY-MM-DD format.",
+            "minLength": 1
+          },
+          "output": {
+            "type": "string",
+            "description": "Output format.",
+            "enum": [
+              "json",
+              "csv",
+              "xml",
+              "php"
+            ]
+          },
+          "select": {
+            "type": "string",
+            "description": "Comma-separated list of columns to return.",
+            "minLength": 1
+          },
+          "country": {
+            "type": "string",
+            "description": "Two-letter country code (ISO 3166-1 alpha-2).",
+            "minLength": 1
+          },
+          "keyword": {
+            "type": "string",
+            "description": "Keyword to show metrics for.",
+            "minLength": 1
+          },
+          "top_positions": {
+            "type": "integer",
+            "description": "Number of top positions to return.",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "select",
+          "keyword"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
       },
       "request": {
         "method": "GET",
@@ -1435,24 +2131,2641 @@
           200
         ],
         "query": {
-          "keyword": "{{keyword}}",
-          "country": "{{country}}",
           "date": "{{date}}",
+          "output": "{{output}}",
           "select": "{{select}}",
-          "limit": "{{limit}}"
+          "country": "{{country}}",
+          "keyword": "{{keyword}}",
+          "top_positions": "{{top_positions}}"
         }
       },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "title": "SERP overview",
+      "validationMode": "strict-generated"
+    },
+    "site-audit.projects": {
+      "description": "List Site Audit projects and their health scores.",
       "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "output": {
+            "type": "string",
+            "description": "Output format.",
+            "enum": [
+              "json",
+              "csv",
+              "xml",
+              "php"
+            ]
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/site-audit/projects",
+        "success": [
+          200
+        ],
+        "query": {
+          "output": "{{output}}"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Site Audit projects",
+      "validationMode": "strict-generated"
+    },
+    "site-explorer.ai-responses-count": {
+      "description": "Retrieve AI-response citation counts for a target from Site Explorer.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "date": {
+            "type": "string",
+            "description": "Date to report metrics on in YYYY-MM-DD format.",
+            "minLength": 1
+          },
+          "mode": {
+            "type": "string",
+            "description": "Scope of the search based on the target.",
+            "enum": [
+              "exact",
+              "prefix",
+              "domain",
+              "subdomains"
+            ]
+          },
+          "output": {
+            "type": "string",
+            "description": "Output format.",
+            "enum": [
+              "json",
+              "php"
+            ]
+          },
+          "select": {
+            "type": "string",
+            "description": "Comma-separated list of columns to return.",
+            "minLength": 1
+          },
+          "target": {
+            "type": "string",
+            "description": "Domain or URL to analyze.",
+            "minLength": 1
+          },
+          "country": {
+            "type": "string",
+            "description": "Two-letter country code (ISO 3166-1 alpha-2).",
+            "minLength": 1
+          },
+          "protocol": {
+            "type": "string",
+            "description": "Protocol of the target.",
+            "enum": [
+              "both",
+              "http",
+              "https"
+            ]
+          }
+        },
+        "required": [
+          "select",
+          "target"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/site-explorer/ai-responses-count",
+        "success": [
+          200
+        ],
+        "query": {
+          "date": "{{date}}",
+          "mode": "{{mode}}",
+          "output": "{{output}}",
+          "select": "{{select}}",
+          "target": "{{target}}",
+          "country": "{{country}}",
+          "protocol": "{{protocol}}"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "AI responses count",
+      "validationMode": "strict-generated"
+    },
+    "site-explorer.crawled-pages": {
+      "description": "Retrieve pages Ahrefs crawled for a target.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "mode": {
+            "type": "string",
+            "description": "Scope of the search based on the target.",
+            "enum": [
+              "exact",
+              "prefix",
+              "domain",
+              "subdomains"
+            ]
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Number of results to return.",
+            "minimum": 1
+          },
+          "where": {
+            "type": "string",
+            "description": "Ahrefs filter expression.",
+            "minLength": 1
+          },
+          "output": {
+            "type": "string",
+            "description": "Output format.",
+            "enum": [
+              "json",
+              "php"
+            ]
+          },
+          "select": {
+            "type": "string",
+            "description": "Comma-separated list of columns to return.",
+            "minLength": 1
+          },
+          "target": {
+            "type": "string",
+            "description": "Domain or URL to analyze.",
+            "minLength": 1
+          },
+          "order_by": {
+            "type": "string",
+            "description": "Column ordering expression accepted by Ahrefs.",
+            "minLength": 1
+          },
+          "protocol": {
+            "type": "string",
+            "description": "Protocol of the target.",
+            "enum": [
+              "both",
+              "http",
+              "https"
+            ]
+          }
+        },
+        "required": [
+          "select",
+          "target"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/site-explorer/crawled-pages",
+        "success": [
+          200
+        ],
+        "query": {
+          "mode": "{{mode}}",
+          "limit": "{{limit}}",
+          "where": "{{where}}",
+          "output": "{{output}}",
+          "select": "{{select}}",
+          "target": "{{target}}",
+          "order_by": "{{order_by}}",
+          "protocol": "{{protocol}}"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Crawled pages",
+      "validationMode": "strict-generated"
+    },
+    "site-explorer.linked-anchors-external": {
+      "description": "Retrieve outgoing external anchor texts from a target.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "mode": {
+            "type": "string",
+            "description": "Scope of the search based on the target.",
+            "enum": [
+              "exact",
+              "prefix",
+              "domain",
+              "subdomains"
+            ]
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Number of results to return.",
+            "minimum": 1
+          },
+          "where": {
+            "type": "string",
+            "description": "Ahrefs filter expression.",
+            "minLength": 1
+          },
+          "offset": {
+            "type": "integer",
+            "description": "Deprecated offset into the result set.",
+            "minimum": 0
+          },
+          "output": {
+            "type": "string",
+            "description": "Output format.",
+            "enum": [
+              "json",
+              "csv",
+              "xml",
+              "php"
+            ]
+          },
+          "timeout": {
+            "type": "integer",
+            "description": "Manual timeout duration in seconds.",
+            "minimum": 1
+          },
+          "order_by": {
+            "type": "string",
+            "description": "Column ordering expression accepted by Ahrefs.",
+            "minLength": 1
+          },
+          "protocol": {
+            "type": "string",
+            "description": "Protocol of the target.",
+            "enum": [
+              "both",
+              "http",
+              "https"
+            ]
+          },
+          "select": {
+            "type": "string",
+            "description": "Comma-separated list of columns to return.",
+            "minLength": 1
+          },
+          "target": {
+            "type": "string",
+            "description": "Domain or URL to analyze.",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "select",
+          "target"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/site-explorer/linked-anchors-external",
+        "success": [
+          200
+        ],
+        "query": {
+          "mode": "{{mode}}",
+          "limit": "{{limit}}",
+          "where": "{{where}}",
+          "offset": "{{offset}}",
+          "output": "{{output}}",
+          "timeout": "{{timeout}}",
+          "order_by": "{{order_by}}",
+          "protocol": "{{protocol}}",
+          "select": "{{select}}",
+          "target": "{{target}}"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Linked anchors (external)",
+      "validationMode": "strict-generated"
+    },
+    "site-explorer.url-rating-history": {
+      "description": "Retrieve historical URL Rating values for a URL or domain.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "output": {
+            "type": "string",
+            "description": "Output format.",
+            "enum": [
+              "json",
+              "csv",
+              "xml",
+              "php"
+            ]
+          },
+          "target": {
+            "type": "string",
+            "description": "Domain or URL to analyze.",
+            "minLength": 1
+          },
+          "date_to": {
+            "type": "string",
+            "description": "End date of the historical period in YYYY-MM-DD format.",
+            "minLength": 1
+          },
+          "date_from": {
+            "type": "string",
+            "description": "Start date of the historical period in YYYY-MM-DD format.",
+            "minLength": 1
+          },
+          "history_grouping": {
+            "type": "string",
+            "description": "Time interval used to group historical data.",
+            "enum": [
+              "daily",
+              "weekly",
+              "monthly"
+            ]
+          }
+        },
+        "required": [
+          "target",
+          "date_from"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/site-explorer/url-rating-history",
+        "success": [
+          200
+        ],
+        "query": {
+          "output": "{{output}}",
+          "target": "{{target}}",
+          "date_to": "{{date_to}}",
+          "date_from": "{{date_from}}",
+          "history_grouping": "{{history_grouping}}"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "URL rating history",
+      "validationMode": "strict-generated"
+    },
+    "site-explorer.linked-anchors-internal": {
+      "description": "Retrieve internal linked anchors for a target website.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "mode": {
+            "type": "string",
+            "description": "Scope of the search based on the target.",
+            "enum": [
+              "exact",
+              "prefix",
+              "domain",
+              "subdomains"
+            ]
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Number of results to return.",
+            "minimum": 1
+          },
+          "where": {
+            "type": "string",
+            "description": "Ahrefs filter expression.",
+            "minLength": 1
+          },
+          "offset": {
+            "type": "integer",
+            "description": "Deprecated offset into the result set.",
+            "minimum": 0
+          },
+          "output": {
+            "type": "string",
+            "description": "Output format.",
+            "enum": [
+              "json",
+              "csv",
+              "xml",
+              "php"
+            ]
+          },
+          "timeout": {
+            "type": "integer",
+            "description": "Manual timeout duration in seconds.",
+            "minimum": 1
+          },
+          "order_by": {
+            "type": "string",
+            "description": "Column ordering expression accepted by Ahrefs.",
+            "minLength": 1
+          },
+          "protocol": {
+            "type": "string",
+            "description": "Protocol of the target.",
+            "enum": [
+              "both",
+              "http",
+              "https"
+            ]
+          },
+          "select": {
+            "type": "string",
+            "description": "Comma-separated list of columns to return.",
+            "minLength": 1
+          },
+          "target": {
+            "type": "string",
+            "description": "Domain or URL to analyze.",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "select",
+          "target"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/site-explorer/linked-anchors-internal",
+        "success": [
+          200
+        ],
+        "query": {
+          "mode": "{{mode}}",
+          "limit": "{{limit}}",
+          "where": "{{where}}",
+          "offset": "{{offset}}",
+          "output": "{{output}}",
+          "timeout": "{{timeout}}",
+          "order_by": "{{order_by}}",
+          "protocol": "{{protocol}}",
+          "select": "{{select}}",
+          "target": "{{target}}"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Linked anchors (internal)",
+      "validationMode": "strict-generated"
+    },
+    "site-explorer.pages-by-backlinks": {
+      "description": "List pages on a target ranked by external links (formerly best-by-external-links).",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "mode": {
+            "type": "string",
+            "description": "Scope of the search based on the target.",
+            "enum": [
+              "exact",
+              "prefix",
+              "domain",
+              "subdomains"
+            ]
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Number of results to return.",
+            "minimum": 1
+          },
+          "where": {
+            "type": "string",
+            "description": "Ahrefs filter expression.",
+            "minLength": 1
+          },
+          "offset": {
+            "type": "integer",
+            "description": "Deprecated offset into the result set.",
+            "minimum": 0
+          },
+          "output": {
+            "type": "string",
+            "description": "Output format.",
+            "enum": [
+              "json",
+              "csv",
+              "xml",
+              "php"
+            ]
+          },
+          "timeout": {
+            "type": "integer",
+            "description": "Manual timeout duration in seconds.",
+            "minimum": 1
+          },
+          "order_by": {
+            "type": "string",
+            "description": "Column ordering expression accepted by Ahrefs.",
+            "minLength": 1
+          },
+          "protocol": {
+            "type": "string",
+            "description": "Protocol of the target.",
+            "enum": [
+              "both",
+              "http",
+              "https"
+            ]
+          },
+          "select": {
+            "type": "string",
+            "description": "Comma-separated list of columns to return.",
+            "minLength": 1
+          },
+          "target": {
+            "type": "string",
+            "description": "Domain or URL to analyze.",
+            "minLength": 1
+          },
+          "history": {
+            "type": "string",
+            "description": "History window: live, since:YYYY-MM-DD, or all_time.",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "select",
+          "target"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/site-explorer/pages-by-backlinks",
+        "success": [
+          200
+        ],
+        "query": {
+          "mode": "{{mode}}",
+          "limit": "{{limit}}",
+          "where": "{{where}}",
+          "offset": "{{offset}}",
+          "output": "{{output}}",
+          "timeout": "{{timeout}}",
+          "order_by": "{{order_by}}",
+          "protocol": "{{protocol}}",
+          "select": "{{select}}",
+          "target": "{{target}}",
+          "history": "{{history}}"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Pages by backlinks",
+      "validationMode": "strict-generated"
+    },
+    "site-explorer.pages-by-traffic": {
+      "description": "Retrieve pages on a target ordered by estimated organic traffic.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "mode": {
+            "type": "string",
+            "description": "Scope of the search based on the target.",
+            "enum": [
+              "exact",
+              "prefix",
+              "domain",
+              "subdomains"
+            ]
+          },
+          "output": {
+            "type": "string",
+            "description": "Output format.",
+            "enum": [
+              "json",
+              "csv",
+              "xml",
+              "php"
+            ]
+          },
+          "target": {
+            "type": "string",
+            "description": "Domain or URL to analyze.",
+            "minLength": 1
+          },
+          "country": {
+            "type": "string",
+            "description": "Two-letter country code (ISO 3166-1 alpha-2).",
+            "minLength": 1
+          },
+          "protocol": {
+            "type": "string",
+            "description": "Protocol of the target.",
+            "enum": [
+              "both",
+              "http",
+              "https"
+            ]
+          },
+          "volume_mode": {
+            "type": "string",
+            "description": "Search volume calculation mode: monthly or average.",
+            "enum": [
+              "monthly",
+              "average"
+            ]
+          }
+        },
+        "required": [
+          "target"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/site-explorer/pages-by-traffic",
+        "success": [
+          200
+        ],
+        "query": {
+          "mode": "{{mode}}",
+          "output": "{{output}}",
+          "target": "{{target}}",
+          "country": "{{country}}",
+          "protocol": "{{protocol}}",
+          "volume_mode": "{{volume_mode}}"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Pages by traffic",
+      "validationMode": "strict-generated"
+    },
+    "public.domain-rating-free-post": {
+      "description": "Retrieve free Domain Rating for up to 1000 domains or URLs.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "output": {
+            "type": "string",
+            "description": "Output format.",
+            "enum": [
+              "json",
+              "php"
+            ]
+          },
+          "targets": {
+            "type": "array",
+            "description": "Domains or URLs to score.",
+            "minItems": 1,
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Column or target identifier."
+            }
+          }
+        },
+        "required": [
+          "targets"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 262144,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "POST",
+        "path": "/public/domain-rating-free",
+        "success": [
+          200
+        ],
+        "query": {
+          "output": "{{output}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "targets": "{{targets}}"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Domain rating (free, batch)",
+      "validationMode": "strict-generated"
+    },
+    "site-explorer.anchors": {
+      "description": "Retrieve backlink anchor-text distribution for a target.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "mode": {
+            "type": "string",
+            "description": "Scope of the search based on the target.",
+            "enum": [
+              "exact",
+              "prefix",
+              "domain",
+              "subdomains"
+            ]
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Number of results to return.",
+            "minimum": 1
+          },
+          "where": {
+            "type": "string",
+            "description": "Ahrefs filter expression.",
+            "minLength": 1
+          },
+          "offset": {
+            "type": "integer",
+            "description": "Deprecated offset into the result set.",
+            "minimum": 0
+          },
+          "output": {
+            "type": "string",
+            "description": "Output format.",
+            "enum": [
+              "json",
+              "csv",
+              "xml",
+              "php"
+            ]
+          },
+          "timeout": {
+            "type": "integer",
+            "description": "Manual timeout duration in seconds.",
+            "minimum": 1
+          },
+          "order_by": {
+            "type": "string",
+            "description": "Column ordering expression accepted by Ahrefs.",
+            "minLength": 1
+          },
+          "protocol": {
+            "type": "string",
+            "description": "Protocol of the target.",
+            "enum": [
+              "both",
+              "http",
+              "https"
+            ]
+          },
+          "select": {
+            "type": "string",
+            "description": "Comma-separated list of columns to return.",
+            "minLength": 1
+          },
+          "target": {
+            "type": "string",
+            "description": "Domain or URL to analyze.",
+            "minLength": 1
+          },
+          "history": {
+            "type": "string",
+            "description": "History window: live, since:YYYY-MM-DD, or all_time.",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "select",
+          "target"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/site-explorer/anchors",
+        "success": [
+          200
+        ],
+        "query": {
+          "mode": "{{mode}}",
+          "limit": "{{limit}}",
+          "where": "{{where}}",
+          "offset": "{{offset}}",
+          "output": "{{output}}",
+          "timeout": "{{timeout}}",
+          "order_by": "{{order_by}}",
+          "protocol": "{{protocol}}",
+          "select": "{{select}}",
+          "target": "{{target}}",
+          "history": "{{history}}"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Anchors",
+      "validationMode": "strict-generated"
+    },
+    "site-explorer.pages-by-internal-links": {
+      "description": "List pages on a target ranked by internal links.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "mode": {
+            "type": "string",
+            "description": "Scope of the search based on the target.",
+            "enum": [
+              "exact",
+              "prefix",
+              "domain",
+              "subdomains"
+            ]
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Number of results to return.",
+            "minimum": 1
+          },
+          "where": {
+            "type": "string",
+            "description": "Ahrefs filter expression.",
+            "minLength": 1
+          },
+          "offset": {
+            "type": "integer",
+            "description": "Deprecated offset into the result set.",
+            "minimum": 0
+          },
+          "output": {
+            "type": "string",
+            "description": "Output format.",
+            "enum": [
+              "json",
+              "csv",
+              "xml",
+              "php"
+            ]
+          },
+          "timeout": {
+            "type": "integer",
+            "description": "Manual timeout duration in seconds.",
+            "minimum": 1
+          },
+          "order_by": {
+            "type": "string",
+            "description": "Column ordering expression accepted by Ahrefs.",
+            "minLength": 1
+          },
+          "protocol": {
+            "type": "string",
+            "description": "Protocol of the target.",
+            "enum": [
+              "both",
+              "http",
+              "https"
+            ]
+          },
+          "select": {
+            "type": "string",
+            "description": "Comma-separated list of columns to return.",
+            "minLength": 1
+          },
+          "target": {
+            "type": "string",
+            "description": "Domain or URL to analyze.",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "select",
+          "target"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/site-explorer/pages-by-internal-links",
+        "success": [
+          200
+        ],
+        "query": {
+          "mode": "{{mode}}",
+          "limit": "{{limit}}",
+          "where": "{{where}}",
+          "offset": "{{offset}}",
+          "output": "{{output}}",
+          "timeout": "{{timeout}}",
+          "order_by": "{{order_by}}",
+          "protocol": "{{protocol}}",
+          "select": "{{select}}",
+          "target": "{{target}}"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Pages by internal links",
+      "validationMode": "strict-generated"
+    },
+    "public.crawler-ip-ranges": {
+      "description": "Retrieve public Ahrefs crawler IP ranges.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "output": {
+            "type": "string",
+            "description": "Output format.",
+            "enum": [
+              "json",
+              "csv",
+              "xml",
+              "php"
+            ]
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/public/crawler-ip-ranges",
+        "success": [
+          200
+        ],
+        "query": {
+          "output": "{{output}}"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Crawler IP ranges",
+      "validationMode": "strict-generated"
+    },
+    "site-explorer.organic-competitors": {
+      "description": "Retrieve organic competitors for a target from Site Explorer.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "mode": {
+            "type": "string",
+            "description": "Scope of the search based on the target.",
+            "enum": [
+              "exact",
+              "prefix",
+              "domain",
+              "subdomains"
+            ]
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Number of results to return.",
+            "minimum": 1
+          },
+          "where": {
+            "type": "string",
+            "description": "Ahrefs filter expression.",
+            "minLength": 1
+          },
+          "offset": {
+            "type": "integer",
+            "description": "Deprecated offset into the result set.",
+            "minimum": 0
+          },
+          "output": {
+            "type": "string",
+            "description": "Output format.",
+            "enum": [
+              "json",
+              "csv",
+              "xml",
+              "php"
+            ]
+          },
+          "timeout": {
+            "type": "integer",
+            "description": "Manual timeout duration in seconds.",
+            "minimum": 1
+          },
+          "order_by": {
+            "type": "string",
+            "description": "Column ordering expression accepted by Ahrefs.",
+            "minLength": 1
+          },
+          "protocol": {
+            "type": "string",
+            "description": "Protocol of the target.",
+            "enum": [
+              "both",
+              "http",
+              "https"
+            ]
+          },
+          "select": {
+            "type": "string",
+            "description": "Comma-separated list of columns to return.",
+            "minLength": 1
+          },
+          "target": {
+            "type": "string",
+            "description": "Domain or URL to analyze.",
+            "minLength": 1
+          },
+          "date": {
+            "type": "string",
+            "description": "Date to report metrics on in YYYY-MM-DD format.",
+            "minLength": 1
+          },
+          "country": {
+            "type": "string",
+            "description": "Two-letter country code (ISO 3166-1 alpha-2).",
+            "minLength": 1
+          },
+          "volume_mode": {
+            "type": "string",
+            "description": "Search volume calculation mode: monthly or average.",
+            "enum": [
+              "monthly",
+              "average"
+            ]
+          },
+          "date_compared": {
+            "type": "string",
+            "description": "Comparison date in YYYY-MM-DD format.",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "date",
+          "select",
+          "target"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/site-explorer/organic-competitors",
+        "success": [
+          200
+        ],
+        "query": {
+          "mode": "{{mode}}",
+          "limit": "{{limit}}",
+          "where": "{{where}}",
+          "offset": "{{offset}}",
+          "output": "{{output}}",
+          "timeout": "{{timeout}}",
+          "order_by": "{{order_by}}",
+          "protocol": "{{protocol}}",
+          "select": "{{select}}",
+          "target": "{{target}}",
+          "date": "{{date}}",
+          "country": "{{country}}",
+          "volume_mode": "{{volume_mode}}",
+          "date_compared": "{{date_compared}}"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Organic competitors",
+      "validationMode": "strict-generated"
+    },
+    "site-explorer.organic-keywords": {
+      "description": "Retrieve organic keywords a target ranks for.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "mode": {
+            "type": "string",
+            "description": "Scope of the search based on the target.",
+            "enum": [
+              "exact",
+              "prefix",
+              "domain",
+              "subdomains"
+            ]
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Number of results to return.",
+            "minimum": 1
+          },
+          "where": {
+            "type": "string",
+            "description": "Ahrefs filter expression.",
+            "minLength": 1
+          },
+          "offset": {
+            "type": "integer",
+            "description": "Deprecated offset into the result set.",
+            "minimum": 0
+          },
+          "output": {
+            "type": "string",
+            "description": "Output format.",
+            "enum": [
+              "json",
+              "csv",
+              "xml",
+              "php"
+            ]
+          },
+          "timeout": {
+            "type": "integer",
+            "description": "Manual timeout duration in seconds.",
+            "minimum": 1
+          },
+          "order_by": {
+            "type": "string",
+            "description": "Column ordering expression accepted by Ahrefs.",
+            "minLength": 1
+          },
+          "protocol": {
+            "type": "string",
+            "description": "Protocol of the target.",
+            "enum": [
+              "both",
+              "http",
+              "https"
+            ]
+          },
+          "select": {
+            "type": "string",
+            "description": "Comma-separated list of columns to return.",
+            "minLength": 1
+          },
+          "target": {
+            "type": "string",
+            "description": "Domain or URL to analyze.",
+            "minLength": 1
+          },
+          "date": {
+            "type": "string",
+            "description": "Date to report metrics on in YYYY-MM-DD format.",
+            "minLength": 1
+          },
+          "country": {
+            "type": "string",
+            "description": "Two-letter country code (ISO 3166-1 alpha-2).",
+            "minLength": 1
+          },
+          "volume_mode": {
+            "type": "string",
+            "description": "Search volume calculation mode: monthly or average.",
+            "enum": [
+              "monthly",
+              "average"
+            ]
+          },
+          "date_compared": {
+            "type": "string",
+            "description": "Comparison date in YYYY-MM-DD format.",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "date",
+          "select",
+          "target"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/site-explorer/organic-keywords",
+        "success": [
+          200
+        ],
+        "query": {
+          "mode": "{{mode}}",
+          "limit": "{{limit}}",
+          "where": "{{where}}",
+          "offset": "{{offset}}",
+          "output": "{{output}}",
+          "timeout": "{{timeout}}",
+          "order_by": "{{order_by}}",
+          "protocol": "{{protocol}}",
+          "select": "{{select}}",
+          "target": "{{target}}",
+          "date": "{{date}}",
+          "country": "{{country}}",
+          "volume_mode": "{{volume_mode}}",
+          "date_compared": "{{date_compared}}"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Organic keywords",
+      "validationMode": "strict-generated"
+    },
+    "site-explorer.outlinks-stats": {
+      "description": "Retrieve outgoing-link statistics for a target.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "mode": {
+            "type": "string",
+            "description": "Scope of the search based on the target.",
+            "enum": [
+              "exact",
+              "prefix",
+              "domain",
+              "subdomains"
+            ]
+          },
+          "output": {
+            "type": "string",
+            "description": "Output format.",
+            "enum": [
+              "json",
+              "csv",
+              "xml",
+              "php"
+            ]
+          },
+          "target": {
+            "type": "string",
+            "description": "Domain or URL to analyze.",
+            "minLength": 1
+          },
+          "protocol": {
+            "type": "string",
+            "description": "Protocol of the target.",
+            "enum": [
+              "both",
+              "http",
+              "https"
+            ]
+          }
+        },
+        "required": [
+          "target"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/site-explorer/outlinks-stats",
+        "success": [
+          200
+        ],
+        "query": {
+          "mode": "{{mode}}",
+          "output": "{{output}}",
+          "target": "{{target}}",
+          "protocol": "{{protocol}}"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Outlinks stats",
+      "validationMode": "strict-generated"
+    },
+    "site-explorer.paid-pages": {
+      "description": "Retrieve paid-search pages for a target from Site Explorer.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "mode": {
+            "type": "string",
+            "description": "Scope of the search based on the target.",
+            "enum": [
+              "exact",
+              "prefix",
+              "domain",
+              "subdomains"
+            ]
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Number of results to return.",
+            "minimum": 1
+          },
+          "where": {
+            "type": "string",
+            "description": "Ahrefs filter expression.",
+            "minLength": 1
+          },
+          "offset": {
+            "type": "integer",
+            "description": "Deprecated offset into the result set.",
+            "minimum": 0
+          },
+          "output": {
+            "type": "string",
+            "description": "Output format.",
+            "enum": [
+              "json",
+              "csv",
+              "xml",
+              "php"
+            ]
+          },
+          "timeout": {
+            "type": "integer",
+            "description": "Manual timeout duration in seconds.",
+            "minimum": 1
+          },
+          "order_by": {
+            "type": "string",
+            "description": "Column ordering expression accepted by Ahrefs.",
+            "minLength": 1
+          },
+          "protocol": {
+            "type": "string",
+            "description": "Protocol of the target.",
+            "enum": [
+              "both",
+              "http",
+              "https"
+            ]
+          },
+          "select": {
+            "type": "string",
+            "description": "Comma-separated list of columns to return.",
+            "minLength": 1
+          },
+          "target": {
+            "type": "string",
+            "description": "Domain or URL to analyze.",
+            "minLength": 1
+          },
+          "date": {
+            "type": "string",
+            "description": "Date to report metrics on in YYYY-MM-DD format.",
+            "minLength": 1
+          },
+          "country": {
+            "type": "string",
+            "description": "Two-letter country code (ISO 3166-1 alpha-2).",
+            "minLength": 1
+          },
+          "volume_mode": {
+            "type": "string",
+            "description": "Search volume calculation mode: monthly or average.",
+            "enum": [
+              "monthly",
+              "average"
+            ]
+          },
+          "date_compared": {
+            "type": "string",
+            "description": "Comparison date in YYYY-MM-DD format.",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "date",
+          "select",
+          "target"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/site-explorer/paid-pages",
+        "success": [
+          200
+        ],
+        "query": {
+          "mode": "{{mode}}",
+          "limit": "{{limit}}",
+          "where": "{{where}}",
+          "offset": "{{offset}}",
+          "output": "{{output}}",
+          "timeout": "{{timeout}}",
+          "order_by": "{{order_by}}",
+          "protocol": "{{protocol}}",
+          "select": "{{select}}",
+          "target": "{{target}}",
+          "date": "{{date}}",
+          "country": "{{country}}",
+          "volume_mode": "{{volume_mode}}",
+          "date_compared": "{{date_compared}}"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Paid pages",
+      "validationMode": "strict-generated"
+    },
+    "public.crawler-ips": {
+      "description": "Retrieve public Ahrefs crawler IP addresses.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "output": {
+            "type": "string",
+            "description": "Output format.",
+            "enum": [
+              "json",
+              "csv",
+              "xml",
+              "php"
+            ]
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/public/crawler-ips",
+        "success": [
+          200
+        ],
+        "query": {
+          "output": "{{output}}"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Crawler IPs",
+      "validationMode": "strict-generated"
+    },
+    "keywords-explorer.related-terms": {
+      "description": "Retrieve related keyword terms from Keywords Explorer.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "description": "Number of results to return.",
+            "minimum": 1
+          },
+          "terms": {
+            "type": "string",
+            "description": "Related-term view: also_rank_for, also_talk_about, or all.",
+            "enum": [
+              "also_rank_for",
+              "also_talk_about",
+              "all"
+            ]
+          },
+          "where": {
+            "type": "string",
+            "description": "Ahrefs filter expression.",
+            "minLength": 1
+          },
+          "offset": {
+            "type": "integer",
+            "description": "Deprecated offset into the result set.",
+            "minimum": 0
+          },
+          "output": {
+            "type": "string",
+            "description": "Output format.",
+            "enum": [
+              "json",
+              "csv",
+              "xml",
+              "php"
+            ]
+          },
+          "select": {
+            "type": "string",
+            "description": "Comma-separated list of columns to return.",
+            "minLength": 1
+          },
+          "country": {
+            "type": "string",
+            "description": "Two-letter country code (ISO 3166-1 alpha-2).",
+            "minLength": 1
+          },
+          "timeout": {
+            "type": "integer",
+            "description": "Manual timeout duration in seconds.",
+            "minimum": 1
+          },
+          "keywords": {
+            "type": "string",
+            "description": "Comma-separated list of keywords to show metrics for.",
+            "minLength": 1
+          },
+          "order_by": {
+            "type": "string",
+            "description": "Column ordering expression accepted by Ahrefs.",
+            "minLength": 1
+          },
+          "view_for": {
+            "type": "string",
+            "description": "SERP window used to compute related terms.",
+            "enum": [
+              "top_10",
+              "top_100"
+            ]
+          },
+          "keyword_list_id": {
+            "type": "integer",
+            "description": "Id of an existing keyword list.",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "select",
+          "country"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/keywords-explorer/related-terms",
+        "success": [
+          200
+        ],
+        "query": {
+          "limit": "{{limit}}",
+          "terms": "{{terms}}",
+          "where": "{{where}}",
+          "offset": "{{offset}}",
+          "output": "{{output}}",
+          "select": "{{select}}",
+          "country": "{{country}}",
+          "timeout": "{{timeout}}",
+          "keywords": "{{keywords}}",
+          "order_by": "{{order_by}}",
+          "view_for": "{{view_for}}",
+          "keyword_list_id": "{{keyword_list_id}}"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Related terms",
+      "validationMode": "strict-generated"
+    },
+    "site-explorer.keywords-history": {
+      "description": "Retrieve historical organic-keyword counts for a target.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "mode": {
+            "type": "string",
+            "description": "Scope of the search based on the target.",
+            "enum": [
+              "exact",
+              "prefix",
+              "domain",
+              "subdomains"
+            ]
+          },
+          "output": {
+            "type": "string",
+            "description": "Output format.",
+            "enum": [
+              "json",
+              "csv",
+              "xml",
+              "php"
+            ]
+          },
+          "select": {
+            "type": "string",
+            "description": "Comma-separated list of columns to return.",
+            "minLength": 1
+          },
+          "target": {
+            "type": "string",
+            "description": "Domain or URL to analyze.",
+            "minLength": 1
+          },
+          "country": {
+            "type": "string",
+            "description": "Two-letter country code (ISO 3166-1 alpha-2).",
+            "minLength": 1
+          },
+          "date_to": {
+            "type": "string",
+            "description": "End date of the historical period in YYYY-MM-DD format.",
+            "minLength": 1
+          },
+          "protocol": {
+            "type": "string",
+            "description": "Protocol of the target.",
+            "enum": [
+              "both",
+              "http",
+              "https"
+            ]
+          },
+          "date_from": {
+            "type": "string",
+            "description": "Start date of the historical period in YYYY-MM-DD format.",
+            "minLength": 1
+          },
+          "history_grouping": {
+            "type": "string",
+            "description": "Time interval used to group historical data.",
+            "enum": [
+              "daily",
+              "weekly",
+              "monthly"
+            ]
+          }
+        },
+        "required": [
+          "target",
+          "date_from"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/site-explorer/keywords-history",
+        "success": [
+          200
+        ],
+        "query": {
+          "mode": "{{mode}}",
+          "output": "{{output}}",
+          "select": "{{select}}",
+          "target": "{{target}}",
+          "country": "{{country}}",
+          "date_to": "{{date_to}}",
+          "protocol": "{{protocol}}",
+          "date_from": "{{date_from}}",
+          "history_grouping": "{{history_grouping}}"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Keywords history",
+      "validationMode": "strict-generated"
+    },
+    "site-explorer.metrics-history": {
+      "description": "Retrieve historical Site Explorer metrics for a target.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "mode": {
+            "type": "string",
+            "description": "Scope of the search based on the target.",
+            "enum": [
+              "exact",
+              "prefix",
+              "domain",
+              "subdomains"
+            ]
+          },
+          "output": {
+            "type": "string",
+            "description": "Output format.",
+            "enum": [
+              "json",
+              "csv",
+              "xml",
+              "php"
+            ]
+          },
+          "select": {
+            "type": "string",
+            "description": "Comma-separated list of columns to return.",
+            "minLength": 1
+          },
+          "target": {
+            "type": "string",
+            "description": "Domain or URL to analyze.",
+            "minLength": 1
+          },
+          "country": {
+            "type": "string",
+            "description": "Two-letter country code (ISO 3166-1 alpha-2).",
+            "minLength": 1
+          },
+          "date_to": {
+            "type": "string",
+            "description": "End date of the historical period in YYYY-MM-DD format.",
+            "minLength": 1
+          },
+          "protocol": {
+            "type": "string",
+            "description": "Protocol of the target.",
+            "enum": [
+              "both",
+              "http",
+              "https"
+            ]
+          },
+          "date_from": {
+            "type": "string",
+            "description": "Start date of the historical period in YYYY-MM-DD format.",
+            "minLength": 1
+          },
+          "volume_mode": {
+            "type": "string",
+            "description": "Search volume calculation mode: monthly or average.",
+            "enum": [
+              "monthly",
+              "average"
+            ]
+          },
+          "history_grouping": {
+            "type": "string",
+            "description": "Time interval used to group historical data.",
+            "enum": [
+              "daily",
+              "weekly",
+              "monthly"
+            ]
+          }
+        },
+        "required": [
+          "target",
+          "date_from"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/site-explorer/metrics-history",
+        "success": [
+          200
+        ],
+        "query": {
+          "mode": "{{mode}}",
+          "output": "{{output}}",
+          "select": "{{select}}",
+          "target": "{{target}}",
+          "country": "{{country}}",
+          "date_to": "{{date_to}}",
+          "protocol": "{{protocol}}",
+          "date_from": "{{date_from}}",
+          "volume_mode": "{{volume_mode}}",
+          "history_grouping": "{{history_grouping}}"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Metrics history",
+      "validationMode": "strict-generated"
+    },
+    "site-explorer.pages-history": {
+      "description": "Retrieve historical crawled-page counts for a target.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "mode": {
+            "type": "string",
+            "description": "Scope of the search based on the target.",
+            "enum": [
+              "exact",
+              "prefix",
+              "domain",
+              "subdomains"
+            ]
+          },
+          "output": {
+            "type": "string",
+            "description": "Output format.",
+            "enum": [
+              "json",
+              "csv",
+              "xml",
+              "php"
+            ]
+          },
+          "target": {
+            "type": "string",
+            "description": "Domain or URL to analyze.",
+            "minLength": 1
+          },
+          "country": {
+            "type": "string",
+            "description": "Two-letter country code (ISO 3166-1 alpha-2).",
+            "minLength": 1
+          },
+          "date_to": {
+            "type": "string",
+            "description": "End date of the historical period in YYYY-MM-DD format.",
+            "minLength": 1
+          },
+          "protocol": {
+            "type": "string",
+            "description": "Protocol of the target.",
+            "enum": [
+              "both",
+              "http",
+              "https"
+            ]
+          },
+          "date_from": {
+            "type": "string",
+            "description": "Start date of the historical period in YYYY-MM-DD format.",
+            "minLength": 1
+          },
+          "history_grouping": {
+            "type": "string",
+            "description": "Time interval used to group historical data.",
+            "enum": [
+              "daily",
+              "weekly",
+              "monthly"
+            ]
+          }
+        },
+        "required": [
+          "target",
+          "date_from"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/site-explorer/pages-history",
+        "success": [
+          200
+        ],
+        "query": {
+          "mode": "{{mode}}",
+          "output": "{{output}}",
+          "target": "{{target}}",
+          "country": "{{country}}",
+          "date_to": "{{date_to}}",
+          "protocol": "{{protocol}}",
+          "date_from": "{{date_from}}",
+          "history_grouping": "{{history_grouping}}"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Pages history",
+      "validationMode": "strict-generated"
+    },
+    "site-explorer.refdomains-history": {
+      "description": "Retrieve historical referring-domain counts for a target.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "mode": {
+            "type": "string",
+            "description": "Scope of the search based on the target.",
+            "enum": [
+              "exact",
+              "prefix",
+              "domain",
+              "subdomains"
+            ]
+          },
+          "output": {
+            "type": "string",
+            "description": "Output format.",
+            "enum": [
+              "json",
+              "csv",
+              "xml",
+              "php"
+            ]
+          },
+          "target": {
+            "type": "string",
+            "description": "Domain or URL to analyze.",
+            "minLength": 1
+          },
+          "date_to": {
+            "type": "string",
+            "description": "End date of the historical period in YYYY-MM-DD format.",
+            "minLength": 1
+          },
+          "protocol": {
+            "type": "string",
+            "description": "Protocol of the target.",
+            "enum": [
+              "both",
+              "http",
+              "https"
+            ]
+          },
+          "date_from": {
+            "type": "string",
+            "description": "Start date of the historical period in YYYY-MM-DD format.",
+            "minLength": 1
+          },
+          "history_grouping": {
+            "type": "string",
+            "description": "Time interval used to group historical data.",
+            "enum": [
+              "daily",
+              "weekly",
+              "monthly"
+            ]
+          }
+        },
+        "required": [
+          "target",
+          "date_from"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/site-explorer/refdomains-history",
+        "success": [
+          200
+        ],
+        "query": {
+          "mode": "{{mode}}",
+          "output": "{{output}}",
+          "target": "{{target}}",
+          "date_to": "{{date_to}}",
+          "protocol": "{{protocol}}",
+          "date_from": "{{date_from}}",
+          "history_grouping": "{{history_grouping}}"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Referring domains history",
+      "validationMode": "strict-generated"
+    },
+    "site-explorer.top-pages": {
+      "description": "Retrieve top pages for a target from Site Explorer.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "mode": {
+            "type": "string",
+            "description": "Scope of the search based on the target.",
+            "enum": [
+              "exact",
+              "prefix",
+              "domain",
+              "subdomains"
+            ]
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Number of results to return.",
+            "minimum": 1
+          },
+          "where": {
+            "type": "string",
+            "description": "Ahrefs filter expression.",
+            "minLength": 1
+          },
+          "offset": {
+            "type": "integer",
+            "description": "Deprecated offset into the result set.",
+            "minimum": 0
+          },
+          "output": {
+            "type": "string",
+            "description": "Output format.",
+            "enum": [
+              "json",
+              "csv",
+              "xml",
+              "php"
+            ]
+          },
+          "timeout": {
+            "type": "integer",
+            "description": "Manual timeout duration in seconds.",
+            "minimum": 1
+          },
+          "order_by": {
+            "type": "string",
+            "description": "Column ordering expression accepted by Ahrefs.",
+            "minLength": 1
+          },
+          "protocol": {
+            "type": "string",
+            "description": "Protocol of the target.",
+            "enum": [
+              "both",
+              "http",
+              "https"
+            ]
+          },
+          "select": {
+            "type": "string",
+            "description": "Comma-separated list of columns to return.",
+            "minLength": 1
+          },
+          "target": {
+            "type": "string",
+            "description": "Domain or URL to analyze.",
+            "minLength": 1
+          },
+          "date": {
+            "type": "string",
+            "description": "Date to report metrics on in YYYY-MM-DD format.",
+            "minLength": 1
+          },
+          "country": {
+            "type": "string",
+            "description": "Two-letter country code (ISO 3166-1 alpha-2).",
+            "minLength": 1
+          },
+          "volume_mode": {
+            "type": "string",
+            "description": "Search volume calculation mode: monthly or average.",
+            "enum": [
+              "monthly",
+              "average"
+            ]
+          },
+          "date_compared": {
+            "type": "string",
+            "description": "Comparison date in YYYY-MM-DD format.",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "date",
+          "select",
+          "target"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/site-explorer/top-pages",
+        "success": [
+          200
+        ],
+        "query": {
+          "mode": "{{mode}}",
+          "limit": "{{limit}}",
+          "where": "{{where}}",
+          "offset": "{{offset}}",
+          "output": "{{output}}",
+          "timeout": "{{timeout}}",
+          "order_by": "{{order_by}}",
+          "protocol": "{{protocol}}",
+          "select": "{{select}}",
+          "target": "{{target}}",
+          "date": "{{date}}",
+          "country": "{{country}}",
+          "volume_mode": "{{volume_mode}}",
+          "date_compared": "{{date_compared}}"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Top pages",
+      "validationMode": "strict-generated"
+    },
+    "keywords-explorer.volume-history": {
+      "description": "Retrieve historical search volume for a keyword.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "output": {
+            "type": "string",
+            "description": "Output format.",
+            "enum": [
+              "json",
+              "csv",
+              "xml",
+              "php"
+            ]
+          },
+          "country": {
+            "type": "string",
+            "description": "Two-letter country code (ISO 3166-1 alpha-2).",
+            "minLength": 1
+          },
+          "keyword": {
+            "type": "string",
+            "description": "Keyword to show metrics for.",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "keyword"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/keywords-explorer/volume-history",
+        "success": [
+          200
+        ],
+        "query": {
+          "output": "{{output}}",
+          "country": "{{country}}",
+          "keyword": "{{keyword}}"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Volume history",
+      "validationMode": "strict-generated"
+    },
+    "keywords-explorer.search-suggestions": {
+      "description": "Retrieve autocomplete-style search suggestions for keywords.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "description": "Number of results to return.",
+            "minimum": 1
+          },
+          "where": {
+            "type": "string",
+            "description": "Ahrefs filter expression.",
+            "minLength": 1
+          },
+          "offset": {
+            "type": "integer",
+            "description": "Deprecated offset into the result set.",
+            "minimum": 0
+          },
+          "output": {
+            "type": "string",
+            "description": "Output format.",
+            "enum": [
+              "json",
+              "csv",
+              "xml",
+              "php"
+            ]
+          },
+          "select": {
+            "type": "string",
+            "description": "Comma-separated list of columns to return.",
+            "minLength": 1
+          },
+          "country": {
+            "type": "string",
+            "description": "Two-letter country code (ISO 3166-1 alpha-2).",
+            "minLength": 1
+          },
+          "timeout": {
+            "type": "integer",
+            "description": "Manual timeout duration in seconds.",
+            "minimum": 1
+          },
+          "keywords": {
+            "type": "string",
+            "description": "Comma-separated list of keywords to show metrics for.",
+            "minLength": 1
+          },
+          "order_by": {
+            "type": "string",
+            "description": "Column ordering expression accepted by Ahrefs.",
+            "minLength": 1
+          },
+          "search_engine": {
+            "type": "string",
+            "description": "Deprecated search engine filter.",
+            "enum": [
+              "google"
+            ]
+          },
+          "keyword_list_id": {
+            "type": "integer",
+            "description": "Id of an existing keyword list.",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "select",
+          "country"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/keywords-explorer/search-suggestions",
+        "success": [
+          200
+        ],
+        "query": {
+          "limit": "{{limit}}",
+          "where": "{{where}}",
+          "offset": "{{offset}}",
+          "output": "{{output}}",
+          "select": "{{select}}",
+          "country": "{{country}}",
+          "timeout": "{{timeout}}",
+          "keywords": "{{keywords}}",
+          "order_by": "{{order_by}}",
+          "search_engine": "{{search_engine}}",
+          "keyword_list_id": "{{keyword_list_id}}"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Search suggestions",
+      "validationMode": "strict-generated"
     }
   },
-  "evidence": {
-    "fixture": {
-      "status": "supplied"
-    },
-    "live": {
-      "status": "unverified"
+  "provenance": {
+    "source": {
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
+      "url": "https://github.com/oomol-lab/open-connector"
     }
-  }
+  },
+  "runtime": "bun",
+  "version": "0.2.0",
+  "visibility": "public"
 }

@@ -1,7 +1,7 @@
 {
   "key": "hubspot",
   "name": "HubSpot",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "runtime": "bun",
   "categories": [
     "crm"
@@ -40,6 +40,10 @@
       "content",
       "marketing-email",
       "conversations.read",
+      "communication_preferences.read",
+      "communication_preferences.write",
+      "settings.users.read",
+      "crm.schemas.custom.write",
       "oauth"
     ],
     "setup": {
@@ -124,14 +128,79 @@
           }
         }
       },
-      "sideEffect": "read"
+      "sideEffect": "read",
+      "request": {
+        "method": "GET",
+        "path": "/crm/objects/2026-09/companies/{{companyId}}",
+        "parameters": [
+          {
+            "wireName": "companyId",
+            "inputName": "companyId",
+            "in": "path",
+            "style": "simple",
+            "explode": false,
+            "allowReserved": false
+          }
+        ],
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json"
     },
     "tickets.list": {
       "kind": "sync",
       "timeoutMs": 30000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
-      "sideEffect": "read"
+      "sideEffect": "read",
+      "request": {
+        "method": "GET",
+        "path": "/crm/objects/2026-09/tickets",
+        "success": [
+          200
+        ],
+        "query": {
+          "limit": "{{limit}}",
+          "after": "{{after}}",
+          "archived": "{{archived}}",
+          "properties": "{{properties}}"
+        },
+        "parameters": [
+          {
+            "wireName": "limit",
+            "inputName": "limit",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "allowReserved": false
+          },
+          {
+            "wireName": "after",
+            "inputName": "after",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "allowReserved": false
+          },
+          {
+            "wireName": "archived",
+            "inputName": "archived",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "allowReserved": false
+          },
+          {
+            "wireName": "properties",
+            "inputName": "properties",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "allowReserved": false
+          }
+        ]
+      }
     },
     "engagements.calls.create": {
       "kind": "action",
@@ -156,8 +225,8 @@
             "description": "Engagement timestamp as epoch milliseconds or ISO-8601."
           },
           "durationMs": {
-            "type": "number",
-            "description": "Call duration in milliseconds."
+            "type": "string",
+            "description": "Call duration in milliseconds, as a numeric string. HubSpot stores CRM property values as strings."
           },
           "status": {
             "type": "string",
@@ -173,7 +242,8 @@
           }
         },
         "required": [
-          "title"
+          "title",
+          "timestamp"
         ]
       },
       "outputSchema": {
@@ -194,7 +264,26 @@
           }
         }
       },
-      "sideEffect": "write"
+      "sideEffect": "write",
+      "request": {
+        "method": "POST",
+        "path": "/crm/objects/2026-09/calls",
+        "body": {
+          "properties": {
+            "hs_call_title": "{{title}}",
+            "hs_call_body": "{{body}}",
+            "hs_timestamp": "{{timestamp}}",
+            "hs_call_duration": "{{durationMs}}",
+            "hs_call_status": "{{status}}",
+            "hs_call_direction": "{{direction}}",
+            "hubspot_owner_id": "{{ownerId}}"
+          }
+        },
+        "success": [
+          201
+        ]
+      },
+      "responseFormat": "json"
     },
     "healthcheck": {
       "kind": "action",
@@ -217,14 +306,72 @@
           }
         }
       },
-      "sideEffect": "read"
+      "sideEffect": "read",
+      "request": {
+        "method": "GET",
+        "path": "/account-info/v3/details",
+        "success": [
+          200
+        ],
+        "echo": {
+          "status": "ok"
+        }
+      },
+      "responseFormat": "json"
     },
     "contacts.list": {
       "kind": "sync",
       "timeoutMs": 30000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
-      "sideEffect": "read"
+      "sideEffect": "read",
+      "request": {
+        "method": "GET",
+        "path": "/crm/objects/2026-09/contacts",
+        "success": [
+          200
+        ],
+        "query": {
+          "limit": "{{limit}}",
+          "after": "{{after}}",
+          "archived": "{{archived}}",
+          "properties": "{{properties}}"
+        },
+        "parameters": [
+          {
+            "wireName": "limit",
+            "inputName": "limit",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "allowReserved": false
+          },
+          {
+            "wireName": "after",
+            "inputName": "after",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "allowReserved": false
+          },
+          {
+            "wireName": "archived",
+            "inputName": "archived",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "allowReserved": false
+          },
+          {
+            "wireName": "properties",
+            "inputName": "properties",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "allowReserved": false
+          }
+        ]
+      }
     },
     "tickets.get": {
       "kind": "action",
@@ -263,7 +410,25 @@
           }
         }
       },
-      "sideEffect": "read"
+      "sideEffect": "read",
+      "request": {
+        "method": "GET",
+        "path": "/crm/objects/2026-09/tickets/{{ticketId}}",
+        "parameters": [
+          {
+            "wireName": "ticketId",
+            "inputName": "ticketId",
+            "in": "path",
+            "style": "simple",
+            "explode": false,
+            "allowReserved": false
+          }
+        ],
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json"
     },
     "deals.create": {
       "kind": "action",
@@ -280,8 +445,8 @@
             "description": "Deal name."
           },
           "amount": {
-            "type": "number",
-            "description": "Monetary value of the deal."
+            "type": "string",
+            "description": "Deal amount as a numeric string, for example \"1500.00\". HubSpot stores CRM property values as strings."
           },
           "stage": {
             "type": "string",
@@ -297,7 +462,9 @@
           }
         },
         "required": [
-          "name"
+          "name",
+          "stage",
+          "pipeline"
         ]
       },
       "outputSchema": {
@@ -318,14 +485,78 @@
           }
         }
       },
-      "sideEffect": "write"
+      "sideEffect": "write",
+      "request": {
+        "method": "POST",
+        "path": "/crm/objects/2026-09/deals",
+        "body": {
+          "properties": {
+            "dealname": "{{name}}",
+            "amount": "{{amount}}",
+            "dealstage": "{{stage}}",
+            "closedate": "{{closeDate}}",
+            "pipeline": "{{pipeline}}"
+          }
+        },
+        "success": [
+          201
+        ]
+      },
+      "responseFormat": "json"
     },
     "companies.list": {
       "kind": "sync",
       "timeoutMs": 30000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
-      "sideEffect": "read"
+      "sideEffect": "read",
+      "request": {
+        "method": "GET",
+        "path": "/crm/objects/2026-09/companies",
+        "success": [
+          200
+        ],
+        "query": {
+          "limit": "{{limit}}",
+          "after": "{{after}}",
+          "archived": "{{archived}}",
+          "properties": "{{properties}}"
+        },
+        "parameters": [
+          {
+            "wireName": "limit",
+            "inputName": "limit",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "allowReserved": false
+          },
+          {
+            "wireName": "after",
+            "inputName": "after",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "allowReserved": false
+          },
+          {
+            "wireName": "archived",
+            "inputName": "archived",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "allowReserved": false
+          },
+          {
+            "wireName": "properties",
+            "inputName": "properties",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "allowReserved": false
+          }
+        ]
+      }
     },
     "tickets.update": {
       "kind": "action",
@@ -380,7 +611,33 @@
           }
         }
       },
-      "sideEffect": "write"
+      "sideEffect": "write",
+      "request": {
+        "method": "PATCH",
+        "path": "/crm/objects/2026-09/tickets/{{ticketId}}",
+        "parameters": [
+          {
+            "wireName": "ticketId",
+            "inputName": "ticketId",
+            "in": "path",
+            "style": "simple",
+            "explode": false,
+            "allowReserved": false
+          }
+        ],
+        "body": {
+          "properties": {
+            "subject": "{{subject}}",
+            "content": "{{content}}",
+            "hs_ticket_priority": "{{priority}}",
+            "hs_ticket_category": "{{category}}"
+          }
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json"
     },
     "deals.delete": {
       "kind": "action",
@@ -419,7 +676,25 @@
           }
         }
       },
-      "sideEffect": "write"
+      "sideEffect": "write",
+      "request": {
+        "method": "DELETE",
+        "path": "/crm/objects/2026-09/deals/{{dealId}}",
+        "parameters": [
+          {
+            "wireName": "dealId",
+            "inputName": "dealId",
+            "in": "path",
+            "style": "simple",
+            "explode": false,
+            "allowReserved": false
+          }
+        ],
+        "success": [
+          204
+        ]
+      },
+      "responseFormat": "json"
     },
     "associations.create": {
       "kind": "action",
@@ -453,7 +728,7 @@
           },
           "associationCategory": {
             "type": "string",
-            "description": "Association category. Defaults to HUBSPOT_DEFINED."
+            "description": "Association category sent to HubSpot. Use HUBSPOT_DEFINED for built-in types and USER_DEFINED for custom labels."
           }
         },
         "required": [
@@ -461,7 +736,8 @@
           "fromId",
           "toObjectType",
           "toId",
-          "associationTypeId"
+          "associationTypeId",
+          "associationCategory"
         ]
       },
       "outputSchema": {
@@ -482,7 +758,56 @@
           }
         }
       },
-      "sideEffect": "write"
+      "sideEffect": "write",
+      "request": {
+        "method": "PUT",
+        "path": "/crm/objects/2026-09/{{fromObjectType}}/{{fromId}}/associations/{{toObjectType}}/{{toId}}",
+        "parameters": [
+          {
+            "wireName": "fromObjectType",
+            "inputName": "fromObjectType",
+            "in": "path",
+            "style": "simple",
+            "explode": false,
+            "allowReserved": false
+          },
+          {
+            "wireName": "fromId",
+            "inputName": "fromId",
+            "in": "path",
+            "style": "simple",
+            "explode": false,
+            "allowReserved": false
+          },
+          {
+            "wireName": "toObjectType",
+            "inputName": "toObjectType",
+            "in": "path",
+            "style": "simple",
+            "explode": false,
+            "allowReserved": false
+          },
+          {
+            "wireName": "toId",
+            "inputName": "toId",
+            "in": "path",
+            "style": "simple",
+            "explode": false,
+            "allowReserved": false
+          }
+        ],
+        "body": [
+          {
+            "associationCategory": "{{associationCategory}}",
+            "associationTypeId": "{{associationTypeId}}"
+          }
+        ],
+        "success": [
+          200,
+          201
+        ]
+      },
+      "responseFormat": "json"
     },
     "webhook.deal.creation": {
       "kind": "webhook",
@@ -560,7 +885,23 @@
           }
         }
       },
-      "sideEffect": "read"
+      "sideEffect": "read",
+      "request": {
+        "method": "POST",
+        "path": "/crm/objects/2026-09/contacts/search",
+        "body": {
+          "query": "{{query}}",
+          "filterGroups": "{{filterGroups}}",
+          "sorts": "{{sorts}}",
+          "properties": "{{properties}}",
+          "limit": "{{limit}}",
+          "after": "{{after}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json"
     },
     "engagements.meetings.create": {
       "kind": "action",
@@ -602,7 +943,8 @@
           }
         },
         "required": [
-          "title"
+          "title",
+          "timestamp"
         ]
       },
       "outputSchema": {
@@ -623,7 +965,26 @@
           }
         }
       },
-      "sideEffect": "write"
+      "sideEffect": "write",
+      "request": {
+        "method": "POST",
+        "path": "/crm/objects/2026-09/meetings",
+        "body": {
+          "properties": {
+            "hs_meeting_title": "{{title}}",
+            "hs_meeting_body": "{{body}}",
+            "hs_timestamp": "{{timestamp}}",
+            "hs_meeting_start_time": "{{startTime}}",
+            "hs_meeting_end_time": "{{endTime}}",
+            "hs_meeting_outcome": "{{outcome}}",
+            "hubspot_owner_id": "{{ownerId}}"
+          }
+        },
+        "success": [
+          201
+        ]
+      },
+      "responseFormat": "json"
     },
     "contacts.delete": {
       "kind": "action",
@@ -662,14 +1023,79 @@
           }
         }
       },
-      "sideEffect": "write"
+      "sideEffect": "write",
+      "request": {
+        "method": "DELETE",
+        "path": "/crm/objects/2026-09/contacts/{{contactId}}",
+        "parameters": [
+          {
+            "wireName": "contactId",
+            "inputName": "contactId",
+            "in": "path",
+            "style": "simple",
+            "explode": false,
+            "allowReserved": false
+          }
+        ],
+        "success": [
+          204
+        ]
+      },
+      "responseFormat": "json"
     },
     "deals.list": {
       "kind": "sync",
       "timeoutMs": 30000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
-      "sideEffect": "read"
+      "sideEffect": "read",
+      "request": {
+        "method": "GET",
+        "path": "/crm/objects/2026-09/deals",
+        "success": [
+          200
+        ],
+        "query": {
+          "limit": "{{limit}}",
+          "after": "{{after}}",
+          "archived": "{{archived}}",
+          "properties": "{{properties}}"
+        },
+        "parameters": [
+          {
+            "wireName": "limit",
+            "inputName": "limit",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "allowReserved": false
+          },
+          {
+            "wireName": "after",
+            "inputName": "after",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "allowReserved": false
+          },
+          {
+            "wireName": "archived",
+            "inputName": "archived",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "allowReserved": false
+          },
+          {
+            "wireName": "properties",
+            "inputName": "properties",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "allowReserved": false
+          }
+        ]
+      }
     },
     "companies.create": {
       "kind": "action",
@@ -724,7 +1150,24 @@
           }
         }
       },
-      "sideEffect": "write"
+      "sideEffect": "write",
+      "request": {
+        "method": "POST",
+        "path": "/crm/objects/2026-09/companies",
+        "body": {
+          "properties": {
+            "name": "{{name}}",
+            "domain": "{{domain}}",
+            "industry": "{{industry}}",
+            "city": "{{city}}",
+            "website": "{{website}}"
+          }
+        },
+        "success": [
+          201
+        ]
+      },
+      "responseFormat": "json"
     },
     "companies.update": {
       "kind": "action",
@@ -783,7 +1226,34 @@
           }
         }
       },
-      "sideEffect": "write"
+      "sideEffect": "write",
+      "request": {
+        "method": "PATCH",
+        "path": "/crm/objects/2026-09/companies/{{companyId}}",
+        "parameters": [
+          {
+            "wireName": "companyId",
+            "inputName": "companyId",
+            "in": "path",
+            "style": "simple",
+            "explode": false,
+            "allowReserved": false
+          }
+        ],
+        "body": {
+          "properties": {
+            "name": "{{name}}",
+            "domain": "{{domain}}",
+            "industry": "{{industry}}",
+            "city": "{{city}}",
+            "website": "{{website}}"
+          }
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json"
     },
     "deals.update": {
       "kind": "action",
@@ -804,8 +1274,8 @@
             "description": "Updated deal name."
           },
           "amount": {
-            "type": "number",
-            "description": "Updated monetary value."
+            "type": "string",
+            "description": "Deal amount as a numeric string, for example \"1500.00\". HubSpot stores CRM property values as strings."
           },
           "stage": {
             "type": "string",
@@ -842,7 +1312,34 @@
           }
         }
       },
-      "sideEffect": "write"
+      "sideEffect": "write",
+      "request": {
+        "method": "PATCH",
+        "path": "/crm/objects/2026-09/deals/{{dealId}}",
+        "parameters": [
+          {
+            "wireName": "dealId",
+            "inputName": "dealId",
+            "in": "path",
+            "style": "simple",
+            "explode": false,
+            "allowReserved": false
+          }
+        ],
+        "body": {
+          "properties": {
+            "dealname": "{{name}}",
+            "amount": "{{amount}}",
+            "dealstage": "{{stage}}",
+            "closedate": "{{closeDate}}",
+            "pipeline": "{{pipeline}}"
+          }
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json"
     },
     "pipelines.deals.list": {
       "kind": "action",
@@ -873,7 +1370,15 @@
             "description": "Deal pipelines with stages."
           }
         }
-      }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/crm/pipelines/2026-09/deals",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json"
     },
     "deals.get": {
       "kind": "action",
@@ -912,7 +1417,25 @@
           }
         }
       },
-      "sideEffect": "read"
+      "sideEffect": "read",
+      "request": {
+        "method": "GET",
+        "path": "/crm/objects/2026-09/deals/{{dealId}}",
+        "parameters": [
+          {
+            "wireName": "dealId",
+            "inputName": "dealId",
+            "in": "path",
+            "style": "simple",
+            "explode": false,
+            "allowReserved": false
+          }
+        ],
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json"
     },
     "engagements.tasks.create": {
       "kind": "action",
@@ -954,7 +1477,8 @@
           }
         },
         "required": [
-          "subject"
+          "subject",
+          "timestamp"
         ]
       },
       "outputSchema": {
@@ -975,7 +1499,26 @@
           }
         }
       },
-      "sideEffect": "write"
+      "sideEffect": "write",
+      "request": {
+        "method": "POST",
+        "path": "/crm/objects/2026-09/tasks",
+        "body": {
+          "properties": {
+            "hs_task_subject": "{{subject}}",
+            "hs_task_body": "{{body}}",
+            "hs_timestamp": "{{timestamp}}",
+            "hs_task_status": "{{status}}",
+            "hs_task_priority": "{{priority}}",
+            "hs_task_type": "{{type}}",
+            "hubspot_owner_id": "{{ownerId}}"
+          }
+        },
+        "success": [
+          201
+        ]
+      },
+      "responseFormat": "json"
     },
     "engagements.notes.create": {
       "kind": "action",
@@ -1001,7 +1544,8 @@
           }
         },
         "required": [
-          "body"
+          "body",
+          "timestamp"
         ]
       },
       "outputSchema": {
@@ -1022,7 +1566,22 @@
           }
         }
       },
-      "sideEffect": "write"
+      "sideEffect": "write",
+      "request": {
+        "method": "POST",
+        "path": "/crm/objects/2026-09/notes",
+        "body": {
+          "properties": {
+            "hs_note_body": "{{body}}",
+            "hs_timestamp": "{{timestamp}}",
+            "hubspot_owner_id": "{{ownerId}}"
+          }
+        },
+        "success": [
+          201
+        ]
+      },
+      "responseFormat": "json"
     },
     "contacts.create": {
       "kind": "action",
@@ -1078,7 +1637,25 @@
           }
         }
       },
-      "sideEffect": "write"
+      "sideEffect": "write",
+      "request": {
+        "method": "POST",
+        "path": "/crm/objects/2026-09/contacts",
+        "body": {
+          "properties": {
+            "email": "{{email}}",
+            "firstname": "{{firstName}}",
+            "lastname": "{{lastName}}",
+            "phone": "{{phone}}",
+            "company": "{{company}}",
+            "jobtitle": "{{jobTitle}}"
+          }
+        },
+        "success": [
+          201
+        ]
+      },
+      "responseFormat": "json"
     },
     "tickets.create": {
       "kind": "action",
@@ -1129,7 +1706,23 @@
           }
         }
       },
-      "sideEffect": "write"
+      "sideEffect": "write",
+      "request": {
+        "method": "POST",
+        "path": "/crm/objects/2026-09/tickets",
+        "body": {
+          "properties": {
+            "subject": "{{subject}}",
+            "content": "{{content}}",
+            "hs_ticket_priority": "{{priority}}",
+            "hs_ticket_category": "{{category}}"
+          }
+        },
+        "success": [
+          201
+        ]
+      },
+      "responseFormat": "json"
     },
     "owners.list": {
       "kind": "action",
@@ -1176,7 +1769,46 @@
             "type": "string"
           }
         }
-      }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/crm/owners/2026-09",
+        "success": [
+          200
+        ],
+        "query": {
+          "email": "{{email}}",
+          "after": "{{after}}",
+          "limit": "{{limit}}"
+        },
+        "parameters": [
+          {
+            "wireName": "email",
+            "inputName": "email",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "allowReserved": false
+          },
+          {
+            "wireName": "after",
+            "inputName": "after",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "allowReserved": false
+          },
+          {
+            "wireName": "limit",
+            "inputName": "limit",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "allowReserved": false
+          }
+        ]
+      },
+      "responseFormat": "json"
     },
     "deals.search": {
       "kind": "action",
@@ -1247,7 +1879,23 @@
           }
         }
       },
-      "sideEffect": "read"
+      "sideEffect": "read",
+      "request": {
+        "method": "POST",
+        "path": "/crm/objects/2026-09/deals/search",
+        "body": {
+          "query": "{{query}}",
+          "filterGroups": "{{filterGroups}}",
+          "sorts": "{{sorts}}",
+          "properties": "{{properties}}",
+          "limit": "{{limit}}",
+          "after": "{{after}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json"
     },
     "tickets.search": {
       "kind": "action",
@@ -1318,7 +1966,23 @@
           }
         }
       },
-      "sideEffect": "read"
+      "sideEffect": "read",
+      "request": {
+        "method": "POST",
+        "path": "/crm/objects/2026-09/tickets/search",
+        "body": {
+          "query": "{{query}}",
+          "filterGroups": "{{filterGroups}}",
+          "sorts": "{{sorts}}",
+          "properties": "{{properties}}",
+          "limit": "{{limit}}",
+          "after": "{{after}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json"
     },
     "companies.delete": {
       "kind": "action",
@@ -1357,7 +2021,25 @@
           }
         }
       },
-      "sideEffect": "write"
+      "sideEffect": "write",
+      "request": {
+        "method": "DELETE",
+        "path": "/crm/objects/2026-09/companies/{{companyId}}",
+        "parameters": [
+          {
+            "wireName": "companyId",
+            "inputName": "companyId",
+            "in": "path",
+            "style": "simple",
+            "explode": false,
+            "allowReserved": false
+          }
+        ],
+        "success": [
+          204
+        ]
+      },
+      "responseFormat": "json"
     },
     "contacts.update": {
       "kind": "action",
@@ -1420,7 +2102,35 @@
           }
         }
       },
-      "sideEffect": "write"
+      "sideEffect": "write",
+      "request": {
+        "method": "PATCH",
+        "path": "/crm/objects/2026-09/contacts/{{contactId}}",
+        "parameters": [
+          {
+            "wireName": "contactId",
+            "inputName": "contactId",
+            "in": "path",
+            "style": "simple",
+            "explode": false,
+            "allowReserved": false
+          }
+        ],
+        "body": {
+          "properties": {
+            "email": "{{email}}",
+            "firstname": "{{firstName}}",
+            "lastname": "{{lastName}}",
+            "phone": "{{phone}}",
+            "company": "{{company}}",
+            "jobtitle": "{{jobTitle}}"
+          }
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json"
     },
     "companies.search": {
       "kind": "action",
@@ -1491,7 +2201,23 @@
           }
         }
       },
-      "sideEffect": "read"
+      "sideEffect": "read",
+      "request": {
+        "method": "POST",
+        "path": "/crm/objects/2026-09/companies/search",
+        "body": {
+          "query": "{{query}}",
+          "filterGroups": "{{filterGroups}}",
+          "sorts": "{{sorts}}",
+          "properties": "{{properties}}",
+          "limit": "{{limit}}",
+          "after": "{{after}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json"
     },
     "contacts.get": {
       "kind": "action",
@@ -1530,7 +2256,25 @@
           }
         }
       },
-      "sideEffect": "read"
+      "sideEffect": "read",
+      "request": {
+        "method": "GET",
+        "path": "/crm/objects/2026-09/contacts/{{contactId}}",
+        "parameters": [
+          {
+            "wireName": "contactId",
+            "inputName": "contactId",
+            "in": "path",
+            "style": "simple",
+            "explode": false,
+            "allowReserved": false
+          }
+        ],
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json"
     },
     "webhook.ticket.creation": {
       "kind": "webhook",
@@ -1538,6 +2282,65 @@
       "maxInputBytes": 1048576,
       "maxResponseBytes": 1048576,
       "sideEffect": "read"
+    },
+    "HUBSPOT_DEAL_STAGE_UPDATED_TRIGGER": {
+      "kind": "webhook",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Deal Stage Updated",
+      "description": "Receives batched HubSpot deal.propertyChange webhook events filtered to the dealstage property.",
+      "inputSchema": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "required": [
+            "subscriptionType",
+            "objectId",
+            "propertyName",
+            "propertyValue"
+          ],
+          "properties": {
+            "eventId": {
+              "type": "integer"
+            },
+            "subscriptionId": {
+              "type": "integer"
+            },
+            "portalId": {
+              "type": "integer"
+            },
+            "appId": {
+              "type": "integer"
+            },
+            "occurredAt": {
+              "type": "integer"
+            },
+            "subscriptionType": {
+              "const": "deal.propertyChange"
+            },
+            "attemptNumber": {
+              "type": "integer"
+            },
+            "objectId": {
+              "type": "integer"
+            },
+            "propertyName": {
+              "const": "dealstage"
+            },
+            "propertyValue": {
+              "type": "string"
+            },
+            "changeSource": {
+              "type": "string"
+            },
+            "sourceId": {
+              "type": "string"
+            }
+          }
+        }
+      }
     },
     "add.asset.association": {
       "kind": "action",
@@ -6618,6 +7421,10 @@
           "limit": {
             "type": "integer",
             "description": "The maximum number of results to display per page."
+          },
+          "before": {
+            "type": "string",
+            "description": "Paging cursor for the previous page, from paging.prev.before."
           }
         },
         "additionalProperties": false
@@ -6640,7 +7447,8 @@
         "path": "/crm/imports/2026-09",
         "query": {
           "after": "{{after}}",
-          "limit": "{{limit}}"
+          "limit": "{{limit}}",
+          "before": "{{before}}"
         },
         "parameters": [
           {
@@ -6654,6 +7462,14 @@
           {
             "wireName": "limit",
             "inputName": "limit",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "allowReserved": false
+          },
+          {
+            "wireName": "before",
+            "inputName": "before",
             "in": "query",
             "style": "form",
             "explode": true,
@@ -20440,6 +21256,1741 @@
           200
         ]
       }
+    },
+    "cms.site-pages.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Get site page",
+      "description": "Retrieve one HubSpot CMS site page by ID (Composio HUBSPOT_GET_SITE_PAGE). GET /cms/v3/pages/site-pages/{page_id}.",
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "page_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique HubSpot ID of the site page to retrieve."
+          },
+          "archived": {
+            "type": "boolean",
+            "description": "Whether to retrieve a deleted site page. Defaults to false; this does not select a draft or revision."
+          },
+          "property": {
+            "type": "string",
+            "description": "Optional site-page property selector accepted by HubSpot."
+          }
+        },
+        "required": [
+          "page_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array",
+              "null"
+            ],
+            "additionalProperties": true
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/cms/v3/pages/site-pages/{{page_id}}",
+        "success": [
+          200
+        ],
+        "query": {
+          "archived": "{{archived}}",
+          "property": "{{property}}"
+        },
+        "parameters": [
+          {
+            "wireName": "page_id",
+            "inputName": "page_id",
+            "in": "path",
+            "style": "simple",
+            "explode": false,
+            "allowReserved": false
+          }
+        ]
+      }
+    },
+    "cms.site-pages.get-draft": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Get site page draft",
+      "description": "Retrieve the full editable draft of one HubSpot site page (Composio HUBSPOT_GET_SITE_PAGE_DRAFT). GET /cms/v3/pages/site-pages/{page_id}/draft.",
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "page_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique HubSpot ID of the site page whose draft to retrieve."
+          }
+        },
+        "required": [
+          "page_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array",
+              "null"
+            ],
+            "additionalProperties": true
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/cms/v3/pages/site-pages/{{page_id}}/draft",
+        "success": [
+          200
+        ],
+        "parameters": [
+          {
+            "wireName": "page_id",
+            "inputName": "page_id",
+            "in": "path",
+            "style": "simple",
+            "explode": false,
+            "allowReserved": false
+          }
+        ]
+      }
+    },
+    "cms.site-pages.publish-draft": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Publish site page draft",
+      "description": "Apply draft changes to the live version of an already published HubSpot site page (Composio HUBSPOT_PUBLISH_SITE_PAGE_DRAFT). POST /cms/v3/pages/site-pages/{page_id}/draft/push-live with no body.",
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "page_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique HubSpot ID of the site page whose draft to publish."
+          }
+        },
+        "required": [
+          "page_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array",
+              "null"
+            ],
+            "additionalProperties": true
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/cms/v3/pages/site-pages/{{page_id}}/draft/push-live",
+        "success": [
+          200,
+          204
+        ],
+        "parameters": [
+          {
+            "wireName": "page_id",
+            "inputName": "page_id",
+            "in": "path",
+            "style": "simple",
+            "explode": false,
+            "allowReserved": false
+          }
+        ]
+      }
+    },
+    "cms.landing-pages.list-revisions": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "List landing page revisions",
+      "description": "List historical revisions of a HubSpot landing page (Composio HUBSPOT_LIST_LANDING_PAGE_REVISIONS). GET /cms/v3/pages/landing-pages/{page_id}/revisions.",
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "page_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique HubSpot ID of the landing page."
+          },
+          "after": {
+            "type": "string",
+            "description": "Cursor from a previous response's paging.next.after value."
+          },
+          "before": {
+            "type": "string",
+            "description": "Cursor from a previous response's paging.prev.before value."
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Maximum number of landing page revisions to return."
+          }
+        },
+        "required": [
+          "page_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array",
+              "null"
+            ],
+            "additionalProperties": true
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/cms/v3/pages/landing-pages/{{page_id}}/revisions",
+        "success": [
+          200
+        ],
+        "query": {
+          "after": "{{after}}",
+          "before": "{{before}}",
+          "limit": "{{limit}}"
+        },
+        "parameters": [
+          {
+            "wireName": "page_id",
+            "inputName": "page_id",
+            "in": "path",
+            "style": "simple",
+            "explode": false,
+            "allowReserved": false
+          }
+        ]
+      }
+    },
+    "email.subscriptions.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Get email subscription status",
+      "description": "Retrieve legacy overall email delivery and subscription state for an address (Composio HUBSPOT_GET_EMAIL_SUBSCRIPTION_STATUS). GET /email/public/v1/subscriptions/{email_address}.",
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "email_address": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Email address whose subscription status to retrieve."
+          }
+        },
+        "required": [
+          "email_address"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array",
+              "null"
+            ],
+            "additionalProperties": true
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/email/public/v1/subscriptions/{{email_address}}",
+        "success": [
+          200
+        ],
+        "parameters": [
+          {
+            "wireName": "email_address",
+            "inputName": "email_address",
+            "in": "path",
+            "style": "simple",
+            "explode": false,
+            "allowReserved": false
+          }
+        ]
+      }
+    },
+    "email.subscriptions.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Update email subscriptions",
+      "description": "IRREVERSIBLY opt out or update email subscription preferences (Composio HUBSPOT_UPDATE_EMAIL_SUBSCRIPTIONS). PUT /email/public/v1/subscriptions/{email_address}. Opting out cannot be undone.",
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "email_address": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Email address whose preferences will be updated."
+          },
+          "unsubscribe_from_all": {
+            "type": "boolean",
+            "description": "Permanently opt the address out from all email. This cannot be undone."
+          },
+          "subscription_statuses": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": true
+            },
+            "description": "One or more subscription type updates. Opting out from a type cannot be undone."
+          },
+          "portal_subscription_legal_basis": {
+            "type": "string",
+            "description": "Portal-level GDPR legal basis.",
+            "enum": [
+              "LEGITIMATE_INTEREST_PQL",
+              "LEGITIMATE_INTEREST_CLIENT",
+              "PERFORMANCE_OF_CONTRACT",
+              "CONSENT_WITH_NOTICE",
+              "NON_GDPR"
+            ]
+          },
+          "portal_subscription_legal_basis_explanation": {
+            "type": "string",
+            "description": "Explanation supporting the portal-level legal basis."
+          }
+        },
+        "required": [
+          "email_address"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array",
+              "null"
+            ],
+            "additionalProperties": true
+          }
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/email/public/v1/subscriptions/{{email_address}}",
+        "success": [
+          200,
+          204
+        ],
+        "body": {
+          "unsubscribeFromAll": "{{unsubscribe_from_all}}",
+          "subscriptionStatuses": "{{subscription_statuses}}",
+          "portalSubscriptionLegalBasis": "{{portal_subscription_legal_basis}}",
+          "portalSubscriptionLegalBasisExplanation": "{{portal_subscription_legal_basis_explanation}}"
+        },
+        "parameters": [
+          {
+            "wireName": "email_address",
+            "inputName": "email_address",
+            "in": "path",
+            "style": "simple",
+            "explode": false,
+            "allowReserved": false
+          }
+        ]
+      }
+    },
+    "marketing-events.participations.breakdown": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Get marketing event participation breakdown",
+      "description": "Page participation records for one HubSpot marketing event (Composio HUBSPOT_GET_MARKETING_EVENT_PARTICIPATION_BREAKDOWN). GET /marketing/v3/marketing-events/{id}/participations/breakdown.",
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "marketing_event_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Numeric HubSpot record ID represented as a string to preserve 64-bit precision."
+          },
+          "after": {
+            "type": "string",
+            "description": "Cursor from a previous response's paging.next.after value."
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Maximum number of participation records to return, from 1 to 100. HubSpot defaults to 10."
+          },
+          "state": {
+            "type": "string",
+            "description": "Participation state used to filter the event's records.",
+            "enum": [
+              "REGISTERED",
+              "CANCELLED",
+              "ATTENDED",
+              "NO_SHOW"
+            ]
+          },
+          "contact_identifier": {
+            "type": "string",
+            "description": "Email address or HubSpot record ID of a contact to filter by."
+          }
+        },
+        "required": [
+          "marketing_event_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array",
+              "null"
+            ],
+            "additionalProperties": true
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/marketing/v3/marketing-events/{{marketing_event_id}}/participations/breakdown",
+        "success": [
+          200
+        ],
+        "query": {
+          "after": "{{after}}",
+          "limit": "{{limit}}",
+          "state": "{{state}}",
+          "contactIdentifier": "{{contact_identifier}}"
+        },
+        "parameters": [
+          {
+            "wireName": "marketing_event_id",
+            "inputName": "marketing_event_id",
+            "in": "path",
+            "style": "simple",
+            "explode": false,
+            "allowReserved": false
+          }
+        ]
+      }
+    },
+    "settings.users.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "List settings users",
+      "description": "List HubSpot account users and their provisioning details (Composio HUBSPOT_LIST_SETTINGS_USERS). GET /settings/v3/users.",
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "after": {
+            "type": "string",
+            "description": "Cursor from a previous response's paging.next.after value."
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Maximum number of account users to return on this page."
+          }
+        },
+        "required": []
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array",
+              "null"
+            ],
+            "additionalProperties": true
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/settings/v3/users",
+        "success": [
+          200
+        ],
+        "query": {
+          "after": "{{after}}",
+          "limit": "{{limit}}"
+        }
+      }
+    },
+    "lists.idmapping": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Map legacy list ID",
+      "description": "Translate a legacy HubSpot v1 list ID to its current ILS list ID (Composio HUBSPOT_MAP_LEGACY_LIST_ID). POST /crm/lists/2026-09/idmapping. Pass input as an array of legacy ids; a single Composio legacy_list_id is [legacy_list_id].",
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "input": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Legacy list IDs used by the retired v1 Lists API."
+          },
+          "legacy_list_id": {
+            "type": "string",
+            "description": "Alias of a single inputs entry for Composio HUBSPOT_MAP_LEGACY_LIST_ID. Prefer input."
+          }
+        },
+        "required": [
+          "input"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array",
+              "null"
+            ],
+            "additionalProperties": true
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/crm/lists/2026-09/idmapping",
+        "success": [
+          200
+        ],
+        "body": {
+          "input": "{{input}}"
+        }
+      }
+    },
+    "lists.search": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Search CRM lists",
+      "description": "Search and page through HubSpot CRM list definitions (Composio HUBSPOT_SEARCH_CRM_LISTS). POST /crm/lists/2026-09/search.",
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "sort": {
+            "type": "string",
+            "description": "List field and order to sort by, using HubSpot's list search syntax."
+          },
+          "count": {
+            "type": "integer",
+            "description": "Number of lists to return, from 1 to 500."
+          },
+          "query": {
+            "type": "string",
+            "description": "Text to match against list names. Leave empty to page through all lists."
+          },
+          "offset": {
+            "type": "integer",
+            "description": "Pagination offset from a previous search response. Use 0 for the first page."
+          },
+          "listIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "ILS list IDs to include. Omit or pass an empty list to avoid filtering by list ID."
+          },
+          "objectTypeId": {
+            "type": "string",
+            "description": "HubSpot object type ID whose lists should be returned, such as 0-1 for contacts."
+          },
+          "processingTypes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "List processing types to include: MANUAL, SNAPSHOT, or DYNAMIC."
+          },
+          "additionalProperties": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Additional list property names to include in each result."
+          }
+        },
+        "required": []
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array",
+              "null"
+            ],
+            "additionalProperties": true
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/crm/lists/2026-09/search",
+        "success": [
+          200
+        ],
+        "body": {
+          "sort": "{{sort}}",
+          "count": "{{count}}",
+          "query": "{{query}}",
+          "offset": "{{offset}}",
+          "listIds": "{{listIds}}",
+          "objectTypeId": "{{objectTypeId}}",
+          "processingTypes": "{{processingTypes}}",
+          "additionalProperties": "{{additionalProperties}}"
+        }
+      }
+    },
+    "lists.batch.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Get CRM lists by IDs",
+      "description": "Retrieve multiple HubSpot CRM lists by their current IDs (Composio HUBSPOT_GET_CRM_LISTS_BY_IDS). GET /crm/lists/2026-09 with repeated listIds query values.",
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "list_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Current CRM list IDs to retrieve. Each ID is sent as a repeated listIds query value."
+          },
+          "include_filters": {
+            "type": "boolean",
+            "description": "Whether to include each list's complete filter branch in the response."
+          }
+        },
+        "required": [
+          "list_ids"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array",
+              "null"
+            ],
+            "additionalProperties": true
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/crm/lists/2026-09",
+        "success": [
+          200
+        ],
+        "query": {
+          "listIds": "{{list_ids}}",
+          "includeFilters": "{{include_filters}}"
+        },
+        "parameters": [
+          {
+            "wireName": "listIds",
+            "inputName": "list_ids",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "allowReserved": false
+          },
+          {
+            "wireName": "includeFilters",
+            "inputName": "include_filters",
+            "in": "query",
+            "style": "form",
+            "explode": false,
+            "allowReserved": false
+          }
+        ]
+      }
+    },
+    "lists.memberships.batch.read": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Batch read list memberships",
+      "description": "Retrieve list memberships for multiple HubSpot CRM records (Composio HUBSPOT_BATCH_READ_LIST_MEMBERSHIPS). POST /crm/lists/2026-09/memberships/join-order/batch/read.",
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "inputs": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": true
+            },
+            "description": "CRM records to retrieve list memberships for. At least one record is required."
+          }
+        },
+        "required": [
+          "inputs"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array",
+              "null"
+            ],
+            "additionalProperties": true
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/crm/lists/2026-09/memberships/join-order/batch/read",
+        "success": [
+          200
+        ],
+        "body": {
+          "inputs": "{{inputs}}"
+        }
+      }
+    },
+    "lists.memberships.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Update list memberships",
+      "description": "Add records to or remove records from a manual or snapshot CRM list (Composio HUBSPOT_UPDATE_LIST_MEMBERSHIPS). PUT /crm/lists/2026-09/{list_id}/memberships/{add|remove}.",
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "list_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique ID of the manual or snapshot list to update."
+          },
+          "operation": {
+            "type": "string",
+            "description": "Membership operation to perform: add records or remove records.",
+            "enum": [
+              "add",
+              "remove"
+            ]
+          },
+          "record_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "One or more CRM record IDs to add to or remove from the list."
+          }
+        },
+        "required": [
+          "list_id",
+          "operation",
+          "record_ids"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array",
+              "null"
+            ],
+            "additionalProperties": true
+          }
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/crm/lists/2026-09/{{list_id}}/memberships/{{operation}}",
+        "success": [
+          200
+        ],
+        "body": {
+          "recordIds": "{{record_ids}}"
+        },
+        "parameters": [
+          {
+            "wireName": "list_id",
+            "inputName": "list_id",
+            "in": "path",
+            "style": "simple",
+            "explode": false,
+            "allowReserved": false
+          },
+          {
+            "wireName": "operation",
+            "inputName": "operation",
+            "in": "path",
+            "style": "simple",
+            "explode": false,
+            "allowReserved": false
+          }
+        ]
+      }
+    },
+    "contacts.legacy.get-by-vid": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Read legacy contact profile",
+      "description": "Retrieve one legacy HubSpot contact profile by VID when form submissions, identity profiles, merge audits, or legacy-shaped property history are needed (Composio HUBSPOT_READ_LEGACY_CONTACT_PROFILE). GET /contacts/v1/contact/vid/{vid}/profile.",
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "vid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Legacy HubSpot contact VID."
+          },
+          "properties": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Contact property names to return. Each name is sent as a repeated property query parameter."
+          },
+          "property_mode": {
+            "type": "string",
+            "description": "Whether returned properties contain only current values or current values and history.",
+            "enum": [
+              "value_only",
+              "value_and_history"
+            ]
+          },
+          "form_submission_mode": {
+            "type": "string",
+            "description": "Which form submissions to include in the contact profile.",
+            "enum": [
+              "all",
+              "none",
+              "newest",
+              "oldest"
+            ]
+          }
+        },
+        "required": [
+          "vid"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array",
+              "null"
+            ],
+            "additionalProperties": true
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/contacts/v1/contact/vid/{{vid}}/profile",
+        "success": [
+          200
+        ],
+        "query": {
+          "property": "{{properties}}",
+          "propertyMode": "{{property_mode}}",
+          "formSubmissionMode": "{{form_submission_mode}}"
+        },
+        "parameters": [
+          {
+            "wireName": "vid",
+            "inputName": "vid",
+            "in": "path",
+            "style": "simple",
+            "explode": false,
+            "allowReserved": false
+          },
+          {
+            "wireName": "property",
+            "inputName": "properties",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "allowReserved": false
+          },
+          {
+            "wireName": "propertyMode",
+            "inputName": "property_mode",
+            "in": "query",
+            "style": "form",
+            "explode": false,
+            "allowReserved": false
+          },
+          {
+            "wireName": "formSubmissionMode",
+            "inputName": "form_submission_mode",
+            "in": "query",
+            "style": "form",
+            "explode": false,
+            "allowReserved": false
+          }
+        ]
+      }
+    },
+    "contacts.legacy.batch-by-email": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Read legacy contact profiles by email",
+      "description": "Batch-read up to 100 legacy HubSpot contact profiles by email (Composio HUBSPOT_READ_LEGACY_CONTACT_PROFILES_BY_EMAIL). GET /contacts/v1/contact/emails/batch with repeated email query values.",
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "emails": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Email addresses whose legacy contact profiles should be returned."
+          },
+          "properties": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Contact property names to return. Each name is sent as a repeated property query value."
+          },
+          "property_mode": {
+            "type": "string",
+            "description": "Whether properties contain only their current value or their current value and history.",
+            "enum": [
+              "value_only",
+              "value_and_history"
+            ]
+          },
+          "form_submission_mode": {
+            "type": "string",
+            "description": "Which legacy form submissions to include in each contact profile.",
+            "enum": [
+              "all",
+              "none",
+              "newest",
+              "oldest"
+            ]
+          }
+        },
+        "required": [
+          "emails"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array",
+              "null"
+            ],
+            "additionalProperties": true
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/contacts/v1/contact/emails/batch",
+        "success": [
+          200
+        ],
+        "query": {
+          "email": "{{emails}}",
+          "property": "{{properties}}",
+          "propertyMode": "{{property_mode}}",
+          "formSubmissionMode": "{{form_submission_mode}}"
+        },
+        "parameters": [
+          {
+            "wireName": "email",
+            "inputName": "emails",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "allowReserved": false
+          },
+          {
+            "wireName": "property",
+            "inputName": "properties",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "allowReserved": false
+          },
+          {
+            "wireName": "propertyMode",
+            "inputName": "property_mode",
+            "in": "query",
+            "style": "form",
+            "explode": false,
+            "allowReserved": false
+          },
+          {
+            "wireName": "formSubmissionMode",
+            "inputName": "form_submission_mode",
+            "in": "query",
+            "style": "form",
+            "explode": false,
+            "allowReserved": false
+          }
+        ]
+      }
+    },
+    "associations.contacts.companies.batch.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Batch create contact-company associations",
+      "description": "Create up to 2,000 labeled contact-to-company associations (Composio HUBSPOT_BATCH_CREATE_CONTACT_COMPANY_ASSOCIATIONS). POST /crm/associations/2026-09/contacts/companies/batch/create.",
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "inputs": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": true
+            },
+            "description": "Labeled contact-to-company associations to create."
+          }
+        },
+        "required": [
+          "inputs"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array",
+              "null"
+            ],
+            "additionalProperties": true
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/crm/associations/2026-09/contacts/companies/batch/create",
+        "success": [
+          200,
+          201,
+          207
+        ],
+        "body": {
+          "inputs": "{{inputs}}"
+        }
+      }
+    },
+    "associations.labels.batch.archive": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Batch archive association labels",
+      "description": "Remove selected labels from up to 100 HubSpot CRM association pairs (Composio HUBSPOT_BATCH_ARCHIVE_ASSOCIATION_LABELS). POST /crm/associations/2026-09/{from}/{to}/batch/labels/archive. Removing a default unlabeled association also removes every label between that record pair.",
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "inputs": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": true
+            },
+            "description": "Record pairs and their labels to remove."
+          },
+          "from_object_type": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Source CRM object type name or object type ID."
+          },
+          "to_object_type": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Target CRM object type name or object type ID."
+          }
+        },
+        "required": [
+          "inputs",
+          "from_object_type",
+          "to_object_type"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array",
+              "null"
+            ],
+            "additionalProperties": true
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/crm/associations/2026-09/{{from_object_type}}/{{to_object_type}}/batch/labels/archive",
+        "success": [
+          200,
+          204
+        ],
+        "body": {
+          "inputs": "{{inputs}}"
+        },
+        "parameters": [
+          {
+            "wireName": "from_object_type",
+            "inputName": "from_object_type",
+            "in": "path",
+            "style": "simple",
+            "explode": false,
+            "allowReserved": false
+          },
+          {
+            "wireName": "to_object_type",
+            "inputName": "to_object_type",
+            "in": "path",
+            "style": "simple",
+            "explode": false,
+            "allowReserved": false
+          }
+        ]
+      }
+    },
+    "associations.types.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "List association types",
+      "description": "List all valid association types between two specified HubSpot CRM object types (Composio HUBSPOT_LIST_ASSOCIATION_TYPES). GET /crm/v3/associations/{fromObjectType}/{toObjectType}/types.",
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "fromObjectType": {
+            "type": "string",
+            "minLength": 1,
+            "description": "The type of the first object in the association (e.g., contact, company, deal)."
+          },
+          "toObjectType": {
+            "type": "string",
+            "minLength": 1,
+            "description": "The type of the second object in the association (e.g., contact, company, deal)."
+          }
+        },
+        "required": [
+          "fromObjectType",
+          "toObjectType"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array",
+              "null"
+            ],
+            "additionalProperties": true
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/crm/v3/associations/{{fromObjectType}}/{{toObjectType}}/types",
+        "success": [
+          200
+        ],
+        "parameters": [
+          {
+            "wireName": "fromObjectType",
+            "inputName": "fromObjectType",
+            "in": "path",
+            "style": "simple",
+            "explode": false,
+            "allowReserved": false
+          },
+          {
+            "wireName": "toObjectType",
+            "inputName": "toObjectType",
+            "in": "path",
+            "style": "simple",
+            "explode": false,
+            "allowReserved": false
+          }
+        ]
+      }
+    },
+    "automation.workflows.performance.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Get workflow performance",
+      "description": "Return enrolled, completed, and unenrolled workflow counts by time bucket (Composio HUBSPOT_GET_WORKFLOW_PERFORMANCE). GET /automation/v3/performance/workflow/{workflow_id}.",
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "workflow_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique ID of the HubSpot workflow to measure."
+          },
+          "start": {
+            "type": "integer",
+            "description": "Inclusive start of the reporting interval as Unix epoch milliseconds."
+          },
+          "end": {
+            "type": "integer",
+            "description": "Inclusive end of the reporting interval as Unix epoch milliseconds."
+          },
+          "bucket": {
+            "type": "string",
+            "description": "Granularity used to bucket workflow metrics.",
+            "enum": [
+              "DAY",
+              "WEEK",
+              "MONTH"
+            ]
+          }
+        },
+        "required": [
+          "workflow_id",
+          "start",
+          "end",
+          "bucket"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array",
+              "null"
+            ],
+            "additionalProperties": true
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/automation/v3/performance/workflow/{{workflow_id}}",
+        "success": [
+          200
+        ],
+        "query": {
+          "start": "{{start}}",
+          "end": "{{end}}",
+          "bucket": "{{bucket}}"
+        },
+        "parameters": [
+          {
+            "wireName": "workflow_id",
+            "inputName": "workflow_id",
+            "in": "path",
+            "style": "simple",
+            "explode": false,
+            "allowReserved": false
+          }
+        ]
+      }
+    },
+    "objects.associations.create-labeled": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Create object association",
+      "description": "Create or label an association between two CRM records using HubSpot Associations v4 (Composio HUBSPOT_CREATE_OBJECT_ASSOCIATION). PUT /crm/objects/2026-09/{objectType}/{objectId}/associations/{toObjectType}/{toObjectId}.",
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "objectType": {
+            "type": "string",
+            "minLength": 1,
+            "description": "The type of the source object (e.g., contacts, companies, deals, tickets)."
+          },
+          "objectId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "The unique ID of the source CRM record."
+          },
+          "toObjectType": {
+            "type": "string",
+            "minLength": 1,
+            "description": "The type of the target object to associate with."
+          },
+          "toObjectId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "The unique ID of the target CRM record to associate with."
+          },
+          "labels": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": true
+            },
+            "description": "Array of association label descriptors. Each label includes an associationCategory and associationTypeId."
+          }
+        },
+        "required": [
+          "objectType",
+          "objectId",
+          "toObjectType",
+          "toObjectId",
+          "labels"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array",
+              "null"
+            ],
+            "additionalProperties": true
+          }
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/crm/objects/2026-09/{{objectType}}/{{objectId}}/associations/{{toObjectType}}/{{toObjectId}}",
+        "success": [
+          200,
+          201
+        ],
+        "body": "{{labels}}",
+        "parameters": [
+          {
+            "wireName": "objectType",
+            "inputName": "objectType",
+            "in": "path",
+            "style": "simple",
+            "explode": false,
+            "allowReserved": false
+          },
+          {
+            "wireName": "objectId",
+            "inputName": "objectId",
+            "in": "path",
+            "style": "simple",
+            "explode": false,
+            "allowReserved": false
+          },
+          {
+            "wireName": "toObjectType",
+            "inputName": "toObjectType",
+            "in": "path",
+            "style": "simple",
+            "explode": false,
+            "allowReserved": false
+          },
+          {
+            "wireName": "toObjectId",
+            "inputName": "toObjectId",
+            "in": "path",
+            "style": "simple",
+            "explode": false,
+            "allowReserved": false
+          }
+        ]
+      }
+    },
+    "list.all.engagements": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List all engagements",
+      "description": "List one page of HubSpot's legacy aggregate engagement feed (GET /engagements/v1/engagements/paged).",
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 250,
+            "description": "Maximum engagements to return, from 1 to 250."
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Numeric offset returned by a previous page. Omit for the first page."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/engagements/v1/engagements/paged",
+        "success": [
+          200
+        ],
+        "query": {
+          "limit": "{{limit}}",
+          "offset": "{{offset}}"
+        },
+        "parameters": [
+          {
+            "wireName": "limit",
+            "inputName": "limit",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "allowReserved": false
+          },
+          {
+            "wireName": "offset",
+            "inputName": "offset",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "allowReserved": false
+          }
+        ]
+      }
+    },
+    "crm-object-schemas.schemas.associations.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Create association definition",
+      "description": "Create a custom object schema association definition. This defines the association type, not a record-to-record link. Requires crm.schemas.custom.write and a custom object type.",
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "objectType": {
+            "type": "string",
+            "description": "Custom object type name or object type id the association definition is created on."
+          },
+          "fromObjectTypeId": {
+            "type": "string",
+            "description": "Object type id or name on the from side of the association definition."
+          },
+          "toObjectTypeId": {
+            "type": "string",
+            "description": "Object type id or name on the to side of the association definition."
+          },
+          "name": {
+            "type": "string",
+            "description": "Optional unique name for the association type. HubSpot generates one when omitted."
+          }
+        },
+        "required": [
+          "objectType",
+          "fromObjectTypeId",
+          "toObjectTypeId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/crm-object-schemas/2026-09/schemas/{{objectType}}/associations",
+        "parameters": [
+          {
+            "wireName": "objectType",
+            "inputName": "objectType",
+            "in": "path",
+            "style": "simple",
+            "explode": false,
+            "allowReserved": false
+          }
+        ],
+        "body": {
+          "fromObjectTypeId": "{{fromObjectTypeId}}",
+          "toObjectTypeId": "{{toObjectTypeId}}",
+          "name": "{{name}}"
+        },
+        "success": [
+          201
+        ]
+      }
     }
   },
   "models": [
@@ -20447,5 +22998,11 @@
     "company",
     "deal",
     "ticket"
-  ]
+  ],
+  "provenance": {
+    "source": {
+      "kind": "open-connector",
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"
+    }
+  }
 }

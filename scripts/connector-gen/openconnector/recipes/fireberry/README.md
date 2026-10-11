@@ -1,6 +1,6 @@
 # Fireberry
 
-Read-only international **Fireberry REST API** recipe. This is the English CRM API at [api.fireberry.com](https://api.fireberry.com), not the `api.powerlink.co.il` host.
+International **Fireberry REST API** recipe. This is the English CRM API at [api.fireberry.com](https://api.fireberry.com), not the `api.powerlink.co.il` host.
 
 ## Setup
 
@@ -14,7 +14,7 @@ Each Fireberry user has a personal API access token (TokenID) under Profile → 
 - `contacts.list`: `GET /api/record/contact` with the same optional page filters.
 - `contacts.get`: `GET /api/record/contact/{id}`; `id` is a required GUID.
 
-Successful responses are raw provider JSON under AppCall `data`. Writes, v3 query, and the Powerlink.co.il edition are omitted. Native `bodyErrorPaths` cannot invert Fireberry's `success` boolean, so these GET reads use HTTP status as the failure signal.
+Successful responses are raw provider JSON under AppCall `data`. Version 0.3.0 adds the remaining Composio Fireberry HTTP tools (CRUD across CRM objects, metadata, custom fields, v3 and legacy query). Multipart file upload is omitted because declarative bodyEncoding cannot send multipart. Native `bodyErrorPaths` cannot invert Fireberry's `success` boolean, so these GET reads use HTTP status as the failure signal.
 
 ## Adaptations
 

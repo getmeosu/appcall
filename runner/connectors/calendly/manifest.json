@@ -1,7 +1,7 @@
 {
   "key": "calendly",
   "name": "Calendly",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "runtime": "bun",
   "categories": [
     "scheduling"
@@ -42,6 +42,14 @@
             "description": "Connector health status, e.g. \"ok\" or \"error\"."
           }
         }
+      },
+      "sideEffect": "read",
+      "request": {
+        "method": "GET",
+        "path": "/users/me",
+        "success": [
+          200
+        ]
       }
     },
     "users.me.action": {
@@ -1073,6 +1081,2308 @@
         }
       }
     },
+    "event_types.create": {
+      "sideEffect": "write",
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 65536,
+      "title": "Create Event Type",
+      "description": "Create a one-on-one (solo) Calendly event type for a user owner URI.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Owner user URI, e.g. https://api.calendly.com/users/UUID."
+          },
+          "name": {
+            "type": "string",
+            "description": "Display name shown to invitees."
+          },
+          "active": {
+            "type": "boolean",
+            "description": "Whether the event type is bookable. Defaults to false."
+          },
+          "description": {
+            "type": "string",
+            "description": "Plain-text description on the scheduling page."
+          },
+          "duration": {
+            "type": "integer",
+            "description": "Session length in minutes (1-720)."
+          },
+          "duration_options": {
+            "type": "array",
+            "description": "Up to 4 alternate durations in minutes.",
+            "items": {
+              "type": "integer"
+            }
+          },
+          "locations": {
+            "type": "array",
+            "description": "Location configurations for the event type.",
+            "items": {
+              "type": "object"
+            }
+          },
+          "color": {
+            "type": "string",
+            "description": "Scheduling-page hex color, e.g. #fff200."
+          },
+          "locale": {
+            "type": "string",
+            "description": "Scheduling-page locale.",
+            "enum": [
+              "de",
+              "en",
+              "es",
+              "fr",
+              "it",
+              "nl",
+              "pt",
+              "uk"
+            ]
+          }
+        },
+        "required": [
+          "owner",
+          "name"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {
+            "description": "Parsed Calendly JSON body."
+          },
+          "success": {
+            "type": "boolean"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/event_types",
+        "body": {
+          "owner": "{{owner}}",
+          "name": "{{name}}",
+          "active": "{{active}}",
+          "description": "{{description}}",
+          "duration": "{{duration}}",
+          "duration_options": "{{duration_options}}",
+          "locations": "{{locations}}",
+          "color": "{{color}}",
+          "locale": "{{locale}}"
+        },
+        "success": [
+          201
+        ]
+      },
+      "responseFormat": "json"
+    },
+    "event_types.one_off.create": {
+      "sideEffect": "write",
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 65536,
+      "title": "Create One-Off Event Type",
+      "description": "Create a temporary one-off event type with a host, duration, and date_setting window.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Name of the one-off event type."
+          },
+          "host": {
+            "type": "string",
+            "description": "Host user URI."
+          },
+          "duration": {
+            "type": "number",
+            "description": "Duration in minutes."
+          },
+          "date_setting": {
+            "type": "object",
+            "description": "Availability window. type is date_range, days_in_future, or spots.",
+            "properties": {
+              "type": {
+                "type": "string",
+                "description": "Window type.",
+                "enum": [
+                  "date_range",
+                  "days_in_future",
+                  "spots"
+                ]
+              },
+              "start_date": {
+                "type": "string",
+                "description": "YYYY-MM-DD start when type is date_range."
+              },
+              "end_date": {
+                "type": "string",
+                "description": "YYYY-MM-DD end when type is date_range."
+              },
+              "days": {
+                "type": "integer",
+                "description": "Days into the future when type is days_in_future."
+              },
+              "only_weekdays": {
+                "type": "boolean",
+                "description": "Count only Monday-Friday when type is days_in_future."
+              },
+              "spots": {
+                "type": "array",
+                "description": "Dedicated start/end spots when type is spots.",
+                "items": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "co_hosts": {
+            "type": "array",
+            "description": "Co-host user URIs.",
+            "items": {
+              "type": "string"
+            }
+          },
+          "timezone": {
+            "type": "string",
+            "description": "IANA timezone. Defaults to the host timezone."
+          },
+          "location": {
+            "type": "object",
+            "description": "Location configuration (kind plus type-specific fields)."
+          }
+        },
+        "required": [
+          "name",
+          "host",
+          "duration",
+          "date_setting"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {
+            "description": "Parsed Calendly JSON body."
+          },
+          "success": {
+            "type": "boolean"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/one_off_event_types",
+        "body": {
+          "name": "{{name}}",
+          "host": "{{host}}",
+          "duration": "{{duration}}",
+          "date_setting": "{{date_setting}}",
+          "co_hosts": "{{co_hosts}}",
+          "timezone": "{{timezone}}",
+          "location": "{{location}}"
+        },
+        "success": [
+          201
+        ]
+      },
+      "responseFormat": "json"
+    },
+    "shares.create": {
+      "sideEffect": "write",
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 65536,
+      "title": "Create Share",
+      "description": "Create a customized single-use share link from an existing event type without changing the original.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "event_type": {
+            "type": "string",
+            "description": "Event type URI to share."
+          },
+          "name": {
+            "type": "string",
+            "description": "Custom display name for the share."
+          },
+          "duration": {
+            "type": "integer",
+            "description": "Override duration in minutes."
+          },
+          "duration_options": {
+            "type": "array",
+            "description": "Override duration options in minutes.",
+            "items": {
+              "type": "integer"
+            }
+          },
+          "period_type": {
+            "type": "string",
+            "description": "Booking window type.",
+            "enum": [
+              "available_moving",
+              "moving",
+              "fixed",
+              "unlimited"
+            ]
+          },
+          "start_date": {
+            "type": "string",
+            "description": "YYYY-MM-DD start when period_type is fixed."
+          },
+          "end_date": {
+            "type": "string",
+            "description": "YYYY-MM-DD end when period_type is fixed."
+          },
+          "max_booking_time": {
+            "type": "integer",
+            "description": "Max days in advance when period_type is moving or available_moving."
+          },
+          "hide_location": {
+            "type": "boolean",
+            "description": "Hide location until booking time."
+          },
+          "location_configurations": {
+            "type": "array",
+            "description": "Override location configurations.",
+            "items": {
+              "type": "object"
+            }
+          },
+          "availability_rule": {
+            "type": "object",
+            "description": "Override availability rule (timezone, rules)."
+          }
+        },
+        "required": [
+          "event_type"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {
+            "description": "Parsed Calendly JSON body."
+          },
+          "success": {
+            "type": "boolean"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/shares",
+        "body": {
+          "event_type": "{{event_type}}",
+          "name": "{{name}}",
+          "duration": "{{duration}}",
+          "duration_options": "{{duration_options}}",
+          "period_type": "{{period_type}}",
+          "start_date": "{{start_date}}",
+          "end_date": "{{end_date}}",
+          "max_booking_time": "{{max_booking_time}}",
+          "hide_location": "{{hide_location}}",
+          "location_configurations": "{{location_configurations}}",
+          "availability_rule": "{{availability_rule}}"
+        },
+        "success": [
+          201
+        ]
+      },
+      "responseFormat": "json"
+    },
+    "scheduling_links.create_single_use": {
+      "sideEffect": "write",
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 65536,
+      "title": "Create Single-Use Scheduling Link",
+      "description": "Create a single-use scheduling link (max_event_count=1) owned by an event type.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Event type URI that owns the link."
+          },
+          "owner_type": {
+            "type": "string",
+            "description": "Owner resource type. Must be EventType.",
+            "enum": [
+              "EventType"
+            ]
+          }
+        },
+        "required": [
+          "owner",
+          "owner_type"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {
+            "description": "Parsed Calendly JSON body."
+          },
+          "success": {
+            "type": "boolean"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/scheduling_links",
+        "body": {
+          "max_event_count": 1,
+          "owner": "{{owner}}",
+          "owner_type": "{{owner_type}}"
+        },
+        "success": [
+          201
+        ]
+      },
+      "responseFormat": "json"
+    },
+    "invitee_data.delete": {
+      "sideEffect": "destructive",
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 65536,
+      "title": "Delete Invitee Data",
+      "description": "Submit an Enterprise data-compliance request to delete invitee data for the given emails. Completes asynchronously (up to 7 days).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "emails": {
+            "type": "array",
+            "description": "Invitee email addresses whose data should be deleted.",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "emails"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {
+            "description": "Parsed Calendly JSON body."
+          },
+          "success": {
+            "type": "boolean"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/data_compliance/deletion/invitees",
+        "body": {
+          "emails": "{{emails}}"
+        },
+        "success": [
+          202
+        ]
+      },
+      "responseFormat": "json"
+    },
+    "invitee_no_shows.delete": {
+      "sideEffect": "destructive",
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "title": "Delete Invitee No Show",
+      "description": "Undo a no-show mark by deleting the invitee no-show record UUID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "uuid": {
+            "type": "string",
+            "description": "Invitee no-show Last-segment UUID (not a full Calendly URI)."
+          }
+        },
+        "required": [
+          "uuid"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {
+            "description": "Parsed Calendly JSON body."
+          },
+          "success": {
+            "type": "boolean"
+          }
+        }
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/invitee_no_shows/{{uuid}}",
+        "success": [
+          204
+        ],
+        "result": {
+          "success": true
+        }
+      },
+      "responseFormat": "json"
+    },
+    "organization.memberships.delete": {
+      "sideEffect": "destructive",
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "title": "Delete Organization Membership",
+      "description": "Remove a non-owner member from a Calendly organization by membership UUID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "uuid": {
+            "type": "string",
+            "description": "Organization membership Last-segment UUID (not a full Calendly URI)."
+          }
+        },
+        "required": [
+          "uuid"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {
+            "description": "Parsed Calendly JSON body."
+          },
+          "success": {
+            "type": "boolean"
+          }
+        }
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/organization_memberships/{{uuid}}",
+        "success": [
+          204
+        ],
+        "result": {
+          "success": true
+        }
+      },
+      "responseFormat": "json"
+    },
+    "scheduled_event_data.delete": {
+      "sideEffect": "destructive",
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 65536,
+      "title": "Delete Scheduled Event Data",
+      "description": "Submit an Enterprise data-compliance request to delete scheduled events between start_time and end_time (past 24 months, up to 7 days to complete).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "start_time": {
+            "type": "string",
+            "description": "Inclusive UTC start of the deletion window (ISO 8601)."
+          },
+          "end_time": {
+            "type": "string",
+            "description": "Inclusive UTC end of the deletion window (ISO 8601)."
+          }
+        },
+        "required": [
+          "start_time",
+          "end_time"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {
+            "description": "Parsed Calendly JSON body."
+          },
+          "success": {
+            "type": "boolean"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/data_compliance/deletion/events",
+        "body": {
+          "start_time": "{{start_time}}",
+          "end_time": "{{end_time}}"
+        },
+        "success": [
+          202
+        ]
+      },
+      "responseFormat": "json"
+    },
+    "event_types.availability.get": {
+      "sideEffect": "read",
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 5242880,
+      "title": "Get Event Type Availability",
+      "description": "List availability schedules configured on an event type URI.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "event_type": {
+            "type": "string",
+            "description": "Event type URI whose availability schedules to list."
+          },
+          "user": {
+            "type": "string",
+            "description": "Optional user URI to filter schedules."
+          }
+        },
+        "required": [
+          "event_type"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {
+            "description": "Parsed Calendly JSON body."
+          },
+          "success": {
+            "type": "boolean"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/event_type_availability_schedules",
+        "query": {
+          "event_type": "{{event_type}}",
+          "user": "{{user}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json"
+    },
+    "groups.get": {
+      "sideEffect": "read",
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 5242880,
+      "title": "Get Group",
+      "description": "Retrieve one Calendly group by UUID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "uuid": {
+            "type": "string",
+            "description": "Group Last-segment UUID (not a full Calendly URI)."
+          }
+        },
+        "required": [
+          "uuid"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {
+            "description": "Parsed Calendly JSON body."
+          },
+          "success": {
+            "type": "boolean"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/groups/{{uuid}}",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json"
+    },
+    "group_relationships.get": {
+      "sideEffect": "read",
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 5242880,
+      "title": "Get Group Relationship",
+      "description": "Retrieve one group relationship (member/admin role) by UUID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "uuid": {
+            "type": "string",
+            "description": "Group relationship Last-segment UUID (not a full Calendly URI)."
+          }
+        },
+        "required": [
+          "uuid"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {
+            "description": "Parsed Calendly JSON body."
+          },
+          "success": {
+            "type": "boolean"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/group_relationships/{{uuid}}",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json"
+    },
+    "invitee_no_shows.get": {
+      "sideEffect": "read",
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 5242880,
+      "title": "Get Invitee No Show",
+      "description": "Retrieve one invitee no-show record by UUID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "uuid": {
+            "type": "string",
+            "description": "Invitee no-show Last-segment UUID (not a full Calendly URI)."
+          }
+        },
+        "required": [
+          "uuid"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {
+            "description": "Parsed Calendly JSON body."
+          },
+          "success": {
+            "type": "boolean"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/invitee_no_shows/{{uuid}}",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json"
+    },
+    "organization.invitations.get": {
+      "sideEffect": "read",
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 5242880,
+      "title": "Get Organization Invitation",
+      "description": "Retrieve one organization invitation by organization UUID and invitation UUID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "org_uuid": {
+            "type": "string",
+            "description": "Organization Last-segment UUID (not a full Calendly URI)."
+          },
+          "uuid": {
+            "type": "string",
+            "description": "Invitation Last-segment UUID (not a full Calendly URI)."
+          }
+        },
+        "required": [
+          "org_uuid",
+          "uuid"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {
+            "description": "Parsed Calendly JSON body."
+          },
+          "success": {
+            "type": "boolean"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/organizations/{{org_uuid}}/invitations/{{uuid}}",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json"
+    },
+    "organization.memberships.get": {
+      "sideEffect": "read",
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 5242880,
+      "title": "Get Organization Membership",
+      "description": "Retrieve one organization membership by UUID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "uuid": {
+            "type": "string",
+            "description": "Organization membership Last-segment UUID (not a full Calendly URI)."
+          }
+        },
+        "required": [
+          "uuid"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {
+            "description": "Parsed Calendly JSON body."
+          },
+          "success": {
+            "type": "boolean"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/organization_memberships/{{uuid}}",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json"
+    },
+    "routing_form_submissions.get": {
+      "sideEffect": "read",
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 5242880,
+      "title": "Get Routing Form Submission",
+      "description": "Retrieve one routing form submission by UUID, including questions, answers, and routing results.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "uuid": {
+            "type": "string",
+            "description": "Routing form submission Last-segment UUID (not a full Calendly URI)."
+          }
+        },
+        "required": [
+          "uuid"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {
+            "description": "Parsed Calendly JSON body."
+          },
+          "success": {
+            "type": "boolean"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/routing_form_submissions/{{uuid}}",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json"
+    },
+    "webhook_subscriptions.sample": {
+      "sideEffect": "read",
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 5242880,
+      "title": "Get Sample Webhook Data",
+      "description": "Retrieve a sample webhook payload for an event, organization, and scope.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "event": {
+            "type": "string",
+            "description": "Webhook event to sample.",
+            "enum": [
+              "invitee.created",
+              "invitee.canceled",
+              "routing_form_submission.created"
+            ]
+          },
+          "scope": {
+            "type": "string",
+            "description": "Sample scope.",
+            "enum": [
+              "user",
+              "organization"
+            ]
+          },
+          "organization": {
+            "type": "string",
+            "description": "Organization URI. Always required."
+          },
+          "user": {
+            "type": "string",
+            "description": "User URI. Required when scope is user."
+          }
+        },
+        "required": [
+          "event",
+          "scope",
+          "organization"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {
+            "description": "Parsed Calendly JSON body."
+          },
+          "success": {
+            "type": "boolean"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/sample_webhook_data",
+        "query": {
+          "event": "{{event}}",
+          "scope": "{{scope}}",
+          "organization": "{{organization}}",
+          "user": "{{user}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json"
+    },
+    "user_availability_schedules.get": {
+      "sideEffect": "read",
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 5242880,
+      "title": "Get User Availability Schedule",
+      "description": "Retrieve one user availability schedule by UUID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "uuid": {
+            "type": "string",
+            "description": "Availability schedule Last-segment UUID (not a full Calendly URI)."
+          }
+        },
+        "required": [
+          "uuid"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {
+            "description": "Parsed Calendly JSON body."
+          },
+          "success": {
+            "type": "boolean"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/user_availability_schedules/{{uuid}}",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json"
+    },
+    "webhook_subscriptions.get": {
+      "sideEffect": "read",
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 5242880,
+      "title": "Get Webhook Subscription",
+      "description": "Retrieve one webhook subscription by UUID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "uuid": {
+            "type": "string",
+            "description": "Webhook subscription Last-segment UUID (not a full Calendly URI)."
+          }
+        },
+        "required": [
+          "uuid"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {
+            "description": "Parsed Calendly JSON body."
+          },
+          "success": {
+            "type": "boolean"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/webhook_subscriptions/{{uuid}}",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json"
+    },
+    "activity_log_entries.list": {
+      "sideEffect": "read",
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List Activity Log Entries",
+      "description": "List Enterprise activity log entries for an organization, with optional filters and pagination.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "organization": {
+            "type": "string",
+            "description": "Organization URI whose activity to list."
+          },
+          "search_term": {
+            "type": "string",
+            "description": "Full-text search with Calendly operators (| + - \"\" () *)."
+          },
+          "actor": {
+            "type": "array",
+            "description": "User URIs that performed the actions.",
+            "items": {
+              "type": "string"
+            }
+          },
+          "action": {
+            "type": "array",
+            "description": "Action names such as user.created.",
+            "items": {
+              "type": "string"
+            }
+          },
+          "namespace": {
+            "type": "array",
+            "description": "Namespaces such as user_management.",
+            "items": {
+              "type": "string"
+            }
+          },
+          "sort": {
+            "type": "array",
+            "description": "Sort expressions such as occurred_at:desc.",
+            "items": {
+              "type": "string"
+            }
+          },
+          "min_occurred_at": {
+            "type": "string",
+            "description": "Inclusive UTC lower bound (ISO 8601)."
+          },
+          "max_occurred_at": {
+            "type": "string",
+            "description": "Inclusive UTC upper bound (ISO 8601)."
+          },
+          "count": {
+            "type": "integer",
+            "description": "Number of results per page (max 100)."
+          },
+          "page_token": {
+            "type": "string",
+            "description": "Pagination token from a previous response."
+          }
+        },
+        "required": [
+          "organization"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {
+            "description": "Parsed Calendly JSON body."
+          },
+          "success": {
+            "type": "boolean"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/activity_log_entries",
+        "query": {
+          "organization": "{{organization}}",
+          "search_term": "{{search_term}}",
+          "actor": "{{actor}}",
+          "action": "{{action}}",
+          "namespace": "{{namespace}}",
+          "sort": "{{sort}}",
+          "min_occurred_at": "{{min_occurred_at}}",
+          "max_occurred_at": "{{max_occurred_at}}",
+          "count": "{{count}}",
+          "page_token": "{{page_token}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json"
+    },
+    "event_type_memberships.list": {
+      "sideEffect": "read",
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 5242880,
+      "title": "List Event Type Hosts",
+      "description": "List hosts (event type memberships) for an event type URI.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "event_type": {
+            "type": "string",
+            "description": "Event type URI, e.g. https://api.calendly.com/event_types/UUID."
+          },
+          "count": {
+            "type": "integer",
+            "description": "Number of results per page (max 100)."
+          },
+          "page_token": {
+            "type": "string",
+            "description": "Pagination token from a previous response."
+          }
+        },
+        "required": [
+          "event_type"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {
+            "description": "Parsed Calendly JSON body."
+          },
+          "success": {
+            "type": "boolean"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/event_type_memberships",
+        "query": {
+          "event_type": "{{event_type}}",
+          "count": "{{count}}",
+          "page_token": "{{page_token}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json"
+    },
+    "group_relationships.list": {
+      "sideEffect": "read",
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 5242880,
+      "title": "List Group Relationships",
+      "description": "List group relationships filtered by organization, group, or owner URI.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "organization": {
+            "type": "string",
+            "description": "Organization URI filter."
+          },
+          "group": {
+            "type": "string",
+            "description": "Group URI filter."
+          },
+          "owner": {
+            "type": "string",
+            "description": "Owner URI filter (organization membership or invitation)."
+          },
+          "count": {
+            "type": "integer",
+            "description": "Number of results per page (max 100)."
+          },
+          "page_token": {
+            "type": "string",
+            "description": "Pagination token from a previous response."
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {
+            "description": "Parsed Calendly JSON body."
+          },
+          "success": {
+            "type": "boolean"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/group_relationships",
+        "query": {
+          "organization": "{{organization}}",
+          "group": "{{group}}",
+          "owner": "{{owner}}",
+          "count": "{{count}}",
+          "page_token": "{{page_token}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json"
+    },
+    "groups.list": {
+      "sideEffect": "read",
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 5242880,
+      "title": "List Groups",
+      "description": "List groups that belong to an organization URI.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "organization": {
+            "type": "string",
+            "description": "Organization URI."
+          },
+          "count": {
+            "type": "integer",
+            "description": "Number of results per page (max 100)."
+          },
+          "page_token": {
+            "type": "string",
+            "description": "Pagination token from a previous response."
+          }
+        },
+        "required": [
+          "organization"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {
+            "description": "Parsed Calendly JSON body."
+          },
+          "success": {
+            "type": "boolean"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/groups",
+        "query": {
+          "organization": "{{organization}}",
+          "count": "{{count}}",
+          "page_token": "{{page_token}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json"
+    },
+    "organization.invitations.list": {
+      "sideEffect": "read",
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 5242880,
+      "title": "List Organization Invitations",
+      "description": "List invitations for an organization UUID, optionally filtered by email or status.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "uuid": {
+            "type": "string",
+            "description": "Organization Last-segment UUID (not a full Calendly URI)."
+          },
+          "email": {
+            "type": "string",
+            "description": "Filter by invitee email."
+          },
+          "status": {
+            "type": "string",
+            "description": "Invitation status filter.",
+            "enum": [
+              "pending",
+              "accepted",
+              "declined"
+            ]
+          },
+          "sort": {
+            "type": "string",
+            "description": "Sort expression such as created_at:asc."
+          },
+          "count": {
+            "type": "integer",
+            "description": "Number of results per page (max 100)."
+          },
+          "page_token": {
+            "type": "string",
+            "description": "Pagination token from a previous response."
+          }
+        },
+        "required": [
+          "uuid"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {
+            "description": "Parsed Calendly JSON body."
+          },
+          "success": {
+            "type": "boolean"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/organizations/{{uuid}}/invitations",
+        "query": {
+          "email": "{{email}}",
+          "status": "{{status}}",
+          "sort": "{{sort}}",
+          "count": "{{count}}",
+          "page_token": "{{page_token}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json"
+    },
+    "outgoing_communications.list": {
+      "sideEffect": "read",
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List Outgoing Communications",
+      "description": "List Enterprise outgoing SMS/email communications for an organization URI.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "organization": {
+            "type": "string",
+            "description": "Organization URI."
+          },
+          "min_created_at": {
+            "type": "string",
+            "description": "Inclusive UTC created-after bound (ISO 8601)."
+          },
+          "max_created_at": {
+            "type": "string",
+            "description": "Exclusive UTC created-before bound (ISO 8601)."
+          },
+          "count": {
+            "type": "integer",
+            "description": "Number of results per page (max 100)."
+          },
+          "page_token": {
+            "type": "string",
+            "description": "Pagination token from a previous response."
+          }
+        },
+        "required": [
+          "organization"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {
+            "description": "Parsed Calendly JSON body."
+          },
+          "success": {
+            "type": "boolean"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/outgoing_communications",
+        "query": {
+          "organization": "{{organization}}",
+          "min_created_at": "{{min_created_at}}",
+          "max_created_at": "{{max_created_at}}",
+          "count": "{{count}}",
+          "page_token": "{{page_token}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json"
+    },
+    "routing_form_submissions.list": {
+      "sideEffect": "read",
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 5242880,
+      "title": "List Routing Form Submissions",
+      "description": "List submissions for a routing form URI (query parameter form).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "form": {
+            "type": "string",
+            "description": "Routing form URI whose submissions to list."
+          },
+          "sort": {
+            "type": "string",
+            "description": "Sort expression such as created_at:desc."
+          },
+          "count": {
+            "type": "integer",
+            "description": "Number of results per page (max 100)."
+          },
+          "page_token": {
+            "type": "string",
+            "description": "Pagination token from a previous response."
+          }
+        },
+        "required": [
+          "form"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {
+            "description": "Parsed Calendly JSON body."
+          },
+          "success": {
+            "type": "boolean"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/routing_form_submissions",
+        "query": {
+          "form": "{{form}}",
+          "sort": "{{sort}}",
+          "count": "{{count}}",
+          "page_token": "{{page_token}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json"
+    },
+    "user_availability_schedules.list": {
+      "sideEffect": "read",
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 5242880,
+      "title": "List User Availability Schedules",
+      "description": "List availability schedules for a user URI.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "user": {
+            "type": "string",
+            "description": "User URI whose schedules to list."
+          }
+        },
+        "required": [
+          "user"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {
+            "description": "Parsed Calendly JSON body."
+          },
+          "success": {
+            "type": "boolean"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/user_availability_schedules",
+        "query": {
+          "user": "{{user}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json"
+    },
+    "user_busy_times.list": {
+      "sideEffect": "read",
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List User Busy Times",
+      "description": "List busy intervals for a user URI in a window of at most 7 days.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "user": {
+            "type": "string",
+            "description": "User URI whose busy times to list."
+          },
+          "start_time": {
+            "type": "string",
+            "description": "Inclusive UTC start (RFC 3339)."
+          },
+          "end_time": {
+            "type": "string",
+            "description": "Exclusive UTC end (RFC 3339). Must be after start_time."
+          }
+        },
+        "required": [
+          "user",
+          "start_time",
+          "end_time"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {
+            "description": "Parsed Calendly JSON body."
+          },
+          "success": {
+            "type": "boolean"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/user_busy_times",
+        "query": {
+          "user": "{{user}}",
+          "start_time": "{{start_time}}",
+          "end_time": "{{end_time}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json"
+    },
+    "user_locations.list": {
+      "sideEffect": "read",
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 5242880,
+      "title": "List User Meeting Locations",
+      "description": "List configured meeting locations for a user URI.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "user": {
+            "type": "string",
+            "description": "User URI whose locations to list."
+          }
+        },
+        "required": [
+          "user"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {
+            "description": "Parsed Calendly JSON body."
+          },
+          "success": {
+            "type": "boolean"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/locations",
+        "query": {
+          "user": "{{user}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json"
+    },
+    "organization.invitations.create": {
+      "sideEffect": "write",
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 65536,
+      "title": "Create Organization Invitation",
+      "description": "Invite a user to an organization by email. Requires owner or admin privileges.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "org_uuid": {
+            "type": "string",
+            "description": "Organization Last-segment UUID (not a full Calendly URI)."
+          },
+          "email": {
+            "type": "string",
+            "description": "Email address to invite."
+          }
+        },
+        "required": [
+          "org_uuid",
+          "email"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {
+            "description": "Parsed Calendly JSON body."
+          },
+          "success": {
+            "type": "boolean"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/organizations/{{org_uuid}}/invitations",
+        "body": {
+          "email": "{{email}}"
+        },
+        "success": [
+          201
+        ]
+      },
+      "responseFormat": "json"
+    },
+    "invitees.create": {
+      "sideEffect": "write",
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 65536,
+      "title": "Create Event Invitee",
+      "description": "Book a meeting by creating an invitee on an event type at a confirmed start_time. Requires a paid Calendly plan.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "event_type": {
+            "type": "string",
+            "description": "Event type URI to book."
+          },
+          "start_time": {
+            "type": "string",
+            "description": "Meeting start in ISO 8601 UTC."
+          },
+          "invitee": {
+            "type": "object",
+            "description": "Invitee identity. email and timezone are required by Calendly.",
+            "properties": {
+              "name": {
+                "type": "string",
+                "description": "Full name."
+              },
+              "first_name": {
+                "type": "string",
+                "description": "First name."
+              },
+              "last_name": {
+                "type": "string",
+                "description": "Last name."
+              },
+              "email": {
+                "type": "string",
+                "description": "Invitee email."
+              },
+              "timezone": {
+                "type": "string",
+                "description": "IANA timezone, e.g. America/New_York."
+              },
+              "text_reminder_number": {
+                "type": "string",
+                "description": "E.164 SMS reminder number."
+              }
+            }
+          },
+          "location": {
+            "type": "object",
+            "description": "Meeting location object (kind plus type-specific fields)."
+          },
+          "tracking": {
+            "type": "object",
+            "description": "UTM and tracking fields."
+          },
+          "event_guests": {
+            "type": "array",
+            "description": "Additional guest emails (max 10).",
+            "items": {
+              "type": "string"
+            }
+          },
+          "questions_and_answers": {
+            "type": "array",
+            "description": "Custom question answers.",
+            "items": {
+              "type": "object"
+            }
+          }
+        },
+        "required": [
+          "event_type",
+          "start_time",
+          "invitee"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {
+            "description": "Parsed Calendly JSON body."
+          },
+          "success": {
+            "type": "boolean"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/invitees",
+        "body": {
+          "event_type": "{{event_type}}",
+          "start_time": "{{start_time}}",
+          "invitee": "{{invitee}}",
+          "location": "{{location}}",
+          "tracking": "{{tracking}}",
+          "event_guests": "{{event_guests}}",
+          "questions_and_answers": "{{questions_and_answers}}"
+        },
+        "success": [
+          201
+        ]
+      },
+      "responseFormat": "json"
+    },
+    "organization.invitations.revoke": {
+      "sideEffect": "destructive",
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "title": "Revoke Organization Invitation",
+      "description": "Revoke a pending organization invitation by organization UUID and invitation UUID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "org_uuid": {
+            "type": "string",
+            "description": "Organization Last-segment UUID (not a full Calendly URI)."
+          },
+          "uuid": {
+            "type": "string",
+            "description": "Invitation Last-segment UUID (not a full Calendly URI)."
+          }
+        },
+        "required": [
+          "org_uuid",
+          "uuid"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {
+            "description": "Parsed Calendly JSON body."
+          },
+          "success": {
+            "type": "boolean"
+          }
+        }
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/organizations/{{org_uuid}}/invitations/{{uuid}}",
+        "success": [
+          204
+        ],
+        "result": {
+          "success": true
+        }
+      },
+      "responseFormat": "json"
+    },
+    "event_types.update": {
+      "sideEffect": "write",
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 65536,
+      "title": "Update Event Type",
+      "description": "Update a one-on-one (solo) event type by UUID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "uuid": {
+            "type": "string",
+            "description": "Event type Last-segment UUID (not a full Calendly URI)."
+          },
+          "name": {
+            "type": "string",
+            "description": "Display name shown to invitees."
+          },
+          "active": {
+            "type": "boolean",
+            "description": "Whether the event type is bookable."
+          },
+          "description": {
+            "type": "string",
+            "description": "Plain-text description on the scheduling page."
+          },
+          "duration": {
+            "type": "integer",
+            "description": "Session length in minutes (1-720)."
+          },
+          "duration_options": {
+            "type": "array",
+            "description": "Up to 4 alternate durations in minutes.",
+            "items": {
+              "type": "integer"
+            }
+          },
+          "locations": {
+            "type": "array",
+            "description": "Location configurations for the event type.",
+            "items": {
+              "type": "object"
+            }
+          },
+          "color": {
+            "type": "string",
+            "description": "Scheduling-page hex color, e.g. #fff200."
+          },
+          "locale": {
+            "type": "string",
+            "description": "Scheduling-page locale.",
+            "enum": [
+              "de",
+              "en",
+              "es",
+              "fr",
+              "it",
+              "nl",
+              "pt",
+              "uk"
+            ]
+          }
+        },
+        "required": [
+          "uuid"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {
+            "description": "Parsed Calendly JSON body."
+          },
+          "success": {
+            "type": "boolean"
+          }
+        }
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/event_types/{{uuid}}",
+        "body": {
+          "name": "{{name}}",
+          "active": "{{active}}",
+          "description": "{{description}}",
+          "duration": "{{duration}}",
+          "duration_options": "{{duration_options}}",
+          "locations": "{{locations}}",
+          "color": "{{color}}",
+          "locale": "{{locale}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json"
+    },
+    "event_types.availability.update": {
+      "sideEffect": "write",
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 65536,
+      "title": "Update Event Type Availability",
+      "description": "Patch the availability schedule for an event type URI. Query event_type is required; availability_rule overwrites existing rules.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "event_type": {
+            "type": "string",
+            "description": "Event type URI, e.g. https://api.calendly.com/event_types/UUID."
+          },
+          "availability_rule": {
+            "type": "object",
+            "description": "Availability rule. timezone is required; rules overwrite existing rules.",
+            "properties": {
+              "timezone": {
+                "type": "string",
+                "description": "IANA timezone for the schedule."
+              },
+              "rules": {
+                "type": "array",
+                "description": "wday/date rules with intervals.",
+                "items": {
+                  "type": "object"
+                }
+              },
+              "user": {
+                "type": "string",
+                "description": "User URI when an admin updates a specific host schedule."
+              }
+            }
+          },
+          "availability_setting": {
+            "type": "string",
+            "description": "How hosts share a schedule.",
+            "enum": [
+              "host"
+            ]
+          }
+        },
+        "required": [
+          "event_type",
+          "availability_rule"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {
+            "description": "Parsed Calendly JSON body."
+          },
+          "success": {
+            "type": "boolean"
+          }
+        }
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/event_type_availability_schedules",
+        "query": {
+          "event_type": "{{event_type}}"
+        },
+        "body": {
+          "availability_rule": "{{availability_rule}}",
+          "availability_setting": "{{availability_setting}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json"
+    },
     "webhook.invitee_created": {
       "kind": "webhook",
       "timeoutMs": 30000,
@@ -1099,6 +3409,48 @@
     "event",
     "user",
     "invitee",
-    "organization"
-  ]
+    "organization",
+    "event_type",
+    "group",
+    "group_relationship",
+    "invitee_no_show",
+    "routing_form",
+    "routing_form_submission",
+    "webhook_subscription",
+    "availability_schedule",
+    "share",
+    "scheduling_link",
+    "organization_invitation",
+    "organization_membership",
+    "activity_log_entry",
+    "outgoing_communication",
+    "location",
+    "busy_time"
+  ],
+  "http": {
+    "baseUrl": "https://api.calendly.com",
+    "auth": {
+      "field": "accessToken",
+      "in": "header",
+      "name": "Authorization",
+      "value": "Bearer {{accessToken}}"
+    },
+    "headers": {
+      "Accept": "application/json",
+      "Content-Type": "application/json"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after",
+      "defaultRetryAfterSeconds": 10,
+      "messagePaths": [
+        "message",
+        "title",
+        "details.0.message",
+        "error"
+      ]
+    }
+  }
 }

@@ -1,7 +1,7 @@
 {
   "key": "resend",
   "name": "Resend",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "runtime": "bun",
   "categories": [
     "email-marketing"
@@ -69,7 +69,7 @@
       "kind": "action",
       "timeoutMs": 15000,
       "maxInputBytes": 1048576,
-      "maxResponseBytes": 65536,
+      "maxResponseBytes": 1048576,
       "title": "Send Email",
       "description": "Send a transactional email via the Resend API (POST /emails). Supports plain text and/or HTML bodies and optional reply-to, cc, and bcc addresses.",
       "sideEffect": "write",
@@ -131,6 +131,41 @@
               "type": "string"
             },
             "description": "BCC address or list of addresses."
+          },
+          "headers": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Optional custom email headers."
+          },
+          "scheduledAt": {
+            "type": "string",
+            "description": "Optional ISO-8601 scheduled send time."
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "value": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "name",
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            "description": "Optional email tags."
+          },
+          "idempotencyKey": {
+            "type": "string",
+            "description": "Optional Idempotency-Key header so a retried send is accepted once."
           }
         },
         "required": [
@@ -156,7 +191,36 @@
             "description": "ID of the email returned by Resend."
           }
         }
-      }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/emails",
+        "headers": {
+          "Content-Type": "application/json",
+          "Idempotency-Key": "{{idempotencyKey}}"
+        },
+        "body": {
+          "from": "{{from}}",
+          "to": "{{to}}",
+          "subject": "{{subject}}",
+          "html": "{{html}}",
+          "text": "{{text}}",
+          "reply_to": "{{replyTo}}",
+          "cc": "{{cc}}",
+          "bcc": "{{bcc}}",
+          "headers": "{{headers}}",
+          "scheduled_at": "{{scheduledAt}}",
+          "tags": "{{tags}}"
+        },
+        "success": [
+          200,
+          201
+        ],
+        "result": {
+          "id": "{{response.id}}"
+        }
+      },
+      "responseFormat": "json"
     },
     "emails.get": {
       "kind": "action",
@@ -198,7 +262,18 @@
             "description": "Normalized sent email including lastEvent."
           }
         }
-      }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/emails/{{id}}",
+        "success": [
+          200
+        ],
+        "result": {
+          "email": "{{response}}"
+        }
+      },
+      "responseFormat": "json"
     },
     "emails.list": {
       "kind": "action",
@@ -248,7 +323,24 @@
             "type": "boolean"
           }
         }
-      }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/emails",
+        "query": {
+          "limit": "{{limit}}",
+          "after": "{{after}}",
+          "before": "{{before}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "emails": "{{response.data}}",
+          "hasMore": "{{response.has_more}}"
+        }
+      },
+      "responseFormat": "json"
     },
     "domains.list": {
       "kind": "action",
@@ -298,7 +390,24 @@
             "type": "boolean"
           }
         }
-      }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/domains",
+        "query": {
+          "limit": "{{limit}}",
+          "after": "{{after}}",
+          "before": "{{before}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "domains": "{{response.data}}",
+          "hasMore": "{{response.has_more}}"
+        }
+      },
+      "responseFormat": "json"
     },
     "domains.get": {
       "kind": "action",
@@ -340,7 +449,18 @@
             "description": "Normalized domain including DNS records and status."
           }
         }
-      }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/domains/{{id}}",
+        "success": [
+          200
+        ],
+        "result": {
+          "domain": "{{response}}"
+        }
+      },
+      "responseFormat": "json"
     },
     "contacts.list": {
       "kind": "action",
@@ -348,7 +468,7 @@
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
       "title": "List Contacts",
-      "description": "List contacts via GET /contacts with optional cursor pagination (limit, after, before).",
+      "description": "List global contacts, or filter to a segment with segmentId (legacy audienceId is accepted).",
       "sideEffect": "read",
       "sample": {
         "limit": 20
@@ -367,6 +487,14 @@
           "before": {
             "type": "string",
             "description": "Optional cursor: return the page before this contact ID."
+          },
+          "segmentId": {
+            "type": "string",
+            "description": "Optional segment ID to filter contacts."
+          },
+          "audienceId": {
+            "type": "string",
+            "description": "Legacy alias for segmentId."
           }
         }
       },
@@ -390,7 +518,25 @@
             "type": "boolean"
           }
         }
-      }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/contacts",
+        "query": {
+          "limit": "{{limit}}",
+          "after": "{{after}}",
+          "before": "{{before}}",
+          "segment_id": "{{segmentId}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "contacts": "{{response.data}}",
+          "hasMore": "{{response.has_more}}"
+        }
+      },
+      "responseFormat": "json"
     },
     "healthcheck": {
       "kind": "action",
@@ -413,12 +559,4592 @@
             "description": "Connector health status, e.g. \"ok\" or \"error\"."
           }
         }
-      }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/domains",
+        "success": [
+          200
+        ],
+        "echo": {
+          "status": "ok"
+        },
+        "result": {
+          "status": "ok"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "emails.cancel": {
+      "title": "Cancel Email",
+      "description": "Cancel a scheduled email before Resend sends it.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Resend resource ID."
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false
+      },
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "destructive",
+      "sample": {
+        "id": "email-id"
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {}
+        },
+        "required": [
+          "connector",
+          "action",
+          "source",
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "kind": "action",
+      "request": {
+        "method": "POST",
+        "path": "/emails/{{id}}/cancel",
+        "success": [
+          200,
+          201
+        ],
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "emails.batch.send": {
+      "title": "Send Batch Emails",
+      "description": "Send one to 100 transactional emails in a single Resend batch request.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "emails": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "from": {
+                  "type": "string"
+                },
+                "to": {
+                  "type": [
+                    "string",
+                    "array"
+                  ],
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "subject": {
+                  "type": "string"
+                },
+                "html": {
+                  "type": "string"
+                },
+                "text": {
+                  "type": "string"
+                },
+                "replyTo": {
+                  "type": [
+                    "string",
+                    "array"
+                  ],
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "cc": {
+                  "type": [
+                    "string",
+                    "array"
+                  ],
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "bcc": {
+                  "type": [
+                    "string",
+                    "array"
+                  ],
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "tags": {
+                  "type": "array",
+                  "items": {
+                    "type": "object"
+                  }
+                }
+              },
+              "required": [
+                "from",
+                "to",
+                "subject"
+              ],
+              "additionalProperties": false
+            },
+            "minItems": 1,
+            "maxItems": 100,
+            "description": "Email messages to send in one batch."
+          },
+          "idempotencyKey": {
+            "type": "string",
+            "description": "Optional Idempotency-Key header so a retried send is accepted once."
+          }
+        },
+        "required": [
+          "emails"
+        ],
+        "additionalProperties": false
+      },
+      "timeoutMs": 15000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "sample": {
+        "emails": [
+          {
+            "from": "a@example.com",
+            "to": [
+              "b@example.com"
+            ],
+            "subject": "Hi",
+            "html": "<p>Hello</p>"
+          }
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {}
+        },
+        "required": [
+          "connector",
+          "action",
+          "source",
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "kind": "action",
+      "request": {
+        "method": "POST",
+        "path": "/emails/batch",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json",
+          "Idempotency-Key": "{{idempotencyKey}}"
+        },
+        "body": "{{emails}}",
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "emails.update": {
+      "title": "Update Email",
+      "description": "Change the scheduled send time for an email that has not been sent.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Resend resource ID."
+          },
+          "scheduledAt": {
+            "type": "string",
+            "description": "ISO-8601 time for a scheduled send."
+          }
+        },
+        "required": [
+          "id",
+          "scheduledAt"
+        ],
+        "additionalProperties": false
+      },
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "sample": {
+        "id": "email-id",
+        "scheduledAt": "2026-10-07T10:00:00Z"
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {}
+        },
+        "required": [
+          "connector",
+          "action",
+          "source",
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "kind": "action",
+      "request": {
+        "method": "PATCH",
+        "path": "/emails/{{id}}",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "scheduled_at": "{{scheduledAt}}"
+        },
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "emails.attachments.list": {
+      "title": "List Email Attachments",
+      "description": "List email attachments through the Resend API using GET /emails/{emailId}/attachments with optional cursor pagination (limit, after, before).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "emailId": {
+            "type": "string",
+            "description": "Sent email ID."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Maximum number of records to return (1-100)."
+          },
+          "after": {
+            "type": "string",
+            "description": "Return records after this cursor."
+          },
+          "before": {
+            "type": "string",
+            "description": "Return records before this cursor."
+          }
+        },
+        "required": [
+          "emailId"
+        ],
+        "additionalProperties": false
+      },
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "sample": {
+        "emailId": "email-id"
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {}
+        },
+        "required": [
+          "connector",
+          "action",
+          "source",
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "kind": "action",
+      "request": {
+        "method": "GET",
+        "path": "/emails/{{emailId}}/attachments",
+        "success": [
+          200
+        ],
+        "query": {
+          "limit": "{{limit}}",
+          "after": "{{after}}",
+          "before": "{{before}}"
+        },
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "emails.attachments.get": {
+      "title": "Get Email Attachment",
+      "description": "Get Email Attachment through the Resend API using GET /emails/{emailId}/attachments/{attachmentId}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "emailId": {
+            "type": "string",
+            "description": "Sent email ID."
+          },
+          "attachmentId": {
+            "type": "string",
+            "description": "Attachment ID."
+          }
+        },
+        "required": [
+          "emailId",
+          "attachmentId"
+        ],
+        "additionalProperties": false
+      },
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "sample": {
+        "emailId": "email-id",
+        "attachmentId": "attachment-id"
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {}
+        },
+        "required": [
+          "connector",
+          "action",
+          "source",
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "kind": "action",
+      "request": {
+        "method": "GET",
+        "path": "/emails/{{emailId}}/attachments/{{attachmentId}}",
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "emails.received.list": {
+      "title": "List Received Emails",
+      "description": "List inbound emails received by Resend, with cursor pagination.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "number",
+            "description": "Page size from 1 to 100.",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "after": {
+            "type": "string",
+            "description": "Return records after this cursor."
+          },
+          "before": {
+            "type": "string",
+            "description": "Return records before this cursor."
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "sample": {
+        "limit": 5,
+        "after": "cursor"
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {}
+        },
+        "required": [
+          "connector",
+          "action",
+          "source",
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "kind": "action",
+      "request": {
+        "method": "GET",
+        "path": "/emails/receiving",
+        "success": [
+          200
+        ],
+        "query": {
+          "limit": "{{limit}}",
+          "after": "{{after}}",
+          "before": "{{before}}"
+        },
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "api_keys.create": {
+      "title": "Create API Key",
+      "description": "Create an API key via POST /api-keys. Permissions are full_access or sending_access.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Resource name."
+          },
+          "permission": {
+            "type": "string",
+            "description": "API key permission scope.",
+            "enum": [
+              "full_access",
+              "sending_access"
+            ]
+          },
+          "domainId": {
+            "type": "string",
+            "description": "Optional verified-domain ID for a restricted key."
+          }
+        },
+        "required": [
+          "name",
+          "permission"
+        ],
+        "additionalProperties": false
+      },
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "sample": {
+        "name": "limited-key",
+        "permission": "sending_access"
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {}
+        },
+        "required": [
+          "connector",
+          "action",
+          "source",
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "kind": "action",
+      "request": {
+        "method": "POST",
+        "path": "/api-keys",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "name": "{{name}}",
+          "permission": "{{permission}}",
+          "domain_id": "{{domainId}}"
+        },
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "api_keys.list": {
+      "title": "List API Keys",
+      "description": "List API Keys through the Resend API using GET /api-keys with cursor pagination (limit, after, before).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "number",
+            "description": "Number of records to return (1-100).",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "after": {
+            "type": "string",
+            "description": "Return records after this object ID."
+          },
+          "before": {
+            "type": "string",
+            "description": "Return records before this object ID."
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "sample": {},
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {}
+        },
+        "required": [
+          "connector",
+          "action",
+          "source",
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "kind": "action",
+      "request": {
+        "method": "GET",
+        "path": "/api-keys",
+        "success": [
+          200
+        ],
+        "query": {
+          "limit": "{{limit}}",
+          "after": "{{after}}",
+          "before": "{{before}}"
+        },
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "api_keys.delete": {
+      "title": "Delete API Key",
+      "description": "Delete API Key through the Resend API using DELETE /api-keys/{id}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Resend resource ID."
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false
+      },
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "destructive",
+      "sample": {
+        "id": "key-id"
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {}
+        },
+        "required": [
+          "connector",
+          "action",
+          "source",
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "kind": "action",
+      "request": {
+        "method": "DELETE",
+        "path": "/api-keys/{{id}}",
+        "success": [
+          200,
+          204
+        ],
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "audiences.create": {
+      "title": "Create Audience",
+      "description": "Create Audience through the Resend API using POST /audiences. This legacy endpoint is deprecated by Resend in favor of Segments or global contacts.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Resource name."
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "additionalProperties": false
+      },
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "sample": {
+        "name": "Registered Users"
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {}
+        },
+        "required": [
+          "connector",
+          "action",
+          "source",
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "kind": "action",
+      "request": {
+        "method": "POST",
+        "path": "/audiences",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "name": "{{name}}"
+        },
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "audiences.retrieve": {
+      "title": "Retrieve Audience",
+      "description": "Retrieve Audience through the Resend API using GET /audiences/{id}. This legacy endpoint is deprecated by Resend in favor of Segments or global contacts.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Resend resource ID."
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false
+      },
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "sample": {
+        "id": "audience-id"
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {}
+        },
+        "required": [
+          "connector",
+          "action",
+          "source",
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "kind": "action",
+      "request": {
+        "method": "GET",
+        "path": "/audiences/{{id}}",
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "audiences.list": {
+      "title": "List Audiences",
+      "description": "List legacy audiences through the Resend API using GET /audiences with optional cursor pagination (limit, after, before).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Maximum number of records to return (1-100)."
+          },
+          "after": {
+            "type": "string",
+            "description": "Return records after this cursor."
+          },
+          "before": {
+            "type": "string",
+            "description": "Return records before this cursor."
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "sample": {},
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {}
+        },
+        "required": [
+          "connector",
+          "action",
+          "source",
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "kind": "action",
+      "request": {
+        "method": "GET",
+        "path": "/audiences",
+        "success": [
+          200
+        ],
+        "query": {
+          "limit": "{{limit}}",
+          "after": "{{after}}",
+          "before": "{{before}}"
+        },
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "audiences.delete": {
+      "title": "Delete Audience",
+      "description": "Delete Audience through the Resend API using DELETE /audiences/{id}. This legacy endpoint is deprecated by Resend in favor of Segments or global contacts.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Resend resource ID."
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false
+      },
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "destructive",
+      "sample": {
+        "id": "audience-id"
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {}
+        },
+        "required": [
+          "connector",
+          "action",
+          "source",
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "kind": "action",
+      "request": {
+        "method": "DELETE",
+        "path": "/audiences/{{id}}",
+        "success": [
+          200,
+          204
+        ],
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "contacts.create": {
+      "title": "Create Contact",
+      "description": "Create Contact through the Resend API using POST /audiences/{audienceId}/contacts. This legacy endpoint is deprecated by Resend in favor of Segments or global contacts.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "audienceId": {
+            "type": "string",
+            "description": "Legacy audience ID."
+          },
+          "email": {
+            "type": "string",
+            "description": "Contact email address."
+          },
+          "firstName": {
+            "type": "string",
+            "description": "Contact first name."
+          },
+          "lastName": {
+            "type": "string",
+            "description": "Contact last name."
+          },
+          "unsubscribed": {
+            "type": "boolean",
+            "description": "Whether the contact is unsubscribed."
+          }
+        },
+        "required": [
+          "audienceId",
+          "email"
+        ],
+        "additionalProperties": false
+      },
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "sample": {
+        "audienceId": "audience-id",
+        "email": "person@example.com",
+        "firstName": "Ada",
+        "lastName": "Lovelace",
+        "unsubscribed": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {}
+        },
+        "required": [
+          "connector",
+          "action",
+          "source",
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "kind": "action",
+      "request": {
+        "method": "POST",
+        "path": "/audiences/{{audienceId}}/contacts",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "email": "{{email}}",
+          "first_name": "{{firstName}}",
+          "last_name": "{{lastName}}",
+          "unsubscribed": "{{unsubscribed}}"
+        },
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "contacts.create_v2": {
+      "title": "Create Contact V2",
+      "description": "Create a global Resend contact, optionally with standard fields and custom properties.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "description": "Contact email address."
+          },
+          "firstName": {
+            "type": "string",
+            "description": "Contact first name."
+          },
+          "lastName": {
+            "type": "string",
+            "description": "Contact last name."
+          },
+          "unsubscribed": {
+            "type": "boolean",
+            "description": "Whether the contact is unsubscribed."
+          },
+          "properties": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Custom contact properties."
+          },
+          "segments": {
+            "type": "array",
+            "description": "Segments to add the contact to.",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "description": "Segment ID."
+                }
+              },
+              "required": [
+                "id"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "topics": {
+            "type": "array",
+            "description": "Topic subscriptions for the contact.",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "description": "Topic ID."
+                },
+                "subscription": {
+                  "type": "string",
+                  "description": "Topic subscription state.",
+                  "enum": [
+                    "opt_in",
+                    "opt_out"
+                  ]
+                }
+              },
+              "required": [
+                "id"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "email"
+        ],
+        "additionalProperties": false
+      },
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "sample": {
+        "email": "person@example.com",
+        "firstName": "Ada",
+        "lastName": "Lovelace",
+        "unsubscribed": false,
+        "properties": {
+          "plan": "pro"
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {}
+        },
+        "required": [
+          "connector",
+          "action",
+          "source",
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "kind": "action",
+      "request": {
+        "method": "POST",
+        "path": "/contacts",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "email": "{{email}}",
+          "first_name": "{{firstName}}",
+          "last_name": "{{lastName}}",
+          "unsubscribed": "{{unsubscribed}}",
+          "properties": "{{properties}}",
+          "segments": "{{segments}}",
+          "topics": "{{topics}}"
+        },
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "contacts.get": {
+      "title": "Get Contact",
+      "description": "Get Contact through the Resend API using GET /contacts/{contactId}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "contactId": {
+            "type": "string",
+            "description": "Contact ID or email address."
+          }
+        },
+        "required": [
+          "contactId"
+        ],
+        "additionalProperties": false
+      },
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "sample": {
+        "contactId": "contact-id"
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {}
+        },
+        "required": [
+          "connector",
+          "action",
+          "source",
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "kind": "action",
+      "request": {
+        "method": "GET",
+        "path": "/contacts/{{contactId}}",
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "contacts.delete": {
+      "title": "Delete Contact From Audience",
+      "description": "Delete a contact from a legacy Resend audience via DELETE /audiences/{audienceId}/contacts/{id-or-email}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "audienceId": {
+            "type": "string",
+            "description": "Legacy Resend audience ID."
+          },
+          "id": {
+            "type": "string",
+            "description": "Contact ID."
+          },
+          "email": {
+            "type": "string",
+            "description": "Contact email address."
+          }
+        },
+        "required": [
+          "audienceId"
+        ],
+        "additionalProperties": false
+      },
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "destructive",
+      "sample": {
+        "audienceId": "audience-id",
+        "email": "person@example.com"
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {}
+        },
+        "required": [
+          "connector",
+          "action",
+          "source",
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "kind": "action",
+      "request": {
+        "method": "DELETE",
+        "path": "/audiences/{{audienceId}}/contacts/{{email}}",
+        "success": [
+          200,
+          204
+        ],
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "contacts.retrieve": {
+      "title": "Retrieve Contact From Audience",
+      "description": "Retrieve a contact from a legacy Resend audience via GET /audiences/{audienceId}/contacts/{id-or-email}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "audienceId": {
+            "type": "string",
+            "description": "Legacy Resend audience ID."
+          },
+          "id": {
+            "type": "string",
+            "description": "Contact ID."
+          },
+          "email": {
+            "type": "string",
+            "description": "Contact email address."
+          }
+        },
+        "required": [
+          "audienceId"
+        ],
+        "additionalProperties": false
+      },
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "sample": {
+        "audienceId": "audience-id",
+        "id": "contact-id"
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {}
+        },
+        "required": [
+          "connector",
+          "action",
+          "source",
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "kind": "action",
+      "request": {
+        "method": "GET",
+        "path": "/audiences/{{audienceId}}/contacts/{{id}}",
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "contacts.delete_by_id": {
+      "title": "Delete Contact By ID",
+      "description": "Delete a global Resend contact by ID via DELETE /contacts/{id}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Global Resend contact ID."
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false
+      },
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "destructive",
+      "sample": {
+        "id": "contact-id"
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {}
+        },
+        "required": [
+          "connector",
+          "action",
+          "source",
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "kind": "action",
+      "request": {
+        "method": "DELETE",
+        "path": "/contacts/{{id}}",
+        "success": [
+          200,
+          204
+        ],
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "contacts.list_all": {
+      "title": "List All Contacts",
+      "description": "List all global contacts or contacts in a segment, with cursor pagination capped at 10 pages.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "number",
+            "description": "Page size from 1 to 100.",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "after": {
+            "type": "string",
+            "description": "Return records after this cursor."
+          },
+          "before": {
+            "type": "string",
+            "description": "Return records before this cursor."
+          },
+          "segmentId": {
+            "type": "string",
+            "description": "Optional segment ID to filter contacts."
+          },
+          "audienceId": {
+            "type": "string",
+            "description": "Legacy alias for segmentId."
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "sample": {},
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {}
+        },
+        "required": [
+          "connector",
+          "action",
+          "source",
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "kind": "action",
+      "request": {
+        "method": "GET",
+        "path": "/contacts",
+        "success": [
+          200
+        ],
+        "query": {
+          "limit": "{{limit}}",
+          "after": "{{after}}",
+          "before": "{{before}}",
+          "segment_id": "{{segmentId}}"
+        },
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "contacts.segments.add": {
+      "title": "Add Contact To Segment",
+      "description": "Add an existing contact to a Resend segment.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "contactId": {
+            "type": "string",
+            "description": "Contact ID or email address."
+          },
+          "segmentId": {
+            "type": "string",
+            "description": "Segment ID."
+          }
+        },
+        "required": [
+          "contactId",
+          "segmentId"
+        ],
+        "additionalProperties": false
+      },
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "sample": {
+        "contactId": "contact-id",
+        "segmentId": "segment-id"
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {}
+        },
+        "required": [
+          "connector",
+          "action",
+          "source",
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "kind": "action",
+      "request": {
+        "method": "POST",
+        "path": "/contacts/{{contactId}}/segments/{{segmentId}}",
+        "success": [
+          200,
+          201
+        ],
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "contacts.segments.list": {
+      "title": "List Contact Segments",
+      "description": "List segments for a contact through the Resend API using GET /contacts/{contactId}/segments with optional cursor pagination (limit, after, before).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "contactId": {
+            "type": "string",
+            "description": "Contact ID or email address."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Maximum number of records to return (1-100)."
+          },
+          "after": {
+            "type": "string",
+            "description": "Return records after this cursor."
+          },
+          "before": {
+            "type": "string",
+            "description": "Return records before this cursor."
+          }
+        },
+        "required": [
+          "contactId"
+        ],
+        "additionalProperties": false
+      },
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "sample": {
+        "contactId": "contact-id"
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {}
+        },
+        "required": [
+          "connector",
+          "action",
+          "source",
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "kind": "action",
+      "request": {
+        "method": "GET",
+        "path": "/contacts/{{contactId}}/segments",
+        "success": [
+          200
+        ],
+        "query": {
+          "limit": "{{limit}}",
+          "after": "{{after}}",
+          "before": "{{before}}"
+        },
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "contacts.segments.remove": {
+      "title": "Remove Contact From Segment",
+      "description": "Remove an existing contact from a Resend segment.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "contactId": {
+            "type": "string",
+            "description": "Contact ID or email address."
+          },
+          "segmentId": {
+            "type": "string",
+            "description": "Segment ID."
+          }
+        },
+        "required": [
+          "contactId",
+          "segmentId"
+        ],
+        "additionalProperties": false
+      },
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "destructive",
+      "sample": {
+        "contactId": "contact-id",
+        "segmentId": "segment-id"
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {}
+        },
+        "required": [
+          "connector",
+          "action",
+          "source",
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "kind": "action",
+      "request": {
+        "method": "DELETE",
+        "path": "/contacts/{{contactId}}/segments/{{segmentId}}",
+        "success": [
+          200,
+          204
+        ],
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "contacts.topics.list": {
+      "title": "List Contact Topics",
+      "description": "List topics for a contact through the Resend API using GET /contacts/{contactId}/topics with optional cursor pagination (limit, after, before).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "contactId": {
+            "type": "string",
+            "description": "Contact ID or email address."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Maximum number of records to return (1-100)."
+          },
+          "after": {
+            "type": "string",
+            "description": "Return records after this cursor."
+          },
+          "before": {
+            "type": "string",
+            "description": "Return records before this cursor."
+          }
+        },
+        "required": [
+          "contactId"
+        ],
+        "additionalProperties": false
+      },
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "sample": {
+        "contactId": "contact-id"
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {}
+        },
+        "required": [
+          "connector",
+          "action",
+          "source",
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "kind": "action",
+      "request": {
+        "method": "GET",
+        "path": "/contacts/{{contactId}}/topics",
+        "success": [
+          200
+        ],
+        "query": {
+          "limit": "{{limit}}",
+          "after": "{{after}}",
+          "before": "{{before}}"
+        },
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "contacts.topics.update": {
+      "title": "Update Contact Topics",
+      "description": "Update a contact's topic subscriptions via PATCH /contacts/{contactId}/topics using a topics object.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "contactId": {
+            "type": "string",
+            "description": "Contact ID or email address."
+          },
+          "topics": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "subscription": {
+                  "type": "string",
+                  "enum": [
+                    "opt_in",
+                    "opt_out"
+                  ]
+                }
+              },
+              "required": [
+                "id",
+                "subscription"
+              ],
+              "additionalProperties": false
+            },
+            "minItems": 1,
+            "description": "Contact topic subscriptions."
+          }
+        },
+        "required": [
+          "contactId",
+          "topics"
+        ],
+        "additionalProperties": false
+      },
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "sample": {
+        "contactId": "contact-id",
+        "topics": [
+          {
+            "id": "topic-id",
+            "subscription": "opt_in"
+          }
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {}
+        },
+        "required": [
+          "connector",
+          "action",
+          "source",
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "kind": "action",
+      "request": {
+        "method": "PATCH",
+        "path": "/contacts/{{contactId}}/topics",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "topics": "{{topics}}"
+        },
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "contacts.update": {
+      "title": "Update Contact",
+      "description": "Update Contact through the Resend API using PATCH /contacts/{contactId}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "contactId": {
+            "type": "string",
+            "description": "Contact ID or email address."
+          },
+          "firstName": {
+            "type": "string",
+            "description": "Contact first name."
+          },
+          "unsubscribed": {
+            "type": "boolean",
+            "description": "Whether the contact is unsubscribed."
+          },
+          "lastName": {
+            "type": "string",
+            "description": "Contact last name."
+          },
+          "properties": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Custom contact properties."
+          }
+        },
+        "required": [
+          "contactId"
+        ],
+        "additionalProperties": false
+      },
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "sample": {
+        "contactId": "contact-id",
+        "firstName": "Ada",
+        "unsubscribed": true
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {}
+        },
+        "required": [
+          "connector",
+          "action",
+          "source",
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "kind": "action",
+      "request": {
+        "method": "PATCH",
+        "path": "/contacts/{{contactId}}",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "first_name": "{{firstName}}",
+          "unsubscribed": "{{unsubscribed}}",
+          "last_name": "{{lastName}}",
+          "properties": "{{properties}}"
+        },
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "contact_properties.create": {
+      "title": "Create Contact Property",
+      "description": "Create a string or number contact property with an optional type-matched fallback.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "description": "Contact property key."
+          },
+          "type": {
+            "type": "string",
+            "description": "Contact property type.",
+            "enum": [
+              "string",
+              "number"
+            ]
+          },
+          "fallbackValue": {
+            "type": [
+              "string",
+              "number"
+            ],
+            "description": "Default value matching the property's type."
+          }
+        },
+        "required": [
+          "key",
+          "type"
+        ],
+        "additionalProperties": false
+      },
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "sample": {
+        "key": "company",
+        "type": "string",
+        "fallbackValue": "Acme"
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {}
+        },
+        "required": [
+          "connector",
+          "action",
+          "source",
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "kind": "action",
+      "request": {
+        "method": "POST",
+        "path": "/contact-properties",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "key": "{{key}}",
+          "type": "{{type}}",
+          "fallback_value": "{{fallbackValue}}"
+        },
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "contact_properties.get": {
+      "title": "Get Contact Property",
+      "description": "Get Contact Property through the Resend API using GET /contact-properties/{id}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Resend resource ID."
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false
+      },
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "sample": {
+        "id": "property-id"
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {}
+        },
+        "required": [
+          "connector",
+          "action",
+          "source",
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "kind": "action",
+      "request": {
+        "method": "GET",
+        "path": "/contact-properties/{{id}}",
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "contact_properties.list": {
+      "title": "List Contact Properties",
+      "description": "List contact properties through the Resend API using GET /contact-properties with optional cursor pagination (limit, after, before).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Maximum number of records to return (1-100)."
+          },
+          "after": {
+            "type": "string",
+            "description": "Return records after this cursor."
+          },
+          "before": {
+            "type": "string",
+            "description": "Return records before this cursor."
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "sample": {},
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {}
+        },
+        "required": [
+          "connector",
+          "action",
+          "source",
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "kind": "action",
+      "request": {
+        "method": "GET",
+        "path": "/contact-properties",
+        "success": [
+          200
+        ],
+        "query": {
+          "limit": "{{limit}}",
+          "after": "{{after}}",
+          "before": "{{before}}"
+        },
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "contact_properties.update": {
+      "title": "Update Contact Property",
+      "description": "Update only a contact property's fallback value; its key and type are immutable.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Resend resource ID."
+          },
+          "fallbackValue": {
+            "type": [
+              "string",
+              "number"
+            ],
+            "description": "Default value matching the property's type."
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false
+      },
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "sample": {
+        "id": "property-id",
+        "fallbackValue": "New Co"
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {}
+        },
+        "required": [
+          "connector",
+          "action",
+          "source",
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "kind": "action",
+      "request": {
+        "method": "PATCH",
+        "path": "/contact-properties/{{id}}",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "fallback_value": "{{fallbackValue}}"
+        },
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "contact_properties.delete": {
+      "title": "Delete Contact Property",
+      "description": "Delete Contact Property through the Resend API using DELETE /contact-properties/{id}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Resend resource ID."
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false
+      },
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "destructive",
+      "sample": {
+        "id": "property-id"
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {}
+        },
+        "required": [
+          "connector",
+          "action",
+          "source",
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "kind": "action",
+      "request": {
+        "method": "DELETE",
+        "path": "/contact-properties/{{id}}",
+        "success": [
+          200,
+          204
+        ],
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "broadcasts.create_draft": {
+      "title": "Create Draft Broadcast",
+      "description": "Create a draft broadcast for a Resend segment. Supply HTML or text content; this operation does not send it.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "segmentId": {
+            "type": "string",
+            "description": "Segment ID."
+          },
+          "from": {
+            "type": "string",
+            "description": "Verified sender address."
+          },
+          "subject": {
+            "type": "string",
+            "description": "Email subject."
+          },
+          "html": {
+            "type": "string",
+            "description": "HTML email body."
+          },
+          "text": {
+            "type": "string",
+            "description": "Plain-text email body."
+          },
+          "replyTo": {
+            "type": [
+              "string",
+              "array"
+            ],
+            "items": {
+              "type": "string"
+            },
+            "description": "Reply-to address or list of addresses."
+          },
+          "topicId": {
+            "type": "string",
+            "description": "Topic ID."
+          },
+          "name": {
+            "type": "string",
+            "description": "Optional human-readable broadcast name."
+          },
+          "previewText": {
+            "type": "string",
+            "description": "Preview text shown in the inbox."
+          }
+        },
+        "required": [
+          "segmentId",
+          "from",
+          "subject"
+        ],
+        "additionalProperties": false
+      },
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "sample": {
+        "segmentId": "segment-id",
+        "from": "team@example.com",
+        "subject": "News",
+        "html": "<p>News</p>"
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {}
+        },
+        "required": [
+          "connector",
+          "action",
+          "source",
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "kind": "action",
+      "request": {
+        "method": "POST",
+        "path": "/broadcasts",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "name": "{{name}}",
+          "segment_id": "{{segmentId}}",
+          "from": "{{from}}",
+          "subject": "{{subject}}",
+          "html": "{{html}}",
+          "text": "{{text}}",
+          "reply_to": "{{replyTo}}",
+          "topic_id": "{{topicId}}",
+          "preview_text": "{{previewText}}"
+        },
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "broadcasts.get": {
+      "title": "Get Broadcast",
+      "description": "Get Broadcast through the Resend API using GET /broadcasts/{id}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Resend resource ID."
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false
+      },
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "sample": {
+        "id": "broadcast-id"
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {}
+        },
+        "required": [
+          "connector",
+          "action",
+          "source",
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "kind": "action",
+      "request": {
+        "method": "GET",
+        "path": "/broadcasts/{{id}}",
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "broadcasts.list": {
+      "title": "List Broadcasts",
+      "description": "List Broadcasts through the Resend API using GET /broadcasts.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "number",
+            "description": "Page size from 1 to 100.",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "after": {
+            "type": "string",
+            "description": "Return records after this cursor."
+          },
+          "before": {
+            "type": "string",
+            "description": "Return records before this cursor."
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "sample": {
+        "limit": 10,
+        "after": "cursor"
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {}
+        },
+        "required": [
+          "connector",
+          "action",
+          "source",
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "kind": "action",
+      "request": {
+        "method": "GET",
+        "path": "/broadcasts",
+        "success": [
+          200
+        ],
+        "query": {
+          "limit": "{{limit}}",
+          "after": "{{after}}",
+          "before": "{{before}}"
+        },
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "broadcasts.update": {
+      "title": "Update Broadcast",
+      "description": "Update a broadcast via PATCH /broadcasts/{id}. Resend may allow this update while the broadcast is scheduled, so this operation does not enforce draft-only state.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Resend resource ID."
+          },
+          "subject": {
+            "type": "string",
+            "description": "Email subject."
+          },
+          "html": {
+            "type": "string",
+            "description": "HTML email body."
+          },
+          "segmentId": {
+            "type": "string",
+            "description": "Segment ID."
+          },
+          "from": {
+            "type": "string",
+            "description": "Verified sender address."
+          },
+          "text": {
+            "type": "string",
+            "description": "Plain-text email body."
+          },
+          "replyTo": {
+            "type": [
+              "string",
+              "array"
+            ],
+            "items": {
+              "type": "string"
+            },
+            "description": "Reply-to address or list of addresses."
+          },
+          "topicId": {
+            "type": "string",
+            "description": "Topic ID."
+          },
+          "name": {
+            "type": "string",
+            "description": "Optional human-readable broadcast name."
+          },
+          "previewText": {
+            "type": "string",
+            "description": "Preview text shown in the inbox."
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false
+      },
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "sample": {
+        "id": "broadcast-id",
+        "subject": "Updated",
+        "html": "<p>Updated</p>"
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {}
+        },
+        "required": [
+          "connector",
+          "action",
+          "source",
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "kind": "action",
+      "request": {
+        "method": "PATCH",
+        "path": "/broadcasts/{{id}}",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "name": "{{name}}",
+          "subject": "{{subject}}",
+          "html": "{{html}}",
+          "segment_id": "{{segmentId}}",
+          "from": "{{from}}",
+          "text": "{{text}}",
+          "reply_to": "{{replyTo}}",
+          "topic_id": "{{topicId}}",
+          "preview_text": "{{previewText}}"
+        },
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "domains.create": {
+      "title": "Create Domain",
+      "description": "Create Domain through the Resend API using POST /domains.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Resource name."
+          },
+          "region": {
+            "type": "string",
+            "description": "Resend sending region."
+          },
+          "openTracking": {
+            "type": "boolean",
+            "description": "Enable open tracking."
+          },
+          "clickTracking": {
+            "type": "boolean",
+            "description": "Enable click tracking."
+          },
+          "trackingSubdomain": {
+            "type": "string",
+            "description": "Tracking subdomain."
+          },
+          "customReturnPath": {
+            "type": "string",
+            "description": "Custom return-path domain."
+          },
+          "tls": {
+            "type": "string",
+            "description": "TLS mode.",
+            "enum": [
+              "opportunistic",
+              "enforced"
+            ]
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "additionalProperties": false
+      },
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "sample": {
+        "name": "example.com",
+        "region": "us-east-1"
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {}
+        },
+        "required": [
+          "connector",
+          "action",
+          "source",
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "kind": "action",
+      "request": {
+        "method": "POST",
+        "path": "/domains",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "name": "{{name}}",
+          "region": "{{region}}",
+          "open_tracking": "{{openTracking}}",
+          "click_tracking": "{{clickTracking}}",
+          "tracking_subdomain": "{{trackingSubdomain}}",
+          "custom_return_path": "{{customReturnPath}}",
+          "tls": "{{tls}}"
+        },
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "domains.update": {
+      "title": "Update Domain",
+      "description": "Update supported domain tracking settings via PATCH /domains/{id}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Resend resource ID."
+          },
+          "openTracking": {
+            "type": "boolean",
+            "description": "Enable open tracking."
+          },
+          "clickTracking": {
+            "type": "boolean",
+            "description": "Enable click tracking."
+          },
+          "trackingSubdomain": {
+            "type": "string",
+            "description": "Tracking subdomain."
+          },
+          "tls": {
+            "type": "string",
+            "description": "TLS mode.",
+            "enum": [
+              "opportunistic",
+              "enforced"
+            ]
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false
+      },
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "sample": {
+        "id": "domain-id",
+        "openTracking": true,
+        "clickTracking": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {}
+        },
+        "required": [
+          "connector",
+          "action",
+          "source",
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "kind": "action",
+      "request": {
+        "method": "PATCH",
+        "path": "/domains/{{id}}",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "open_tracking": "{{openTracking}}",
+          "click_tracking": "{{clickTracking}}",
+          "tracking_subdomain": "{{trackingSubdomain}}",
+          "tls": "{{tls}}"
+        },
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "domains.delete": {
+      "title": "Delete Domain",
+      "description": "Delete Domain through the Resend API using DELETE /domains/{id}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Resend resource ID."
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false
+      },
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "destructive",
+      "sample": {
+        "id": "domain-id"
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {}
+        },
+        "required": [
+          "connector",
+          "action",
+          "source",
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "kind": "action",
+      "request": {
+        "method": "DELETE",
+        "path": "/domains/{{id}}",
+        "success": [
+          200,
+          204
+        ],
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "domains.verify": {
+      "title": "Verify Domain",
+      "description": "Ask Resend to recheck the DNS records for a sending domain.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Resend resource ID."
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false
+      },
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "sample": {
+        "id": "domain-id"
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {}
+        },
+        "required": [
+          "connector",
+          "action",
+          "source",
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "kind": "action",
+      "request": {
+        "method": "POST",
+        "path": "/domains/{{id}}/verify",
+        "success": [
+          200,
+          201
+        ],
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "segments.create": {
+      "title": "Create Segment",
+      "description": "Create Segment through the Resend API using POST /segments.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Resource name."
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "additionalProperties": false
+      },
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "sample": {
+        "name": "Trial users"
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {}
+        },
+        "required": [
+          "connector",
+          "action",
+          "source",
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "kind": "action",
+      "request": {
+        "method": "POST",
+        "path": "/segments",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "name": "{{name}}"
+        },
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "segments.get": {
+      "title": "Get Segment",
+      "description": "Get Segment through the Resend API using GET /segments/{id}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Resend resource ID."
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false
+      },
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "sample": {
+        "id": "segment-id"
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {}
+        },
+        "required": [
+          "connector",
+          "action",
+          "source",
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "kind": "action",
+      "request": {
+        "method": "GET",
+        "path": "/segments/{{id}}",
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "segments.list": {
+      "title": "List Segments",
+      "description": "List Segments through the Resend API using GET /segments with cursor pagination (limit, after, before).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "number",
+            "description": "Number of records to return (1-100).",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "after": {
+            "type": "string",
+            "description": "Return records after this object ID."
+          },
+          "before": {
+            "type": "string",
+            "description": "Return records before this object ID."
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "sample": {},
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {}
+        },
+        "required": [
+          "connector",
+          "action",
+          "source",
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "kind": "action",
+      "request": {
+        "method": "GET",
+        "path": "/segments",
+        "success": [
+          200
+        ],
+        "query": {
+          "limit": "{{limit}}",
+          "after": "{{after}}",
+          "before": "{{before}}"
+        },
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "segments.delete": {
+      "title": "Delete Segment",
+      "description": "Delete Segment through the Resend API using DELETE /segments/{id}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Resend resource ID."
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false
+      },
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "destructive",
+      "sample": {
+        "id": "segment-id"
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {}
+        },
+        "required": [
+          "connector",
+          "action",
+          "source",
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "kind": "action",
+      "request": {
+        "method": "DELETE",
+        "path": "/segments/{{id}}",
+        "success": [
+          200,
+          204
+        ],
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "templates.create": {
+      "title": "Create Template",
+      "description": "Create a template with required HTML, optional text, and string or number variables.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Resource name."
+          },
+          "html": {
+            "type": "string",
+            "description": "HTML email body."
+          },
+          "variables": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "key": {
+                  "type": "string",
+                  "description": "Template variable name."
+                },
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "string",
+                    "number"
+                  ],
+                  "description": "Template variable value type. Supported types are string and number."
+                },
+                "fallbackValue": {
+                  "type": [
+                    "string",
+                    "number"
+                  ],
+                  "description": "Optional fallback matching the variable type; only string and number values are supported."
+                }
+              },
+              "required": [
+                "key",
+                "type"
+              ],
+              "additionalProperties": false
+            },
+            "description": "Template variables with string or number values.",
+            "maxItems": 50
+          },
+          "text": {
+            "type": "string",
+            "description": "Plain-text email body."
+          },
+          "alias": {
+            "type": "string",
+            "description": "Template alias."
+          },
+          "from": {
+            "type": "string",
+            "description": "Sender email address."
+          },
+          "subject": {
+            "type": "string",
+            "description": "Template email subject."
+          },
+          "replyTo": {
+            "type": [
+              "string",
+              "array"
+            ],
+            "items": {
+              "type": "string"
+            },
+            "description": "Reply-to address or list of addresses."
+          }
+        },
+        "required": [
+          "name",
+          "html"
+        ],
+        "additionalProperties": false
+      },
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "sample": {
+        "name": "welcome",
+        "html": "<p>Hello {{{PRODUCT}}}</p>",
+        "variables": [
+          {
+            "key": "PRODUCT",
+            "type": "string"
+          }
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {}
+        },
+        "required": [
+          "connector",
+          "action",
+          "source",
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "kind": "action",
+      "request": {
+        "method": "POST",
+        "path": "/templates",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "name": "{{name}}",
+          "html": "{{html}}",
+          "variables": "{{variables}}",
+          "text": "{{text}}",
+          "alias": "{{alias}}",
+          "from": "{{from}}",
+          "subject": "{{subject}}",
+          "reply_to": "{{replyTo}}"
+        },
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "templates.get": {
+      "title": "Get Template",
+      "description": "Get Template through the Resend API using GET /templates/{id}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Resend resource ID."
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false
+      },
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "sample": {
+        "id": "welcome"
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {}
+        },
+        "required": [
+          "connector",
+          "action",
+          "source",
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "kind": "action",
+      "request": {
+        "method": "GET",
+        "path": "/templates/{{id}}",
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "templates.list": {
+      "title": "List Templates",
+      "description": "List Templates through the Resend API using GET /templates.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "number",
+            "description": "Page size from 1 to 100.",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "before": {
+            "type": "string",
+            "description": "Return records before this cursor."
+          },
+          "after": {
+            "type": "string",
+            "description": "Return records after this cursor."
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "sample": {
+        "limit": 20,
+        "before": "template-cursor"
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {}
+        },
+        "required": [
+          "connector",
+          "action",
+          "source",
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "kind": "action",
+      "request": {
+        "method": "GET",
+        "path": "/templates",
+        "success": [
+          200
+        ],
+        "query": {
+          "limit": "{{limit}}",
+          "after": "{{after}}",
+          "before": "{{before}}"
+        },
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "templates.update": {
+      "title": "Update Template",
+      "description": "Update Template through the Resend API using PATCH /templates/{id}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Resend resource ID."
+          },
+          "html": {
+            "type": "string",
+            "description": "HTML email body."
+          },
+          "name": {
+            "type": "string",
+            "description": "Resource name."
+          },
+          "text": {
+            "type": "string",
+            "description": "Plain-text email body."
+          },
+          "variables": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "key": {
+                  "type": "string",
+                  "description": "Template variable name."
+                },
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "string",
+                    "number"
+                  ],
+                  "description": "Template variable value type. Supported types are string and number."
+                },
+                "fallbackValue": {
+                  "type": [
+                    "string",
+                    "number"
+                  ],
+                  "description": "Optional fallback matching the variable type; only string and number values are supported."
+                }
+              },
+              "required": [
+                "key",
+                "type"
+              ],
+              "additionalProperties": false
+            },
+            "description": "Template variables with string or number values.",
+            "maxItems": 50
+          },
+          "alias": {
+            "type": "string",
+            "description": "Template alias."
+          },
+          "from": {
+            "type": "string",
+            "description": "Sender email address."
+          },
+          "subject": {
+            "type": "string",
+            "description": "Template email subject."
+          },
+          "replyTo": {
+            "type": [
+              "string",
+              "array"
+            ],
+            "items": {
+              "type": "string"
+            },
+            "description": "Reply-to address or list of addresses."
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false
+      },
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "sample": {
+        "id": "welcome",
+        "html": "<p>Hi</p>"
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {}
+        },
+        "required": [
+          "connector",
+          "action",
+          "source",
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "kind": "action",
+      "request": {
+        "method": "PATCH",
+        "path": "/templates/{{id}}",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "html": "{{html}}",
+          "name": "{{name}}",
+          "text": "{{text}}",
+          "variables": "{{variables}}",
+          "alias": "{{alias}}",
+          "from": "{{from}}",
+          "subject": "{{subject}}",
+          "reply_to": "{{replyTo}}"
+        },
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "templates.delete": {
+      "title": "Delete Template",
+      "description": "Delete Template through the Resend API using DELETE /templates/{id}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Resend resource ID."
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false
+      },
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "destructive",
+      "sample": {
+        "id": "welcome"
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {}
+        },
+        "required": [
+          "connector",
+          "action",
+          "source",
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "kind": "action",
+      "request": {
+        "method": "DELETE",
+        "path": "/templates/{{id}}",
+        "success": [
+          200,
+          204
+        ],
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "templates.publish": {
+      "title": "Publish Template",
+      "description": "Publish the latest version of a Resend email template.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Resend resource ID."
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false
+      },
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "sample": {
+        "id": "welcome"
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {}
+        },
+        "required": [
+          "connector",
+          "action",
+          "source",
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "kind": "action",
+      "request": {
+        "method": "POST",
+        "path": "/templates/{{id}}/publish",
+        "success": [
+          200,
+          201
+        ],
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "templates.duplicate": {
+      "title": "Duplicate Template",
+      "description": "Duplicate a template via POST /templates/{id}/duplicate without a request body.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Template ID to duplicate."
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false
+      },
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "sample": {
+        "id": "welcome"
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {}
+        },
+        "required": [
+          "connector",
+          "action",
+          "source",
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "kind": "action",
+      "request": {
+        "method": "POST",
+        "path": "/templates/{{id}}/duplicate",
+        "success": [
+          200,
+          201
+        ],
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "topics.create": {
+      "title": "Create Topic",
+      "description": "Create Topic through the Resend API using POST /topics.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Resource name.",
+            "maxLength": 50
+          },
+          "defaultSubscription": {
+            "type": "string",
+            "description": "Default subscription state.",
+            "enum": [
+              "opt_in",
+              "opt_out"
+            ]
+          },
+          "description": {
+            "type": "string",
+            "description": "Topic description (up to 200 characters).",
+            "maxLength": 200
+          },
+          "visibility": {
+            "type": "string",
+            "description": "Topic visibility.",
+            "enum": [
+              "public",
+              "private"
+            ]
+          }
+        },
+        "required": [
+          "name",
+          "defaultSubscription"
+        ],
+        "additionalProperties": false
+      },
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "sample": {
+        "name": "Product updates",
+        "defaultSubscription": "opt_in"
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {}
+        },
+        "required": [
+          "connector",
+          "action",
+          "source",
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "kind": "action",
+      "request": {
+        "method": "POST",
+        "path": "/topics",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "name": "{{name}}",
+          "default_subscription": "{{defaultSubscription}}",
+          "description": "{{description}}",
+          "visibility": "{{visibility}}"
+        },
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "topics.get": {
+      "title": "Get Topic",
+      "description": "Get Topic through the Resend API using GET /topics/{id}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Resend resource ID."
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false
+      },
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "sample": {
+        "id": "topic-id"
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {}
+        },
+        "required": [
+          "connector",
+          "action",
+          "source",
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "kind": "action",
+      "request": {
+        "method": "GET",
+        "path": "/topics/{{id}}",
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "topics.list": {
+      "title": "List Topics",
+      "description": "List Topics through the Resend API using GET /topics with cursor pagination (limit, after, before).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "number",
+            "description": "Number of records to return (1-100).",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "after": {
+            "type": "string",
+            "description": "Return records after this object ID."
+          },
+          "before": {
+            "type": "string",
+            "description": "Return records before this object ID."
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "sample": {},
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {}
+        },
+        "required": [
+          "connector",
+          "action",
+          "source",
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "kind": "action",
+      "request": {
+        "method": "GET",
+        "path": "/topics",
+        "success": [
+          200
+        ],
+        "query": {
+          "limit": "{{limit}}",
+          "after": "{{after}}",
+          "before": "{{before}}"
+        },
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "topics.update": {
+      "title": "Update Topic",
+      "description": "Update a topic's name or description via PATCH /topics/{id}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Resend resource ID."
+          },
+          "name": {
+            "type": "string",
+            "description": "Resource name.",
+            "maxLength": 50
+          },
+          "description": {
+            "type": "string",
+            "description": "Topic description (up to 200 characters).",
+            "maxLength": 200
+          },
+          "visibility": {
+            "type": "string",
+            "description": "Topic visibility.",
+            "enum": [
+              "public",
+              "private"
+            ]
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false
+      },
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "sample": {
+        "id": "topic-id",
+        "name": "Product news"
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {}
+        },
+        "required": [
+          "connector",
+          "action",
+          "source",
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "kind": "action",
+      "request": {
+        "method": "PATCH",
+        "path": "/topics/{{id}}",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "name": "{{name}}",
+          "description": "{{description}}",
+          "visibility": "{{visibility}}"
+        },
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "topics.delete": {
+      "title": "Delete Topic",
+      "description": "Delete Topic through the Resend API using DELETE /topics/{id}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Resend resource ID."
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false
+      },
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "destructive",
+      "sample": {
+        "id": "topic-id"
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {}
+        },
+        "required": [
+          "connector",
+          "action",
+          "source",
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "kind": "action",
+      "request": {
+        "method": "DELETE",
+        "path": "/topics/{{id}}",
+        "success": [
+          200,
+          204
+        ],
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "webhooks.create": {
+      "title": "Create Webhook",
+      "description": "Create Webhook through the Resend API using POST /webhooks.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "endpoint": {
+            "type": "string",
+            "description": "HTTPS webhook destination."
+          },
+          "events": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "description": "Webhook event types."
+          }
+        },
+        "required": [
+          "endpoint",
+          "events"
+        ],
+        "additionalProperties": false
+      },
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "sample": {
+        "endpoint": "https://example.com/resend",
+        "events": [
+          "email.delivered",
+          "email.bounced"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {}
+        },
+        "required": [
+          "connector",
+          "action",
+          "source",
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "kind": "action",
+      "request": {
+        "method": "POST",
+        "path": "/webhooks",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "endpoint": "{{endpoint}}",
+          "events": "{{events}}"
+        },
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "webhooks.get": {
+      "title": "Get Webhook",
+      "description": "Get Webhook through the Resend API using GET /webhooks/{id}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Resend resource ID."
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false
+      },
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "sample": {
+        "id": "webhook-id"
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {}
+        },
+        "required": [
+          "connector",
+          "action",
+          "source",
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "kind": "action",
+      "request": {
+        "method": "GET",
+        "path": "/webhooks/{{id}}",
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "webhooks.list": {
+      "title": "List Webhooks",
+      "description": "List webhooks through the Resend API using GET /webhooks with optional cursor pagination (limit, after, before).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Maximum number of records to return (1-100)."
+          },
+          "after": {
+            "type": "string",
+            "description": "Return records after this cursor."
+          },
+          "before": {
+            "type": "string",
+            "description": "Return records before this cursor."
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "sample": {},
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {}
+        },
+        "required": [
+          "connector",
+          "action",
+          "source",
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "kind": "action",
+      "request": {
+        "method": "GET",
+        "path": "/webhooks",
+        "success": [
+          200
+        ],
+        "query": {
+          "limit": "{{limit}}",
+          "after": "{{after}}",
+          "before": "{{before}}"
+        },
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "webhooks.update": {
+      "title": "Update Webhook",
+      "description": "Update Webhook through the Resend API using PATCH /webhooks/{id}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Resend resource ID."
+          },
+          "events": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "description": "Webhook event types."
+          },
+          "status": {
+            "type": "string",
+            "description": "Webhook status.",
+            "enum": [
+              "enabled",
+              "disabled"
+            ]
+          },
+          "endpoint": {
+            "type": "string",
+            "description": "HTTPS webhook destination."
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false
+      },
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "sample": {
+        "id": "webhook-id",
+        "events": [
+          "email.delivered"
+        ],
+        "status": "enabled"
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {}
+        },
+        "required": [
+          "connector",
+          "action",
+          "source",
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "kind": "action",
+      "request": {
+        "method": "PATCH",
+        "path": "/webhooks/{{id}}",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "events": "{{events}}",
+          "status": "{{status}}",
+          "endpoint": "{{endpoint}}"
+        },
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "webhooks.delete": {
+      "title": "Delete Webhook",
+      "description": "Delete Webhook through the Resend API using DELETE /webhooks/{id}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Resend resource ID."
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false
+      },
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "destructive",
+      "sample": {
+        "id": "webhook-id"
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {}
+        },
+        "required": [
+          "connector",
+          "action",
+          "source",
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "kind": "action",
+      "request": {
+        "method": "DELETE",
+        "path": "/webhooks/{{id}}",
+        "success": [
+          200,
+          204
+        ],
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "responseFormat": "json"
     }
   },
   "models": [
     "email",
     "domain",
     "contact"
-  ]
+  ],
+  "http": {
+    "baseUrl": "https://api.resend.com",
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "Authorization",
+      "value": "Bearer {{apiKey}}"
+    },
+    "headers": {
+      "Accept": "application/json",
+      "User-Agent": "appcall-resend/0.4.0"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after",
+      "retryAfterKind": "seconds",
+      "defaultRetryAfterSeconds": 10,
+      "messagePaths": [
+        "message",
+        "error.message",
+        "error",
+        "name"
+      ]
+    }
+  }
 }

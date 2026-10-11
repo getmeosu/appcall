@@ -72,6 +72,7 @@ describe("listDatasets", () => {
     expect(url.searchParams.get("limit")).toBe("10");
     expect(url.searchParams.get("offset")).toBe("0");
     expect(requests[0].headers.get("Authorization")).toBe("Bearer apify_api_test");
+    expect(requests[0].headers.get("Content-Type")).toBeNull();
     expect(result.action).toBe("datasets.list");
     expect(Array.isArray(result.datasets)).toBe(true);
     expect((result.datasets as unknown[]).length).toBe(2);
@@ -106,6 +107,7 @@ describe("createDataset", () => {
     expect(requests).toHaveLength(1);
     expect(requests[0].url).toBe("https://api.apify.com/v2/datasets");
     expect(requests[0].method).toBe("POST");
+    expect(requests[0].headers.get("Content-Type")).toBe("application/json");
     const body = await requests[0].json() as Record<string, unknown>;
     expect(body.name).toBe("outbound-leads");
     expect(result.action).toBe("datasets.create");
@@ -147,6 +149,7 @@ describe("deleteDataset", () => {
     expect(requests).toHaveLength(1);
     expect(requests[0].url).toContain("/v2/datasets/wmKPijuyDnPZAPRMk");
     expect(requests[0].method).toBe("DELETE");
+    expect(requests[0].headers.get("Content-Type")).toBeNull();
     expect(result.action).toBe("datasets.delete");
     expect(result.datasetId).toBe("wmKPijuyDnPZAPRMk");
   });

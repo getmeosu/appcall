@@ -1,17 +1,7 @@
 {
-  "key": "raisely",
-  "name": "Raisely",
-  "version": "0.2.0",
-  "runtime": "bun",
-  "visibility": "public",
-  "categories": [
-    "payments"
-  ],
   "auth": {
-    "type": "api_key",
     "scopes": [],
     "setup": {
-      "mode": "api_key",
       "fields": [
         {
           "key": "apiKey",
@@ -19,56 +9,1028 @@
           "required": true,
           "secret": true
         }
-      ]
+      ],
+      "mode": "api_key"
+    },
+    "type": "api_key"
+  },
+  "categories": [
+    "payments"
+  ],
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
     }
   },
-  "network": {
-    "allowedHosts": [
-      "api.raisely.com"
-    ]
-  },
-  "models": [
-    "campaign",
-    "profile",
-    "donation",
-    "user",
-    "subscription",
-    "post"
-  ],
   "http": {
-    "baseUrl": "https://api.raisely.com/v3",
     "auth": {
       "field": "apiKey",
       "in": "header",
       "name": "Authorization",
       "value": "Bearer {{apiKey}}"
     },
-    "headers": {
-      "Accept": "application/json"
-    },
+    "baseUrl": "https://api.raisely.com/v3",
     "errors": {
-      "rateLimitStatuses": [
-        429
-      ],
-      "retryAfterHeader": "retry-after",
       "defaultRetryAfterSeconds": 30,
       "messagePaths": [
         "detail",
         "message",
         "error",
         "errors.0.message"
-      ]
+      ],
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after"
+    },
+    "headers": {
+      "Accept": "application/json"
     }
   },
+  "key": "raisely",
+  "models": [
+    "campaign",
+    "profile",
+    "donation",
+    "user",
+    "webhook",
+    "post",
+    "subscription",
+    "exerciseLog",
+    "interaction",
+    "order",
+    "promoCode",
+    "tag",
+    "segment",
+    "product"
+  ],
+  "name": "Raisely",
+  "network": {
+    "allowedHosts": [
+      "api.raisely.com"
+    ]
+  },
   "operations": {
+    "campaigns.get": {
+      "description": "Get one Raisely campaign by UUID, path, or domain.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "campaign": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "private": {
+            "type": "boolean",
+            "description": "Return the full record when authenticated."
+          },
+          "includeTags": {
+            "type": "boolean",
+            "description": "Include tags on the campaign."
+          },
+          "pruneConfig": {
+            "type": "boolean",
+            "description": "Omit campaign.config from private responses."
+          }
+        },
+        "required": [
+          "campaign"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/campaigns/{{campaign}}",
+        "success": [
+          200
+        ],
+        "query": {
+          "private": "{{private}}",
+          "includeTags": "{{includeTags}}",
+          "pruneConfig": "{{pruneConfig}}"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get campaign",
+      "validationMode": "strict-generated"
+    },
+    "campaigns.list": {
+      "description": "List Raisely campaigns with optional search, sort, and pagination.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "limit": {
+            "minimum": 1,
+            "type": "integer"
+          },
+          "offset": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "order": {
+            "enum": [
+              "asc",
+              "desc"
+            ],
+            "type": "string"
+          },
+          "private": {
+            "type": "boolean"
+          },
+          "query": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "sort": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "q": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Full-text search (Composio RAISELY_GET_CAMPAIGNS)."
+          },
+          "path": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by campaign path."
+          },
+          "mode": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by campaign mode."
+          }
+        },
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/campaigns",
+        "query": {
+          "limit": "{{limit}}",
+          "offset": "{{offset}}",
+          "order": "{{order}}",
+          "private": "{{private}}",
+          "q": "{{query}}",
+          "sort": "{{sort}}",
+          "path": "{{path}}",
+          "mode": "{{mode}}"
+        },
+        "success": [
+          200
+        ],
+        "parameters": [
+          {
+            "wireName": "q",
+            "inputName": "q",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "allowReserved": false
+          },
+          {
+            "wireName": "q",
+            "inputName": "query",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "allowReserved": false
+          }
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List campaigns",
+      "validationMode": "strict-generated"
+    },
     "healthcheck": {
-      "timeoutMs": 5000,
+      "description": "Validate the Raisely API key with a one-campaign list probe.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {},
+        "type": "object"
+      },
+      "kind": "action",
       "maxInputBytes": 4096,
       "maxResponseBytes": 65536,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/campaigns",
+        "query": {
+          "limit": 1
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 5000,
+      "title": "Healthcheck",
+      "validationMode": "strict-generated"
+    },
+    "profiles.get": {
+      "description": "Get one Raisely fundraising profile by UUID or path. Composio RAISELY_GET_PROFILE uses path; this operation's path segment is profilePath.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "campaign": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "private": {
+            "type": "boolean"
+          },
+          "profilePath": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "path": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Composio RAISELY_GET_PROFILE alias; send profilePath for this operation."
+          }
+        },
+        "required": [
+          "profilePath"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/profiles/{{profilePath}}",
+        "query": {
+          "campaign": "{{campaign}}",
+          "private": "{{private}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get profile",
+      "validationMode": "strict-generated"
+    },
+    "profiles.list": {
+      "description": "List fundraising profiles in one Raisely campaign.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "campaign": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "limit": {
+            "minimum": 1,
+            "type": "integer"
+          },
+          "offset": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "private": {
+            "type": "boolean"
+          },
+          "query": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "q": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Full-text search (Composio RAISELY_GET_PROFILES)."
+          },
+          "rank": {
+            "type": "string",
+            "enum": [
+              "asc",
+              "desc"
+            ],
+            "description": "Rank by amount raised."
+          },
+          "sort": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Field to sort by."
+          },
+          "user": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by owner user UUID."
+          },
+          "order": {
+            "type": "string",
+            "enum": [
+              "asc",
+              "desc"
+            ],
+            "description": "Sort direction."
+          },
+          "rankDonors": {
+            "type": "string",
+            "enum": [
+              "asc",
+              "desc"
+            ],
+            "description": "Rank by unique donors."
+          },
+          "organisation": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by organisation UUID."
+          },
+          "rankActivityTime": {
+            "type": "string",
+            "enum": [
+              "asc",
+              "desc"
+            ],
+            "description": "Rank by activity time."
+          },
+          "rankActivityTotal": {
+            "type": "string",
+            "enum": [
+              "asc",
+              "desc"
+            ],
+            "description": "Rank by activity total."
+          }
+        },
+        "required": [
+          "campaign"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/profiles",
+        "query": {
+          "campaign": "{{campaign}}",
+          "limit": "{{limit}}",
+          "offset": "{{offset}}",
+          "private": "{{private}}",
+          "q": "{{query}}",
+          "sort": "{{sort}}",
+          "order": "{{order}}",
+          "rank": "{{rank}}",
+          "user": "{{user}}",
+          "rankDonors": "{{rankDonors}}",
+          "organisation": "{{organisation}}",
+          "rankActivityTime": "{{rankActivityTime}}",
+          "rankActivityTotal": "{{rankActivityTotal}}"
+        },
+        "success": [
+          200
+        ],
+        "parameters": [
+          {
+            "wireName": "q",
+            "inputName": "q",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "allowReserved": false
+          },
+          {
+            "wireName": "q",
+            "inputName": "query",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "allowReserved": false
+          }
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List profiles",
+      "validationMode": "strict-generated"
+    },
+    "profiles.url.check": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
       "kind": "action",
       "sideEffect": "read",
-      "title": "Healthcheck",
-      "description": "Validate the Raisely API key with a one-campaign list probe.",
+      "title": "Check profile URL",
+      "description": "Verify whether a profile URL is available in a campaign and return suggestions if it is taken.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Profile path to check (e.g. my-test-profile)."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Profile name used to generate a suggested path when url is omitted."
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "individual",
+              "group",
+              "team"
+            ],
+            "description": "Profile type used when generating a path."
+          },
+          "campaignUuid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Campaign UUID to check the path against."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "campaignUuid"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/utils/profile-url",
+        "success": [
+          200
+        ],
+        "query": {
+          "url": "{{url}}",
+          "name": "{{name}}",
+          "type": "{{type}}",
+          "campaignUuid": "{{campaignUuid}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "campaigns.profile.get": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Get campaign profile",
+      "description": "Return the hidden top-level campaign profile for a Raisely campaign.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "campaign": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Campaign UUID, path, or domain."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "campaign"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/campaigns/{{campaign}}/profile",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "campaigns.profiles.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List campaign profiles",
+      "description": "List fundraising profiles in a campaign via GET /campaigns/{campaign}/profiles.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "campaign": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Campaign UUID or path."
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Number of records to return per page.",
+            "minimum": 1
+          },
+          "offset": {
+            "type": "integer",
+            "description": "Number of records to skip.",
+            "minimum": 0
+          },
+          "sort": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Field to sort by."
+          },
+          "order": {
+            "type": "string",
+            "enum": [
+              "asc",
+              "desc"
+            ],
+            "description": "Sort direction."
+          },
+          "private": {
+            "type": "boolean",
+            "description": "If true, return private fields when authenticated."
+          },
+          "q": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Full-text search query."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "campaign"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/campaigns/{{campaign}}/profiles",
+        "success": [
+          200
+        ],
+        "query": {
+          "q": "{{q}}",
+          "sort": "{{sort}}",
+          "limit": "{{limit}}",
+          "order": "{{order}}",
+          "offset": "{{offset}}",
+          "private": "{{private}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "exerciseLogs.get": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Get exercise log",
+      "description": "Retrieve one exercise log by UUID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "uuid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Exercise log UUID."
+          },
+          "private": {
+            "type": "boolean",
+            "description": "Return private fields when authenticated."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "uuid"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/exercise-logs/{{uuid}}",
+        "success": [
+          200
+        ],
+        "query": {
+          "private": "{{private}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "interactions.get": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Get interaction",
+      "description": "Retrieve one interaction by UUID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "uuid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Interaction UUID."
+          },
+          "private": {
+            "type": "boolean",
+            "description": "Return private fields when authenticated."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "uuid"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/interactions/{{uuid}}",
+        "success": [
+          200
+        ],
+        "query": {
+          "private": "{{private}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "posts.get": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Get post",
+      "description": "Retrieve one post by UUID or path.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Post UUID or path."
+          },
+          "private": {
+            "type": "boolean",
+            "description": "Return private fields when authenticated."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "path"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/posts/{{path}}",
+        "success": [
+          200
+        ],
+        "query": {
+          "private": "{{private}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "users.get": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Get user",
+      "description": "Retrieve one user by UUID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "uuid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "User UUID."
+          },
+          "private": {
+            "type": "boolean",
+            "description": "Include private fields such as email and address."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "uuid"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/users/{{uuid}}",
+        "success": [
+          200
+        ],
+        "query": {
+          "private": "{{private}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "users.profiles.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Get user profiles",
+      "description": "List fundraising profiles owned by a user.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "uuid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "User UUID."
+          },
+          "private": {
+            "type": "boolean",
+            "description": "Include private custom fields."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "uuid"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/users/{{uuid}}/profiles",
+        "success": [
+          200
+        ],
+        "query": {
+          "private": "{{private}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "users.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List users",
+      "description": "List users in the organisation with optional pagination and private fields.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "sort": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Field to sort by."
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Number of records to return per page.",
+            "minimum": 1
+          },
+          "order": {
+            "type": "string",
+            "enum": [
+              "asc",
+              "desc"
+            ],
+            "description": "Sort direction."
+          },
+          "offset": {
+            "type": "integer",
+            "description": "Number of records to skip.",
+            "minimum": 0
+          },
+          "private": {
+            "type": "boolean",
+            "description": "If true, return private fields when authenticated."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/users",
+        "success": [
+          200
+        ],
+        "query": {
+          "sort": "{{sort}}",
+          "limit": "{{limit}}",
+          "order": "{{order}}",
+          "offset": "{{offset}}",
+          "private": "{{private}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "api.docs.get": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Get API docs",
+      "description": "Retrieve the Raisely OpenAPI specification from GET /api-docs.",
       "inputSchema": {
         "type": "object",
         "properties": {},
@@ -88,1117 +1050,23 @@
       },
       "request": {
         "method": "GET",
-        "path": "/campaigns",
-        "query": {
-          "limit": 1
-        },
+        "path": "/api-docs",
         "success": [
           200
         ]
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "campaigns.list": {
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "kind": "action",
-      "sideEffect": "read",
-      "title": "List campaigns",
-      "description": "List Raisely campaigns with optional search, sort, and pagination.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "private": {
-            "type": "boolean"
-          },
-          "query": {
-            "type": "string",
-            "minLength": 1
-          },
-          "limit": {
-            "type": "integer",
-            "minimum": 1
-          },
-          "offset": {
-            "type": "integer",
-            "minimum": 0
-          },
-          "sort": {
-            "type": "string",
-            "minLength": 1
-          },
-          "order": {
-            "type": "string",
-            "enum": [
-              "asc",
-              "desc"
-            ]
-          }
-        },
-        "additionalProperties": false
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "GET",
-        "path": "/campaigns",
-        "query": {
-          "private": "{{private}}",
-          "q": "{{query}}",
-          "limit": "{{limit}}",
-          "offset": "{{offset}}",
-          "sort": "{{sort}}",
-          "order": "{{order}}"
-        },
-        "success": [
-          200
-        ]
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "campaigns.get": {
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "kind": "action",
-      "sideEffect": "read",
-      "title": "Get campaign",
-      "description": "Get one Raisely campaign by UUID, path, or domain.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "campaign": {
-            "type": "string",
-            "minLength": 1
-          }
-        },
-        "required": [
-          "campaign"
-        ],
-        "additionalProperties": false
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "GET",
-        "path": "/campaigns/{{campaign}}",
-        "success": [
-          200
-        ]
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "campaigns.update": {
-      "kind": "action",
-      "sideEffect": "write",
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "title": "Update campaign",
-      "description": "Update a Raisely campaign by UUID, path, or domain.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "campaign": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Campaign UUID, path, or domain."
-          },
-          "name": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Campaign name."
-          },
-          "currency": {
-            "type": "string",
-            "minLength": 1,
-            "description": "3-letter currency code."
-          }
-        },
-        "additionalProperties": false,
-        "required": [
-          "campaign"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "PATCH",
-        "path": "/campaigns/{{campaign}}",
-        "success": [
-          200,
-          201
-        ],
-        "headers": {
-          "Content-Type": "application/json"
-        },
-        "body": {
-          "data": {
-            "name": "{{name}}",
-            "currency": "{{currency}}"
-          }
-        }
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "profiles.list": {
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "kind": "action",
-      "sideEffect": "read",
-      "title": "List profiles",
-      "description": "List fundraising profiles in one Raisely campaign.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "campaign": {
-            "type": "string",
-            "minLength": 1
-          },
-          "private": {
-            "type": "boolean"
-          },
-          "query": {
-            "type": "string",
-            "minLength": 1
-          },
-          "limit": {
-            "type": "integer",
-            "minimum": 1
-          },
-          "offset": {
-            "type": "integer",
-            "minimum": 0
-          }
-        },
-        "required": [
-          "campaign"
-        ],
-        "additionalProperties": false
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "GET",
-        "path": "/profiles",
-        "query": {
-          "campaign": "{{campaign}}",
-          "private": "{{private}}",
-          "q": "{{query}}",
-          "limit": "{{limit}}",
-          "offset": "{{offset}}"
-        },
-        "success": [
-          200
-        ]
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "profiles.get": {
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "kind": "action",
-      "sideEffect": "read",
-      "title": "Get profile",
-      "description": "Get one Raisely fundraising profile by UUID or path.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "profilePath": {
-            "type": "string",
-            "minLength": 1
-          },
-          "campaign": {
-            "type": "string",
-            "minLength": 1
-          },
-          "private": {
-            "type": "boolean"
-          }
-        },
-        "required": [
-          "profilePath"
-        ],
-        "additionalProperties": false
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "GET",
-        "path": "/profiles/{{profilePath}}",
-        "query": {
-          "campaign": "{{campaign}}",
-          "private": "{{private}}"
-        },
-        "success": [
-          200
-        ]
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "profiles.create": {
-      "kind": "action",
-      "sideEffect": "write",
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "title": "Create profile",
-      "description": "Create a fundraising profile in a Raisely campaign.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "campaign": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Campaign UUID, path, or domain."
-          },
-          "name": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Profile name."
-          },
-          "path": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Profile path."
-          },
-          "goal": {
-            "type": "integer",
-            "minimum": 0,
-            "description": "Fundraising goal in cents."
-          }
-        },
-        "additionalProperties": false,
-        "required": [
-          "campaign",
-          "name"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "POST",
-        "path": "/campaigns/{{campaign}}/profiles",
-        "success": [
-          200,
-          201
-        ],
-        "headers": {
-          "Content-Type": "application/json"
-        },
-        "body": {
-          "data": {
-            "name": "{{name}}",
-            "path": "{{path}}",
-            "goal": "{{goal}}"
-          }
-        }
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "profiles.update": {
-      "kind": "action",
-      "sideEffect": "write",
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "title": "Update profile",
-      "description": "Update a Raisely fundraising profile by UUID or path.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "profilePath": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Profile UUID or path."
-          },
-          "name": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Profile name."
-          },
-          "goal": {
-            "type": "integer",
-            "minimum": 0,
-            "description": "Fundraising goal in cents."
-          }
-        },
-        "additionalProperties": false,
-        "required": [
-          "profilePath"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "PATCH",
-        "path": "/profiles/{{profilePath}}",
-        "success": [
-          200,
-          201
-        ],
-        "headers": {
-          "Content-Type": "application/json"
-        },
-        "body": {
-          "data": {
-            "name": "{{name}}",
-            "goal": "{{goal}}"
-          }
-        }
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "donations.list": {
-      "kind": "action",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "title": "List donations",
-      "description": "List Raisely donations with optional campaign, search, and pagination.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "campaign": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Campaign UUID, path, or domain."
-          },
-          "query": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Search query."
-          },
-          "limit": {
-            "type": "integer",
-            "minimum": 1,
-            "description": "Page size."
-          },
-          "offset": {
-            "type": "integer",
-            "minimum": 0,
-            "description": "Pagination offset."
-          }
-        },
-        "additionalProperties": false
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "GET",
-        "path": "/donations",
-        "success": [
-          200
-        ],
-        "query": {
-          "campaign": "{{campaign}}",
-          "q": "{{query}}",
-          "limit": "{{limit}}",
-          "offset": "{{offset}}"
-        }
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "donations.get": {
-      "kind": "action",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "title": "Get donation",
-      "description": "Get one Raisely donation by UUID.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "donation": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Donation UUID."
-          }
-        },
-        "additionalProperties": false,
-        "required": [
-          "donation"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "GET",
-        "path": "/donations/{{donation}}",
-        "success": [
-          200
-        ]
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "donations.create": {
-      "kind": "action",
-      "sideEffect": "write",
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "title": "Create donation",
-      "description": "Record an offline Raisely donation.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "email": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Donor email."
-          },
-          "currency": {
-            "type": "string",
-            "minLength": 1,
-            "description": "3-letter currency code."
-          },
-          "type": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Donation type.",
-            "enum": [
-              "ONLINE",
-              "OFFLINE"
-            ]
-          },
-          "amount": {
-            "type": "integer",
-            "minimum": 1,
-            "description": "Amount in cents."
-          },
-          "method": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Payment method.",
-            "enum": [
-              "CREDIT_CARD",
-              "PAYPAL",
-              "APPLE_PAY",
-              "OFFLINE",
-              "CUSTOM",
-              "STRIPE_INTENT",
-              "FACEBOOK"
-            ]
-          },
-          "firstName": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Donor first name."
-          },
-          "lastName": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Donor last name."
-          },
-          "campaignUuid": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Campaign UUID."
-          }
-        },
-        "additionalProperties": false,
-        "required": [
-          "email",
-          "currency",
-          "type",
-          "amount",
-          "method"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "POST",
-        "path": "/donations",
-        "success": [
-          200,
-          201
-        ],
-        "headers": {
-          "Content-Type": "application/json"
-        },
-        "body": {
-          "data": {
-            "email": "{{email}}",
-            "currency": "{{currency}}",
-            "type": "{{type}}",
-            "amount": "{{amount}}",
-            "method": "{{method}}",
-            "firstName": "{{firstName}}",
-            "lastName": "{{lastName}}",
-            "campaignUuid": "{{campaignUuid}}"
-          }
-        }
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "users.list": {
-      "kind": "action",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "title": "List users",
-      "description": "List Raisely users with optional search and pagination.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "query": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Search query."
-          },
-          "limit": {
-            "type": "integer",
-            "minimum": 1,
-            "description": "Page size."
-          },
-          "offset": {
-            "type": "integer",
-            "minimum": 0,
-            "description": "Pagination offset."
-          }
-        },
-        "additionalProperties": false
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "GET",
-        "path": "/users",
-        "success": [
-          200
-        ],
-        "query": {
-          "q": "{{query}}",
-          "limit": "{{limit}}",
-          "offset": "{{offset}}"
-        }
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "users.get": {
-      "kind": "action",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "title": "Get user",
-      "description": "Get one Raisely user by UUID.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "user": {
-            "type": "string",
-            "minLength": 1,
-            "description": "User UUID."
-          }
-        },
-        "additionalProperties": false,
-        "required": [
-          "user"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "GET",
-        "path": "/users/{{user}}",
-        "success": [
-          200
-        ]
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "users.create": {
-      "kind": "action",
-      "sideEffect": "write",
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "title": "Create user",
-      "description": "Create a Raisely user.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "email": {
-            "type": "string",
-            "minLength": 1,
-            "description": "User email."
-          },
-          "firstName": {
-            "type": "string",
-            "minLength": 1,
-            "description": "First name."
-          },
-          "lastName": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Last name."
-          }
-        },
-        "additionalProperties": false,
-        "required": [
-          "email"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "POST",
-        "path": "/users",
-        "success": [
-          200,
-          201
-        ],
-        "headers": {
-          "Content-Type": "application/json"
-        },
-        "body": {
-          "data": {
-            "email": "{{email}}",
-            "firstName": "{{firstName}}",
-            "lastName": "{{lastName}}"
-          }
-        }
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "subscriptions.list": {
-      "kind": "action",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "title": "List subscriptions",
-      "description": "List Raisely recurring subscriptions with optional campaign and pagination.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "campaign": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Campaign UUID, path, or domain."
-          },
-          "limit": {
-            "type": "integer",
-            "minimum": 1,
-            "description": "Page size."
-          },
-          "offset": {
-            "type": "integer",
-            "minimum": 0,
-            "description": "Pagination offset."
-          }
-        },
-        "additionalProperties": false
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "GET",
-        "path": "/subscriptions",
-        "success": [
-          200
-        ],
-        "query": {
-          "campaign": "{{campaign}}",
-          "limit": "{{limit}}",
-          "offset": "{{offset}}"
-        }
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "subscriptions.get": {
-      "kind": "action",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "title": "Get subscription",
-      "description": "Get one Raisely subscription by UUID.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "subscription": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Subscription UUID."
-          }
-        },
-        "additionalProperties": false,
-        "required": [
-          "subscription"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "GET",
-        "path": "/subscriptions/{{subscription}}",
-        "success": [
-          200
-        ]
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "posts.list": {
-      "kind": "action",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "title": "List posts",
-      "description": "List Raisely profile posts with optional pagination.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "limit": {
-            "type": "integer",
-            "minimum": 1,
-            "description": "Page size."
-          },
-          "offset": {
-            "type": "integer",
-            "minimum": 0,
-            "description": "Pagination offset."
-          }
-        },
-        "additionalProperties": false
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "GET",
-        "path": "/posts",
-        "success": [
-          200
-        ],
-        "query": {
-          "limit": "{{limit}}",
-          "offset": "{{offset}}"
-        }
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "posts.get": {
-      "kind": "action",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "title": "Get post",
-      "description": "Get one Raisely post by UUID or path.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "post": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Post UUID or path."
-          }
-        },
-        "additionalProperties": false,
-        "required": [
-          "post"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "GET",
-        "path": "/posts/{{post}}",
-        "success": [
-          200
-        ]
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "posts.create": {
-      "kind": "action",
-      "sideEffect": "write",
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "title": "Create post",
-      "description": "Create a Raisely profile post.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "title": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Post title."
-          },
-          "body": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Post body."
-          },
-          "path": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Post path."
-          }
-        },
-        "additionalProperties": false,
-        "required": [
-          "body"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "POST",
-        "path": "/posts",
-        "success": [
-          200,
-          201
-        ],
-        "headers": {
-          "Content-Type": "application/json"
-        },
-        "body": {
-          "data": {
-            "title": "{{title}}",
-            "body": "{{body}}",
-            "path": "{{path}}"
-          }
-        }
       },
       "enforceOutputSchema": true,
       "validationMode": "strict-generated",
       "responseFormat": "json"
     },
     "authenticate.get": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
       "kind": "action",
       "sideEffect": "read",
-      "timeoutMs": 5000,
-      "maxInputBytes": 4096,
-      "maxResponseBytes": 65536,
-      "title": "Authenticate",
-      "description": "Validate the Raisely API token with GET /authenticate.",
+      "title": "Authenticate token",
+      "description": "Validate the Bearer token and return the authenticated user, organisation, and privileges.",
       "inputSchema": {
         "type": "object",
         "properties": {},
@@ -1226,20 +1094,4141 @@
       "enforceOutputSchema": true,
       "validationMode": "strict-generated",
       "responseFormat": "json"
+    },
+    "events.available": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Get available events",
+      "description": "Raisely has no dedicated webhook-event catalog route. This reads GET /api-docs, the official OpenAPI document that lists webhook event names.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api-docs",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "campaigns.donations.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List campaign donations",
+      "description": "List donations for one campaign.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "campaign": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Campaign UUID, path, or domain."
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Number of records to return per page.",
+            "minimum": 1
+          },
+          "offset": {
+            "type": "integer",
+            "description": "Number of records to skip.",
+            "minimum": 0
+          },
+          "sort": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Field to sort by."
+          },
+          "order": {
+            "type": "string",
+            "enum": [
+              "asc",
+              "desc"
+            ],
+            "description": "Sort direction."
+          },
+          "private": {
+            "type": "boolean",
+            "description": "If true, return private fields when authenticated."
+          },
+          "q": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Full-text search query."
+          },
+          "mode": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by mode (LIVE or TEST)."
+          },
+          "type": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by donation type."
+          },
+          "user": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by user UUID."
+          },
+          "status": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by status."
+          },
+          "profile": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by profile path or UUID."
+          },
+          "currency": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by currency code."
+          },
+          "isSuspicious": {
+            "type": "boolean",
+            "description": "Filter by suspicious flag."
+          },
+          "organisation": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by organisation UUID."
+          },
+          "subscription": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by subscription UUID."
+          },
+          "matchedDonationConfig": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by matched donation config path or UUID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "campaign"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/campaigns/{{campaign}}/donations",
+        "success": [
+          200
+        ],
+        "query": {
+          "q": "{{q}}",
+          "mode": "{{mode}}",
+          "sort": "{{sort}}",
+          "type": "{{type}}",
+          "user": "{{user}}",
+          "limit": "{{limit}}",
+          "order": "{{order}}",
+          "offset": "{{offset}}",
+          "status": "{{status}}",
+          "private": "{{private}}",
+          "profile": "{{profile}}",
+          "currency": "{{currency}}",
+          "isSuspicious": "{{isSuspicious}}",
+          "organisation": "{{organisation}}",
+          "subscription": "{{subscription}}",
+          "matchedDonationConfig": "{{matchedDonationConfig}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "campaigns.products.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List campaign products",
+      "description": "List products, tickets, and merchandise configured on a campaign.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "campaign": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Campaign UUID, path, or domain."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "campaign"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/campaigns/{{campaign}}/products",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "campaigns.subscriptions.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List campaign subscriptions",
+      "description": "List recurring donation subscriptions for one campaign.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "campaign": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Campaign UUID, path, or domain."
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Number of records to return per page.",
+            "minimum": 1
+          },
+          "offset": {
+            "type": "integer",
+            "description": "Number of records to skip.",
+            "minimum": 0
+          },
+          "sort": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Field to sort by."
+          },
+          "order": {
+            "type": "string",
+            "enum": [
+              "asc",
+              "desc"
+            ],
+            "description": "Sort direction."
+          },
+          "private": {
+            "type": "boolean",
+            "description": "If true, return private fields when authenticated."
+          },
+          "q": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Full-text search query."
+          },
+          "mode": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by mode."
+          },
+          "user": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by user UUID."
+          },
+          "source": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by source (OFFLINE or ONLINE)."
+          },
+          "status": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by status."
+          },
+          "profile": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by profile path or UUID."
+          },
+          "userUuid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by userUuid."
+          },
+          "organisation": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by organisation UUID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "campaign"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/campaigns/{{campaign}}/subscriptions",
+        "success": [
+          200
+        ],
+        "query": {
+          "q": "{{q}}",
+          "mode": "{{mode}}",
+          "sort": "{{sort}}",
+          "user": "{{user}}",
+          "limit": "{{limit}}",
+          "order": "{{order}}",
+          "offset": "{{offset}}",
+          "source": "{{source}}",
+          "status": "{{status}}",
+          "private": "{{private}}",
+          "profile": "{{profile}}",
+          "userUuid": "{{userUuid}}",
+          "organisation": "{{organisation}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "donations.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List donations",
+      "description": "List donations across the organisation with filters and pagination.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "description": "Number of records to return per page.",
+            "minimum": 1
+          },
+          "offset": {
+            "type": "integer",
+            "description": "Number of records to skip.",
+            "minimum": 0
+          },
+          "sort": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Field to sort by."
+          },
+          "order": {
+            "type": "string",
+            "enum": [
+              "asc",
+              "desc"
+            ],
+            "description": "Sort direction."
+          },
+          "private": {
+            "type": "boolean",
+            "description": "If true, return private fields when authenticated."
+          },
+          "q": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Full-text search query."
+          },
+          "mode": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by mode (LIVE or TEST)."
+          },
+          "type": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by donation type."
+          },
+          "user": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by user UUID."
+          },
+          "status": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by status."
+          },
+          "profile": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by profile path or UUID."
+          },
+          "campaign": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by campaign path or UUID."
+          },
+          "currency": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by currency code."
+          },
+          "isSuspicious": {
+            "type": "boolean",
+            "description": "Filter by suspicious flag."
+          },
+          "organisation": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by organisation UUID."
+          },
+          "subscription": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by subscription UUID."
+          },
+          "matchedDonationConfig": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by matched donation config path or UUID."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/donations",
+        "success": [
+          200
+        ],
+        "query": {
+          "q": "{{q}}",
+          "mode": "{{mode}}",
+          "sort": "{{sort}}",
+          "type": "{{type}}",
+          "user": "{{user}}",
+          "limit": "{{limit}}",
+          "order": "{{order}}",
+          "offset": "{{offset}}",
+          "status": "{{status}}",
+          "private": "{{private}}",
+          "profile": "{{profile}}",
+          "campaign": "{{campaign}}",
+          "currency": "{{currency}}",
+          "isSuspicious": "{{isSuspicious}}",
+          "organisation": "{{organisation}}",
+          "subscription": "{{subscription}}",
+          "matchedDonationConfig": "{{matchedDonationConfig}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "exerciseLogs.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List exercise logs",
+      "description": "List exercise logs with optional user and profile filters.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "description": "Number of records to return per page.",
+            "minimum": 1
+          },
+          "offset": {
+            "type": "integer",
+            "description": "Number of records to skip.",
+            "minimum": 0
+          },
+          "sort": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Field to sort by."
+          },
+          "order": {
+            "type": "string",
+            "enum": [
+              "asc",
+              "desc"
+            ],
+            "description": "Sort direction."
+          },
+          "private": {
+            "type": "boolean",
+            "description": "If true, return private fields when authenticated."
+          },
+          "q": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Full-text search query."
+          },
+          "user": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by person UUID."
+          },
+          "profile": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by profile UUID or path."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/exercise-logs",
+        "success": [
+          200
+        ],
+        "query": {
+          "q": "{{q}}",
+          "sort": "{{sort}}",
+          "user": "{{user}}",
+          "limit": "{{limit}}",
+          "order": "{{order}}",
+          "offset": "{{offset}}",
+          "private": "{{private}}",
+          "profile": "{{profile}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "interactionCategories.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List interaction categories",
+      "description": "List interaction categories in the organisation.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "description": "Number of records to return per page.",
+            "minimum": 1
+          },
+          "offset": {
+            "type": "integer",
+            "description": "Number of records to skip.",
+            "minimum": 0
+          },
+          "sort": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Field to sort by."
+          },
+          "order": {
+            "type": "string",
+            "enum": [
+              "asc",
+              "desc"
+            ],
+            "description": "Sort direction."
+          },
+          "private": {
+            "type": "boolean",
+            "description": "If true, return private fields when authenticated."
+          },
+          "q": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Full-text search query."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/interaction_categories",
+        "success": [
+          200
+        ],
+        "query": {
+          "q": "{{q}}",
+          "sort": "{{sort}}",
+          "limit": "{{limit}}",
+          "order": "{{order}}",
+          "offset": "{{offset}}",
+          "private": "{{private}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "interactions.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List interactions",
+      "description": "List interactions with optional user and category filters.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "description": "Number of records to return per page.",
+            "minimum": 1
+          },
+          "offset": {
+            "type": "integer",
+            "description": "Number of records to skip.",
+            "minimum": 0
+          },
+          "sort": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Field to sort by."
+          },
+          "order": {
+            "type": "string",
+            "enum": [
+              "asc",
+              "desc"
+            ],
+            "description": "Sort direction."
+          },
+          "private": {
+            "type": "boolean",
+            "description": "If true, return private fields when authenticated."
+          },
+          "q": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Full-text search query."
+          },
+          "user": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by user UUID."
+          },
+          "category": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by interaction category UUID."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/interactions",
+        "success": [
+          200
+        ],
+        "query": {
+          "q": "{{q}}",
+          "sort": "{{sort}}",
+          "user": "{{user}}",
+          "limit": "{{limit}}",
+          "order": "{{order}}",
+          "offset": "{{offset}}",
+          "private": "{{private}}",
+          "category": "{{category}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "orders.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List orders",
+      "description": "List orders with optional sort and pagination.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "sort": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Field to sort by."
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Number of records to return per page.",
+            "minimum": 1
+          },
+          "order": {
+            "type": "string",
+            "enum": [
+              "asc",
+              "desc"
+            ],
+            "description": "Sort direction."
+          },
+          "offset": {
+            "type": "integer",
+            "description": "Number of records to skip.",
+            "minimum": 0
+          },
+          "private": {
+            "type": "boolean",
+            "description": "If true, return private fields when authenticated."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/orders",
+        "success": [
+          200
+        ],
+        "query": {
+          "sort": "{{sort}}",
+          "limit": "{{limit}}",
+          "order": "{{order}}",
+          "offset": "{{offset}}",
+          "private": "{{private}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "posts.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List posts",
+      "description": "List posts with optional profile and campaign filters.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "description": "Number of records to return per page.",
+            "minimum": 1
+          },
+          "offset": {
+            "type": "integer",
+            "description": "Number of records to skip.",
+            "minimum": 0
+          },
+          "sort": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Field to sort by."
+          },
+          "order": {
+            "type": "string",
+            "enum": [
+              "asc",
+              "desc"
+            ],
+            "description": "Sort direction."
+          },
+          "private": {
+            "type": "boolean",
+            "description": "If true, return private fields when authenticated."
+          },
+          "q": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Full-text search query."
+          },
+          "profile": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by profile path or UUID."
+          },
+          "campaign": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by campaign path or UUID."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/posts",
+        "success": [
+          200
+        ],
+        "query": {
+          "q": "{{q}}",
+          "sort": "{{sort}}",
+          "limit": "{{limit}}",
+          "order": "{{order}}",
+          "offset": "{{offset}}",
+          "private": "{{private}}",
+          "profile": "{{profile}}",
+          "campaign": "{{campaign}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "profiles.donations.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List profile donations",
+      "description": "List donations credited to one fundraising profile.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Profile UUID."
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Number of records to return per page.",
+            "minimum": 1
+          },
+          "offset": {
+            "type": "integer",
+            "description": "Number of records to skip.",
+            "minimum": 0
+          },
+          "sort": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Field to sort by."
+          },
+          "order": {
+            "type": "string",
+            "enum": [
+              "asc",
+              "desc"
+            ],
+            "description": "Sort direction."
+          },
+          "private": {
+            "type": "boolean",
+            "description": "If true, return private fields when authenticated."
+          },
+          "q": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Full-text search query."
+          },
+          "mode": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by mode (LIVE or TEST)."
+          },
+          "type": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by donation type."
+          },
+          "user": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by user UUID."
+          },
+          "status": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by status."
+          },
+          "profile": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by profile path or UUID."
+          },
+          "campaign": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by campaign path or UUID."
+          },
+          "currency": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by currency code."
+          },
+          "isSuspicious": {
+            "type": "boolean",
+            "description": "Filter by suspicious flag."
+          },
+          "organisation": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by organisation UUID."
+          },
+          "subscription": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by subscription UUID."
+          },
+          "matchedDonationConfig": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by matched donation config path or UUID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "path"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/profiles/{{path}}/donations",
+        "success": [
+          200
+        ],
+        "query": {
+          "q": "{{q}}",
+          "mode": "{{mode}}",
+          "sort": "{{sort}}",
+          "type": "{{type}}",
+          "user": "{{user}}",
+          "limit": "{{limit}}",
+          "order": "{{order}}",
+          "offset": "{{offset}}",
+          "status": "{{status}}",
+          "private": "{{private}}",
+          "profile": "{{profile}}",
+          "campaign": "{{campaign}}",
+          "currency": "{{currency}}",
+          "isSuspicious": "{{isSuspicious}}",
+          "organisation": "{{organisation}}",
+          "subscription": "{{subscription}}",
+          "matchedDonationConfig": "{{matchedDonationConfig}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "profiles.members.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List profile members",
+      "description": "List members of a team profile.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Team profile UUID."
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Number of records to return per page.",
+            "minimum": 1
+          },
+          "offset": {
+            "type": "integer",
+            "description": "Number of records to skip.",
+            "minimum": 0
+          },
+          "sort": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Field to sort by."
+          },
+          "order": {
+            "type": "string",
+            "enum": [
+              "asc",
+              "desc"
+            ],
+            "description": "Sort direction."
+          },
+          "private": {
+            "type": "boolean",
+            "description": "If true, return private fields when authenticated."
+          },
+          "q": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Full-text search query."
+          },
+          "campaign": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Campaign UUID, path, or domain."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "path"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/profiles/{{path}}/members",
+        "success": [
+          200
+        ],
+        "query": {
+          "q": "{{q}}",
+          "sort": "{{sort}}",
+          "limit": "{{limit}}",
+          "order": "{{order}}",
+          "offset": "{{offset}}",
+          "private": "{{private}}",
+          "campaign": "{{campaign}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "profiles.posts.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List profile posts",
+      "description": "List posts created by a profile.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Profile UUID or path."
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Number of records to return per page.",
+            "minimum": 1
+          },
+          "offset": {
+            "type": "integer",
+            "description": "Number of records to skip.",
+            "minimum": 0
+          },
+          "sort": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Field to sort by."
+          },
+          "order": {
+            "type": "string",
+            "enum": [
+              "asc",
+              "desc"
+            ],
+            "description": "Sort direction."
+          },
+          "private": {
+            "type": "boolean",
+            "description": "If true, return private fields when authenticated."
+          },
+          "q": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Full-text search query."
+          },
+          "profile": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Additional profile filter."
+          },
+          "campaign": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by campaign path or UUID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "path"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/profiles/{{path}}/posts",
+        "success": [
+          200
+        ],
+        "query": {
+          "q": "{{q}}",
+          "sort": "{{sort}}",
+          "limit": "{{limit}}",
+          "order": "{{order}}",
+          "offset": "{{offset}}",
+          "private": "{{private}}",
+          "profile": "{{profile}}",
+          "campaign": "{{campaign}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "promoCodes.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List promo codes",
+      "description": "List promo codes with pagination.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "description": "Maximum results.",
+            "minimum": 1
+          },
+          "offset": {
+            "type": "integer",
+            "description": "Results to skip.",
+            "minimum": 0
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/promo_codes",
+        "success": [
+          200
+        ],
+        "query": {
+          "limit": "{{limit}}",
+          "offset": "{{offset}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "segments.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List segments",
+      "description": "List segments with optional sharing filters.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "description": "Number of records to return per page.",
+            "minimum": 1
+          },
+          "offset": {
+            "type": "integer",
+            "description": "Number of records to skip.",
+            "minimum": 0
+          },
+          "sort": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Field to sort by."
+          },
+          "order": {
+            "type": "string",
+            "enum": [
+              "asc",
+              "desc"
+            ],
+            "description": "Sort direction."
+          },
+          "private": {
+            "type": "boolean",
+            "description": "If true, return private fields when authenticated."
+          },
+          "q": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Full-text search query."
+          },
+          "user": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by user UUID."
+          },
+          "isShared": {
+            "type": "boolean",
+            "description": "Filter by isShared."
+          },
+          "isTemporary": {
+            "type": "boolean",
+            "description": "Filter by isTemporary."
+          },
+          "organisation": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by organisation UUID."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/segments",
+        "success": [
+          200
+        ],
+        "query": {
+          "q": "{{q}}",
+          "sort": "{{sort}}",
+          "user": "{{user}}",
+          "limit": "{{limit}}",
+          "order": "{{order}}",
+          "offset": "{{offset}}",
+          "private": "{{private}}",
+          "isShared": "{{isShared}}",
+          "isTemporary": "{{isTemporary}}",
+          "organisation": "{{organisation}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "subscriptions.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List subscriptions",
+      "description": "List recurring donation subscriptions.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "description": "Number of records to return per page.",
+            "minimum": 1
+          },
+          "offset": {
+            "type": "integer",
+            "description": "Number of records to skip.",
+            "minimum": 0
+          },
+          "sort": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Field to sort by."
+          },
+          "order": {
+            "type": "string",
+            "enum": [
+              "asc",
+              "desc"
+            ],
+            "description": "Sort direction."
+          },
+          "private": {
+            "type": "boolean",
+            "description": "If true, return private fields when authenticated."
+          },
+          "q": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Full-text search query."
+          },
+          "mode": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by mode."
+          },
+          "user": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by user UUID."
+          },
+          "source": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by source (OFFLINE or ONLINE)."
+          },
+          "status": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by status."
+          },
+          "profile": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by profile path or UUID."
+          },
+          "campaign": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by campaign path or UUID."
+          },
+          "userUuid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by userUuid."
+          },
+          "organisation": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by organisation UUID."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/subscriptions",
+        "success": [
+          200
+        ],
+        "query": {
+          "q": "{{q}}",
+          "mode": "{{mode}}",
+          "sort": "{{sort}}",
+          "user": "{{user}}",
+          "limit": "{{limit}}",
+          "order": "{{order}}",
+          "offset": "{{offset}}",
+          "source": "{{source}}",
+          "status": "{{status}}",
+          "private": "{{private}}",
+          "profile": "{{profile}}",
+          "campaign": "{{campaign}}",
+          "userUuid": "{{userUuid}}",
+          "organisation": "{{organisation}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "tags.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List tags",
+      "description": "List tags. Private tags are omitted unless private=true.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "description": "Number of records to return per page.",
+            "minimum": 1
+          },
+          "offset": {
+            "type": "integer",
+            "description": "Number of records to skip.",
+            "minimum": 0
+          },
+          "sort": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Field to sort by."
+          },
+          "order": {
+            "type": "string",
+            "enum": [
+              "asc",
+              "desc"
+            ],
+            "description": "Sort direction."
+          },
+          "private": {
+            "type": "boolean",
+            "description": "If true, return private fields when authenticated."
+          },
+          "q": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Full-text search query."
+          },
+          "path": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by tag path."
+          },
+          "recordType": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by recordType."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/tags",
+        "success": [
+          200
+        ],
+        "query": {
+          "q": "{{q}}",
+          "path": "{{path}}",
+          "sort": "{{sort}}",
+          "limit": "{{limit}}",
+          "order": "{{order}}",
+          "offset": "{{offset}}",
+          "private": "{{private}}",
+          "recordType": "{{recordType}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "users.donations.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List user donations",
+      "description": "List donations associated with one user.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "uuid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "User UUID."
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Number of records to return per page.",
+            "minimum": 1
+          },
+          "offset": {
+            "type": "integer",
+            "description": "Number of records to skip.",
+            "minimum": 0
+          },
+          "sort": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Field to sort by."
+          },
+          "order": {
+            "type": "string",
+            "enum": [
+              "asc",
+              "desc"
+            ],
+            "description": "Sort direction."
+          },
+          "private": {
+            "type": "boolean",
+            "description": "If true, return private fields when authenticated."
+          },
+          "q": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Full-text search query."
+          },
+          "mode": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by mode (LIVE or TEST)."
+          },
+          "type": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by donation type."
+          },
+          "user": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by user UUID."
+          },
+          "status": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by status."
+          },
+          "profile": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by profile path or UUID."
+          },
+          "campaign": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by campaign path or UUID."
+          },
+          "currency": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by currency code."
+          },
+          "isSuspicious": {
+            "type": "boolean",
+            "description": "Filter by suspicious flag."
+          },
+          "organisation": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by organisation UUID."
+          },
+          "subscription": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by subscription UUID."
+          },
+          "matchedDonationConfig": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by matched donation config path or UUID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "uuid"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/users/{{uuid}}/donations",
+        "success": [
+          200
+        ],
+        "query": {
+          "q": "{{q}}",
+          "mode": "{{mode}}",
+          "sort": "{{sort}}",
+          "type": "{{type}}",
+          "user": "{{user}}",
+          "limit": "{{limit}}",
+          "order": "{{order}}",
+          "offset": "{{offset}}",
+          "status": "{{status}}",
+          "private": "{{private}}",
+          "profile": "{{profile}}",
+          "campaign": "{{campaign}}",
+          "currency": "{{currency}}",
+          "isSuspicious": "{{isSuspicious}}",
+          "organisation": "{{organisation}}",
+          "subscription": "{{subscription}}",
+          "matchedDonationConfig": "{{matchedDonationConfig}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "users.interactions.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List user interactions",
+      "description": "List interactions for one user.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "uuid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "User UUID."
+          },
+          "q": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Full-text search query."
+          },
+          "sort": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Field to sort by."
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Number of records to return per page.",
+            "minimum": 1
+          },
+          "order": {
+            "type": "string",
+            "enum": [
+              "asc",
+              "desc"
+            ],
+            "description": "Sort direction."
+          },
+          "offset": {
+            "type": "integer",
+            "description": "Number of records to skip.",
+            "minimum": 0
+          },
+          "private": {
+            "type": "boolean",
+            "description": "If true, return private fields when authenticated."
+          },
+          "category": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by interaction category UUID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "uuid"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/users/{{uuid}}/interactions",
+        "success": [
+          200
+        ],
+        "query": {
+          "q": "{{q}}",
+          "sort": "{{sort}}",
+          "limit": "{{limit}}",
+          "order": "{{order}}",
+          "offset": "{{offset}}",
+          "private": "{{private}}",
+          "category": "{{category}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "users.subscriptions.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List user subscriptions",
+      "description": "List subscriptions for one user.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "uuid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "User UUID."
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Number of records to return per page.",
+            "minimum": 1
+          },
+          "offset": {
+            "type": "integer",
+            "description": "Number of records to skip.",
+            "minimum": 0
+          },
+          "sort": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Field to sort by."
+          },
+          "order": {
+            "type": "string",
+            "enum": [
+              "asc",
+              "desc"
+            ],
+            "description": "Sort direction."
+          },
+          "private": {
+            "type": "boolean",
+            "description": "If true, return private fields when authenticated."
+          },
+          "q": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Full-text search query."
+          },
+          "mode": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by mode."
+          },
+          "user": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by user UUID."
+          },
+          "source": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by source (OFFLINE or ONLINE)."
+          },
+          "status": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by status."
+          },
+          "profile": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by profile path or UUID."
+          },
+          "campaign": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by campaign path or UUID."
+          },
+          "userUuid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by userUuid."
+          },
+          "organisation": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by organisation UUID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "uuid"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/users/{{uuid}}/subscriptions",
+        "success": [
+          200
+        ],
+        "query": {
+          "q": "{{q}}",
+          "mode": "{{mode}}",
+          "sort": "{{sort}}",
+          "user": "{{user}}",
+          "limit": "{{limit}}",
+          "order": "{{order}}",
+          "offset": "{{offset}}",
+          "source": "{{source}}",
+          "status": "{{status}}",
+          "private": "{{private}}",
+          "profile": "{{profile}}",
+          "campaign": "{{campaign}}",
+          "userUuid": "{{userUuid}}",
+          "organisation": "{{organisation}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "webhooks.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List webhooks",
+      "description": "List webhook subscriptions for a campaign.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "campaign": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Campaign UUID, path, or domain."
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Number of records to return per page.",
+            "minimum": 1
+          },
+          "offset": {
+            "type": "integer",
+            "description": "Number of records to skip.",
+            "minimum": 0
+          },
+          "sort": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Field to sort by."
+          },
+          "order": {
+            "type": "string",
+            "enum": [
+              "asc",
+              "desc"
+            ],
+            "description": "Sort direction."
+          },
+          "private": {
+            "type": "boolean",
+            "description": "If true, return private fields when authenticated."
+          },
+          "q": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Full-text search query."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "campaign"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/webhooks",
+        "success": [
+          200
+        ],
+        "query": {
+          "q": "{{q}}",
+          "sort": "{{sort}}",
+          "limit": "{{limit}}",
+          "order": "{{order}}",
+          "offset": "{{offset}}",
+          "private": "{{private}}",
+          "campaign": "{{campaign}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "users.check": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Check user registration",
+      "description": "Check whether an email is already registered to a campaign.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "User payload. Must include email."
+          },
+          "campaignUuid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Campaign UUID or public key."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "data",
+          "campaignUuid"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/check-user",
+        "success": [
+          200,
+          201
+        ],
+        "body": {
+          "data": "{{data}}",
+          "campaignUuid": "{{campaignUuid}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "campaigns.create": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Create campaign",
+      "description": "Create a new campaign or clone an existing one.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "goal": {
+            "type": "integer",
+            "description": "Fundraising goal in cents."
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "LIVE",
+              "TEST"
+            ],
+            "description": "Start mode."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Campaign title."
+          },
+          "path": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique campaign path (path.raisely.com)."
+          },
+          "theme": {
+            "type": "string",
+            "enum": [
+              "special-charityChallenge",
+              "special-virtualEvent",
+              "special-virtualAppeal",
+              "communityHub-modern",
+              "peerToPeer-modern",
+              "donation-modern",
+              "communityHub-expansive",
+              "peerToPeer-expansive",
+              "donation-expansive"
+            ],
+            "description": "Theme name."
+          },
+          "version": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Theme version. Must be 3.0.0."
+          },
+          "currency": {
+            "type": "string",
+            "minLength": 1,
+            "description": "3 letter ISO currency code."
+          },
+          "internal": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Internal configuration used when cloning."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "goal",
+          "mode",
+          "name",
+          "path",
+          "theme",
+          "version",
+          "currency"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/campaigns",
+        "success": [
+          200,
+          201
+        ],
+        "body": {
+          "data": {
+            "goal": "{{goal}}",
+            "mode": "{{mode}}",
+            "name": "{{name}}",
+            "path": "{{path}}",
+            "theme": "{{theme}}",
+            "version": "{{version}}",
+            "currency": "{{currency}}",
+            "internal": "{{internal}}"
+          }
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "donations.create": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Create offline donation",
+      "description": "Record a donation processed outside Raisely (typically type=OFFLINE).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "card": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Payment method ID from the gateway."
+          },
+          "date": {
+            "type": "string",
+            "minLength": 1,
+            "description": "ISO8601 time the offline donation was received."
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "LIVE",
+              "TEST"
+            ],
+            "description": "LIVE or TEST."
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "ONLINE",
+              "OFFLINE"
+            ],
+            "description": "ONLINE or OFFLINE."
+          },
+          "email": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Donor email."
+          },
+          "items": {
+            "type": "array",
+            "description": "Donation line items.",
+            "items": {
+              "type": "object",
+              "additionalProperties": true,
+              "description": "A donation item."
+            }
+          },
+          "state": {
+            "type": "string",
+            "minLength": 1,
+            "description": "State or province."
+          },
+          "token": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Payment token from the gateway."
+          },
+          "amount": {
+            "type": "integer",
+            "description": "Total amount in cents."
+          },
+          "method": {
+            "type": "string",
+            "enum": [
+              "CREDIT_CARD",
+              "PAYPAL",
+              "APPLE_PAY",
+              "OFFLINE",
+              "CUSTOM",
+              "STRIPE_INTENT",
+              "FACEBOOK"
+            ],
+            "description": "Payment gateway."
+          },
+          "public": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Public custom fields."
+          },
+          "suburb": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Suburb or city."
+          },
+          "country": {
+            "type": "string",
+            "minLength": 1,
+            "description": "ISO 3166-1 alpha-2 country code."
+          },
+          "message": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Message from the donor."
+          },
+          "private": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Private custom fields."
+          },
+          "address1": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Address line 1."
+          },
+          "address2": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Address line 2."
+          },
+          "currency": {
+            "type": "string",
+            "minLength": 1,
+            "description": "3 letter currency code."
+          },
+          "customer": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Gateway customer ID."
+          },
+          "fullName": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Full name of the donor."
+          },
+          "lastName": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Last name of the donor."
+          },
+          "postcode": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Postal code."
+          },
+          "anonymous": {
+            "type": "boolean",
+            "description": "Whether the donor is anonymous."
+          },
+          "firstName": {
+            "type": "string",
+            "minLength": 1,
+            "description": "First name of the donor."
+          },
+          "methodType": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Payment method type (CARD, APPLE_PAY, ...)."
+          },
+          "phoneNumber": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Phone number."
+          },
+          "profileUuid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Profile UUID to credit."
+          },
+          "campaignUuid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Campaign UUID."
+          },
+          "preferredName": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Preferred name."
+          },
+          "gatewayVersion": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Gateway version."
+          },
+          "swiftAidStatus": {
+            "type": "string",
+            "enum": [
+              "OK",
+              "FAILED",
+              "PENDING",
+              "DELETING",
+              "DELETED"
+            ],
+            "description": "SwiftAid status."
+          },
+          "forRegistration": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Set aside for an upcoming registration."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "type",
+          "email",
+          "amount",
+          "method",
+          "currency"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/donations",
+        "success": [
+          200,
+          201
+        ],
+        "body": {
+          "data": {
+            "card": "{{card}}",
+            "date": "{{date}}",
+            "mode": "{{mode}}",
+            "type": "{{type}}",
+            "email": "{{email}}",
+            "items": "{{items}}",
+            "state": "{{state}}",
+            "token": "{{token}}",
+            "amount": "{{amount}}",
+            "method": "{{method}}",
+            "public": "{{public}}",
+            "suburb": "{{suburb}}",
+            "country": "{{country}}",
+            "message": "{{message}}",
+            "private": "{{private}}",
+            "address1": "{{address1}}",
+            "address2": "{{address2}}",
+            "currency": "{{currency}}",
+            "customer": "{{customer}}",
+            "fullName": "{{fullName}}",
+            "lastName": "{{lastName}}",
+            "postcode": "{{postcode}}",
+            "anonymous": "{{anonymous}}",
+            "firstName": "{{firstName}}",
+            "methodType": "{{methodType}}",
+            "phoneNumber": "{{phoneNumber}}",
+            "profileUuid": "{{profileUuid}}",
+            "campaignUuid": "{{campaignUuid}}",
+            "preferredName": "{{preferredName}}",
+            "gatewayVersion": "{{gatewayVersion}}",
+            "swiftAidStatus": "{{swiftAidStatus}}",
+            "forRegistration": "{{forRegistration}}"
+          }
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "exerciseLogs.create": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Create exercise log",
+      "description": "Record an exercise activity against a user and profile.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Additional contextual data."
+          },
+          "date": {
+            "type": "string",
+            "minLength": 1,
+            "description": "ISO 8601 timestamp of the activity."
+          },
+          "time": {
+            "type": "integer",
+            "description": "Elapsed time in seconds."
+          },
+          "measure": {
+            "type": "integer",
+            "description": "Completed measure in the campaign unit."
+          },
+          "activity": {
+            "type": "string",
+            "enum": [
+              "RUNNING",
+              "SWIMMING",
+              "CYCLING",
+              "WALKING",
+              "WHEELCHAIRING",
+              "OTHER"
+            ],
+            "description": "Activity type."
+          },
+          "distance": {
+            "type": "integer",
+            "description": "Distance in metres."
+          },
+          "userUuid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "User who performed the exercise."
+          },
+          "sourceApp": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Source application (e.g. Strava)."
+          },
+          "profileUuid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Associated profile UUID."
+          },
+          "rawDistance": {
+            "type": "integer",
+            "description": "Raw distance value."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "activity",
+          "userUuid",
+          "profileUuid"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/exercise-logs",
+        "success": [
+          200,
+          201
+        ],
+        "body": {
+          "data": {
+            "data": "{{data}}",
+            "date": "{{date}}",
+            "time": "{{time}}",
+            "measure": "{{measure}}",
+            "activity": "{{activity}}",
+            "distance": "{{distance}}",
+            "userUuid": "{{userUuid}}",
+            "sourceApp": "{{sourceApp}}",
+            "profileUuid": "{{profileUuid}}",
+            "rawDistance": "{{rawDistance}}"
+          }
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "interactions.create": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Create interaction",
+      "description": "Create an interaction. Supply categoryUuid or categoryPath.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "detail": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Additional interaction details."
+          },
+          "private": {
+            "type": "boolean",
+            "description": "Return the full record when authenticated."
+          },
+          "userUuid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "User the interaction belongs to."
+          },
+          "categoryPath": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Category path when categoryUuid is omitted."
+          },
+          "categoryUuid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Category UUID. Either this or categoryPath is required by Raisely."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/interactions",
+        "success": [
+          200,
+          201
+        ],
+        "query": {
+          "private": "{{private}}"
+        },
+        "body": {
+          "data": {
+            "detail": "{{detail}}",
+            "userUuid": "{{userUuid}}",
+            "categoryPath": "{{categoryPath}}",
+            "categoryUuid": "{{categoryUuid}}"
+          }
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "posts.create": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Create post",
+      "description": "Create a blog post or update on a profile.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "body": {
+            "type": "string",
+            "minLength": 1,
+            "description": "HTML or text body."
+          },
+          "date": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Publication date (ISO 8601)."
+          },
+          "path": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique URL slug."
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Post title."
+          },
+          "photoUrl": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Main image URL."
+          },
+          "profileUuid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Profile UUID the post belongs to."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "body",
+          "path",
+          "photoUrl",
+          "profileUuid"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/posts",
+        "success": [
+          200,
+          201
+        ],
+        "body": {
+          "data": {
+            "body": "{{body}}",
+            "date": "{{date}}",
+            "path": "{{path}}",
+            "title": "{{title}}",
+            "photoUrl": "{{photoUrl}}",
+            "profileUuid": "{{profileUuid}}"
+          }
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "promoCodes.create": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Create promo code",
+      "description": "Create a campaign promo code.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "minLength": 1,
+            "description": "User-facing code (must be unique)."
+          },
+          "uses": {
+            "type": "integer",
+            "description": "Current claim count. Typically 0 for a new code.",
+            "minimum": 0
+          },
+          "endDate": {
+            "type": "string",
+            "minLength": 1,
+            "description": "ISO 8601 end timestamp."
+          },
+          "maxUses": {
+            "type": "integer",
+            "description": "Maximum claims."
+          },
+          "startDate": {
+            "type": "string",
+            "minLength": 1,
+            "description": "ISO 8601 start timestamp."
+          },
+          "campaignUuid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Campaign UUID."
+          },
+          "discountType": {
+            "type": "string",
+            "enum": [
+              "PERCENTAGE",
+              "FIXED"
+            ],
+            "description": "PERCENTAGE or FIXED."
+          },
+          "discountAmount": {
+            "type": "integer",
+            "description": "Percent whole number, or cents for FIXED."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "code",
+          "campaignUuid",
+          "discountType",
+          "discountAmount"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/promo_codes",
+        "success": [
+          200,
+          201
+        ],
+        "body": {
+          "data": {
+            "code": "{{code}}",
+            "uses": "{{uses}}",
+            "endDate": "{{endDate}}",
+            "maxUses": "{{maxUses}}",
+            "startDate": "{{startDate}}",
+            "campaignUuid": "{{campaignUuid}}",
+            "discountType": "{{discountType}}",
+            "discountAmount": "{{discountAmount}}"
+          }
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "webhooks.create": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Create webhook",
+      "description": "Subscribe to Raisely events. Omit campaignUuid for account-wide events.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "minLength": 1,
+            "description": "HTTPS endpoint that receives events."
+          },
+          "events": {
+            "type": "array",
+            "description": "Event names to forward.",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "description": "A Raisely event name such as donation.created."
+            }
+          },
+          "secret": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Shared secret included in payloads."
+          },
+          "campaignUuid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Restrict events to one campaign."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "url",
+          "events"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/webhooks",
+        "success": [
+          200,
+          201
+        ],
+        "body": {
+          "data": {
+            "url": "{{url}}",
+            "events": "{{events}}",
+            "secret": "{{secret}}",
+            "campaignUuid": "{{campaignUuid}}"
+          }
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "users.create": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Create user",
+      "description": "Create a user. Fails when the email already exists.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Email address. Raisely deduplicates on email."
+          },
+          "state": {
+            "type": "string",
+            "minLength": 1,
+            "description": "State or province."
+          },
+          "public": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Public custom fields."
+          },
+          "suburb": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Suburb or city."
+          },
+          "country": {
+            "type": "string",
+            "minLength": 1,
+            "description": "ISO 3166-1 alpha-2 country code."
+          },
+          "private": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Private custom fields."
+          },
+          "address1": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Address line 1."
+          },
+          "address2": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Address line 2."
+          },
+          "fullName": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Full name."
+          },
+          "lastName": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Last name."
+          },
+          "photoUrl": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Profile photo URL."
+          },
+          "postcode": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Postal code."
+          },
+          "firstName": {
+            "type": "string",
+            "minLength": 1,
+            "description": "First name."
+          },
+          "phoneNumber": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Phone number."
+          },
+          "preferredName": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Preferred name."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "email"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/users",
+        "success": [
+          200,
+          201
+        ],
+        "body": {
+          "data": {
+            "email": "{{email}}",
+            "state": "{{state}}",
+            "public": "{{public}}",
+            "suburb": "{{suburb}}",
+            "country": "{{country}}",
+            "private": "{{private}}",
+            "address1": "{{address1}}",
+            "address2": "{{address2}}",
+            "fullName": "{{fullName}}",
+            "lastName": "{{lastName}}",
+            "photoUrl": "{{photoUrl}}",
+            "postcode": "{{postcode}}",
+            "firstName": "{{firstName}}",
+            "phoneNumber": "{{phoneNumber}}",
+            "preferredName": "{{preferredName}}"
+          }
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "users.upsert": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Upsert user",
+      "description": "Create or update a user by email, optionally tagging and recording an interaction.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "User payload. Email is the unique identifier."
+          },
+          "private": {
+            "type": "boolean",
+            "description": "Return private fields when authenticated."
+          },
+          "campaign": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Campaign UUID, path, or domain."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "data",
+          "campaign"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/users/upsert",
+        "success": [
+          200,
+          201
+        ],
+        "query": {
+          "private": "{{private}}",
+          "campaign": "{{campaign}}"
+        },
+        "body": {
+          "data": "{{data}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "logout": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Logout",
+      "description": "Invalidate the current Bearer token.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/logout",
+        "success": [
+          200,
+          201
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "exerciseLogs.delete": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "destructive",
+      "title": "Delete exercise log",
+      "description": "Delete an exercise log by UUID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "uuid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Exercise log UUID."
+          },
+          "private": {
+            "type": "boolean",
+            "description": "Return private fields when authenticated."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "uuid"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/exercise-logs/{{uuid}}",
+        "success": [
+          200
+        ],
+        "query": {
+          "private": "{{private}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "interactions.delete": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "destructive",
+      "title": "Delete interaction",
+      "description": "Delete a custom interaction. System-generated interactions cannot be deleted.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "uuid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Interaction UUID."
+          },
+          "private": {
+            "type": "boolean",
+            "description": "Return the full record when authenticated."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "uuid"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/interactions/{{uuid}}",
+        "success": [
+          200
+        ],
+        "query": {
+          "private": "{{private}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "posts.delete": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "destructive",
+      "title": "Delete post",
+      "description": "Permanently delete a post by UUID or path.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Post UUID or path."
+          },
+          "private": {
+            "type": "boolean",
+            "description": "Return private fields when authenticated."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "path"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/posts/{{path}}",
+        "success": [
+          200
+        ],
+        "query": {
+          "private": "{{private}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "profiles.delete": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "destructive",
+      "title": "Delete profile",
+      "description": "Archive a profile so it is hidden from the campaign.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Profile UUID or path."
+          },
+          "private": {
+            "type": "boolean",
+            "description": "Return private custom fields when authenticated."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "path"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/profiles/{{path}}",
+        "success": [
+          200
+        ],
+        "query": {
+          "private": "{{private}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "webhooks.delete": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "destructive",
+      "title": "Delete webhook",
+      "description": "Delete a webhook subscription by UUID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "uuid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Webhook UUID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "uuid"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/webhooks/{{uuid}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "donations.move": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Move donation",
+      "description": "Reassign a donation to a different profile, which may be in another campaign.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "uuid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Donation UUID."
+          },
+          "profileUuid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Destination profile UUID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "uuid",
+          "profileUuid"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/donations/{{uuid}}/move",
+        "success": [
+          200
+        ],
+        "body": {
+          "data": {
+            "profileUuid": "{{profileUuid}}"
+          }
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "campaigns.update": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Update campaign",
+      "description": "Patch campaign fields such as name, goal, mode, or custom fields.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Campaign fields to update."
+          },
+          "private": {
+            "type": "boolean",
+            "description": "Return private fields when authenticated."
+          },
+          "campaign": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Campaign UUID, path, or domain."
+          },
+          "overwriteCustomFields": {
+            "type": "boolean",
+            "description": "Replace public/private custom fields instead of merging."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "data",
+          "campaign"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/campaigns/{{campaign}}",
+        "success": [
+          200
+        ],
+        "query": {
+          "private": "{{private}}",
+          "overwriteCustomFields": "{{overwriteCustomFields}}"
+        },
+        "body": {
+          "data": "{{data}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "campaigns.config.update": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Update campaign config",
+      "description": "Overwrite one campaign config attribute.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "value": {
+            "description": "JSON-serializable value for the config key.",
+            "type": [
+              "string",
+              "number",
+              "integer",
+              "boolean",
+              "object",
+              "array",
+              "null"
+            ]
+          },
+          "campaign": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Campaign UUID, path, or domain."
+          },
+          "attribute": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Config key to update."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "campaign",
+          "attribute"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/campaigns/{{campaign}}/config/{{attribute}}",
+        "success": [
+          200
+        ],
+        "body": {
+          "data": "{{value}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "exerciseLogs.update": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Update exercise log",
+      "description": "Patch distance, time, activity, or other exercise log fields.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Additional contextual data."
+          },
+          "date": {
+            "type": "string",
+            "minLength": 1,
+            "description": "ISO 8601 timestamp."
+          },
+          "time": {
+            "type": "integer",
+            "description": "Elapsed time in seconds."
+          },
+          "uuid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Exercise log UUID."
+          },
+          "measure": {
+            "type": "integer",
+            "description": "Completed measure in the campaign unit."
+          },
+          "private": {
+            "type": "boolean",
+            "description": "Return private fields."
+          },
+          "activity": {
+            "type": "string",
+            "enum": [
+              "RUNNING",
+              "SWIMMING",
+              "CYCLING",
+              "WALKING",
+              "WHEELCHAIRING",
+              "OTHER"
+            ],
+            "description": "Activity type."
+          },
+          "distance": {
+            "type": "integer",
+            "description": "Distance in metres."
+          },
+          "sourceApp": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Source application."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "uuid"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/exercise-logs/{{uuid}}",
+        "success": [
+          200
+        ],
+        "query": {
+          "private": "{{private}}"
+        },
+        "body": {
+          "data": {
+            "data": "{{data}}",
+            "date": "{{date}}",
+            "time": "{{time}}",
+            "measure": "{{measure}}",
+            "activity": "{{activity}}",
+            "distance": "{{distance}}",
+            "sourceApp": "{{sourceApp}}"
+          }
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "posts.update": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Update post",
+      "description": "Patch a post's title, body, date, path, or photo.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Post fields to update."
+          },
+          "path": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Post UUID or path."
+          },
+          "private": {
+            "type": "boolean",
+            "description": "Return private fields when authenticated."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "data",
+          "path"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/posts/{{path}}",
+        "success": [
+          200
+        ],
+        "query": {
+          "private": "{{private}}"
+        },
+        "body": {
+          "data": "{{data}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "profiles.update": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Update profile",
+      "description": "Patch profile details such as description, goal, name, photo, or custom fields.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Profile fields to update."
+          },
+          "path": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Profile UUID or path."
+          },
+          "partial": {
+            "type": "boolean",
+            "description": "Merge versus overwrite public/private values."
+          },
+          "private": {
+            "type": "boolean",
+            "description": "Return private custom fields."
+          },
+          "campaign": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Campaign UUID, path, or domain."
+          },
+          "overwriteCustomFields": {
+            "type": "boolean",
+            "description": "Replace public/private custom fields instead of merging."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "data",
+          "path"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/profiles/{{path}}",
+        "success": [
+          200
+        ],
+        "query": {
+          "partial": "{{partial}}",
+          "private": "{{private}}",
+          "campaign": "{{campaign}}",
+          "overwriteCustomFields": "{{overwriteCustomFields}}"
+        },
+        "body": {
+          "data": "{{data}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "users.update": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Update user",
+      "description": "Patch a user's profile, contact details, or custom fields.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "User fields to update."
+          },
+          "uuid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "User UUID."
+          },
+          "private": {
+            "type": "boolean",
+            "description": "Return private custom fields."
+          },
+          "overwriteCustomFields": {
+            "type": "boolean",
+            "description": "Replace public/private custom fields instead of merging."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "data",
+          "uuid"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/users/{{uuid}}",
+        "success": [
+          200
+        ],
+        "query": {
+          "private": "{{private}}",
+          "overwriteCustomFields": "{{overwriteCustomFields}}"
+        },
+        "body": {
+          "data": "{{data}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "webhooks.update": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Update webhook",
+      "description": "Patch a webhook URL, events, or secret.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Webhook fields to update."
+          },
+          "uuid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Webhook UUID."
+          },
+          "private": {
+            "type": "boolean",
+            "description": "Return the full record when authenticated."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "data",
+          "uuid"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/webhooks/{{uuid}}",
+        "success": [
+          200
+        ],
+        "query": {
+          "private": "{{private}}"
+        },
+        "body": {
+          "data": "{{data}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "campaigns.media.upload": {
+      "timeoutMs": 60000,
+      "maxInputBytes": 26214400,
+      "maxResponseBytes": 26214400,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Upload campaign media",
+      "description": "Upload a file to a campaign media folder via multipart POST /campaigns/{campaign}/media/{folder_uuid}.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "file",
+          "campaign",
+          "folder_uuid"
+        ],
+        "properties": {
+          "file": {
+            "type": "object",
+            "description": "File to upload. Provide contentBase64 (or content) plus name/filename, or a url for Raisely to fetch.",
+            "additionalProperties": true,
+            "properties": {
+              "name": {
+                "type": "string",
+                "minLength": 1,
+                "description": "File name."
+              },
+              "filename": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Alternate file name."
+              },
+              "contentBase64": {
+                "type": "string",
+                "description": "Standard padded base64 file bytes."
+              },
+              "content": {
+                "type": "string",
+                "description": "Alternate base64 body."
+              },
+              "contentType": {
+                "type": "string",
+                "minLength": 1,
+                "description": "MIME type."
+              },
+              "mimeType": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Alternate MIME type."
+              },
+              "url": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Remote image URL for Raisely to fetch when bytes are omitted."
+              }
+            }
+          },
+          "campaign": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Campaign UUID, path, or domain."
+          },
+          "folder_uuid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Folder UUID to store the file in."
+          },
+          "folderUuid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Alias of folder_uuid."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
     }
   },
   "provenance": {
     "source": {
-      "url": "https://github.com/oomol-lab/open-connector",
-      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
+      "url": "https://github.com/oomol-lab/open-connector"
     }
   },
-  "evidence": {
-    "fixture": {
-      "status": "supplied"
-    },
-    "live": {
-      "status": "unverified"
-    }
-  }
+  "runtime": "bun",
+  "version": "0.2.0",
+  "visibility": "public"
 }

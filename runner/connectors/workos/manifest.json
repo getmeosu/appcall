@@ -1,17 +1,7 @@
 {
-  "key": "workos",
-  "name": "WorkOS",
-  "version": "0.2.0",
-  "runtime": "bun",
-  "visibility": "public",
-  "categories": [
-    "dev-tools"
-  ],
   "auth": {
-    "type": "api_key",
     "scopes": [],
     "setup": {
-      "mode": "api_key",
       "fields": [
         {
           "key": "apiKey",
@@ -19,108 +9,174 @@
           "required": true,
           "secret": true
         }
-      ]
+      ],
+      "mode": "api_key"
+    },
+    "type": "api_key"
+  },
+  "categories": [
+    "dev-tools"
+  ],
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
     }
   },
-  "network": {
-    "allowedHosts": [
-      "api.workos.com"
-    ]
-  },
-  "models": [
-    "organization",
-    "user",
-    "membership",
-    "invitation",
-    "directory",
-    "connection"
-  ],
   "http": {
-    "baseUrl": "https://api.workos.com",
     "auth": {
       "field": "apiKey",
       "in": "header",
       "name": "Authorization",
       "value": "Bearer {{apiKey}}"
     },
-    "headers": {
-      "Accept": "application/json"
-    },
+    "baseUrl": "https://api.workos.com",
     "errors": {
-      "rateLimitStatuses": [
-        429
-      ],
-      "retryAfterHeader": "retry-after",
       "defaultRetryAfterSeconds": 30,
       "messagePaths": [
         "error.message",
         "message",
         "error_description",
         "error"
-      ]
+      ],
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after"
+    },
+    "headers": {
+      "Accept": "application/json"
     }
+  },
+  "key": "workos",
+  "models": [
+    "organization",
+    "user",
+    "organization_membership",
+    "connection",
+    "directory",
+    "directory_group",
+    "directory_user",
+    "invitation"
+  ],
+  "name": "WorkOS",
+  "network": {
+    "allowedHosts": [
+      "api.workos.com"
+    ]
   },
   "operations": {
     "healthcheck": {
-      "timeoutMs": 5000,
-      "maxInputBytes": 4096,
-      "maxResponseBytes": 65536,
-      "kind": "action",
-      "sideEffect": "read",
-      "title": "Healthcheck",
       "description": "Validate the WorkOS API key by listing one organization.",
+      "enforceOutputSchema": true,
       "inputSchema": {
         "type": "object",
-        "properties": {},
-        "additionalProperties": false
+        "additionalProperties": false,
+        "properties": {}
       },
+      "kind": "action",
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
       "outputSchema": {
         "type": "object",
         "required": [
           "data"
         ],
+        "additionalProperties": false,
         "properties": {
           "data": {
             "type": "object"
           }
-        },
-        "additionalProperties": false
+        }
       },
       "request": {
         "method": "GET",
         "path": "/organizations",
+        "success": [
+          200
+        ],
         "query": {
           "limit": 1
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 5000,
+      "title": "Healthcheck",
+      "validationMode": "strict-generated"
+    },
+    "connections.get": {
+      "description": "Get one WorkOS SSO or OAuth connection by ID via GET /connections/{connection_id}.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "connection_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "WorkOS connection ID."
+          }
         },
+        "required": [
+          "connection_id"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/connections/{{connection_id}}",
         "success": [
           200
         ]
       },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "organizations.list": {
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "kind": "action",
+      "responseFormat": "json",
       "sideEffect": "read",
-      "title": "List organizations",
-      "description": "List WorkOS organizations with optional cursor pagination.",
+      "timeoutMs": 15000,
+      "title": "Get connection",
+      "validationMode": "strict-generated"
+    },
+    "connections.list": {
+      "description": "List one page of WorkOS SSO and OAuth connections, optionally filtered by type, domain, organization, or name.",
+      "enforceOutputSchema": true,
       "inputSchema": {
         "type": "object",
+        "additionalProperties": false,
         "properties": {
           "before": {
             "type": "string",
-            "minLength": 1
+            "minLength": 1,
+            "description": "Object ID cursor for the previous page. Omit for the first page."
           },
           "after": {
             "type": "string",
-            "minLength": 1
+            "minLength": 1,
+            "description": "Object ID cursor for the next page. Official WorkOS `after` parameter."
+          },
+          "next_cursor": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Composio alias for `after`. Mapped to the official after query parameter."
           },
           "limit": {
             "type": "integer",
+            "description": "Maximum objects to return in this page (1-100). Defaults to 10.",
             "minimum": 1,
             "maximum": 100
           },
@@ -130,1178 +186,96 @@
               "normal",
               "desc",
               "asc"
-            ]
+            ],
+            "description": "Creation-time order. `normal` uses reversed cursor semantics."
+          },
+          "domain": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Return connections associated with this domain."
           },
           "search": {
             "type": "string",
-            "minLength": 1
-          }
-        },
-        "additionalProperties": false
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "GET",
-        "path": "/organizations",
-        "query": {
-          "before": "{{before}}",
-          "after": "{{after}}",
-          "limit": "{{limit}}",
-          "order": "{{order}}",
-          "search": "{{search}}"
-        },
-        "success": [
-          200
-        ]
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "organizations.get": {
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "kind": "action",
-      "sideEffect": "read",
-      "title": "Get organization",
-      "description": "Get a WorkOS organization by ID.",
-      "inputSchema": {
-        "type": "object",
-        "required": [
-          "id"
-        ],
-        "properties": {
-          "id": {
-            "type": "string",
-            "minLength": 1
-          }
-        },
-        "additionalProperties": false
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "GET",
-        "path": "/organizations/{{id}}",
-        "success": [
-          200
-        ]
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "users.list": {
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "kind": "action",
-      "sideEffect": "read",
-      "title": "List users",
-      "description": "List WorkOS AuthKit users with optional cursor and identity filters.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "before": {
-            "type": "string",
-            "minLength": 1
+            "minLength": 1,
+            "description": "Text to match against connection names."
           },
-          "after": {
-            "type": "string",
-            "minLength": 1
-          },
-          "limit": {
-            "type": "integer",
-            "minimum": 1,
-            "maximum": 100
-          },
-          "order": {
+          "connection_type": {
             "type": "string",
             "enum": [
-              "normal",
-              "desc",
-              "asc"
-            ]
-          },
-          "organization_id": {
-            "type": "string",
-            "minLength": 1
-          },
-          "email": {
-            "type": "string",
-            "minLength": 1
-          }
-        },
-        "additionalProperties": false
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "GET",
-        "path": "/user_management/users",
-        "query": {
-          "before": "{{before}}",
-          "after": "{{after}}",
-          "limit": "{{limit}}",
-          "order": "{{order}}",
-          "organization_id": "{{organization_id}}",
-          "email": "{{email}}"
-        },
-        "success": [
-          200
-        ]
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "users.get": {
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "kind": "action",
-      "sideEffect": "read",
-      "title": "Get user",
-      "description": "Get a WorkOS AuthKit user by ID.",
-      "inputSchema": {
-        "type": "object",
-        "required": [
-          "id"
-        ],
-        "properties": {
-          "id": {
-            "type": "string",
-            "minLength": 1
-          }
-        },
-        "additionalProperties": false
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "GET",
-        "path": "/user_management/users/{{id}}",
-        "success": [
-          200
-        ]
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "organizations.create": {
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "kind": "action",
-      "sideEffect": "write",
-      "title": "Create organization",
-      "description": "Create a WorkOS organization.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "name": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Organization name."
-          },
-          "external_id": {
-            "type": "string",
-            "minLength": 1,
-            "description": "External identifier."
-          }
-        },
-        "additionalProperties": false,
-        "required": [
-          "name"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "POST",
-        "path": "/organizations",
-        "success": [
-          200,
-          201
-        ],
-        "headers": {
-          "Content-Type": "application/json"
-        },
-        "body": {
-          "name": "{{name}}",
-          "external_id": "{{external_id}}"
-        }
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "organizations.update": {
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "kind": "action",
-      "sideEffect": "write",
-      "title": "Update organization",
-      "description": "Update a WorkOS organization by ID.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Organization ID."
-          },
-          "name": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Organization name."
-          },
-          "external_id": {
-            "type": "string",
-            "minLength": 1,
-            "description": "External identifier."
-          }
-        },
-        "additionalProperties": false,
-        "required": [
-          "id"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "PUT",
-        "path": "/organizations/{{id}}",
-        "success": [
-          200
-        ],
-        "headers": {
-          "Content-Type": "application/json"
-        },
-        "body": {
-          "name": "{{name}}",
-          "external_id": "{{external_id}}"
-        }
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "organizations.delete": {
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "kind": "action",
-      "sideEffect": "destructive",
-      "title": "Delete organization",
-      "description": "Permanently delete a WorkOS organization.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Resource ID."
-          }
-        },
-        "additionalProperties": false,
-        "required": [
-          "id"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {}
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "DELETE",
-        "path": "/organizations/{{id}}",
-        "success": [
-          204,
-          200
-        ]
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "users.create": {
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "kind": "action",
-      "sideEffect": "write",
-      "title": "Create user",
-      "description": "Create a WorkOS AuthKit user.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "email": {
-            "type": "string",
-            "minLength": 1,
-            "description": "User email."
-          },
-          "first_name": {
-            "type": "string",
-            "minLength": 1,
-            "description": "First name."
-          },
-          "last_name": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Last name."
-          },
-          "email_verified": {
-            "type": "boolean",
-            "description": "Mark the email verified."
-          }
-        },
-        "additionalProperties": false,
-        "required": [
-          "email"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "POST",
-        "path": "/user_management/users",
-        "success": [
-          200,
-          201
-        ],
-        "headers": {
-          "Content-Type": "application/json"
-        },
-        "body": {
-          "email": "{{email}}",
-          "first_name": "{{first_name}}",
-          "last_name": "{{last_name}}",
-          "email_verified": "{{email_verified}}"
-        }
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "users.update": {
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "kind": "action",
-      "sideEffect": "write",
-      "title": "Update user",
-      "description": "Update a WorkOS AuthKit user by ID.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "minLength": 1,
-            "description": "User ID."
-          },
-          "first_name": {
-            "type": "string",
-            "minLength": 1,
-            "description": "First name."
-          },
-          "last_name": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Last name."
-          },
-          "email_verified": {
-            "type": "boolean",
-            "description": "Mark the email verified."
-          }
-        },
-        "additionalProperties": false,
-        "required": [
-          "id"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "PUT",
-        "path": "/user_management/users/{{id}}",
-        "success": [
-          200
-        ],
-        "headers": {
-          "Content-Type": "application/json"
-        },
-        "body": {
-          "first_name": "{{first_name}}",
-          "last_name": "{{last_name}}",
-          "email_verified": "{{email_verified}}"
-        }
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "users.delete": {
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "kind": "action",
-      "sideEffect": "destructive",
-      "title": "Delete user",
-      "description": "Permanently delete a WorkOS AuthKit user.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Resource ID."
-          }
-        },
-        "additionalProperties": false,
-        "required": [
-          "id"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {}
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "DELETE",
-        "path": "/user_management/users/{{id}}",
-        "success": [
-          204,
-          200
-        ]
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "memberships.list": {
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "kind": "action",
-      "sideEffect": "read",
-      "title": "List organization memberships",
-      "description": "List WorkOS organization memberships for a user or organization.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "user_id": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Filter by user ID."
+              "ADFSSAML",
+              "AdpOidc",
+              "AppleOAuth",
+              "Auth0SAML",
+              "AzureSAML",
+              "BitbucketOAuth",
+              "CasSAML",
+              "ClassLinkSAML",
+              "CleverOIDC",
+              "CloudflareSAML",
+              "CyberArkSAML",
+              "DiscordOAuth",
+              "DuoSAML",
+              "EntraIdOIDC",
+              "GenericOIDC",
+              "GenericSAML",
+              "GitLabOAuth",
+              "GithubOAuth",
+              "GoogleOAuth",
+              "GoogleOIDC",
+              "GoogleSAML",
+              "GrokOAuth",
+              "IntuitOAuth",
+              "JumpCloudSAML",
+              "KeycloakSAML",
+              "LastPassSAML",
+              "LinkedInOAuth",
+              "LoginGovOidc",
+              "MagicLink",
+              "MicrosoftOAuth",
+              "MiniOrangeSAML",
+              "NetIqSAML",
+              "OktaOIDC",
+              "OktaSAML",
+              "OneLoginSAML",
+              "OracleSAML",
+              "PingFederateSAML",
+              "PingOneSAML",
+              "RipplingSAML",
+              "SalesforceOAuth",
+              "SalesforceSAML",
+              "ShibbolethGenericSAML",
+              "ShibbolethSAML",
+              "SimpleSamlPhpSAML",
+              "SlackOAuth",
+              "VercelMarketplaceOAuth",
+              "VercelOAuth",
+              "VMwareSAML",
+              "XeroOAuth",
+              "XOAuth"
+            ],
+            "description": "Exact WorkOS connection type, such as OktaSAML or GoogleOAuth."
           },
           "organization_id": {
             "type": "string",
             "minLength": 1,
-            "description": "Filter by organization ID."
-          },
-          "limit": {
-            "type": "integer",
-            "description": "Page size.",
-            "minimum": 1,
-            "maximum": 100
-          },
-          "after": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Cursor after."
-          },
-          "before": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Cursor before."
-          },
-          "statuses": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Comma-separated membership statuses."
+            "description": "Return connections associated with this WorkOS organization ID."
           }
-        },
-        "additionalProperties": false
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "GET",
-        "path": "/user_management/organization_memberships",
-        "success": [
-          200
-        ],
-        "query": {
-          "user_id": "{{user_id}}",
-          "organization_id": "{{organization_id}}",
-          "limit": "{{limit}}",
-          "after": "{{after}}",
-          "before": "{{before}}",
-          "statuses": "{{statuses}}"
         }
       },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "memberships.get": {
-      "timeoutMs": 15000,
+      "kind": "action",
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
-      "kind": "action",
-      "sideEffect": "read",
-      "title": "Get organization membership",
-      "description": "Get a WorkOS organization membership by ID.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Resource ID."
-          }
-        },
-        "additionalProperties": false,
-        "required": [
-          "id"
-        ]
-      },
       "outputSchema": {
         "type": "object",
         "required": [
           "data"
         ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "GET",
-        "path": "/user_management/organization_memberships/{{id}}",
-        "success": [
-          200
-        ]
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "memberships.create": {
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "kind": "action",
-      "sideEffect": "write",
-      "title": "Create organization membership",
-      "description": "Create an active WorkOS organization membership.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "user_id": {
-            "type": "string",
-            "minLength": 1,
-            "description": "User ID."
-          },
-          "organization_id": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Organization ID."
-          },
-          "role_slug": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Role slug."
-          }
-        },
         "additionalProperties": false,
-        "required": [
-          "user_id",
-          "organization_id"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
         "properties": {
           "data": {
             "type": "object"
           }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "POST",
-        "path": "/user_management/organization_memberships",
-        "success": [
-          200,
-          201
-        ],
-        "headers": {
-          "Content-Type": "application/json"
-        },
-        "body": {
-          "user_id": "{{user_id}}",
-          "organization_id": "{{organization_id}}",
-          "role_slug": "{{role_slug}}"
         }
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "memberships.update": {
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "kind": "action",
-      "sideEffect": "write",
-      "title": "Update organization membership",
-      "description": "Update a WorkOS organization membership role.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Membership ID."
-          },
-          "role_slug": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Role slug."
-          }
-        },
-        "additionalProperties": false,
-        "required": [
-          "id"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "PUT",
-        "path": "/user_management/organization_memberships/{{id}}",
-        "success": [
-          200
-        ],
-        "headers": {
-          "Content-Type": "application/json"
-        },
-        "body": {
-          "role_slug": "{{role_slug}}"
-        }
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "memberships.delete": {
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "kind": "action",
-      "sideEffect": "destructive",
-      "title": "Delete organization membership",
-      "description": "Permanently delete a WorkOS organization membership.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Resource ID."
-          }
-        },
-        "additionalProperties": false,
-        "required": [
-          "id"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {}
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "DELETE",
-        "path": "/user_management/organization_memberships/{{id}}",
-        "success": [
-          204,
-          200
-        ]
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "invitations.list": {
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "kind": "action",
-      "sideEffect": "read",
-      "title": "List invitations",
-      "description": "List WorkOS AuthKit invitations.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "email": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Filter by email."
-          },
-          "organization_id": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Filter by organization ID."
-          },
-          "limit": {
-            "type": "integer",
-            "description": "Page size.",
-            "minimum": 1,
-            "maximum": 100
-          },
-          "after": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Cursor after."
-          },
-          "before": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Cursor before."
-          }
-        },
-        "additionalProperties": false
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "GET",
-        "path": "/user_management/invitations",
-        "success": [
-          200
-        ],
-        "query": {
-          "email": "{{email}}",
-          "organization_id": "{{organization_id}}",
-          "limit": "{{limit}}",
-          "after": "{{after}}",
-          "before": "{{before}}"
-        }
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "invitations.get": {
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "kind": "action",
-      "sideEffect": "read",
-      "title": "Get invitation",
-      "description": "Get a WorkOS invitation by ID.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Resource ID."
-          }
-        },
-        "additionalProperties": false,
-        "required": [
-          "id"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "GET",
-        "path": "/user_management/invitations/{{id}}",
-        "success": [
-          200
-        ]
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "invitations.create": {
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "kind": "action",
-      "sideEffect": "write",
-      "title": "Create invitation",
-      "description": "Invite a user to a WorkOS organization.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "email": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Invitee email."
-          },
-          "organization_id": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Organization ID."
-          },
-          "role_slug": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Role slug."
-          },
-          "expires_in_days": {
-            "type": "integer",
-            "description": "Expiration in days.",
-            "minimum": 1,
-            "maximum": 30
-          }
-        },
-        "additionalProperties": false,
-        "required": [
-          "email"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "POST",
-        "path": "/user_management/invitations",
-        "success": [
-          200,
-          201
-        ],
-        "headers": {
-          "Content-Type": "application/json"
-        },
-        "body": {
-          "email": "{{email}}",
-          "organization_id": "{{organization_id}}",
-          "role_slug": "{{role_slug}}",
-          "expires_in_days": "{{expires_in_days}}"
-        }
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "invitations.revoke": {
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "kind": "action",
-      "sideEffect": "write",
-      "title": "Revoke invitation",
-      "description": "Revoke a pending WorkOS invitation.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Resource ID."
-          }
-        },
-        "additionalProperties": false,
-        "required": [
-          "id"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "POST",
-        "path": "/user_management/invitations/{{id}}/revoke",
-        "success": [
-          200
-        ]
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "directories.list": {
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "kind": "action",
-      "sideEffect": "read",
-      "title": "List directories",
-      "description": "List WorkOS Directory Sync directories.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "organization_id": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Filter by organization ID."
-          },
-          "limit": {
-            "type": "integer",
-            "description": "Page size.",
-            "minimum": 1,
-            "maximum": 100
-          },
-          "after": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Cursor after."
-          },
-          "before": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Cursor before."
-          }
-        },
-        "additionalProperties": false
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "GET",
-        "path": "/directories",
-        "success": [
-          200
-        ],
-        "query": {
-          "organization_id": "{{organization_id}}",
-          "limit": "{{limit}}",
-          "after": "{{after}}",
-          "before": "{{before}}"
-        }
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "connections.list": {
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "kind": "action",
-      "sideEffect": "read",
-      "title": "List SSO connections",
-      "description": "List WorkOS SSO connections.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "organization_id": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Filter by organization ID."
-          },
-          "limit": {
-            "type": "integer",
-            "description": "Page size.",
-            "minimum": 1,
-            "maximum": 100
-          },
-          "after": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Cursor after."
-          },
-          "before": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Cursor before."
-          }
-        },
-        "additionalProperties": false
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
       },
       "request": {
         "method": "GET",
@@ -1310,29 +284,2280 @@
           200
         ],
         "query": {
-          "organization_id": "{{organization_id}}",
-          "limit": "{{limit}}",
+          "before": "{{before}}",
           "after": "{{after}}",
-          "before": "{{before}}"
+          "limit": "{{limit}}",
+          "order": "{{order}}",
+          "domain": "{{domain}}",
+          "search": "{{search}}",
+          "connection_type": "{{connection_type}}",
+          "organization_id": "{{organization_id}}"
+        },
+        "parameters": [
+          {
+            "wireName": "after",
+            "inputName": "after",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "allowReserved": false
+          },
+          {
+            "wireName": "after",
+            "inputName": "next_cursor",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "allowReserved": false
+          }
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List connections",
+      "validationMode": "strict-generated"
+    },
+    "directories.get": {
+      "description": "Get one WorkOS Directory Sync directory by ID via GET /directories/{directory_id}.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "directory_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "WorkOS directory ID."
+          }
+        },
+        "required": [
+          "directory_id"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
         }
       },
+      "request": {
+        "method": "GET",
+        "path": "/directories/{{directory_id}}",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get directory",
+      "validationMode": "strict-generated"
+    },
+    "directories.list": {
+      "description": "List one page of WorkOS Directory Sync directories, optionally filtered by organization, name, or domain.",
       "enforceOutputSchema": true,
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "before": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Object ID cursor for the previous page. Omit for the first page."
+          },
+          "after": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Object ID cursor for the next page. Official WorkOS `after` parameter."
+          },
+          "next_cursor": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Composio alias for `after`. Mapped to the official after query parameter."
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Maximum objects to return in this page (1-100). Defaults to 10.",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "order": {
+            "type": "string",
+            "enum": [
+              "normal",
+              "desc",
+              "asc"
+            ],
+            "description": "Creation-time order. `normal` uses reversed cursor semantics."
+          },
+          "domain": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Return directories associated with this domain."
+          },
+          "search": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Text to match against directory names."
+          },
+          "organization_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Return directories associated with this WorkOS organization ID."
+          }
+        }
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/directories",
+        "success": [
+          200
+        ],
+        "query": {
+          "before": "{{before}}",
+          "after": "{{after}}",
+          "limit": "{{limit}}",
+          "order": "{{order}}",
+          "domain": "{{domain}}",
+          "search": "{{search}}",
+          "organization_id": "{{organization_id}}"
+        },
+        "parameters": [
+          {
+            "wireName": "after",
+            "inputName": "after",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "allowReserved": false
+          },
+          {
+            "wireName": "after",
+            "inputName": "next_cursor",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "allowReserved": false
+          }
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List directories",
+      "validationMode": "strict-generated"
+    },
+    "directory_groups.get": {
+      "description": "Get one WorkOS Directory Sync group by its exact group ID via GET /directory_groups/{directory_group_id}.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "directory_group_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Exact WorkOS directory group ID to retrieve."
+          }
+        },
+        "required": [
+          "directory_group_id"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/directory_groups/{{directory_group_id}}",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get directory group",
+      "validationMode": "strict-generated"
+    },
+    "directory_groups.list": {
+      "description": "List one page of WorkOS Directory Sync groups for a directory, a directory user, or both.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "before": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Object ID cursor for the previous page. Omit for the first page."
+          },
+          "after": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Object ID cursor for the next page. Official WorkOS `after` parameter."
+          },
+          "next_cursor": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Composio alias for `after`. Mapped to the official after query parameter."
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Maximum objects to return in this page (1-100). Defaults to 10.",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "order": {
+            "type": "string",
+            "enum": [
+              "normal",
+              "desc",
+              "asc"
+            ],
+            "description": "Creation-time order. `normal` uses reversed cursor semantics."
+          },
+          "directory_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "WorkOS directory whose groups to list. Provide directory_id, directory_user_id, or both. Mapped to official `directory`."
+          },
+          "directory_user_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "WorkOS directory user whose groups to list. Mapped to official `user`."
+          }
+        }
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/directory_groups",
+        "success": [
+          200
+        ],
+        "query": {
+          "before": "{{before}}",
+          "after": "{{after}}",
+          "limit": "{{limit}}",
+          "order": "{{order}}"
+        },
+        "parameters": [
+          {
+            "wireName": "after",
+            "inputName": "after",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "allowReserved": false
+          },
+          {
+            "wireName": "after",
+            "inputName": "next_cursor",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "allowReserved": false
+          },
+          {
+            "wireName": "directory",
+            "inputName": "directory_id",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "allowReserved": false
+          },
+          {
+            "wireName": "user",
+            "inputName": "directory_user_id",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "allowReserved": false
+          }
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List directory groups",
+      "validationMode": "strict-generated"
+    },
+    "directory_users.get": {
+      "description": "Get one WorkOS Directory Sync user by exact ID via GET /directory_users/{directory_user_id}.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "directory_user_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Exact WorkOS directory user ID to retrieve."
+          }
+        },
+        "required": [
+          "directory_user_id"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/directory_users/{{directory_user_id}}",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get directory user",
+      "validationMode": "strict-generated"
+    },
+    "directory_users.list": {
+      "description": "List one page of WorkOS Directory Sync users for a directory or group, optionally filtering a directory by exact identity-provider ID or primary email.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "before": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Object ID cursor for the previous page. Omit for the first page."
+          },
+          "after": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Object ID cursor for the next page. Official WorkOS `after` parameter."
+          },
+          "next_cursor": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Composio alias for `after`. Mapped to the official after query parameter."
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Maximum objects to return in this page (1-100). Defaults to 10.",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "order": {
+            "type": "string",
+            "enum": [
+              "normal",
+              "desc",
+              "asc"
+            ],
+            "description": "Creation-time order. `normal` uses reversed cursor semantics."
+          },
+          "email": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Exact primary email address to match. This filter requires directory_id."
+          },
+          "idp_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Exact identity-provider user ID to match. This filter requires directory_id."
+          },
+          "directory_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Directory whose users to list. Mapped to official `directory`. Required when filtering by idp_id or email."
+          },
+          "directory_group_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Directory group whose users to list. Mapped to official `group`."
+          }
+        }
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/directory_users",
+        "success": [
+          200
+        ],
+        "query": {
+          "before": "{{before}}",
+          "after": "{{after}}",
+          "limit": "{{limit}}",
+          "order": "{{order}}",
+          "email": "{{email}}",
+          "idp_id": "{{idp_id}}"
+        },
+        "parameters": [
+          {
+            "wireName": "after",
+            "inputName": "after",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "allowReserved": false
+          },
+          {
+            "wireName": "after",
+            "inputName": "next_cursor",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "allowReserved": false
+          },
+          {
+            "wireName": "directory",
+            "inputName": "directory_id",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "allowReserved": false
+          },
+          {
+            "wireName": "group",
+            "inputName": "directory_group_id",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "allowReserved": false
+          }
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List directory users",
+      "validationMode": "strict-generated"
+    },
+    "invitations.get": {
+      "description": "Get WorkOS AuthKit invitation status and metadata by invitation ID. The acceptance token and URL are redacted.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "invitation_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "WorkOS invitation ID."
+          }
+        },
+        "required": [
+          "invitation_id"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/user_management/invitations/{{invitation_id}}",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get invitation",
       "validationMode": "strict-generated",
-      "responseFormat": "json"
+      "redactResponseKeys": [
+        "token",
+        "accept_invitation_url"
+      ]
+    },
+    "invitations.list": {
+      "description": "List one page of WorkOS AuthKit invitations by organization or exact recipient email. Acceptance credentials are redacted.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "before": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Object ID cursor for the previous page. Omit for the first page."
+          },
+          "after": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Object ID cursor for the next page. Official WorkOS `after` parameter."
+          },
+          "next_cursor": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Composio alias for `after`. Mapped to the official after query parameter."
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Maximum objects to return in this page (1-100). Defaults to 10.",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "order": {
+            "type": "string",
+            "enum": [
+              "normal",
+              "desc",
+              "asc"
+            ],
+            "description": "Creation-time order. `normal` uses reversed cursor semantics."
+          },
+          "email": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Exact recipient email address to match."
+          },
+          "organization_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Return invitations associated with this WorkOS organization ID."
+          }
+        }
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/user_management/invitations",
+        "success": [
+          200
+        ],
+        "query": {
+          "before": "{{before}}",
+          "after": "{{after}}",
+          "limit": "{{limit}}",
+          "order": "{{order}}",
+          "email": "{{email}}",
+          "organization_id": "{{organization_id}}"
+        },
+        "parameters": [
+          {
+            "wireName": "after",
+            "inputName": "after",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "allowReserved": false
+          },
+          {
+            "wireName": "after",
+            "inputName": "next_cursor",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "allowReserved": false
+          }
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List invitations",
+      "validationMode": "strict-generated",
+      "redactResponseKeys": [
+        "token",
+        "accept_invitation_url"
+      ]
+    },
+    "invitations.resend": {
+      "description": "Send another invitation email to the existing recipient of a pending WorkOS AuthKit invitation via POST /user_management/invitations/{invitation_id}/resend.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "invitation_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Pending WorkOS invitation to email again. Calling this tool sends a real email."
+          },
+          "locale": {
+            "type": "string",
+            "enum": [
+              "af",
+              "am",
+              "ar",
+              "bg",
+              "bn",
+              "bs",
+              "ca",
+              "cs",
+              "da",
+              "de",
+              "de-DE",
+              "el",
+              "en",
+              "en-AU",
+              "en-CA",
+              "en-GB",
+              "en-US",
+              "es",
+              "es-419",
+              "es-ES",
+              "es-US",
+              "et",
+              "fa",
+              "fi",
+              "fil",
+              "fr",
+              "fr-BE",
+              "fr-CA",
+              "fr-FR",
+              "fy",
+              "gl",
+              "gu",
+              "ha",
+              "he",
+              "hi",
+              "hr",
+              "hu",
+              "hy",
+              "id",
+              "is",
+              "it",
+              "it-IT",
+              "ja",
+              "jv",
+              "ka",
+              "kk",
+              "km",
+              "kn",
+              "ko",
+              "lt",
+              "lv",
+              "mk",
+              "ml",
+              "mn",
+              "mr",
+              "ms",
+              "my",
+              "nb",
+              "ne",
+              "nl",
+              "nl-BE",
+              "nl-NL",
+              "nn",
+              "no",
+              "pa",
+              "pl",
+              "pt",
+              "pt-BR",
+              "pt-PT",
+              "ro",
+              "ru",
+              "sk",
+              "sl",
+              "sq",
+              "sr",
+              "sv",
+              "sw",
+              "ta",
+              "te",
+              "th",
+              "tr",
+              "uk",
+              "ur",
+              "uz",
+              "vi",
+              "zh",
+              "zh-CN",
+              "zh-HK",
+              "zh-TW",
+              "zu"
+            ],
+            "description": "Supported WorkOS locale for hosted invitation email rendering."
+          }
+        },
+        "required": [
+          "invitation_id"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/user_management/invitations/{{invitation_id}}/resend",
+        "success": [
+          200,
+          201,
+          202
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "locale": "{{locale}}"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Resend invitation",
+      "validationMode": "strict-generated",
+      "redactResponseKeys": [
+        "token",
+        "accept_invitation_url"
+      ]
+    },
+    "invitations.revoke": {
+      "description": "Revoke a pending AuthKit invitation so it can no longer be accepted via POST /user_management/invitations/{invitation_id}/revoke.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "invitation_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "WorkOS invitation to revoke."
+          }
+        },
+        "required": [
+          "invitation_id"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/user_management/invitations/{{invitation_id}}/revoke",
+        "success": [
+          200,
+          201,
+          202
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Revoke invitation",
+      "validationMode": "strict-generated",
+      "redactResponseKeys": [
+        "token",
+        "accept_invitation_url"
+      ]
+    },
+    "invitations.send": {
+      "description": "Create an AuthKit invitation and immediately send a real invitation email via POST /user_management/invitations.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "email": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Recipient email address. Calling this tool sends a real email."
+          },
+          "locale": {
+            "type": "string",
+            "enum": [
+              "af",
+              "am",
+              "ar",
+              "bg",
+              "bn",
+              "bs",
+              "ca",
+              "cs",
+              "da",
+              "de",
+              "de-DE",
+              "el",
+              "en",
+              "en-AU",
+              "en-CA",
+              "en-GB",
+              "en-US",
+              "es",
+              "es-419",
+              "es-ES",
+              "es-US",
+              "et",
+              "fa",
+              "fi",
+              "fil",
+              "fr",
+              "fr-BE",
+              "fr-CA",
+              "fr-FR",
+              "fy",
+              "gl",
+              "gu",
+              "ha",
+              "he",
+              "hi",
+              "hr",
+              "hu",
+              "hy",
+              "id",
+              "is",
+              "it",
+              "it-IT",
+              "ja",
+              "jv",
+              "ka",
+              "kk",
+              "km",
+              "kn",
+              "ko",
+              "lt",
+              "lv",
+              "mk",
+              "ml",
+              "mn",
+              "mr",
+              "ms",
+              "my",
+              "nb",
+              "ne",
+              "nl",
+              "nl-BE",
+              "nl-NL",
+              "nn",
+              "no",
+              "pa",
+              "pl",
+              "pt",
+              "pt-BR",
+              "pt-PT",
+              "ro",
+              "ru",
+              "sk",
+              "sl",
+              "sq",
+              "sr",
+              "sv",
+              "sw",
+              "ta",
+              "te",
+              "th",
+              "tr",
+              "uk",
+              "ur",
+              "uz",
+              "vi",
+              "zh",
+              "zh-CN",
+              "zh-HK",
+              "zh-TW",
+              "zu"
+            ],
+            "description": "Supported WorkOS locale for hosted invitation email rendering."
+          },
+          "role_slug": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Role granted when the organization invitation is accepted."
+          },
+          "expires_in_days": {
+            "type": "integer",
+            "description": "Number of days the invitation remains valid (1-30).",
+            "minimum": 1,
+            "maximum": 30
+          },
+          "inviter_user_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "WorkOS user whose name will appear as the inviter in the email."
+          },
+          "organization_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "WorkOS organization the recipient will join after accepting."
+          }
+        },
+        "required": [
+          "email"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/user_management/invitations",
+        "success": [
+          200,
+          201,
+          202
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "email": "{{email}}",
+          "locale": "{{locale}}",
+          "role_slug": "{{role_slug}}",
+          "expires_in_days": "{{expires_in_days}}",
+          "inviter_user_id": "{{inviter_user_id}}",
+          "organization_id": "{{organization_id}}"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Send invitation",
+      "validationMode": "strict-generated",
+      "redactResponseKeys": [
+        "token",
+        "accept_invitation_url"
+      ]
+    },
+    "organization_memberships.create": {
+      "description": "Grant an AuthKit user active membership in an organization via POST /user_management/organization_memberships. An existing inactive membership is reactivated.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "user_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "WorkOS user to grant organization access."
+          },
+          "organization_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "WorkOS organization the user will join."
+          },
+          "role_slug": {
+            "type": "string",
+            "minLength": 1,
+            "description": "One role slug to assign. Omit both role fields to use the default role; do not provide this with role_slugs."
+          },
+          "role_slugs": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "description": "Role slugs to assign when Multiple Roles is enabled. Do not provide this with role_slug."
+          }
+        },
+        "required": [
+          "user_id",
+          "organization_id"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/user_management/organization_memberships",
+        "success": [
+          200,
+          201,
+          202
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "user_id": "{{user_id}}",
+          "organization_id": "{{organization_id}}",
+          "role_slug": "{{role_slug}}",
+          "role_slugs": "{{role_slugs}}"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Create organization membership",
+      "validationMode": "strict-generated"
+    },
+    "organization_memberships.delete": {
+      "description": "Permanently remove an organization membership and its access via DELETE /user_management/organization_memberships/{membership_id}.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "membership_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Exact WorkOS organization membership ID to permanently delete."
+          }
+        },
+        "required": [
+          "membership_id"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "success"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "success": {
+            "type": "boolean"
+          }
+        }
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/user_management/organization_memberships/{{membership_id}}",
+        "success": [
+          200,
+          204
+        ],
+        "result": {
+          "success": true
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "title": "Delete organization membership",
+      "validationMode": "strict-generated"
+    },
+    "organization_memberships.get": {
+      "description": "Get one WorkOS AuthKit organization membership by ID via GET /user_management/organization_memberships/{membership_id}.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "membership_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "WorkOS organization membership ID."
+          }
+        },
+        "required": [
+          "membership_id"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/user_management/organization_memberships/{{membership_id}}",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get organization membership",
+      "validationMode": "strict-generated"
+    },
+    "organization_memberships.list": {
+      "description": "List one page of WorkOS AuthKit organization memberships for a specific organization or user, optionally including inactive or pending memberships.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "before": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Object ID cursor for the previous page. Omit for the first page."
+          },
+          "after": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Object ID cursor for the next page. Official WorkOS `after` parameter."
+          },
+          "next_cursor": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Composio alias for `after`. Mapped to the official after query parameter."
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Maximum objects to return in this page (1-100). Defaults to 10.",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "order": {
+            "type": "string",
+            "enum": [
+              "normal",
+              "desc",
+              "asc"
+            ],
+            "description": "Creation-time order. `normal` uses reversed cursor semantics."
+          },
+          "user_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "User whose memberships to list. Provide this or organization_id."
+          },
+          "organization_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Organization whose memberships to list. Provide this or user_id."
+          },
+          "statuses": {
+            "type": "array",
+            "description": "Membership statuses to include. WorkOS returns only active memberships when this filter is omitted.",
+            "items": {
+              "type": "string",
+              "enum": [
+                "active",
+                "inactive",
+                "pending"
+              ]
+            }
+          }
+        }
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/user_management/organization_memberships",
+        "success": [
+          200
+        ],
+        "query": {
+          "before": "{{before}}",
+          "after": "{{after}}",
+          "limit": "{{limit}}",
+          "order": "{{order}}",
+          "user_id": "{{user_id}}",
+          "organization_id": "{{organization_id}}",
+          "statuses": "{{statuses}}"
+        },
+        "parameters": [
+          {
+            "wireName": "after",
+            "inputName": "after",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "allowReserved": false
+          },
+          {
+            "wireName": "after",
+            "inputName": "next_cursor",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "allowReserved": false
+          }
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List organization memberships",
+      "validationMode": "strict-generated"
+    },
+    "organization_memberships.set_status": {
+      "description": "Activate or deactivate a WorkOS organization membership without deleting it. Maps to PUT .../reactivate or PUT .../deactivate.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "membership_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "WorkOS organization membership whose access state will change."
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "inactive"
+            ],
+            "description": "Desired access state. Active reactivates an inactive membership; inactive deactivates an active membership. Pending is not supported."
+          }
+        },
+        "required": [
+          "membership_id",
+          "status"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/user_management/organization_memberships/{{membership_id}}/deactivate",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Set organization membership status",
+      "validationMode": "strict-generated"
+    },
+    "organization_memberships.update_roles": {
+      "description": "Replace the role assignment on an existing WorkOS organization membership via PUT /user_management/organization_memberships/{membership_id}.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "membership_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "WorkOS organization membership ID whose roles will be replaced."
+          },
+          "role_slug": {
+            "type": "string",
+            "minLength": 1,
+            "description": "One replacement role slug. Omit both role fields to use the default role; do not provide this with role_slugs."
+          },
+          "role_slugs": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "description": "Complete replacement role set for environments with Multiple Roles enabled."
+          }
+        },
+        "required": [
+          "membership_id"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/user_management/organization_memberships/{{membership_id}}",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "role_slug": "{{role_slug}}",
+          "role_slugs": "{{role_slugs}}"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Update organization membership roles",
+      "validationMode": "strict-generated"
+    },
+    "organizations.create": {
+      "description": "Create a WorkOS organization in the connected environment via POST /organizations.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Organization display name."
+          },
+          "metadata": {
+            "type": "object",
+            "description": "Metadata with at most 50 pairs. Keys may contain up to 40 characters and values up to 600 characters."
+          },
+          "domain_data": {
+            "type": "array",
+            "description": "Domains to associate with the organization. Each record includes a domain and verification state.",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "domain",
+                "state"
+              ],
+              "properties": {
+                "domain": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Organization domain name."
+                },
+                "state": {
+                  "type": "string",
+                  "enum": [
+                    "pending",
+                    "verified",
+                    "failed"
+                  ],
+                  "description": "Domain verification state."
+                }
+              }
+            }
+          },
+          "external_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Optional ASCII external identifier, up to 128 characters."
+          },
+          "allow_profiles_outside_organization": {
+            "type": "boolean",
+            "description": "Whether profiles outside this organization may sign in."
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/organizations",
+        "success": [
+          200,
+          201,
+          202
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "name": "{{name}}",
+          "metadata": "{{metadata}}",
+          "domain_data": "{{domain_data}}",
+          "external_id": "{{external_id}}",
+          "allow_profiles_outside_organization": "{{allow_profiles_outside_organization}}"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Create organization",
+      "validationMode": "strict-generated"
+    },
+    "organizations.delete": {
+      "description": "Permanently delete a WorkOS organization via DELETE /organizations/{organization_id}.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "organization_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Exact WorkOS organization ID to permanently delete."
+          }
+        },
+        "required": [
+          "organization_id"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "success"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "success": {
+            "type": "boolean"
+          }
+        }
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/organizations/{{organization_id}}",
+        "success": [
+          200,
+          204
+        ],
+        "result": {
+          "success": true
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "title": "Delete organization",
+      "validationMode": "strict-generated"
+    },
+    "organizations.get": {
+      "description": "Get one WorkOS organization by its WorkOS ID or external ID.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "WorkOS organization ID. Origin field; provide exactly one of id, organization_id, or external_id."
+          },
+          "organization_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Composio alias for the WorkOS organization ID. Provide exactly one identifier."
+          },
+          "external_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Your external organization ID. Uses GET /organizations/external_id/{external_id}."
+          }
+        }
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/organizations/{{id}}",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get organization",
+      "validationMode": "strict-generated"
+    },
+    "organizations.list": {
+      "description": "List one page of WorkOS organizations, optionally filtered by domain or organization name.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "before": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Object ID cursor for the previous page. Omit for the first page."
+          },
+          "after": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Object ID cursor for the next page. Official WorkOS `after` parameter."
+          },
+          "next_cursor": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Composio alias for `after`. Mapped to the official after query parameter."
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Maximum objects to return in this page (1-100). Defaults to 10.",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "order": {
+            "type": "string",
+            "enum": [
+              "normal",
+              "desc",
+              "asc"
+            ],
+            "description": "Creation-time order. `normal` uses reversed cursor semantics."
+          },
+          "search": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Text to match against organization names."
+          },
+          "domains": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "description": "Return organizations matching any supplied domain. Sent as a repeated `domains` query key."
+          }
+        }
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/organizations",
+        "success": [
+          200
+        ],
+        "query": {
+          "before": "{{before}}",
+          "after": "{{after}}",
+          "limit": "{{limit}}",
+          "order": "{{order}}",
+          "search": "{{search}}",
+          "domains": "{{domains}}"
+        },
+        "parameters": [
+          {
+            "wireName": "after",
+            "inputName": "after",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "allowReserved": false
+          },
+          {
+            "wireName": "after",
+            "inputName": "next_cursor",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "allowReserved": false
+          }
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List organizations",
+      "validationMode": "strict-generated"
+    },
+    "organizations.update": {
+      "description": "Update selected properties of an existing WorkOS organization via PUT /organizations/{organization_id}.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "organization_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "WorkOS organization ID."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "New organization name."
+          },
+          "metadata": {
+            "type": "object",
+            "description": "Metadata with at most 50 pairs. Keys may contain up to 40 characters and values up to 600 characters. JSON null-to-clear is omitted by the declarative template renderer; pass a replacement object instead."
+          },
+          "domain_data": {
+            "type": "array",
+            "description": "Domains to associate with the organization. Each record includes a domain and verification state.",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "domain",
+                "state"
+              ],
+              "properties": {
+                "domain": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Organization domain name."
+                },
+                "state": {
+                  "type": "string",
+                  "enum": [
+                    "pending",
+                    "verified",
+                    "failed"
+                  ],
+                  "description": "Domain verification state."
+                }
+              }
+            }
+          },
+          "external_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Replacement ASCII external ID."
+          },
+          "stripe_customer_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Stripe customer ID associated with the organization."
+          },
+          "allow_profiles_outside_organization": {
+            "type": "boolean",
+            "description": "New outside-profile sign-in policy."
+          }
+        },
+        "required": [
+          "organization_id"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/organizations/{{organization_id}}",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "name": "{{name}}",
+          "metadata": "{{metadata}}",
+          "domain_data": "{{domain_data}}",
+          "external_id": "{{external_id}}",
+          "stripe_customer_id": "{{stripe_customer_id}}",
+          "allow_profiles_outside_organization": "{{allow_profiles_outside_organization}}"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Update organization",
+      "validationMode": "strict-generated"
+    },
+    "users.create": {
+      "description": "Create a passwordless AuthKit user record in the connected WorkOS environment via POST /user_management/users. This operation does not accept plaintext or hashed passwords.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "email": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Email address for the new user."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Full name for the new user."
+          },
+          "first_name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "First name for the new user."
+          },
+          "last_name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Last name for the new user."
+          },
+          "metadata": {
+            "type": "object",
+            "description": "Metadata with at most 50 pairs. Keys may contain up to 40 characters and values up to 600 characters."
+          },
+          "external_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Optional ASCII external identifier, up to 128 characters."
+          },
+          "email_verified": {
+            "type": "boolean",
+            "description": "Whether the email has already been independently verified. Set this only when verification is backed by trusted evidence."
+          }
+        },
+        "required": [
+          "email"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/user_management/users",
+        "success": [
+          200,
+          201,
+          202
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "email": "{{email}}",
+          "name": "{{name}}",
+          "first_name": "{{first_name}}",
+          "last_name": "{{last_name}}",
+          "metadata": "{{metadata}}",
+          "external_id": "{{external_id}}",
+          "email_verified": "{{email_verified}}"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Create user",
+      "validationMode": "strict-generated"
+    },
+    "users.delete": {
+      "description": "Permanently delete an AuthKit user via DELETE /user_management/users/{user_id}.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "user_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Exact WorkOS user ID to permanently delete."
+          }
+        },
+        "required": [
+          "user_id"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "success"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "success": {
+            "type": "boolean"
+          }
+        }
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/user_management/users/{{user_id}}",
+        "success": [
+          200,
+          204
+        ],
+        "result": {
+          "success": true
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "title": "Delete user",
+      "validationMode": "strict-generated"
+    },
+    "users.get": {
+      "description": "Get one WorkOS AuthKit user by WorkOS ID or external ID.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "WorkOS user ID. Origin field; provide exactly one of id, user_id, or external_id."
+          },
+          "user_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Composio alias for the WorkOS user ID. Provide exactly one identifier."
+          },
+          "external_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Your external user ID. Uses GET /user_management/users/external_id/{external_id}."
+          }
+        }
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/user_management/users/{{id}}",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get user",
+      "validationMode": "strict-generated"
+    },
+    "users.list": {
+      "description": "List one page of WorkOS AuthKit users, optionally filtered by organization or exact email address.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "before": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Object ID cursor for the previous page. Omit for the first page."
+          },
+          "after": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Object ID cursor for the next page. Official WorkOS `after` parameter."
+          },
+          "next_cursor": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Composio alias for `after`. Mapped to the official after query parameter."
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Maximum objects to return in this page (1-100). Defaults to 10.",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "order": {
+            "type": "string",
+            "enum": [
+              "normal",
+              "desc",
+              "asc"
+            ],
+            "description": "Creation-time order. `normal` uses reversed cursor semantics."
+          },
+          "email": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Exact user email address to match."
+          },
+          "organization_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Return users belonging to this WorkOS organization."
+          }
+        }
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/user_management/users",
+        "success": [
+          200
+        ],
+        "query": {
+          "before": "{{before}}",
+          "after": "{{after}}",
+          "limit": "{{limit}}",
+          "order": "{{order}}",
+          "email": "{{email}}",
+          "organization_id": "{{organization_id}}"
+        },
+        "parameters": [
+          {
+            "wireName": "after",
+            "inputName": "after",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "allowReserved": false
+          },
+          {
+            "wireName": "after",
+            "inputName": "next_cursor",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "allowReserved": false
+          }
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List users",
+      "validationMode": "strict-generated"
+    },
+    "users.update": {
+      "description": "Update selected profile fields on an AuthKit user without invoking email delivery flows via PUT /user_management/users/{user_id}.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "user_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "WorkOS user ID."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Replacement full name."
+          },
+          "email": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Replacement email address."
+          },
+          "locale": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Preferred locale."
+          },
+          "metadata": {
+            "type": "object",
+            "description": "Metadata with at most 50 pairs. Keys may contain up to 40 characters and values up to 600 characters. JSON null-to-clear is omitted by the declarative template renderer; pass a replacement object instead."
+          },
+          "last_name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Replacement last name."
+          },
+          "first_name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Replacement first name."
+          },
+          "external_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Replacement ASCII external ID."
+          },
+          "email_verified": {
+            "type": "boolean",
+            "description": "Replacement verification state. Set this only from trusted evidence."
+          }
+        },
+        "required": [
+          "user_id"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/user_management/users/{{user_id}}",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "name": "{{name}}",
+          "email": "{{email}}",
+          "locale": "{{locale}}",
+          "metadata": "{{metadata}}",
+          "last_name": "{{last_name}}",
+          "first_name": "{{first_name}}",
+          "external_id": "{{external_id}}",
+          "email_verified": "{{email_verified}}"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Update user",
+      "validationMode": "strict-generated"
     }
   },
   "provenance": {
     "source": {
-      "url": "https://github.com/oomol-lab/open-connector",
-      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
+      "url": "https://github.com/oomol-lab/open-connector"
     }
   },
-  "evidence": {
-    "fixture": {
-      "status": "supplied"
-    },
-    "live": {
-      "status": "unverified"
-    }
-  }
+  "runtime": "bun",
+  "version": "0.2.0",
+  "visibility": "public"
 }

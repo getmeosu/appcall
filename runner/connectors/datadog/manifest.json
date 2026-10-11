@@ -1,7 +1,7 @@
 {
   "key": "datadog",
   "name": "Datadog",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "runtime": "bun",
   "visibility": "public",
   "categories": [
@@ -40,7 +40,16 @@
     "event",
     "downtime",
     "host",
-    "incident"
+    "incident",
+    "log",
+    "span",
+    "slo",
+    "synthetics",
+    "webhook",
+    "on-call",
+    "user",
+    "role",
+    "usage"
   ],
   "http": {
     "baseUrl": "https://api.datadoghq.com",
@@ -128,6 +137,26 @@
           },
           "withDowntimes": {
             "type": "boolean"
+          },
+          "tags": {
+            "type": "string",
+            "description": "Comma-separated scope tags."
+          },
+          "monitorTags": {
+            "type": "string",
+            "description": "Comma-separated monitor tags."
+          },
+          "idOffset": {
+            "type": "integer",
+            "description": "Monitor id offset."
+          },
+          "page": {
+            "type": "integer",
+            "description": "Page index. Send with pageSize."
+          },
+          "pageSize": {
+            "type": "integer",
+            "description": "Page size, capped at 100 by Datadog."
           }
         },
         "additionalProperties": false
@@ -155,7 +184,12 @@
         "query": {
           "name": "{{name}}",
           "group_states": "{{groupStates}}",
-          "with_downtimes": "{{withDowntimes}}"
+          "with_downtimes": "{{withDowntimes}}",
+          "tags": "{{tags}}",
+          "monitor_tags": "{{monitorTags}}",
+          "id_offset": "{{idOffset}}",
+          "page": "{{page}}",
+          "page_size": "{{pageSize}}"
         },
         "result": {
           "monitors": "{{response}}"
@@ -180,6 +214,10 @@
           },
           "withDowntimes": {
             "type": "boolean"
+          },
+          "groupStates": {
+            "type": "string",
+            "description": "Comma-separated group states: all, alert, warn, or no data."
           }
         },
         "required": [
@@ -197,7 +235,8 @@
           200
         ],
         "query": {
-          "with_downtimes": "{{withDowntimes}}"
+          "with_downtimes": "{{withDowntimes}}",
+          "group_states": "{{groupStates}}"
         },
         "result": "{{response}}"
       },
@@ -296,6 +335,15 @@
               "type": "string"
             },
             "description": "Monitor tags."
+          },
+          "options": {
+            "type": "object",
+            "description": "Monitor options such as thresholds and renotify.",
+            "additionalProperties": true
+          },
+          "priority": {
+            "type": "integer",
+            "description": "Priority from 1 (highest) to 5."
           }
         },
         "required": [
@@ -331,7 +379,9 @@
           "query": "{{query}}",
           "name": "{{name}}",
           "message": "{{message}}",
-          "tags": "{{tags}}"
+          "tags": "{{tags}}",
+          "options": "{{options}}",
+          "priority": "{{priority}}"
         }
       },
       "enforceOutputSchema": true,
@@ -366,6 +416,26 @@
           "message": {
             "type": "string",
             "description": "Updated notification message."
+          },
+          "type": {
+            "type": "string",
+            "description": "Monitor type. Sent only when set."
+          },
+          "tags": {
+            "type": "array",
+            "description": "Monitor tags.",
+            "items": {
+              "type": "string"
+            }
+          },
+          "options": {
+            "type": "object",
+            "description": "Monitor options.",
+            "additionalProperties": true
+          },
+          "priority": {
+            "type": "integer",
+            "description": "Priority from 1 (highest) to 5."
           }
         },
         "required": [
@@ -398,7 +468,11 @@
         "body": {
           "query": "{{query}}",
           "name": "{{name}}",
-          "message": "{{message}}"
+          "message": "{{message}}",
+          "type": "{{type}}",
+          "tags": "{{tags}}",
+          "options": "{{options}}",
+          "priority": "{{priority}}"
         }
       },
       "enforceOutputSchema": true,
@@ -420,6 +494,10 @@
             "type": "integer",
             "minimum": 1,
             "description": "Monitor ID."
+          },
+          "force": {
+            "type": "boolean",
+            "description": "Force delete. Sent as the force query parameter."
           }
         },
         "required": [
@@ -453,6 +531,9 @@
         "result": {
           "deleted": true,
           "monitorId": "{{input.monitorId}}"
+        },
+        "query": {
+          "force": "{{force}}"
         }
       },
       "enforceOutputSchema": true,
@@ -479,6 +560,10 @@
             "type": "integer",
             "minimum": 0,
             "description": "Unix timestamp when muting ends."
+          },
+          "override": {
+            "type": "boolean",
+            "description": "Override an existing mute."
           }
         },
         "required": [
@@ -508,7 +593,8 @@
           "Content-Type": "application/json"
         },
         "body": {
-          "end": "{{end}}"
+          "end": "{{end}}",
+          "override": "{{override}}"
         }
       },
       "enforceOutputSchema": true,
@@ -632,7 +718,24 @@
       "description": "List Datadog dashboards available to the authenticated account.",
       "inputSchema": {
         "type": "object",
-        "properties": {},
+        "properties": {
+          "count": {
+            "type": "integer",
+            "description": "Maximum dashboards to return."
+          },
+          "start": {
+            "type": "integer",
+            "description": "Pagination offset."
+          },
+          "filterShared": {
+            "type": "boolean",
+            "description": "Filter by shared status. Sent as filter[shared]."
+          },
+          "filterDeleted": {
+            "type": "boolean",
+            "description": "Include deleted dashboards. Sent as filter[deleted]."
+          }
+        },
         "additionalProperties": false
       },
       "outputSchema": {
@@ -652,7 +755,13 @@
         "path": "/api/v1/dashboard",
         "success": [
           200
-        ]
+        ],
+        "query": {
+          "count": "{{count}}",
+          "start": "{{start}}",
+          "filter[shared]": "{{filterShared}}",
+          "filter[deleted]": "{{filterDeleted}}"
+        }
       },
       "enforceOutputSchema": true,
       "validationMode": "strict-generated",
@@ -734,6 +843,27 @@
           "description": {
             "type": "string",
             "description": "Dashboard description."
+          },
+          "tags": {
+            "type": "array",
+            "description": "Dashboard tags.",
+            "items": {
+              "type": "string"
+            }
+          },
+          "notifyList": {
+            "type": "array",
+            "description": "Users notified about dashboard changes.",
+            "items": {
+              "type": "string"
+            }
+          },
+          "templateVariables": {
+            "type": "array",
+            "description": "Template variables.",
+            "items": {
+              "type": "object"
+            }
           }
         },
         "required": [
@@ -769,7 +899,10 @@
           "title": "{{title}}",
           "layout_type": "{{layoutType}}",
           "widgets": "{{widgets}}",
-          "description": "{{description}}"
+          "description": "{{description}}",
+          "tags": "{{tags}}",
+          "notify_list": "{{notifyList}}",
+          "template_variables": "{{templateVariables}}"
         }
       },
       "enforceOutputSchema": true,
@@ -858,6 +991,22 @@
           "tags": {
             "type": "string",
             "description": "Comma-separated tag filter."
+          },
+          "sources": {
+            "type": "string",
+            "description": "Comma-separated event sources."
+          },
+          "unaggregated": {
+            "type": "boolean",
+            "description": "Return unaggregated events."
+          },
+          "excludeAggregate": {
+            "type": "boolean",
+            "description": "Exclude aggregated events."
+          },
+          "page": {
+            "type": "integer",
+            "description": "Page number."
           }
         },
         "required": [
@@ -887,7 +1036,11 @@
           "start": "{{start}}",
           "end": "{{end}}",
           "priority": "{{priority}}",
-          "tags": "{{tags}}"
+          "tags": "{{tags}}",
+          "sources": "{{sources}}",
+          "unaggregated": "{{unaggregated}}",
+          "exclude_aggregate": "{{excludeAggregate}}",
+          "page": "{{page}}"
         }
       },
       "enforceOutputSchema": true,
@@ -974,6 +1127,26 @@
           "priority": {
             "type": "string",
             "description": "Event priority, normal or low."
+          },
+          "host": {
+            "type": "string",
+            "description": "Host name associated with the event."
+          },
+          "deviceName": {
+            "type": "string",
+            "description": "Device name."
+          },
+          "dateHappened": {
+            "type": "integer",
+            "description": "Unix timestamp when the event happened."
+          },
+          "aggregationKey": {
+            "type": "string",
+            "description": "Aggregation key."
+          },
+          "sourceTypeName": {
+            "type": "string",
+            "description": "Source type name such as jenkins or docker."
           }
         },
         "required": [
@@ -1009,7 +1182,12 @@
           "text": "{{text}}",
           "alert_type": "{{alertType}}",
           "tags": "{{tags}}",
-          "priority": "{{priority}}"
+          "priority": "{{priority}}",
+          "host": "{{host}}",
+          "device_name": "{{deviceName}}",
+          "date_happened": "{{dateHappened}}",
+          "aggregation_key": "{{aggregationKey}}",
+          "source_type_name": "{{sourceTypeName}}"
         }
       },
       "enforceOutputSchema": true,
@@ -1097,6 +1275,22 @@
             "type": "integer",
             "minimum": 1,
             "description": "Optional monitor ID to mute."
+          },
+          "timezone": {
+            "type": "string",
+            "description": "Timezone such as UTC."
+          },
+          "recurrence": {
+            "type": "object",
+            "description": "Downtime recurrence.",
+            "additionalProperties": true
+          },
+          "monitorTags": {
+            "type": "array",
+            "description": "Monitor tags to match.",
+            "items": {
+              "type": "string"
+            }
           }
         },
         "required": [
@@ -1131,7 +1325,10 @@
           "start": "{{start}}",
           "end": "{{end}}",
           "message": "{{message}}",
-          "monitor_id": "{{monitorId}}"
+          "monitor_id": "{{monitorId}}",
+          "timezone": "{{timezone}}",
+          "recurrence": "{{recurrence}}",
+          "monitor_tags": "{{monitorTags}}"
         }
       },
       "enforceOutputSchema": true,
@@ -1217,6 +1414,30 @@
             "type": "integer",
             "minimum": 0,
             "description": "Unix timestamp search window start."
+          },
+          "start": {
+            "type": "integer",
+            "description": "Pagination start offset."
+          },
+          "sortField": {
+            "type": "string",
+            "description": "status, name, cpu, iowait, or load."
+          },
+          "sortDir": {
+            "type": "string",
+            "description": "asc or desc.",
+            "enum": [
+              "asc",
+              "desc"
+            ]
+          },
+          "includeHostsMetadata": {
+            "type": "boolean",
+            "description": "Include host metadata."
+          },
+          "includeMutedHostsData": {
+            "type": "boolean",
+            "description": "Include muted host data."
           }
         },
         "additionalProperties": false
@@ -1242,7 +1463,12 @@
         "query": {
           "filter": "{{filter}}",
           "count": "{{count}}",
-          "from": "{{from}}"
+          "from": "{{from}}",
+          "start": "{{start}}",
+          "sort_field": "{{sortField}}",
+          "sort_dir": "{{sortDir}}",
+          "include_hosts_metadata": "{{includeHostsMetadata}}",
+          "include_muted_hosts_data": "{{includeMutedHostsData}}"
         }
       },
       "enforceOutputSchema": true,
@@ -1265,6 +1491,26 @@
             "minimum": 1,
             "maximum": 100,
             "description": "Page size."
+          },
+          "pageOffset": {
+            "type": "integer",
+            "description": "Page offset sent as page[offset]."
+          },
+          "sort": {
+            "type": "string",
+            "description": "public_id or -public_id.",
+            "enum": [
+              "public_id",
+              "-public_id"
+            ]
+          },
+          "include": {
+            "type": "string",
+            "description": "Related resources such as users,attachments."
+          },
+          "filter": {
+            "type": "string",
+            "description": "Incident search filter such as state:active."
           }
         },
         "additionalProperties": false
@@ -1288,12 +1534,2523 @@
           200
         ],
         "query": {
-          "page[size]": "{{pageSize}}"
+          "page[size]": "{{pageSize}}",
+          "page[offset]": "{{pageOffset}}",
+          "sort": "{{sort}}",
+          "include": "{{include}}",
+          "filter": "{{filter}}"
         }
       },
       "enforceOutputSchema": true,
       "validationMode": "strict-generated",
       "responseFormat": "json"
+    },
+    "logs.aggregate": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 262144,
+      "maxResponseBytes": 5242880,
+      "title": "Aggregate logs",
+      "description": "Aggregate Datadog logs with POST /api/v2/logs/analytics/aggregate. Omit fields to use Datadog defaults (a total count). Composio: DATADOG_AGGREGATE_LOGS.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "compute": {
+            "type": "array",
+            "description": "Aggregation computes. Each item is a Datadog compute object.",
+            "items": {
+              "type": "object"
+            }
+          },
+          "filter": {
+            "type": "object",
+            "description": "Log query, time range, indexes, and storage tier.",
+            "additionalProperties": true
+          },
+          "groupBy": {
+            "type": "array",
+            "description": "Facets that bucket the aggregate.",
+            "items": {
+              "type": "object"
+            }
+          },
+          "page": {
+            "type": "object",
+            "description": "Cursor for an alphabetically sorted aggregate query.",
+            "additionalProperties": true
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": true
+      },
+      "request": {
+        "method": "POST",
+        "path": "/api/v2/logs/analytics/aggregate",
+        "success": [
+          200
+        ],
+        "body": {
+          "compute": "{{compute}}",
+          "filter": "{{filter}}",
+          "group_by": "{{groupBy}}",
+          "page": "{{page}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
+    },
+    "logs.search": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 262144,
+      "maxResponseBytes": 5242880,
+      "title": "Search logs",
+      "description": "Search log events with POST /api/v2/logs/events/search. Datadog rejects a sort field on this endpoint, so it is not sent. timeFrom and timeTo are date-math or millisecond timestamp strings. Composio: DATADOG_SEARCH_LOGS.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "Log search query.",
+            "minLength": 1
+          },
+          "timeFrom": {
+            "type": "string",
+            "description": "Start time as date math or a millisecond timestamp string.",
+            "minLength": 1
+          },
+          "timeTo": {
+            "type": "string",
+            "description": "End time as date math or a millisecond timestamp string.",
+            "minLength": 1
+          },
+          "indexes": {
+            "type": "array",
+            "description": "Log index names. Omit to search the default indexes.",
+            "items": {
+              "type": "string"
+            }
+          },
+          "page": {
+            "type": "object",
+            "description": "Pagination object with limit and cursor (Composio start_at).",
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "query",
+          "timeFrom",
+          "timeTo"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": true
+      },
+      "request": {
+        "method": "POST",
+        "path": "/api/v2/logs/events/search",
+        "success": [
+          200
+        ],
+        "body": {
+          "filter": {
+            "query": "{{query}}",
+            "from": "{{timeFrom}}",
+            "to": "{{timeTo}}",
+            "indexes": "{{indexes}}"
+          },
+          "page": "{{page}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
+    },
+    "logs.indexes.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List log indexes",
+      "description": "List configured log indexes with GET /api/v1/logs/config/indexes. Composio: DATADOG_LIST_LOG_INDEXES.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": true
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/logs/config/indexes",
+        "success": [
+          200
+        ]
+      }
+    },
+    "metrics.scalar": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 262144,
+      "maxResponseBytes": 5242880,
+      "title": "Query scalar data",
+      "description": "Run a formula scalar query with POST /api/v2/query/scalar. fromTimestamp and toTimestamp are Unix epoch milliseconds. Composio: DATADOG_QUERY_SCALAR_DATA.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "fromTimestamp": {
+            "type": "integer",
+            "description": "Inclusive window start as Unix epoch milliseconds."
+          },
+          "toTimestamp": {
+            "type": "integer",
+            "description": "Exclusive window end as Unix epoch milliseconds."
+          },
+          "queries": {
+            "type": "array",
+            "description": "Typed scalar queries selected by data_source.",
+            "items": {
+              "type": "object"
+            }
+          },
+          "formulas": {
+            "type": "array",
+            "description": "Formulas over named queries.",
+            "items": {
+              "type": "object"
+            }
+          }
+        },
+        "required": [
+          "fromTimestamp",
+          "toTimestamp",
+          "queries"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": true
+      },
+      "request": {
+        "method": "POST",
+        "path": "/api/v2/query/scalar",
+        "success": [
+          200
+        ],
+        "body": {
+          "data": {
+            "type": "scalar_request",
+            "attributes": {
+              "from": "{{fromTimestamp}}",
+              "to": "{{toTimestamp}}",
+              "queries": "{{queries}}",
+              "formulas": "{{formulas}}"
+            }
+          }
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
+    },
+    "metrics.timeseries": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 262144,
+      "maxResponseBytes": 5242880,
+      "title": "Query timeseries data",
+      "description": "Run a formula timeseries query with POST /api/v2/query/timeseries. Timestamps are Unix epoch milliseconds. Composio: DATADOG_QUERY_TIMESERIES_DATA.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "fromTimestamp": {
+            "type": "integer",
+            "description": "Inclusive window start as Unix epoch milliseconds."
+          },
+          "toTimestamp": {
+            "type": "integer",
+            "description": "Exclusive window end as Unix epoch milliseconds."
+          },
+          "queries": {
+            "type": "array",
+            "description": "Typed timeseries queries selected by data_source.",
+            "items": {
+              "type": "object"
+            }
+          },
+          "formulas": {
+            "type": "array",
+            "description": "Formula expressions over named queries.",
+            "items": {
+              "type": "object"
+            }
+          },
+          "interval": {
+            "type": "integer",
+            "description": "Requested rollup interval in milliseconds."
+          }
+        },
+        "required": [
+          "fromTimestamp",
+          "toTimestamp",
+          "queries"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": true
+      },
+      "request": {
+        "method": "POST",
+        "path": "/api/v2/query/timeseries",
+        "success": [
+          200
+        ],
+        "body": {
+          "data": {
+            "type": "timeseries_request",
+            "attributes": {
+              "from": "{{fromTimestamp}}",
+              "to": "{{toTimestamp}}",
+              "interval": "{{interval}}",
+              "queries": "{{queries}}",
+              "formulas": "{{formulas}}"
+            }
+          }
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
+    },
+    "metrics.submit": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Submit metrics",
+      "description": "Submit custom metric series with POST /api/v2/series. Composio: DATADOG_SUBMIT_METRICS.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "series": {
+            "type": "array",
+            "description": "Metric series to submit.",
+            "items": {
+              "type": "object"
+            }
+          }
+        },
+        "required": [
+          "series"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": true
+      },
+      "request": {
+        "method": "POST",
+        "path": "/api/v2/series",
+        "success": [
+          202,
+          200
+        ],
+        "body": {
+          "series": "{{series}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
+    },
+    "auditLogs.search": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 262144,
+      "maxResponseBytes": 5242880,
+      "title": "Search audit logs",
+      "description": "Search Audit Trail events with POST /api/v2/audit/events/search. Composio: DATADOG_SEARCH_AUDIT_LOGS.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "Audit Trail search query."
+          },
+          "fromTime": {
+            "type": "string",
+            "description": "Start time as date math or a millisecond timestamp string."
+          },
+          "toTime": {
+            "type": "string",
+            "description": "End time as date math or a millisecond timestamp string."
+          },
+          "sort": {
+            "type": "string",
+            "description": "timestamp or -timestamp.",
+            "enum": [
+              "timestamp",
+              "-timestamp"
+            ]
+          },
+          "page": {
+            "type": "object",
+            "description": "Pagination object with limit and cursor.",
+            "additionalProperties": true
+          },
+          "options": {
+            "type": "object",
+            "description": "timezone or time_offset. Datadog treats them as mutually exclusive.",
+            "additionalProperties": true
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": true
+      },
+      "request": {
+        "method": "POST",
+        "path": "/api/v2/audit/events/search",
+        "success": [
+          200
+        ],
+        "body": {
+          "filter": {
+            "query": "{{query}}",
+            "from": "{{fromTime}}",
+            "to": "{{toTime}}"
+          },
+          "sort": "{{sort}}",
+          "page": "{{page}}",
+          "options": "{{options}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
+    },
+    "events.search": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 262144,
+      "maxResponseBytes": 5242880,
+      "title": "Search events",
+      "description": "Search Event Management events with POST /api/v2/events/search. This is distinct from the v1 GET /api/v1/events list. Composio: DATADOG_SEARCH_EVENTS.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "Event search query."
+          },
+          "fromTime": {
+            "type": "string",
+            "description": "Start time as date math or a millisecond timestamp string."
+          },
+          "toTime": {
+            "type": "string",
+            "description": "End time as date math or a millisecond timestamp string."
+          },
+          "sort": {
+            "type": "string",
+            "description": "timestamp or -timestamp.",
+            "enum": [
+              "timestamp",
+              "-timestamp"
+            ]
+          },
+          "page": {
+            "type": "object",
+            "description": "Pagination object with limit and cursor.",
+            "additionalProperties": true
+          },
+          "options": {
+            "type": "object",
+            "description": "timezone or time_offset. Datadog treats them as mutually exclusive.",
+            "additionalProperties": true
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": true
+      },
+      "request": {
+        "method": "POST",
+        "path": "/api/v2/events/search",
+        "success": [
+          200
+        ],
+        "body": {
+          "filter": {
+            "query": "{{query}}",
+            "from": "{{fromTime}}",
+            "to": "{{toTime}}"
+          },
+          "sort": "{{sort}}",
+          "page": "{{page}}",
+          "options": "{{options}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
+    },
+    "spans.aggregate": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 262144,
+      "maxResponseBytes": 5242880,
+      "title": "Search spans analytics",
+      "description": "Aggregate span analytics with POST /api/v2/spans/analytics/aggregate. The body type is aggregate_request. Composio: DATADOG_SEARCH_SPANS_ANALYTICS.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "filter": {
+            "type": "object",
+            "description": "Span filter. Include query and a bounded from/to window.",
+            "additionalProperties": true
+          },
+          "compute": {
+            "type": "array",
+            "description": "Aggregations to compute.",
+            "items": {
+              "type": "object"
+            }
+          },
+          "groupBy": {
+            "type": "array",
+            "description": "Group-by facets.",
+            "items": {
+              "type": "object"
+            }
+          },
+          "options": {
+            "type": "object",
+            "description": "Additional aggregate options.",
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "filter"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": true
+      },
+      "request": {
+        "method": "POST",
+        "path": "/api/v2/spans/analytics/aggregate",
+        "success": [
+          200
+        ],
+        "body": {
+          "data": {
+            "type": "aggregate_request",
+            "attributes": {
+              "filter": "{{filter}}",
+              "compute": "{{compute}}",
+              "group_by": "{{groupBy}}",
+              "options": "{{options}}"
+            }
+          }
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
+    },
+    "traces.search": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 262144,
+      "maxResponseBytes": 5242880,
+      "title": "Search traces",
+      "description": "Search spans for distributed traces with POST /api/v2/spans/events/search. Composio: DATADOG_SEARCH_TRACES.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "filter": {
+            "type": "object",
+            "description": "Span search filter. Custom attributes need an @ prefix.",
+            "additionalProperties": true
+          },
+          "sort": {
+            "type": "string",
+            "description": "Sort, typically timestamp or -timestamp."
+          },
+          "page": {
+            "type": "object",
+            "description": "Pagination. Pass meta.page.after as page.cursor.",
+            "additionalProperties": true
+          },
+          "options": {
+            "type": "object",
+            "description": "Additional search options.",
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "filter"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": true
+      },
+      "request": {
+        "method": "POST",
+        "path": "/api/v2/spans/events/search",
+        "success": [
+          200
+        ],
+        "body": {
+          "data": {
+            "type": "search_request",
+            "attributes": {
+              "filter": "{{filter}}",
+              "sort": "{{sort}}",
+              "page": "{{page}}",
+              "options": "{{options}}"
+            }
+          }
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
+    },
+    "traces.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get trace by ID",
+      "description": "Fetch spans for one trace id with POST /api/v2/spans/events/search. Datadog does not publish a GET-by-id trace route; the public API is span search filtered by trace_id. Composio: DATADOG_GET_TRACE_BY_ID.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "traceId": {
+            "type": "string",
+            "description": "Trace id to retrieve.",
+            "minLength": 1
+          },
+          "fromTime": {
+            "type": "string",
+            "description": "Search window start as date math or a millisecond timestamp string."
+          },
+          "toTime": {
+            "type": "string",
+            "description": "Search window end as date math or a millisecond timestamp string."
+          }
+        },
+        "required": [
+          "traceId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": true
+      },
+      "request": {
+        "method": "POST",
+        "path": "/api/v2/spans/events/search",
+        "success": [
+          200
+        ],
+        "body": {
+          "data": {
+            "type": "search_request",
+            "attributes": {
+              "filter": {
+                "query": "trace_id:{{traceId}}",
+                "from": "{{fromTime}}",
+                "to": "{{toTime}}"
+              },
+              "page": {
+                "limit": 50
+              }
+            }
+          }
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
+    },
+    "dashboards.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Update dashboard",
+      "description": "Replace a dashboard with PUT /api/v1/dashboard/{dashboardId}. title, widgets, and layoutType are required by the Datadog PUT body. Composio: DATADOG_UPDATE_DASHBOARD.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "dashboardId": {
+            "type": "string",
+            "description": "Dashboard id.",
+            "minLength": 1
+          },
+          "title": {
+            "type": "string",
+            "description": "Dashboard title.",
+            "minLength": 1
+          },
+          "widgets": {
+            "type": "array",
+            "description": "Dashboard widgets.",
+            "items": {
+              "type": "object"
+            }
+          },
+          "layoutType": {
+            "type": "string",
+            "description": "ordered or free.",
+            "enum": [
+              "ordered",
+              "free"
+            ]
+          },
+          "description": {
+            "type": "string",
+            "description": "Dashboard description."
+          },
+          "tags": {
+            "type": "array",
+            "description": "Dashboard tags.",
+            "items": {
+              "type": "string"
+            }
+          },
+          "notifyList": {
+            "type": "array",
+            "description": "Users notified of dashboard changes.",
+            "items": {
+              "type": "string"
+            }
+          },
+          "templateVariables": {
+            "type": "array",
+            "description": "Template variables.",
+            "items": {
+              "type": "object"
+            }
+          },
+          "reflowType": {
+            "type": "string",
+            "description": "auto or fixed. Sent only when set.",
+            "enum": [
+              "auto",
+              "fixed"
+            ]
+          },
+          "isReadOnly": {
+            "type": "boolean",
+            "description": "Whether the dashboard is read-only."
+          },
+          "pauseAutoRefresh": {
+            "type": "boolean",
+            "description": "Whether automatic refresh is paused. Sent only when set."
+          }
+        },
+        "required": [
+          "dashboardId",
+          "title",
+          "widgets",
+          "layoutType"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": true
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/api/v1/dashboard/{{dashboardId}}",
+        "success": [
+          200
+        ],
+        "body": {
+          "title": "{{title}}",
+          "widgets": "{{widgets}}",
+          "layout_type": "{{layoutType}}",
+          "description": "{{description}}",
+          "tags": "{{tags}}",
+          "notify_list": "{{notifyList}}",
+          "template_variables": "{{templateVariables}}",
+          "reflow_type": "{{reflowType}}",
+          "is_read_only": "{{isReadOnly}}",
+          "pause_auto_refresh": "{{pauseAutoRefresh}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
+    },
+    "slos.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 262144,
+      "maxResponseBytes": 1048576,
+      "title": "Create SLO",
+      "description": "Create a service level objective with POST /api/v1/slo. Composio: DATADOG_CREATE_SLO.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "SLO display name.",
+            "minLength": 1
+          },
+          "type": {
+            "type": "string",
+            "description": "metric or monitor.",
+            "enum": [
+              "metric",
+              "monitor"
+            ]
+          },
+          "thresholds": {
+            "type": "array",
+            "description": "SLO target thresholds.",
+            "items": {
+              "type": "object"
+            }
+          },
+          "query": {
+            "type": "object",
+            "description": "Query for a metric SLO. numerator and denominator.",
+            "additionalProperties": true
+          },
+          "monitorIds": {
+            "type": "array",
+            "description": "Monitor ids for a monitor SLO.",
+            "items": {
+              "type": "integer"
+            }
+          },
+          "tags": {
+            "type": "array",
+            "description": "Tags as key:value strings.",
+            "items": {
+              "type": "string"
+            }
+          },
+          "description": {
+            "type": "string",
+            "description": "SLO description."
+          },
+          "groups": {
+            "type": "array",
+            "description": "SLO groups.",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "name",
+          "type",
+          "thresholds"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": true
+      },
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/slo",
+        "success": [
+          200,
+          201
+        ],
+        "body": {
+          "name": "{{name}}",
+          "type": "{{type}}",
+          "thresholds": "{{thresholds}}",
+          "query": "{{query}}",
+          "monitor_ids": "{{monitorIds}}",
+          "tags": "{{tags}}",
+          "description": "{{description}}",
+          "groups": "{{groups}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
+    },
+    "slos.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List SLOs",
+      "description": "List service level objectives with GET /api/v1/slo. Composio: DATADOG_LIST_SL_OS.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "Search query over name or description."
+          },
+          "tags": {
+            "type": "string",
+            "description": "Comma-separated tag filter sent as tags_query."
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Maximum SLOs to return."
+          },
+          "offset": {
+            "type": "integer",
+            "description": "Number of SLOs to skip."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": true
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/slo",
+        "success": [
+          200
+        ],
+        "query": {
+          "query": "{{query}}",
+          "tags_query": "{{tags}}",
+          "limit": "{{limit}}",
+          "offset": "{{offset}}"
+        }
+      }
+    },
+    "synthetics.apiTests.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 262144,
+      "maxResponseBytes": 1048576,
+      "title": "Create synthetic API test",
+      "description": "Create an API synthetic test with POST /api/v1/synthetics/tests/api. The body type is api. Composio: DATADOG_CREATE_SYNTHETIC_API_TEST.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Test name.",
+            "minLength": 1
+          },
+          "config": {
+            "type": "object",
+            "description": "Request and assertions.",
+            "additionalProperties": true
+          },
+          "options": {
+            "type": "object",
+            "description": "Execution options such as tick_every and locations.",
+            "additionalProperties": true
+          },
+          "subtype": {
+            "type": "string",
+            "description": "http, ssl, tcp, dns, or icmp.",
+            "enum": [
+              "http",
+              "ssl",
+              "tcp",
+              "dns",
+              "icmp"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "description": "live or paused.",
+            "enum": [
+              "live",
+              "paused"
+            ]
+          },
+          "message": {
+            "type": "string",
+            "description": "Notification message."
+          },
+          "tags": {
+            "type": "array",
+            "description": "Test tags.",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "name",
+          "config",
+          "options"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": true
+      },
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/synthetics/tests/api",
+        "success": [
+          200,
+          201
+        ],
+        "body": {
+          "name": "{{name}}",
+          "type": "api",
+          "subtype": "{{subtype}}",
+          "config": "{{config}}",
+          "options": "{{options}}",
+          "status": "{{status}}",
+          "message": "{{message}}",
+          "tags": "{{tags}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
+    },
+    "synthetics.tests.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List synthetics tests",
+      "description": "List synthetic tests with GET /api/v1/synthetics/tests. pageSize and pageNumber are the documented page_size and page_number query parameters. Tag and location filters are not parameters of this list route. Composio: DATADOG_LIST_SYNTHETICS.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "pageSize": {
+            "type": "integer",
+            "description": "Page size sent as page_size."
+          },
+          "pageNumber": {
+            "type": "integer",
+            "description": "Zero-based page number sent as page_number."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": true
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/synthetics/tests",
+        "success": [
+          200
+        ],
+        "query": {
+          "page_size": "{{pageSize}}",
+          "page_number": "{{pageNumber}}"
+        }
+      }
+    },
+    "synthetics.locations.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get synthetics locations",
+      "description": "List public and private synthetic locations with GET /api/v1/synthetics/locations. Composio: DATADOG_GET_SYNTHETICS_LOCATIONS.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": true
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/synthetics/locations",
+        "success": [
+          200
+        ]
+      }
+    },
+    "webhooks.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Create webhook",
+      "description": "Create a named webhook destination with POST /api/v1/integration/webhooks/configuration/webhooks. Monitors must reference the name to deliver alerts. Composio: DATADOG_CREATE_WEBHOOK.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Webhook name.",
+            "minLength": 1
+          },
+          "url": {
+            "type": "string",
+            "description": "HTTPS endpoint.",
+            "minLength": 1
+          },
+          "payload": {
+            "type": "string",
+            "description": "Custom payload template."
+          },
+          "encodeAs": {
+            "type": "string",
+            "description": "json or form.",
+            "enum": [
+              "json",
+              "form"
+            ]
+          },
+          "customHeaders": {
+            "type": "string",
+            "description": "Custom headers as a JSON object string."
+          }
+        },
+        "required": [
+          "name",
+          "url"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": true
+      },
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/integration/webhooks/configuration/webhooks",
+        "success": [
+          200,
+          201
+        ],
+        "body": {
+          "name": "{{name}}",
+          "url": "{{url}}",
+          "payload": "{{payload}}",
+          "encode_as": "{{encodeAs}}",
+          "custom_headers": "{{customHeaders}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
+    },
+    "webhooks.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "List webhooks",
+      "description": "List webhook destinations with GET /api/v1/integration/webhooks/configuration/webhooks. The public route returns the full set and has no limit query parameter. Composio: DATADOG_LIST_WEBHOOKS.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": true
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/integration/webhooks/configuration/webhooks",
+        "success": [
+          200
+        ]
+      }
+    },
+    "tags.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List host tags",
+      "description": "List host tags in the organization with GET /api/v1/tags/hosts. Composio: DATADOG_LIST_ALL_TAGS.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "source": {
+            "type": "string",
+            "description": "Tag source such as users, chef, puppet, or datadog."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": true
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/tags/hosts",
+        "success": [
+          200
+        ],
+        "query": {
+          "source": "{{source}}"
+        }
+      }
+    },
+    "hosts.tags.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get host tags",
+      "description": "Get tags for one host with GET /api/v1/tags/hosts/{hostName}. Composio: DATADOG_GET_TAGS.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "hostName": {
+            "type": "string",
+            "description": "Host name.",
+            "minLength": 1
+          },
+          "source": {
+            "type": "string",
+            "description": "Tag source such as users, chef, or puppet."
+          }
+        },
+        "required": [
+          "hostName"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": true
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/tags/hosts/{{hostName}}",
+        "success": [
+          200
+        ],
+        "query": {
+          "source": "{{source}}"
+        }
+      }
+    },
+    "hosts.tags.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Update host tags",
+      "description": "Replace host tags from one source with PUT /api/v1/tags/hosts/{hostName}. Composio: DATADOG_UPDATE_HOST_TAGS.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "hostName": {
+            "type": "string",
+            "description": "Host name.",
+            "minLength": 1
+          },
+          "tags": {
+            "type": "array",
+            "description": "Tags that replace the existing tags for the source.",
+            "items": {
+              "type": "string"
+            }
+          },
+          "source": {
+            "type": "string",
+            "description": "Tag source. Datadog defaults to users when omitted."
+          }
+        },
+        "required": [
+          "hostName",
+          "tags"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": true
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/api/v1/tags/hosts/{{hostName}}",
+        "success": [
+          201,
+          200
+        ],
+        "query": {
+          "source": "{{source}}"
+        },
+        "body": {
+          "tags": "{{tags}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
+    },
+    "usage.summary": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get usage summary",
+      "description": "Get billable usage summary with GET /api/v1/usage/summary. Months with no usage return an empty payload. Composio: DATADOG_GET_USAGE_SUMMARY.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "startMonth": {
+            "type": "string",
+            "description": "Start month as YYYY-MM.",
+            "minLength": 7
+          },
+          "endMonth": {
+            "type": "string",
+            "description": "End month as YYYY-MM. Defaults to startMonth when omitted."
+          },
+          "includeOrgDetails": {
+            "type": "boolean",
+            "description": "Include organization details."
+          }
+        },
+        "required": [
+          "startMonth"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": true
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/usage/summary",
+        "success": [
+          200
+        ],
+        "query": {
+          "start_month": "{{startMonth}}",
+          "end_month": "{{endMonth}}",
+          "include_org_details": "{{includeOrgDetails}}"
+        }
+      }
+    },
+    "apiKeys.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "List API keys",
+      "description": "List organization API keys with GET /api/v2/api_keys. Response metadata includes key names and owners. Composio: DATADOG_LIST_API_KEYS.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "sort": {
+            "type": "string",
+            "description": "Sort field.",
+            "enum": [
+              "created_at",
+              "last4",
+              "modified_at",
+              "name"
+            ]
+          },
+          "pageSize": {
+            "type": "integer",
+            "description": "Page size sent as page[size]."
+          },
+          "pageNumber": {
+            "type": "integer",
+            "description": "Zero-based page number sent as page[number]."
+          },
+          "filterCreatedAtStart": {
+            "type": "string",
+            "description": "ISO timestamp. Keys created after this time."
+          },
+          "filterCreatedAtEnd": {
+            "type": "string",
+            "description": "ISO timestamp. Keys created before this time."
+          },
+          "filterModifiedAtStart": {
+            "type": "string",
+            "description": "ISO timestamp. Keys modified after this time."
+          },
+          "filterModifiedAtEnd": {
+            "type": "string",
+            "description": "ISO timestamp. Keys modified before this time."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": true
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v2/api_keys",
+        "success": [
+          200
+        ],
+        "query": {
+          "sort": "{{sort}}",
+          "page[size]": "{{pageSize}}",
+          "page[number]": "{{pageNumber}}",
+          "filter[created_at][start]": "{{filterCreatedAtStart}}",
+          "filter[created_at][end]": "{{filterCreatedAtEnd}}",
+          "filter[modified_at][start]": "{{filterModifiedAtStart}}",
+          "filter[modified_at][end]": "{{filterModifiedAtEnd}}"
+        }
+      }
+    },
+    "apm.services.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List APM services",
+      "description": "List APM services with GET /api/v2/apm/services. filter[env] is required by Datadog; pass * for every environment. Composio: DATADOG_LIST_APM_SERVICES.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "env": {
+            "type": "string",
+            "description": "Environment filter. Use * for all environments.",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "env"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": true
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v2/apm/services",
+        "success": [
+          200
+        ],
+        "query": {
+          "filter[env]": "{{env}}"
+        }
+      }
+    },
+    "apm.serviceDependencies.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get service dependencies",
+      "description": "Get one APM service dependency map with GET /api/v1/service_dependencies/{service}. Composio: DATADOG_GET_SERVICE_DEPENDENCIES.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "service": {
+            "type": "string",
+            "description": "APM service name.",
+            "minLength": 1
+          },
+          "env": {
+            "type": "string",
+            "description": "APM environment. Strongly recommended."
+          },
+          "start": {
+            "type": "integer",
+            "description": "Window start as Unix epoch seconds."
+          },
+          "end": {
+            "type": "integer",
+            "description": "Window end as Unix epoch seconds."
+          }
+        },
+        "required": [
+          "service"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": true
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/service_dependencies/{{service}}",
+        "success": [
+          200
+        ],
+        "query": {
+          "env": "{{env}}",
+          "start": "{{start}}",
+          "end": "{{end}}"
+        }
+      }
+    },
+    "aws.accounts.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "List AWS integration accounts",
+      "description": "List AWS accounts integrated with Datadog with GET /api/v1/integration/aws. Composio: DATADOG_LIST_AWS_INTEGRATION.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "accountId": {
+            "type": "string",
+            "description": "Filter by AWS account id."
+          },
+          "roleName": {
+            "type": "string",
+            "description": "Filter by IAM role name."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": true
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/integration/aws",
+        "success": [
+          200
+        ],
+        "query": {
+          "account_id": "{{accountId}}",
+          "role_name": "{{roleName}}"
+        }
+      }
+    },
+    "roles.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "List roles",
+      "description": "List organization roles with GET /api/v2/roles. Composio: DATADOG_LIST_ROLES.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "sort": {
+            "type": "string",
+            "description": "Sort field such as name, created_at, or user_count."
+          },
+          "pageSize": {
+            "type": "integer",
+            "description": "Page size sent as page[size]."
+          },
+          "pageNumber": {
+            "type": "integer",
+            "description": "Zero-based page number sent as page[number]."
+          },
+          "filterName": {
+            "type": "string",
+            "description": "Partial role name sent as filter."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": true
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v2/roles",
+        "success": [
+          200
+        ],
+        "query": {
+          "sort": "{{sort}}",
+          "page[size]": "{{pageSize}}",
+          "page[number]": "{{pageNumber}}",
+          "filter": "{{filterName}}"
+        }
+      }
+    },
+    "users.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List users",
+      "description": "List organization users with GET /api/v2/users. Composio: DATADOG_LIST_USERS.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "sort": {
+            "type": "string",
+            "description": "Sort field such as name, email, status, or created_at."
+          },
+          "sortDir": {
+            "type": "string",
+            "description": "asc or desc.",
+            "enum": [
+              "asc",
+              "desc"
+            ]
+          },
+          "pageSize": {
+            "type": "integer",
+            "description": "Page size sent as page[size]."
+          },
+          "pageNumber": {
+            "type": "integer",
+            "description": "Zero-based page number sent as page[number]."
+          },
+          "filterStatus": {
+            "type": "string",
+            "description": "Active, Pending, or Disabled. Sent as filter."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": true
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v2/users",
+        "success": [
+          200
+        ],
+        "query": {
+          "sort": "{{sort}}",
+          "sort_dir": "{{sortDir}}",
+          "page[size]": "{{pageSize}}",
+          "page[number]": "{{pageNumber}}",
+          "filter": "{{filterStatus}}"
+        }
+      }
+    },
+    "oncall.escalationPolicies.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Create escalation policy",
+      "description": "Create an On-Call escalation policy with POST /api/v2/on-call/escalation-policies. Composio: DATADOG_CREATE_ESCALATION_POLICY.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "JSON:API data object forwarded as the request body data field.",
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": true
+      },
+      "request": {
+        "method": "POST",
+        "path": "/api/v2/on-call/escalation-policies",
+        "success": [
+          200,
+          201
+        ],
+        "body": {
+          "data": "{{data}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
+    },
+    "oncall.escalationPolicies.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get escalation policy",
+      "description": "Get an On-Call escalation policy with GET /api/v2/on-call/escalation-policies/{policyId}. Composio: DATADOG_GET_ESCALATION_POLICY.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "policyId": {
+            "type": "string",
+            "description": "Escalation policy id.",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "policyId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": true
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v2/on-call/escalation-policies/{{policyId}}",
+        "success": [
+          200
+        ]
+      }
+    },
+    "oncall.escalationPolicies.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Update escalation policy",
+      "description": "Replace an On-Call escalation policy with PUT /api/v2/on-call/escalation-policies/{policyId}. Composio: DATADOG_UPDATE_ESCALATION_POLICY.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "policyId": {
+            "type": "string",
+            "description": "Escalation policy id.",
+            "minLength": 1
+          },
+          "data": {
+            "type": "object",
+            "description": "JSON:API data object forwarded as the request body data field.",
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "policyId",
+          "data"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": true
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/api/v2/on-call/escalation-policies/{{policyId}}",
+        "success": [
+          200
+        ],
+        "body": {
+          "data": "{{data}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
+    },
+    "oncall.escalationPolicies.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Delete escalation policy",
+      "description": "Delete an On-Call escalation policy with DELETE /api/v2/on-call/escalation-policies/{policyId}. Composio: DATADOG_DELETE_ESCALATION_POLICY.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "policyId": {
+            "type": "string",
+            "description": "Escalation policy id.",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "policyId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": true
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/api/v2/on-call/escalation-policies/{{policyId}}",
+        "success": [
+          200,
+          204
+        ],
+        "result": {
+          "deleted": true,
+          "policyId": "{{input.policyId}}"
+        }
+      }
+    },
+    "oncall.schedules.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Create schedule",
+      "description": "Create an On-Call schedule with POST /api/v2/on-call/schedules. Composio: DATADOG_CREATE_SCHEDULE.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "JSON:API data object forwarded as the request body data field.",
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": true
+      },
+      "request": {
+        "method": "POST",
+        "path": "/api/v2/on-call/schedules",
+        "success": [
+          200,
+          201
+        ],
+        "body": {
+          "data": "{{data}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
+    },
+    "oncall.schedules.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get schedule",
+      "description": "Get an On-Call schedule with GET /api/v2/on-call/schedules/{scheduleId}. Composio: DATADOG_GET_SCHEDULE.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "scheduleId": {
+            "type": "string",
+            "description": "Schedule id.",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "scheduleId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": true
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v2/on-call/schedules/{{scheduleId}}",
+        "success": [
+          200
+        ]
+      }
+    },
+    "oncall.schedules.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Update schedule",
+      "description": "Replace an On-Call schedule with PUT /api/v2/on-call/schedules/{scheduleId}. Composio: DATADOG_UPDATE_SCHEDULE.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "scheduleId": {
+            "type": "string",
+            "description": "Schedule id.",
+            "minLength": 1
+          },
+          "data": {
+            "type": "object",
+            "description": "JSON:API data object forwarded as the request body data field.",
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "scheduleId",
+          "data"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": true
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/api/v2/on-call/schedules/{{scheduleId}}",
+        "success": [
+          200
+        ],
+        "body": {
+          "data": "{{data}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
+    },
+    "oncall.schedules.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Delete schedule",
+      "description": "Delete an On-Call schedule with DELETE /api/v2/on-call/schedules/{scheduleId}. Composio: DATADOG_DELETE_SCHEDULE.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "scheduleId": {
+            "type": "string",
+            "description": "Schedule id.",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "scheduleId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": true
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/api/v2/on-call/schedules/{{scheduleId}}",
+        "success": [
+          200,
+          204
+        ],
+        "result": {
+          "deleted": true,
+          "scheduleId": "{{input.scheduleId}}"
+        }
+      }
+    },
+    "oncall.schedules.onCall": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get scheduled on-call user",
+      "description": "Get the user on call for a schedule with GET /api/v2/on-call/schedules/{scheduleId}/on-call. Datadog marks this route deprecated in favor of responders, and it remains the public call for this tool. Composio: DATADOG_GET_SCHEDULED_ON_CALL_USER.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "scheduleId": {
+            "type": "string",
+            "description": "Schedule id.",
+            "minLength": 1
+          },
+          "include": {
+            "type": "string",
+            "description": "Related resources. Allowed value: user."
+          },
+          "atTs": {
+            "type": "string",
+            "description": "RFC3339 timestamp sent as filter[at_ts]."
+          }
+        },
+        "required": [
+          "scheduleId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": true
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v2/on-call/schedules/{{scheduleId}}/on-call",
+        "success": [
+          200
+        ],
+        "query": {
+          "include": "{{include}}",
+          "filter[at_ts]": "{{atTs}}"
+        }
+      }
+    },
+    "oncall.notificationChannels.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Create notification channel",
+      "description": "Create an On-Call notification channel with POST /api/v2/on-call/users/{userId}/notification-channels. Composio: DATADOG_CREATE_NOTIFICATION_CHANNEL.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "userId": {
+            "type": "string",
+            "description": "Datadog user id.",
+            "minLength": 1
+          },
+          "data": {
+            "type": "object",
+            "description": "JSON:API data object forwarded as the request body data field.",
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "userId",
+          "data"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": true
+      },
+      "request": {
+        "method": "POST",
+        "path": "/api/v2/on-call/users/{{userId}}/notification-channels",
+        "success": [
+          200,
+          201
+        ],
+        "body": {
+          "data": "{{data}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
+    },
+    "oncall.notificationChannels.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "List notification channels",
+      "description": "List On-Call notification channels for a user with GET /api/v2/on-call/users/{userId}/notification-channels. Composio: DATADOG_LIST_NOTIFICATION_CHANNELS.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "userId": {
+            "type": "string",
+            "description": "Datadog user id.",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "userId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": true
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v2/on-call/users/{{userId}}/notification-channels",
+        "success": [
+          200
+        ]
+      }
+    },
+    "oncall.notificationChannels.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get notification channel",
+      "description": "Get one On-Call notification channel with GET /api/v2/on-call/users/{userId}/notification-channels/{channelId}. Composio: DATADOG_GET_NOTIFICATION_CHANNEL.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "userId": {
+            "type": "string",
+            "description": "Datadog user id.",
+            "minLength": 1
+          },
+          "channelId": {
+            "type": "string",
+            "description": "Notification channel id.",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "userId",
+          "channelId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": true
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v2/on-call/users/{{userId}}/notification-channels/{{channelId}}",
+        "success": [
+          200
+        ]
+      }
+    },
+    "oncall.notificationChannels.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Delete notification channel",
+      "description": "Delete an On-Call notification channel with DELETE /api/v2/on-call/users/{userId}/notification-channels/{channelId}. Composio: DATADOG_DELETE_NOTIFICATION_CHANNEL.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "userId": {
+            "type": "string",
+            "description": "Datadog user id.",
+            "minLength": 1
+          },
+          "channelId": {
+            "type": "string",
+            "description": "Notification channel id.",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "userId",
+          "channelId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": true
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/api/v2/on-call/users/{{userId}}/notification-channels/{{channelId}}",
+        "success": [
+          200,
+          204
+        ],
+        "result": {
+          "deleted": true,
+          "userId": "{{input.userId}}",
+          "channelId": "{{input.channelId}}"
+        }
+      }
+    },
+    "oncall.notificationRules.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Create notification rule",
+      "description": "Create an On-Call notification rule with POST /api/v2/on-call/users/{userId}/notification-rules. Composio: DATADOG_CREATE_NOTIFICATION_RULE.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "userId": {
+            "type": "string",
+            "description": "Datadog user id.",
+            "minLength": 1
+          },
+          "data": {
+            "type": "object",
+            "description": "JSON:API data object forwarded as the request body data field.",
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "userId",
+          "data"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": true
+      },
+      "request": {
+        "method": "POST",
+        "path": "/api/v2/on-call/users/{{userId}}/notification-rules",
+        "success": [
+          200,
+          201
+        ],
+        "body": {
+          "data": "{{data}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
+    },
+    "oncall.notificationRules.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "List notification rules",
+      "description": "List On-Call notification rules for a user with GET /api/v2/on-call/users/{userId}/notification-rules. Composio: DATADOG_LIST_NOTIFICATION_RULES.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "userId": {
+            "type": "string",
+            "description": "Datadog user id.",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "userId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": true
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v2/on-call/users/{{userId}}/notification-rules",
+        "success": [
+          200
+        ]
+      }
+    },
+    "oncall.notificationRules.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get notification rule",
+      "description": "Get one On-Call notification rule with GET /api/v2/on-call/users/{userId}/notification-rules/{ruleId}. Composio: DATADOG_GET_NOTIFICATION_RULE.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "userId": {
+            "type": "string",
+            "description": "Datadog user id.",
+            "minLength": 1
+          },
+          "ruleId": {
+            "type": "string",
+            "description": "Notification rule id.",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "userId",
+          "ruleId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": true
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v2/on-call/users/{{userId}}/notification-rules/{{ruleId}}",
+        "success": [
+          200
+        ]
+      }
+    },
+    "oncall.notificationRules.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Update notification rule",
+      "description": "Replace an On-Call notification rule with PUT /api/v2/on-call/users/{userId}/notification-rules/{ruleId}. Composio: DATADOG_UPDATE_NOTIFICATION_RULE.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "userId": {
+            "type": "string",
+            "description": "Datadog user id.",
+            "minLength": 1
+          },
+          "ruleId": {
+            "type": "string",
+            "description": "Notification rule id.",
+            "minLength": 1
+          },
+          "data": {
+            "type": "object",
+            "description": "JSON:API data object forwarded as the request body data field.",
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "userId",
+          "ruleId",
+          "data"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": true
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/api/v2/on-call/users/{{userId}}/notification-rules/{{ruleId}}",
+        "success": [
+          200
+        ],
+        "body": {
+          "data": "{{data}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
+    },
+    "oncall.notificationRules.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Delete notification rule",
+      "description": "Delete an On-Call notification rule with DELETE /api/v2/on-call/users/{userId}/notification-rules/{ruleId}. Composio: DATADOG_DELETE_NOTIFICATION_RULE.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "userId": {
+            "type": "string",
+            "description": "Datadog user id.",
+            "minLength": 1
+          },
+          "ruleId": {
+            "type": "string",
+            "description": "Notification rule id.",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "userId",
+          "ruleId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": true
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/api/v2/on-call/users/{{userId}}/notification-rules/{{ruleId}}",
+        "success": [
+          200,
+          204
+        ],
+        "result": {
+          "deleted": true,
+          "userId": "{{input.userId}}",
+          "ruleId": "{{input.ruleId}}"
+        }
+      }
+    },
+    "oncall.teams.onCall": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get team on-call users",
+      "description": "Get the users currently on call for a team with GET /api/v2/on-call/teams/{teamId}/on-call. Composio: DATADOG_GET_TEAM_ON_CALL_USERS.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "teamId": {
+            "type": "string",
+            "description": "Team id.",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "teamId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": true
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v2/on-call/teams/{{teamId}}/on-call",
+        "success": [
+          200
+        ]
+      }
+    },
+    "oncall.teams.routingRules.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get team routing rules",
+      "description": "Get On-Call routing rules for a team with GET /api/v2/on-call/teams/{teamId}/routing-rules. Composio: DATADOG_GET_TEAM_ROUTING_RULES.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "teamId": {
+            "type": "string",
+            "description": "Team id.",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "teamId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": true
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v2/on-call/teams/{{teamId}}/routing-rules",
+        "success": [
+          200
+        ]
+      }
+    },
+    "oncall.teams.routingRules.set": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Set team routing rules",
+      "description": "Replace On-Call routing rules for a team with PUT /api/v2/on-call/teams/{teamId}/routing-rules. Composio: DATADOG_SET_TEAM_ROUTING_RULES.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "teamId": {
+            "type": "string",
+            "description": "Team id.",
+            "minLength": 1
+          },
+          "data": {
+            "type": "object",
+            "description": "JSON:API data object forwarded as the request body data field.",
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "teamId",
+          "data"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": true
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/api/v2/on-call/teams/{{teamId}}/routing-rules",
+        "success": [
+          200
+        ],
+        "body": {
+          "data": "{{data}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
     }
   },
   "provenance": {

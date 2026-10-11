@@ -1,17 +1,7 @@
 {
-  "key": "altoviz",
-  "name": "Altoviz",
-  "version": "0.2.0",
-  "runtime": "bun",
-  "visibility": "public",
-  "categories": [
-    "accounting"
-  ],
   "auth": {
-    "type": "api_key",
     "scopes": [],
     "setup": {
-      "mode": "api_key",
       "fields": [
         {
           "key": "apiKey",
@@ -19,169 +9,155 @@
           "required": true,
           "secret": true
         }
-      ]
+      ],
+      "mode": "api_key"
+    },
+    "type": "api_key"
+  },
+  "categories": [
+    "accounting"
+  ],
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
     }
   },
-  "network": {
-    "allowedHosts": [
-      "api.altoviz.com"
-    ]
-  },
-  "models": [
-    "customer",
-    "product",
-    "invoice",
-    "quote",
-    "contact",
-    "supplier"
-  ],
   "http": {
-    "baseUrl": "https://api.altoviz.com",
     "auth": {
       "field": "apiKey",
       "in": "header",
       "name": "x-api-key",
       "value": "{{apiKey}}"
     },
-    "headers": {
-      "Accept": "application/json"
-    },
+    "baseUrl": "https://api.altoviz.com",
     "errors": {
-      "rateLimitStatuses": [
-        429
-      ],
-      "retryAfterHeader": "retry-after",
       "defaultRetryAfterSeconds": 30,
       "messagePaths": [
         "message",
         "errors"
-      ]
+      ],
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after"
+    },
+    "headers": {
+      "Accept": "application/json"
     }
   },
+  "key": "altoviz",
+  "models": [
+    "classification",
+    "colleague",
+    "contact",
+    "customer",
+    "customer-family",
+    "product",
+    "product-family",
+    "purchase-invoice",
+    "receipt",
+    "sale-credit",
+    "sale-invoice",
+    "sale-quote",
+    "setting",
+    "supplier",
+    "unit",
+    "user",
+    "vat",
+    "webhook"
+  ],
+  "name": "Altoviz",
+  "network": {
+    "allowedHosts": [
+      "api.altoviz.com"
+    ]
+  },
   "operations": {
-    "healthcheck": {
-      "kind": "action",
-      "sideEffect": "read",
-      "timeoutMs": 5000,
-      "maxInputBytes": 4096,
-      "maxResponseBytes": 65536,
-      "title": "Healthcheck",
-      "description": "Validate the Altoviz API key with a one-row customer list.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {},
-        "additionalProperties": false
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {}
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "GET",
-        "path": "/v1/customers",
-        "success": [
-          200
-        ],
-        "query": {
-          "PageIndex": 1,
-          "PageSize": 1
-        }
-      },
+    "customers.find": {
+      "description": "Find Altoviz customers by email, internal id, or customer number.",
       "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "customers.list": {
-      "kind": "action",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "title": "List customers",
-      "description": "List Altoviz customers with optional page index, page size, and order.",
       "inputSchema": {
-        "type": "object",
-        "properties": {
-          "pageIndex": {
-            "type": "integer",
-            "minimum": 1
-          },
-          "pageSize": {
-            "type": "integer",
-            "minimum": 1,
-            "maximum": 100
-          },
-          "orderBy": {
-            "type": "string",
-            "minLength": 1
-          }
-        },
-        "additionalProperties": false
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {}
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "GET",
-        "path": "/v1/customers",
-        "success": [
-          200
-        ],
-        "query": {
-          "PageIndex": "{{pageIndex}}",
-          "PageSize": "{{pageSize}}",
-          "OrderBy": "{{orderBy}}"
-        }
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "customers.get": {
-      "kind": "action",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "title": "Get customer",
-      "description": "Retrieve one Altoviz customer by numeric id.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "customerId": {
-            "type": "integer",
-            "minimum": 1
-          }
-        },
         "additionalProperties": false,
+        "properties": {
+          "email": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "internalId": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "number": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {}
+        },
         "required": [
-          "customerId"
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/customers/find",
+        "query": {
+          "email": "{{email}}",
+          "internalId": "{{internalId}}",
+          "number": "{{number}}"
+        },
+        "success": [
+          200
         ]
       },
-      "outputSchema": {
-        "type": "object",
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Find customers",
+      "validationMode": "strict-generated"
+    },
+    "customers.get": {
+      "description": "Retrieve one Altoviz customer by numeric id.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "customerId": {
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
         "required": [
-          "data"
+          "customerId"
         ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "additionalProperties": false
+        "required": [
+          "data"
+        ],
+        "type": "object"
       },
       "request": {
         "method": "GET",
@@ -190,57 +166,975 @@
           200
         ]
       },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get customer",
+      "validationMode": "strict-generated"
     },
-    "customers.find": {
+    "customers.list": {
+      "description": "List Altoviz customers with optional page index, page size, and order.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "orderBy": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "pageIndex": {
+            "minimum": 1,
+            "type": "integer"
+          },
+          "pageSize": {
+            "maximum": 100,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "query": {
+            "type": "string",
+            "description": "Full-text customer search query.",
+            "minLength": 1
+          }
+        },
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {}
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/customers",
+        "query": {
+          "OrderBy": "{{orderBy}}",
+          "PageIndex": "{{pageIndex}}",
+          "PageSize": "{{pageSize}}",
+          "query": "{{query}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List customers",
+      "validationMode": "strict-generated"
+    },
+    "healthcheck": {
+      "description": "Validate the Altoviz API key with a one-row customer list.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {},
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {}
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/customers",
+        "query": {
+          "PageIndex": 1,
+          "PageSize": 1
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 5000,
+      "title": "Healthcheck",
+      "validationMode": "strict-generated"
+    },
+    "classifications.list": {
       "kind": "action",
       "sideEffect": "read",
       "timeoutMs": 15000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
-      "title": "Find customers",
-      "description": "Find Altoviz customers by email, internal id, or customer number.",
+      "title": "List classifications",
+      "description": "List Altoviz accounting classifications, optionally filtered by type.",
       "inputSchema": {
         "type": "object",
+        "additionalProperties": false,
         "properties": {
-          "email": {
+          "pageIndex": {
+            "type": "integer",
+            "description": "One-based page index.",
+            "minimum": 1
+          },
+          "pageSize": {
+            "type": "integer",
+            "description": "Page size.",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "orderBy": {
             "type": "string",
+            "description": "Field ordering expression.",
             "minLength": 1
           },
-          "internalId": {
+          "query": {
             "type": "string",
+            "description": "Full-text search query.",
             "minLength": 1
           },
-          "number": {
+          "type": {
             "type": "string",
-            "minLength": 1
+            "description": "Classification type.",
+            "enum": [
+              "Sale",
+              "Expense",
+              "Other"
+            ]
           }
-        },
-        "additionalProperties": false
+        }
       },
       "outputSchema": {
         "type": "object",
+        "additionalProperties": false,
         "required": [
           "data"
         ],
         "properties": {
           "data": {}
-        },
-        "additionalProperties": false
+        }
       },
       "request": {
         "method": "GET",
-        "path": "/v1/customers/find",
+        "path": "/v1/classifications",
+        "success": [
+          200
+        ],
+        "query": {
+          "PageIndex": "{{pageIndex}}",
+          "PageSize": "{{pageSize}}",
+          "OrderBy": "{{orderBy}}",
+          "query": "{{query}}",
+          "type": "{{type}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "colleagues.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Delete colleague",
+      "description": "Permanently delete a colleague by numeric id.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "integer",
+            "description": "id to delete.",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "deleted": {
+            "type": "boolean"
+          },
+          "id": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "deleted"
+        ]
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/v1/colleagues/{{id}}",
+        "success": [
+          200
+        ],
+        "result": {
+          "deleted": true,
+          "id": "{{input.id}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "colleagues.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get colleague",
+      "description": "Retrieve one colleague by numeric id.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "integer",
+            "description": "id to retrieve.",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/colleagues/{{id}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "colleagues.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List colleagues",
+      "description": "List colleagues with optional pagination, order, and full-text query.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "pageIndex": {
+            "type": "integer",
+            "description": "One-based page index.",
+            "minimum": 1
+          },
+          "pageSize": {
+            "type": "integer",
+            "description": "Page size.",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "orderBy": {
+            "type": "string",
+            "description": "Field ordering expression.",
+            "minLength": 1
+          },
+          "query": {
+            "type": "string",
+            "description": "Full-text search query.",
+            "minLength": 1
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/colleagues",
+        "success": [
+          200
+        ],
+        "query": {
+          "PageIndex": "{{pageIndex}}",
+          "PageSize": "{{pageSize}}",
+          "OrderBy": "{{orderBy}}",
+          "query": "{{query}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "colleagues.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Update colleague",
+      "description": "Update a colleague. Only supplied fields are sent.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "integer",
+            "description": "Colleague id to update.",
+            "minimum": 1
+          },
+          "name": {
+            "type": "string",
+            "description": "Full name."
+          },
+          "email": {
+            "type": "string",
+            "description": "Email."
+          },
+          "phone": {
+            "type": "string",
+            "description": "Phone."
+          },
+          "title": {
+            "type": "string",
+            "description": "Title or position."
+          },
+          "number": {
+            "type": "string",
+            "description": "Colleague number."
+          },
+          "userId": {
+            "type": "string",
+            "description": "Associated user id."
+          },
+          "lastName": {
+            "type": "string",
+            "description": "Last name."
+          },
+          "firstName": {
+            "type": "string",
+            "description": "First name."
+          },
+          "cellPhone": {
+            "type": "string",
+            "description": "Cell phone."
+          },
+          "isPartner": {
+            "type": "boolean",
+            "description": "Whether the colleague is a partner."
+          },
+          "internalId": {
+            "type": "string",
+            "description": "Caller-supplied internal id."
+          },
+          "metadatas": {
+            "type": "object",
+            "description": "Colleague metadata."
+          },
+          "homecareServiceNumber": {
+            "type": "string",
+            "description": "Homecare service number."
+          },
+          "initialPartnerBalance": {
+            "type": "number",
+            "description": "Initial partner balance."
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/v1/colleagues/{{id}}",
+        "success": [
+          200
+        ],
+        "body": {
+          "name": "{{name}}",
+          "email": "{{email}}",
+          "phone": "{{phone}}",
+          "title": "{{title}}",
+          "number": "{{number}}",
+          "userId": "{{userId}}",
+          "lastName": "{{lastName}}",
+          "firstName": "{{firstName}}",
+          "cellPhone": "{{cellPhone}}",
+          "isPartner": "{{isPartner}}",
+          "internalId": "{{internalId}}",
+          "metadatas": "{{metadatas}}",
+          "homecareServiceNumber": "{{homecareServiceNumber}}",
+          "initialPartnerBalance": "{{initialPartnerBalance}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "contacts.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create contact",
+      "description": "Create a contact.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "email": {
+            "type": "string",
+            "description": "Email address of the contact."
+          },
+          "phone": {
+            "type": "string",
+            "description": "Phone number of the contact."
+          },
+          "title": {
+            "type": "string",
+            "description": "Job title of the contact."
+          },
+          "service": {
+            "type": "string",
+            "description": "Service or department."
+          },
+          "function": {
+            "type": "string",
+            "description": "Job function."
+          },
+          "lastName": {
+            "type": "string",
+            "description": "Last name."
+          },
+          "cellPhone": {
+            "type": "string",
+            "description": "Cell phone number."
+          },
+          "firstName": {
+            "type": "string",
+            "description": "First name."
+          },
+          "internalId": {
+            "type": "string",
+            "description": "Internal id used in an external system."
+          },
+          "companyName": {
+            "type": "string",
+            "description": "Company name."
+          },
+          "displayName": {
+            "type": "string",
+            "description": "Display name."
+          },
+          "invertedDisplayName": {
+            "type": "string",
+            "description": "Inverted display name."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/contacts",
+        "success": [
+          200
+        ],
+        "body": {
+          "email": "{{email}}",
+          "phone": "{{phone}}",
+          "title": "{{title}}",
+          "service": "{{service}}",
+          "function": "{{function}}",
+          "lastName": "{{lastName}}",
+          "cellPhone": "{{cellPhone}}",
+          "firstName": "{{firstName}}",
+          "internalId": "{{internalId}}",
+          "companyName": "{{companyName}}",
+          "displayName": "{{displayName}}",
+          "invertedDisplayName": "{{invertedDisplayName}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "contacts.find": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Find contacts",
+      "description": "Find contacts by email and optional internal id.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "email": {
+            "type": "string",
+            "description": "Email address to search.",
+            "minLength": 1
+          },
+          "internalId": {
+            "type": "string",
+            "description": "Internal id to search.",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "email"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/contacts/find",
         "success": [
           200
         ],
         "query": {
           "email": "{{email}}",
-          "internalId": "{{internalId}}",
-          "number": "{{number}}"
+          "internalId": "{{internalId}}"
         }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "contacts.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get contact",
+      "description": "Retrieve one contact by numeric id.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "integer",
+            "description": "id to retrieve.",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/contacts/{{id}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "contacts.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List contacts",
+      "description": "List contacts with optional pagination, order, and full-text query.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "pageIndex": {
+            "type": "integer",
+            "description": "One-based page index.",
+            "minimum": 1
+          },
+          "pageSize": {
+            "type": "integer",
+            "description": "Page size.",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "orderBy": {
+            "type": "string",
+            "description": "Field ordering expression.",
+            "minLength": 1
+          },
+          "query": {
+            "type": "string",
+            "description": "Full-text search query.",
+            "minLength": 1
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/contacts",
+        "success": [
+          200
+        ],
+        "query": {
+          "PageIndex": "{{pageIndex}}",
+          "PageSize": "{{pageSize}}",
+          "OrderBy": "{{orderBy}}",
+          "query": "{{query}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "customer-families.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create customer family",
+      "description": "Create a customer family used to group customers.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "label": {
+            "type": "string",
+            "description": "Family label."
+          },
+          "number": {
+            "type": "string",
+            "description": "Family reference number."
+          },
+          "internalId": {
+            "type": "string",
+            "description": "Caller-supplied internal id."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/customerfamilies",
+        "success": [
+          200
+        ],
+        "body": {
+          "label": "{{label}}",
+          "number": "{{number}}",
+          "internalId": "{{internalId}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "customer-families.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Delete customer family",
+      "description": "Permanently delete a customer family by numeric id.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "integer",
+            "description": "id to delete.",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "deleted": {
+            "type": "boolean"
+          },
+          "id": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "deleted"
+        ]
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/v1/customerfamilies/{{id}}",
+        "success": [
+          200
+        ],
+        "result": {
+          "deleted": true,
+          "id": "{{input.id}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "customer-families.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get customer family",
+      "description": "Retrieve one customer family by numeric id.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "integer",
+            "description": "id to retrieve.",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/customerfamilies/{{id}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "customer-families.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List customer families",
+      "description": "List customer families with optional pagination, order, and full-text query.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "pageIndex": {
+            "type": "integer",
+            "description": "One-based page index.",
+            "minimum": 1
+          },
+          "pageSize": {
+            "type": "integer",
+            "description": "Page size.",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "orderBy": {
+            "type": "string",
+            "description": "Field ordering expression.",
+            "minLength": 1
+          },
+          "query": {
+            "type": "string",
+            "description": "Full-text search query.",
+            "minLength": 1
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/customerfamilies",
+        "success": [
+          200
+        ],
+        "query": {
+          "PageIndex": "{{pageIndex}}",
+          "PageSize": "{{pageSize}}",
+          "OrderBy": "{{orderBy}}",
+          "query": "{{query}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "customers.contacts.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List customer contacts",
+      "description": "List contacts belonging to one customer.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "customerId": {
+            "type": "integer",
+            "description": "Customer id whose contacts to list.",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "customerId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/customers/{{customerId}}/contacts",
+        "success": [
+          200
+        ]
       },
       "enforceOutputSchema": true,
       "validationMode": "strict-generated",
@@ -253,47 +1147,104 @@
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
       "title": "Create customer",
-      "description": "Create an Altoviz customer.",
+      "description": "Create a Business, Consumer, or Government customer.",
       "inputSchema": {
         "type": "object",
+        "additionalProperties": false,
         "properties": {
-          "companyName": {
+          "type": {
             "type": "string",
-            "minLength": 1,
-            "description": "Company name."
-          },
-          "firstName": {
-            "type": "string",
-            "minLength": 1,
-            "description": "First name."
-          },
-          "lastName": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Last name."
+            "description": "Customer type. Official values are Business, Consumer, and Government.",
+            "enum": [
+              "Business",
+              "Consumer",
+              "Government"
+            ]
           },
           "email": {
             "type": "string",
-            "minLength": 1,
             "description": "Email address."
           },
-          "type": {
+          "phone": {
             "type": "string",
-            "minLength": 0,
-            "description": "Customer type."
+            "description": "Landline/office phone."
+          },
+          "title": {
+            "type": "string",
+            "description": "Title or salutation."
+          },
+          "active": {
+            "type": "boolean",
+            "description": "Whether the customer is active."
+          },
+          "family": {
+            "type": "object",
+            "description": "Customer family object with id and label."
+          },
+          "number": {
+            "type": "string",
+            "description": "Customer number/reference."
+          },
+          "lastName": {
+            "type": "string",
+            "description": "Last name (typically for Consumer)."
+          },
+          "cellPhone": {
+            "type": "string",
+            "description": "Mobile phone."
+          },
+          "firstName": {
+            "type": "string",
+            "description": "First name (typically for Consumer)."
+          },
+          "internalId": {
+            "type": "string",
+            "description": "Caller-supplied internal id."
+          },
+          "companyName": {
+            "type": "string",
+            "description": "Company name (typically for Business)."
+          },
+          "internalNotes": {
+            "type": "string",
+            "description": "Private internal notes."
+          },
+          "billingAddress": {
+            "type": "object",
+            "description": "Billing address fields."
+          },
+          "billingOptions": {
+            "type": "object",
+            "description": "Billing options."
+          },
+          "shippingAddress": {
+            "type": "object",
+            "description": "Shipping address fields."
+          },
+          "companyInformations": {
+            "type": "object",
+            "description": "Company registration information."
+          },
+          "metadata": {
+            "type": "object",
+            "description": "Custom metadata."
           }
         },
-        "additionalProperties": false
+        "required": [
+          "type"
+        ]
       },
       "outputSchema": {
         "type": "object",
+        "additionalProperties": false,
         "required": [
           "data"
         ],
         "properties": {
-          "data": {}
-        },
-        "additionalProperties": false
+          "data": {
+            "type": "object"
+          }
+        }
       },
       "request": {
         "method": "POST",
@@ -302,83 +1253,24 @@
           200
         ],
         "body": {
-          "companyName": "{{companyName}}",
-          "firstName": "{{firstName}}",
+          "type": "{{type}}",
+          "email": "{{email}}",
+          "phone": "{{phone}}",
+          "title": "{{title}}",
+          "active": "{{active}}",
+          "family": "{{family}}",
+          "number": "{{number}}",
           "lastName": "{{lastName}}",
-          "email": "{{email}}",
-          "type": "{{type}}"
-        },
-        "headers": {
-          "Content-Type": "application/json"
-        }
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "customers.update": {
-      "kind": "action",
-      "sideEffect": "write",
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "title": "Update customer",
-      "description": "Update an Altoviz customer by numeric id.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "customerId": {
-            "type": "integer",
-            "minimum": 1,
-            "description": "Numeric resource id."
-          },
-          "companyName": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Company name."
-          },
-          "email": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Email address."
-          },
-          "firstName": {
-            "type": "string",
-            "minLength": 1,
-            "description": "First name."
-          },
-          "lastName": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Last name."
-          }
-        },
-        "additionalProperties": false,
-        "required": [
-          "customerId"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {}
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "PUT",
-        "path": "/v1/customers/{{customerId}}",
-        "success": [
-          200
-        ],
-        "body": {
-          "companyName": "{{companyName}}",
-          "email": "{{email}}",
+          "cellPhone": "{{cellPhone}}",
           "firstName": "{{firstName}}",
-          "lastName": "{{lastName}}"
+          "internalId": "{{internalId}}",
+          "companyName": "{{companyName}}",
+          "internalNotes": "{{internalNotes}}",
+          "billingAddress": "{{billingAddress}}",
+          "billingOptions": "{{billingOptions}}",
+          "shippingAddress": "{{shippingAddress}}",
+          "companyInformations": "{{companyInformations}}",
+          "metadata": "{{metadata}}"
         },
         "headers": {
           "Content-Type": "application/json"
@@ -395,112 +1287,775 @@
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
       "title": "Delete customer",
-      "description": "Delete an Altoviz customer by numeric id.",
+      "description": "Permanently delete a customer by numeric id.",
       "inputSchema": {
         "type": "object",
+        "additionalProperties": false,
         "properties": {
           "customerId": {
             "type": "integer",
-            "minimum": 1,
-            "description": "Numeric resource id."
+            "description": "customerId to delete.",
+            "minimum": 1
           }
         },
-        "additionalProperties": false,
         "required": [
           "customerId"
         ]
       },
       "outputSchema": {
         "type": "object",
-        "required": [
-          "deleted"
-        ],
+        "additionalProperties": false,
         "properties": {
           "deleted": {
             "type": "boolean"
           },
-          "id": {},
-          "key": {
-            "type": "string"
-          },
-          "name": {
-            "type": "string"
-          },
-          "domain": {
-            "type": "string"
-          },
-          "profileId": {
-            "type": "string"
+          "customerId": {
+            "type": "integer"
           }
         },
-        "additionalProperties": false
+        "required": [
+          "deleted"
+        ]
       },
       "request": {
         "method": "DELETE",
         "path": "/v1/customers/{{customerId}}",
         "success": [
-          204,
           200
         ],
         "result": {
           "deleted": true,
-          "id": "{{input.customerId}}"
+          "customerId": "{{input.customerId}}"
         }
       },
       "enforceOutputSchema": true,
       "validationMode": "strict-generated",
       "responseFormat": "json"
     },
-    "products.list": {
+    "customers.get_by_internal_id": {
       "kind": "action",
       "sideEffect": "read",
       "timeoutMs": 15000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
-      "title": "List products",
-      "description": "List Altoviz products with optional paging.",
+      "title": "Get customer by internal id",
+      "description": "Retrieve one customer by the caller-supplied internal id.",
       "inputSchema": {
         "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "internalId": {
+            "type": "string",
+            "description": "Caller-supplied internal id.",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "internalId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/customers/getbyinternalid/{{internalId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "customers.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Update customer",
+      "description": "Update a customer. Only supplied fields are sent.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "customerId": {
+            "type": "integer",
+            "description": "Customer id to update.",
+            "minimum": 1
+          },
+          "type": {
+            "type": "string",
+            "description": "Customer type. Official values are Business, Consumer, and Government.",
+            "enum": [
+              "Business",
+              "Consumer",
+              "Government"
+            ]
+          },
+          "email": {
+            "type": "string",
+            "description": "Email address."
+          },
+          "phone": {
+            "type": "string",
+            "description": "Landline/office phone."
+          },
+          "title": {
+            "type": "string",
+            "description": "Title or salutation."
+          },
+          "active": {
+            "type": "boolean",
+            "description": "Whether the customer is active."
+          },
+          "family": {
+            "type": "object",
+            "description": "Customer family object with id and label."
+          },
+          "number": {
+            "type": "string",
+            "description": "Customer number/reference."
+          },
+          "lastName": {
+            "type": "string",
+            "description": "Last name (typically for Consumer)."
+          },
+          "cellPhone": {
+            "type": "string",
+            "description": "Mobile phone."
+          },
+          "firstName": {
+            "type": "string",
+            "description": "First name (typically for Consumer)."
+          },
+          "internalId": {
+            "type": "string",
+            "description": "Caller-supplied internal id."
+          },
+          "companyName": {
+            "type": "string",
+            "description": "Company name (typically for Business)."
+          },
+          "internalNotes": {
+            "type": "string",
+            "description": "Private internal notes."
+          },
+          "billingAddress": {
+            "type": "object",
+            "description": "Billing address fields."
+          },
+          "billingOptions": {
+            "type": "object",
+            "description": "Billing options."
+          },
+          "shippingAddress": {
+            "type": "object",
+            "description": "Shipping address fields."
+          },
+          "companyInformations": {
+            "type": "object",
+            "description": "Company registration information."
+          },
+          "metadata": {
+            "type": "object",
+            "description": "Custom metadata."
+          }
+        },
+        "required": [
+          "customerId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/v1/customers/{{customerId}}",
+        "success": [
+          200
+        ],
+        "body": {
+          "type": "{{type}}",
+          "email": "{{email}}",
+          "phone": "{{phone}}",
+          "title": "{{title}}",
+          "active": "{{active}}",
+          "family": "{{family}}",
+          "number": "{{number}}",
+          "lastName": "{{lastName}}",
+          "cellPhone": "{{cellPhone}}",
+          "firstName": "{{firstName}}",
+          "internalId": "{{internalId}}",
+          "companyName": "{{companyName}}",
+          "internalNotes": "{{internalNotes}}",
+          "billingAddress": "{{billingAddress}}",
+          "billingOptions": "{{billingOptions}}",
+          "shippingAddress": "{{shippingAddress}}",
+          "companyInformations": "{{companyInformations}}",
+          "metadata": "{{metadata}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "hello.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 5000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 65536,
+      "title": "Test API key",
+      "description": "Call GET /hello to verify the API key and return basic account information.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "api_version": {
+            "type": "string",
+            "description": "Optional API version query (sent as api-version)."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/hello",
+        "success": [
+          200
+        ],
+        "query": {
+          "api-version": "{{api_version}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "product-families.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create product family",
+      "description": "Create a product family used to group products.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "label": {
+            "type": "string",
+            "description": "Family label.",
+            "minLength": 1
+          },
+          "number": {
+            "type": "string",
+            "description": "Family reference number."
+          }
+        },
+        "required": [
+          "label"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/productfamilies",
+        "success": [
+          200
+        ],
+        "body": {
+          "label": "{{label}}",
+          "number": "{{number}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "product-families.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Delete product family",
+      "description": "Permanently delete a product family by numeric id.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "integer",
+            "description": "id to delete.",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "deleted": {
+            "type": "boolean"
+          },
+          "id": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "deleted"
+        ]
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/v1/productfamilies/{{id}}",
+        "success": [
+          200
+        ],
+        "result": {
+          "deleted": true,
+          "id": "{{input.id}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "product-families.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get product family",
+      "description": "Retrieve one product family by numeric id.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "integer",
+            "description": "id to retrieve.",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/productfamilies/{{id}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "product-families.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List product families",
+      "description": "List product families with optional pagination, order, and full-text query.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
         "properties": {
           "pageIndex": {
             "type": "integer",
-            "minimum": 1,
-            "description": "1-based page index."
+            "description": "One-based page index.",
+            "minimum": 1
           },
           "pageSize": {
             "type": "integer",
-            "minimum": 1,
             "description": "Page size.",
+            "minimum": 1,
             "maximum": 100
           },
           "orderBy": {
             "type": "string",
-            "minLength": 1,
-            "description": "Order-by expression."
+            "description": "Field ordering expression.",
+            "minLength": 1
+          },
+          "query": {
+            "type": "string",
+            "description": "Full-text search query.",
+            "minLength": 1
           }
-        },
-        "additionalProperties": false
+        }
       },
       "outputSchema": {
         "type": "object",
+        "additionalProperties": false,
         "required": [
           "data"
         ],
         "properties": {
           "data": {}
-        },
-        "additionalProperties": false
+        }
       },
       "request": {
         "method": "GET",
-        "path": "/v1/products",
+        "path": "/v1/productfamilies",
         "success": [
           200
         ],
         "query": {
           "PageIndex": "{{pageIndex}}",
           "PageSize": "{{pageSize}}",
-          "OrderBy": "{{orderBy}}"
+          "OrderBy": "{{orderBy}}",
+          "query": "{{query}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "products.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create product",
+      "description": "Create a product or service.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Product name.",
+            "minLength": 1
+          },
+          "number": {
+            "type": "string",
+            "description": "Product number or SKU.",
+            "minLength": 1
+          },
+          "description": {
+            "type": "string",
+            "description": "Product description."
+          },
+          "type": {
+            "type": "string",
+            "description": "Product type.",
+            "enum": [
+              "Product",
+              "Service",
+              "Text"
+            ]
+          },
+          "unitPrice": {
+            "type": "number",
+            "description": "Selling price.",
+            "minimum": 0
+          },
+          "purchasePrice": {
+            "type": "number",
+            "description": "Purchase/cost price.",
+            "minimum": 0
+          },
+          "active": {
+            "type": "boolean",
+            "description": "Whether the product is active."
+          },
+          "family": {
+            "type": "object",
+            "description": "Product family object with id and label."
+          },
+          "unit": {
+            "type": "object",
+            "description": "Unit of measurement object."
+          },
+          "vat": {
+            "type": "object",
+            "description": "VAT rate object."
+          },
+          "internalId": {
+            "type": "string",
+            "description": "Caller-supplied internal id."
+          },
+          "internalNotes": {
+            "type": "string",
+            "description": "Private notes."
+          },
+          "defaultQuantity": {
+            "type": "number",
+            "description": "Default quantity on documents."
+          },
+          "isUnitPriceTaxIncluded": {
+            "type": "boolean",
+            "description": "True when unitPrice includes VAT."
+          },
+          "metadata": {
+            "type": "object",
+            "description": "Custom metadata."
+          }
+        },
+        "required": [
+          "name",
+          "number",
+          "description",
+          "type",
+          "unitPrice",
+          "purchasePrice"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/products",
+        "success": [
+          200
+        ],
+        "body": {
+          "name": "{{name}}",
+          "number": "{{number}}",
+          "description": "{{description}}",
+          "type": "{{type}}",
+          "unitPrice": "{{unitPrice}}",
+          "purchasePrice": "{{purchasePrice}}",
+          "active": "{{active}}",
+          "family": "{{family}}",
+          "unit": "{{unit}}",
+          "vat": "{{vat}}",
+          "internalId": "{{internalId}}",
+          "internalNotes": "{{internalNotes}}",
+          "defaultQuantity": "{{defaultQuantity}}",
+          "isUnitPriceTaxIncluded": "{{isUnitPriceTaxIncluded}}",
+          "metadata": "{{metadata}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "products.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Delete product",
+      "description": "Permanently delete a product by numeric id.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "integer",
+            "description": "id to delete.",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "deleted": {
+            "type": "boolean"
+          },
+          "id": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "deleted"
+        ]
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/v1/products/{{id}}",
+        "success": [
+          200
+        ],
+        "result": {
+          "deleted": true,
+          "id": "{{input.id}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "products.find": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Find product by number",
+      "description": "Find products whose number contains the supplied value.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "number": {
+            "type": "string",
+            "description": "Product number/SKU to search.",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "number"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/products/find",
+        "success": [
+          200
+        ],
+        "query": {
+          "number": "{{number}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "products.find_by_number_or_id": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Find product by number or internal id",
+      "description": "Find a product by exact number and/or internal id. Supply at least one.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "number": {
+            "type": "string",
+            "description": "Exact product number/SKU.",
+            "minLength": 1
+          },
+          "internalId": {
+            "type": "string",
+            "description": "Caller-supplied internal id.",
+            "minLength": 1
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/products/find",
+        "success": [
+          200
+        ],
+        "query": {
+          "number": "{{number}}",
+          "internalId": "{{internalId}}"
         }
       },
       "enforceOutputSchema": true,
@@ -514,34 +2069,36 @@
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
       "title": "Get product",
-      "description": "Retrieve one Altoviz product by numeric id.",
+      "description": "Retrieve one product by numeric id.",
       "inputSchema": {
         "type": "object",
+        "additionalProperties": false,
         "properties": {
-          "productId": {
+          "id": {
             "type": "integer",
-            "minimum": 1,
-            "description": "Numeric resource id."
+            "description": "id to retrieve.",
+            "minimum": 1
           }
         },
-        "additionalProperties": false,
         "required": [
-          "productId"
+          "id"
         ]
       },
       "outputSchema": {
         "type": "object",
+        "additionalProperties": false,
         "required": [
           "data"
         ],
         "properties": {
-          "data": {}
-        },
-        "additionalProperties": false
+          "data": {
+            "type": "object"
+          }
+        }
       },
       "request": {
         "method": "GET",
-        "path": "/v1/products/{{productId}}",
+        "path": "/v1/products/{{id}}",
         "success": [
           200
         ]
@@ -550,57 +2107,174 @@
       "validationMode": "strict-generated",
       "responseFormat": "json"
     },
-    "products.create": {
+    "purchase-invoices.download": {
       "kind": "action",
-      "sideEffect": "write",
+      "sideEffect": "read",
       "timeoutMs": 15000,
       "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "title": "Create product",
-      "description": "Create an Altoviz product.",
+      "maxResponseBytes": 10485760,
+      "title": "Download purchase invoice",
+      "description": "Download a purchase invoice document by numeric id.",
       "inputSchema": {
         "type": "object",
+        "additionalProperties": false,
         "properties": {
-          "name": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Product name."
-          },
-          "unitPrice": {
-            "type": "number",
-            "description": "Tax-excluded unit price."
-          },
-          "description": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Product description."
+          "id": {
+            "type": "integer",
+            "description": "id of the document to download.",
+            "minimum": 1
           }
         },
-        "additionalProperties": false,
         "required": [
-          "name"
+          "id"
         ]
       },
       "outputSchema": {
         "type": "object",
+        "additionalProperties": false,
         "required": [
           "data"
         ],
         "properties": {
           "data": {}
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/purchaseinvoices/download/{{id}}",
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated"
+    },
+    "receipts.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create receipt",
+      "description": "Record a customer payment receipt.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "date": {
+            "type": "string",
+            "description": "Receipt date (YYYY-MM-DD)."
+          },
+          "amount": {
+            "type": "number",
+            "description": "Receipt amount.",
+            "minimum": 0
+          },
+          "paymentMethod": {
+            "type": "string",
+            "description": "Payment method.",
+            "enum": [
+              "Transfer",
+              "Order",
+              "Check",
+              "Cash",
+              "Card",
+              "Bill",
+              "Usec",
+              "Other"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "description": "Receipt status.",
+            "enum": [
+              "Success",
+              "Pending",
+              "Failed"
+            ]
+          },
+          "notes": {
+            "type": "string",
+            "description": "Notes."
+          },
+          "reference": {
+            "type": "string",
+            "description": "External payment reference."
+          },
+          "internalId": {
+            "type": "string",
+            "description": "Caller-supplied internal id."
+          },
+          "customerId": {
+            "type": "integer",
+            "description": "Customer id.",
+            "minimum": 1
+          },
+          "customerName": {
+            "type": "string",
+            "description": "Customer name."
+          },
+          "customerNumber": {
+            "type": "string",
+            "description": "Customer number."
+          },
+          "customerInternalId": {
+            "type": "string",
+            "description": "Customer internal id."
+          },
+          "links": {
+            "type": "array",
+            "description": "Links that mark documents paid by this receipt.",
+            "items": {
+              "type": "object"
+            }
+          },
+          "metadata": {
+            "type": "object",
+            "description": "Custom metadata."
+          }
         },
-        "additionalProperties": false
+        "required": [
+          "date",
+          "amount",
+          "paymentMethod"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
       },
       "request": {
         "method": "POST",
-        "path": "/v1/products",
+        "path": "/v1/receipts",
         "success": [
           200
         ],
         "body": {
-          "name": "{{name}}",
-          "unitPrice": "{{unitPrice}}",
-          "description": "{{description}}"
+          "date": "{{date}}",
+          "amount": "{{amount}}",
+          "paymentMethod": "{{paymentMethod}}",
+          "status": "{{status}}",
+          "notes": "{{notes}}",
+          "reference": "{{reference}}",
+          "internalId": "{{internalId}}",
+          "customerId": "{{customerId}}",
+          "customerName": "{{customerName}}",
+          "customerNumber": "{{customerNumber}}",
+          "customerInternalId": "{{customerInternalId}}",
+          "links": "{{links}}",
+          "metadata": "{{metadata}}"
         },
         "headers": {
           "Content-Type": "application/json"
@@ -610,56 +2284,334 @@
       "validationMode": "strict-generated",
       "responseFormat": "json"
     },
-    "products.update": {
+    "receipts.delete": {
       "kind": "action",
-      "sideEffect": "write",
+      "sideEffect": "destructive",
       "timeoutMs": 15000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
-      "title": "Update product",
-      "description": "Update an Altoviz product by numeric id.",
+      "title": "Delete receipt",
+      "description": "Permanently delete a receipt by numeric id.",
       "inputSchema": {
         "type": "object",
+        "additionalProperties": false,
         "properties": {
-          "productId": {
+          "id": {
             "type": "integer",
-            "minimum": 1,
-            "description": "Numeric resource id."
-          },
-          "name": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Product name."
-          },
-          "unitPrice": {
-            "type": "number",
-            "description": "Tax-excluded unit price."
+            "description": "id to delete.",
+            "minimum": 1
           }
         },
-        "additionalProperties": false,
         "required": [
-          "productId"
+          "id"
         ]
       },
       "outputSchema": {
         "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "deleted": {
+            "type": "boolean"
+          },
+          "id": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "deleted"
+        ]
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/v1/receipts/{{id}}",
+        "success": [
+          200
+        ],
+        "result": {
+          "deleted": true,
+          "id": "{{input.id}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "receipts.find": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Find receipts",
+      "description": "Find receipts by customer internal id.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "internalId": {
+            "type": "string",
+            "description": "Customer internal id.",
+            "minLength": 1
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
         "required": [
           "data"
         ],
         "properties": {
           "data": {}
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/receipts/find",
+        "success": [
+          200
+        ],
+        "query": {
+          "internalId": "{{internalId}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "receipts.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get receipt",
+      "description": "Retrieve one receipt by numeric id.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "integer",
+            "description": "id to retrieve.",
+            "minimum": 1
+          }
         },
-        "additionalProperties": false
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/receipts/{{id}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "receipts.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List receipts",
+      "description": "List receipts with optional pagination, order, and full-text query.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "pageIndex": {
+            "type": "integer",
+            "description": "One-based page index.",
+            "minimum": 1
+          },
+          "pageSize": {
+            "type": "integer",
+            "description": "Page size.",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "orderBy": {
+            "type": "string",
+            "description": "Field ordering expression.",
+            "minLength": 1
+          },
+          "query": {
+            "type": "string",
+            "description": "Full-text search query.",
+            "minLength": 1
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/receipts",
+        "success": [
+          200
+        ],
+        "query": {
+          "PageIndex": "{{pageIndex}}",
+          "PageSize": "{{pageSize}}",
+          "OrderBy": "{{orderBy}}",
+          "query": "{{query}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "receipts.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Update receipt",
+      "description": "Update a receipt. Only supplied fields are sent.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "integer",
+            "description": "Receipt id to update.",
+            "minimum": 1
+          },
+          "date": {
+            "type": "string",
+            "description": "Receipt date (YYYY-MM-DD)."
+          },
+          "amount": {
+            "type": "number",
+            "description": "Receipt amount.",
+            "minimum": 0
+          },
+          "paymentMethod": {
+            "type": "string",
+            "description": "Payment method.",
+            "enum": [
+              "Transfer",
+              "Order",
+              "Check",
+              "Cash",
+              "Card",
+              "Bill",
+              "Usec",
+              "Other"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "description": "Receipt status.",
+            "enum": [
+              "Success",
+              "Pending",
+              "Failed"
+            ]
+          },
+          "notes": {
+            "type": "string",
+            "description": "Notes."
+          },
+          "reference": {
+            "type": "string",
+            "description": "External payment reference."
+          },
+          "internalId": {
+            "type": "string",
+            "description": "Caller-supplied internal id."
+          },
+          "customerId": {
+            "type": "integer",
+            "description": "Customer id.",
+            "minimum": 1
+          },
+          "customerName": {
+            "type": "string",
+            "description": "Customer name."
+          },
+          "customerNumber": {
+            "type": "string",
+            "description": "Customer number."
+          },
+          "customerInternalId": {
+            "type": "string",
+            "description": "Customer internal id."
+          },
+          "links": {
+            "type": "array",
+            "description": "Links that mark documents paid by this receipt.",
+            "items": {
+              "type": "object"
+            }
+          },
+          "metadata": {
+            "type": "object",
+            "description": "Custom metadata."
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
       },
       "request": {
         "method": "PUT",
-        "path": "/v1/products/{{productId}}",
+        "path": "/v1/receipts/{{id}}",
         "success": [
           200
         ],
         "body": {
-          "name": "{{name}}",
-          "unitPrice": "{{unitPrice}}"
+          "date": "{{date}}",
+          "amount": "{{amount}}",
+          "paymentMethod": "{{paymentMethod}}",
+          "status": "{{status}}",
+          "notes": "{{notes}}",
+          "reference": "{{reference}}",
+          "internalId": "{{internalId}}",
+          "customerId": "{{customerId}}",
+          "customerName": "{{customerName}}",
+          "customerNumber": "{{customerNumber}}",
+          "customerInternalId": "{{customerInternalId}}",
+          "links": "{{links}}",
+          "metadata": "{{metadata}}"
         },
         "headers": {
           "Content-Type": "application/json"
@@ -669,157 +2621,205 @@
       "validationMode": "strict-generated",
       "responseFormat": "json"
     },
-    "invoices.list": {
-      "kind": "action",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "title": "List invoices",
-      "description": "List Altoviz sales invoices with optional paging.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "pageIndex": {
-            "type": "integer",
-            "minimum": 1,
-            "description": "1-based page index."
-          },
-          "pageSize": {
-            "type": "integer",
-            "minimum": 1,
-            "description": "Page size.",
-            "maximum": 100
-          },
-          "orderBy": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Order-by expression."
-          }
-        },
-        "additionalProperties": false
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {}
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "GET",
-        "path": "/v1/salesinvoices",
-        "success": [
-          200
-        ],
-        "query": {
-          "PageIndex": "{{pageIndex}}",
-          "PageSize": "{{pageSize}}",
-          "OrderBy": "{{orderBy}}"
-        }
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "invoices.get": {
-      "kind": "action",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "title": "Get invoice",
-      "description": "Retrieve one Altoviz sales invoice by numeric id.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "invoiceId": {
-            "type": "integer",
-            "minimum": 1,
-            "description": "Numeric resource id."
-          }
-        },
-        "additionalProperties": false,
-        "required": [
-          "invoiceId"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {}
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "GET",
-        "path": "/v1/salesinvoices/{{invoiceId}}",
-        "success": [
-          200
-        ]
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "invoices.create": {
+    "sale-credits.create": {
       "kind": "action",
       "sideEffect": "write",
       "timeoutMs": 15000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
-      "title": "Create invoice",
-      "description": "Create a draft Altoviz sales invoice.",
+      "title": "Create sale credit",
+      "description": "Create a draft credit note (avoir).",
       "inputSchema": {
         "type": "object",
+        "additionalProperties": false,
         "properties": {
-          "customerId": {
-            "type": "integer",
-            "minimum": 1,
-            "description": "Numeric resource id."
-          },
           "date": {
             "type": "string",
-            "minLength": 1,
-            "description": "Invoice date (YYYY-MM-DD)."
+            "description": "Document date (YYYY-MM-DD)."
+          },
+          "lines": {
+            "type": "array",
+            "description": "Line items.",
+            "items": {
+              "type": "object"
+            }
+          },
+          "region": {
+            "type": "string",
+            "description": "Tax region.",
+            "enum": [
+              "FR",
+              "EU",
+              "IE",
+              "DOM",
+              "Corse",
+              "Monaco"
+            ]
           },
           "subject": {
             "type": "string",
-            "minLength": 1,
-            "description": "Invoice subject."
+            "description": "Subject/title."
+          },
+          "vatMode": {
+            "type": "string",
+            "description": "VAT mode.",
+            "enum": [
+              "Auto",
+              "Debit",
+              "Collection"
+            ]
+          },
+          "vatNote": {
+            "type": "string",
+            "description": "VAT note printed on the document."
+          },
+          "metadata": {
+            "type": "object",
+            "description": "Custom metadata."
+          },
+          "customerId": {
+            "type": "integer",
+            "description": "Customer id.",
+            "minimum": 1
+          },
+          "internalId": {
+            "type": "string",
+            "description": "Caller-supplied internal id."
+          },
+          "footerNotes": {
+            "type": "string",
+            "description": "Footer notes."
+          },
+          "headerNotes": {
+            "type": "string",
+            "description": "Header notes."
+          },
+          "liableToVat": {
+            "type": "boolean",
+            "description": "Whether the document is liable to VAT."
+          },
+          "shippingVat": {
+            "type": "object",
+            "description": "VAT rate for shipping."
+          },
+          "customerName": {
+            "type": "string",
+            "description": "Customer name override."
+          },
+          "internalNotes": {
+            "type": "string",
+            "description": "Internal notes (not printed)."
+          },
+          "billingAddress": {
+            "type": "object",
+            "description": "Billing address."
+          },
+          "billingContact": {
+            "type": "object",
+            "description": "Billing contact."
+          },
+          "customerNumber": {
+            "type": "string",
+            "description": "Customer number."
+          },
+          "globalDiscount": {
+            "type": "object",
+            "description": "Global discount."
+          },
+          "shippingAmount": {
+            "type": "number",
+            "description": "Shipping amount."
+          },
+          "shippingAddress": {
+            "type": "object",
+            "description": "Shipping address."
+          },
+          "shippingContact": {
+            "type": "object",
+            "description": "Shipping contact."
+          },
+          "vendorReference": {
+            "type": "string",
+            "description": "Vendor reference."
+          },
+          "vatReverseCharge": {
+            "type": "boolean",
+            "description": "VAT reverse charge."
+          },
+          "customerVatNumber": {
+            "type": "string",
+            "description": "Customer VAT number."
+          },
+          "useTaxIncludedPrices": {
+            "type": "boolean",
+            "description": "True when prices include tax."
+          },
+          "customerOrderReference": {
+            "type": "string",
+            "description": "Customer order reference."
+          },
+          "cancelledInvoicetId": {
+            "type": "integer",
+            "description": "Id of the cancelled invoice (API field spelling)."
+          },
+          "cancelledInvoicetNumber": {
+            "type": "string",
+            "description": "Number of the cancelled invoice (API field spelling)."
           }
         },
-        "additionalProperties": false,
         "required": [
-          "customerId"
+          "region",
+          "useTaxIncludedPrices"
         ]
       },
       "outputSchema": {
         "type": "object",
+        "additionalProperties": false,
         "required": [
           "data"
         ],
         "properties": {
-          "data": {}
-        },
-        "additionalProperties": false
+          "data": {
+            "type": "object"
+          }
+        }
       },
       "request": {
         "method": "POST",
-        "path": "/v1/salesinvoices",
+        "path": "/v1/salecredits",
         "success": [
           200
         ],
         "body": {
-          "customerId": "{{customerId}}",
           "date": "{{date}}",
-          "subject": "{{subject}}"
+          "lines": "{{lines}}",
+          "region": "{{region}}",
+          "subject": "{{subject}}",
+          "vatMode": "{{vatMode}}",
+          "vatNote": "{{vatNote}}",
+          "metadata": "{{metadata}}",
+          "customerId": "{{customerId}}",
+          "internalId": "{{internalId}}",
+          "footerNotes": "{{footerNotes}}",
+          "headerNotes": "{{headerNotes}}",
+          "liableToVat": "{{liableToVat}}",
+          "shippingVat": "{{shippingVat}}",
+          "customerName": "{{customerName}}",
+          "internalNotes": "{{internalNotes}}",
+          "billingAddress": "{{billingAddress}}",
+          "billingContact": "{{billingContact}}",
+          "customerNumber": "{{customerNumber}}",
+          "globalDiscount": "{{globalDiscount}}",
+          "shippingAmount": "{{shippingAmount}}",
+          "shippingAddress": "{{shippingAddress}}",
+          "shippingContact": "{{shippingContact}}",
+          "vendorReference": "{{vendorReference}}",
+          "vatReverseCharge": "{{vatReverseCharge}}",
+          "customerVatNumber": "{{customerVatNumber}}",
+          "useTaxIncludedPrices": "{{useTaxIncludedPrices}}",
+          "customerOrderReference": "{{customerOrderReference}}",
+          "cancelledInvoicetId": "{{cancelledInvoicetId}}",
+          "cancelledInvoicetNumber": "{{cancelledInvoicetNumber}}"
         },
         "headers": {
           "Content-Type": "application/json"
@@ -829,97 +2829,189 @@
       "validationMode": "strict-generated",
       "responseFormat": "json"
     },
-    "quotes.list": {
+    "sale-credits.delete": {
       "kind": "action",
-      "sideEffect": "read",
+      "sideEffect": "destructive",
       "timeoutMs": 15000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
-      "title": "List quotes",
-      "description": "List Altoviz sales quotes with optional paging.",
+      "title": "Delete draft sale credit",
+      "description": "Delete a draft credit note. Finalized credits cannot be deleted.",
       "inputSchema": {
         "type": "object",
+        "additionalProperties": false,
         "properties": {
-          "pageIndex": {
+          "id": {
             "type": "integer",
-            "minimum": 1,
-            "description": "1-based page index."
-          },
-          "pageSize": {
-            "type": "integer",
-            "minimum": 1,
-            "description": "Page size.",
-            "maximum": 100
-          },
-          "orderBy": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Order-by expression."
+            "description": "id to delete.",
+            "minimum": 1
           }
         },
-        "additionalProperties": false
+        "required": [
+          "id"
+        ]
       },
       "outputSchema": {
         "type": "object",
-        "required": [
-          "data"
-        ],
+        "additionalProperties": false,
         "properties": {
-          "data": {}
+          "deleted": {
+            "type": "boolean"
+          },
+          "id": {
+            "type": "integer"
+          }
         },
-        "additionalProperties": false
+        "required": [
+          "deleted"
+        ]
       },
       "request": {
-        "method": "GET",
-        "path": "/v1/salesquotes",
+        "method": "DELETE",
+        "path": "/v1/salecredits/{{id}}",
         "success": [
           200
         ],
-        "query": {
-          "PageIndex": "{{pageIndex}}",
-          "PageSize": "{{pageSize}}",
-          "OrderBy": "{{orderBy}}"
+        "result": {
+          "deleted": true,
+          "id": "{{input.id}}"
         }
       },
       "enforceOutputSchema": true,
       "validationMode": "strict-generated",
       "responseFormat": "json"
     },
-    "quotes.get": {
+    "sale-credits.download": {
       "kind": "action",
       "sideEffect": "read",
       "timeoutMs": 15000,
       "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "title": "Get quote",
-      "description": "Retrieve one Altoviz sales quote by numeric id.",
+      "maxResponseBytes": 10485760,
+      "title": "Download sale credit PDF",
+      "description": "Download a sale credit as a PDF by numeric id.",
       "inputSchema": {
         "type": "object",
+        "additionalProperties": false,
         "properties": {
-          "quoteId": {
+          "id": {
             "type": "integer",
-            "minimum": 1,
-            "description": "Numeric resource id."
+            "description": "id of the document to download.",
+            "minimum": 1
           }
         },
-        "additionalProperties": false,
         "required": [
-          "quoteId"
+          "id"
         ]
       },
       "outputSchema": {
         "type": "object",
+        "additionalProperties": false,
         "required": [
           "data"
         ],
         "properties": {
           "data": {}
-        },
-        "additionalProperties": false
+        }
       },
       "request": {
         "method": "GET",
-        "path": "/v1/salesquotes/{{quoteId}}",
+        "path": "/v1/salecredits/download/{{id}}",
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated"
+    },
+    "sale-credits.find": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Find sale credits",
+      "description": "Find sale credits by internal id and/or document number.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "internalId": {
+            "type": "string",
+            "description": "Credit internal id.",
+            "minLength": 1
+          },
+          "number": {
+            "type": "string",
+            "description": "Credit number.",
+            "minLength": 1
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/salecredits/find",
+        "success": [
+          200
+        ],
+        "query": {
+          "internalId": "{{internalId}}",
+          "number": "{{number}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "sale-credits.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get sale credit",
+      "description": "Retrieve one sale credit by numeric id.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "integer",
+            "description": "id to retrieve.",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/salecredits/{{id}}",
         "success": [
           200
         ]
@@ -928,58 +3020,292 @@
       "validationMode": "strict-generated",
       "responseFormat": "json"
     },
-    "quotes.create": {
+    "sale-credits.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List sale credits",
+      "description": "List sale credits with pagination and optional date/customer filters.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "pageIndex": {
+            "type": "integer",
+            "description": "One-based page index.",
+            "minimum": 1
+          },
+          "pageSize": {
+            "type": "integer",
+            "description": "Page size.",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "orderBy": {
+            "type": "string",
+            "description": "Field ordering expression.",
+            "minLength": 1
+          },
+          "query": {
+            "type": "string",
+            "description": "Full-text search query.",
+            "minLength": 1
+          },
+          "from": {
+            "type": "string",
+            "description": "Inclusive start date (YYYY-MM-DD)."
+          },
+          "to": {
+            "type": "string",
+            "description": "Inclusive end date (YYYY-MM-DD)."
+          },
+          "customerId": {
+            "type": "integer",
+            "description": "Filter by customer id.",
+            "minimum": 1
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/salecredits",
+        "success": [
+          200
+        ],
+        "query": {
+          "PageIndex": "{{pageIndex}}",
+          "PageSize": "{{pageSize}}",
+          "OrderBy": "{{orderBy}}",
+          "query": "{{query}}",
+          "From": "{{from}}",
+          "To": "{{to}}",
+          "CustomerId": "{{customerId}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "sale-credits.update": {
       "kind": "action",
       "sideEffect": "write",
       "timeoutMs": 15000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
-      "title": "Create quote",
-      "description": "Create an Altoviz sales quote.",
+      "title": "Update sale credit",
+      "description": "Update a draft credit note. Finalized credits cannot be modified.",
       "inputSchema": {
         "type": "object",
+        "additionalProperties": false,
         "properties": {
-          "customerId": {
+          "id": {
             "type": "integer",
-            "minimum": 1,
-            "description": "Numeric resource id."
+            "description": "Credit id to update.",
+            "minimum": 1
+          },
+          "isDraft": {
+            "type": "boolean",
+            "description": "Keep as draft when true."
           },
           "date": {
             "type": "string",
-            "minLength": 1,
-            "description": "Quote date (YYYY-MM-DD)."
+            "description": "Document date (YYYY-MM-DD)."
+          },
+          "lines": {
+            "type": "array",
+            "description": "Line items.",
+            "items": {
+              "type": "object"
+            }
+          },
+          "region": {
+            "type": "string",
+            "description": "Tax region.",
+            "enum": [
+              "FR",
+              "EU",
+              "IE",
+              "DOM",
+              "Corse",
+              "Monaco"
+            ]
           },
           "subject": {
             "type": "string",
-            "minLength": 1,
-            "description": "Quote subject."
+            "description": "Subject/title."
+          },
+          "vatMode": {
+            "type": "string",
+            "description": "VAT mode.",
+            "enum": [
+              "Auto",
+              "Debit",
+              "Collection"
+            ]
+          },
+          "vatNote": {
+            "type": "string",
+            "description": "VAT note printed on the document."
+          },
+          "metadata": {
+            "type": "object",
+            "description": "Custom metadata."
+          },
+          "customerId": {
+            "type": "integer",
+            "description": "Customer id.",
+            "minimum": 1
+          },
+          "internalId": {
+            "type": "string",
+            "description": "Caller-supplied internal id."
+          },
+          "footerNotes": {
+            "type": "string",
+            "description": "Footer notes."
+          },
+          "headerNotes": {
+            "type": "string",
+            "description": "Header notes."
+          },
+          "liableToVat": {
+            "type": "boolean",
+            "description": "Whether the document is liable to VAT."
+          },
+          "shippingVat": {
+            "type": "object",
+            "description": "VAT rate for shipping."
+          },
+          "customerName": {
+            "type": "string",
+            "description": "Customer name override."
+          },
+          "internalNotes": {
+            "type": "string",
+            "description": "Internal notes (not printed)."
+          },
+          "billingAddress": {
+            "type": "object",
+            "description": "Billing address."
+          },
+          "billingContact": {
+            "type": "object",
+            "description": "Billing contact."
+          },
+          "customerNumber": {
+            "type": "string",
+            "description": "Customer number."
+          },
+          "globalDiscount": {
+            "type": "object",
+            "description": "Global discount."
+          },
+          "shippingAmount": {
+            "type": "number",
+            "description": "Shipping amount."
+          },
+          "shippingAddress": {
+            "type": "object",
+            "description": "Shipping address."
+          },
+          "shippingContact": {
+            "type": "object",
+            "description": "Shipping contact."
+          },
+          "vendorReference": {
+            "type": "string",
+            "description": "Vendor reference."
+          },
+          "vatReverseCharge": {
+            "type": "boolean",
+            "description": "VAT reverse charge."
+          },
+          "customerVatNumber": {
+            "type": "string",
+            "description": "Customer VAT number."
+          },
+          "useTaxIncludedPrices": {
+            "type": "boolean",
+            "description": "True when prices include tax."
+          },
+          "customerOrderReference": {
+            "type": "string",
+            "description": "Customer order reference."
+          },
+          "cancelledInvoicetId": {
+            "type": "integer",
+            "description": "Id of the cancelled invoice (API field spelling)."
+          },
+          "cancelledInvoicetNumber": {
+            "type": "string",
+            "description": "Number of the cancelled invoice (API field spelling)."
           }
         },
-        "additionalProperties": false,
         "required": [
-          "customerId"
+          "id"
         ]
       },
       "outputSchema": {
         "type": "object",
+        "additionalProperties": false,
         "required": [
           "data"
         ],
         "properties": {
-          "data": {}
-        },
-        "additionalProperties": false
+          "data": {
+            "type": "object"
+          }
+        }
       },
       "request": {
-        "method": "POST",
-        "path": "/v1/salesquotes",
+        "method": "PUT",
+        "path": "/v1/salecredits/{{id}}",
         "success": [
           200
         ],
         "body": {
-          "customerId": "{{customerId}}",
+          "isDraft": "{{isDraft}}",
           "date": "{{date}}",
-          "subject": "{{subject}}"
+          "lines": "{{lines}}",
+          "region": "{{region}}",
+          "subject": "{{subject}}",
+          "vatMode": "{{vatMode}}",
+          "vatNote": "{{vatNote}}",
+          "metadata": "{{metadata}}",
+          "customerId": "{{customerId}}",
+          "internalId": "{{internalId}}",
+          "footerNotes": "{{footerNotes}}",
+          "headerNotes": "{{headerNotes}}",
+          "liableToVat": "{{liableToVat}}",
+          "shippingVat": "{{shippingVat}}",
+          "customerName": "{{customerName}}",
+          "internalNotes": "{{internalNotes}}",
+          "billingAddress": "{{billingAddress}}",
+          "billingContact": "{{billingContact}}",
+          "customerNumber": "{{customerNumber}}",
+          "globalDiscount": "{{globalDiscount}}",
+          "shippingAmount": "{{shippingAmount}}",
+          "shippingAddress": "{{shippingAddress}}",
+          "shippingContact": "{{shippingContact}}",
+          "vendorReference": "{{vendorReference}}",
+          "vatReverseCharge": "{{vatReverseCharge}}",
+          "customerVatNumber": "{{customerVatNumber}}",
+          "useTaxIncludedPrices": "{{useTaxIncludedPrices}}",
+          "customerOrderReference": "{{customerOrderReference}}",
+          "cancelledInvoicetId": "{{cancelledInvoicetId}}",
+          "cancelledInvoicetNumber": "{{cancelledInvoicetNumber}}"
         },
         "headers": {
           "Content-Type": "application/json"
@@ -989,97 +3315,842 @@
       "validationMode": "strict-generated",
       "responseFormat": "json"
     },
-    "contacts.list": {
+    "sale-invoices.create": {
       "kind": "action",
-      "sideEffect": "read",
+      "sideEffect": "write",
       "timeoutMs": 15000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
-      "title": "List contacts",
-      "description": "List Altoviz contacts with optional paging.",
+      "title": "Create sale invoice",
+      "description": "Create a draft sale invoice with line items.",
       "inputSchema": {
         "type": "object",
+        "additionalProperties": false,
         "properties": {
-          "pageIndex": {
-            "type": "integer",
-            "minimum": 1,
-            "description": "1-based page index."
-          },
-          "pageSize": {
-            "type": "integer",
-            "minimum": 1,
-            "description": "Page size.",
-            "maximum": 100
-          },
-          "orderBy": {
+          "date": {
             "type": "string",
-            "minLength": 1,
-            "description": "Order-by expression."
+            "description": "Document date (YYYY-MM-DD)."
+          },
+          "lines": {
+            "type": "array",
+            "description": "Line items.",
+            "items": {
+              "type": "object"
+            }
+          },
+          "region": {
+            "type": "string",
+            "description": "Tax region.",
+            "enum": [
+              "FR",
+              "EU",
+              "IE",
+              "DOM",
+              "Corse",
+              "Monaco"
+            ]
+          },
+          "subject": {
+            "type": "string",
+            "description": "Subject/title."
+          },
+          "vatMode": {
+            "type": "string",
+            "description": "VAT mode.",
+            "enum": [
+              "Auto",
+              "Debit",
+              "Collection"
+            ]
+          },
+          "vatNote": {
+            "type": "string",
+            "description": "VAT note printed on the document."
+          },
+          "metadata": {
+            "type": "object",
+            "description": "Custom metadata."
+          },
+          "customerId": {
+            "type": "integer",
+            "description": "Customer id.",
+            "minimum": 1
+          },
+          "internalId": {
+            "type": "string",
+            "description": "Caller-supplied internal id."
+          },
+          "footerNotes": {
+            "type": "string",
+            "description": "Footer notes."
+          },
+          "headerNotes": {
+            "type": "string",
+            "description": "Header notes."
+          },
+          "liableToVat": {
+            "type": "boolean",
+            "description": "Whether the document is liable to VAT."
+          },
+          "shippingVat": {
+            "type": "object",
+            "description": "VAT rate for shipping."
+          },
+          "customerName": {
+            "type": "string",
+            "description": "Customer name override."
+          },
+          "internalNotes": {
+            "type": "string",
+            "description": "Internal notes (not printed)."
+          },
+          "billingAddress": {
+            "type": "object",
+            "description": "Billing address."
+          },
+          "billingContact": {
+            "type": "object",
+            "description": "Billing contact."
+          },
+          "customerNumber": {
+            "type": "string",
+            "description": "Customer number."
+          },
+          "globalDiscount": {
+            "type": "object",
+            "description": "Global discount."
+          },
+          "shippingAmount": {
+            "type": "number",
+            "description": "Shipping amount."
+          },
+          "shippingAddress": {
+            "type": "object",
+            "description": "Shipping address."
+          },
+          "shippingContact": {
+            "type": "object",
+            "description": "Shipping contact."
+          },
+          "vendorReference": {
+            "type": "string",
+            "description": "Vendor reference."
+          },
+          "vatReverseCharge": {
+            "type": "boolean",
+            "description": "VAT reverse charge."
+          },
+          "customerVatNumber": {
+            "type": "string",
+            "description": "Customer VAT number."
+          },
+          "useTaxIncludedPrices": {
+            "type": "boolean",
+            "description": "True when prices include tax."
+          },
+          "customerOrderReference": {
+            "type": "string",
+            "description": "Customer order reference."
           }
         },
-        "additionalProperties": false
+        "required": [
+          "lines",
+          "customerId"
+        ]
       },
       "outputSchema": {
         "type": "object",
+        "additionalProperties": false,
         "required": [
           "data"
         ],
         "properties": {
-          "data": {}
-        },
-        "additionalProperties": false
+          "data": {
+            "type": "object"
+          }
+        }
       },
       "request": {
-        "method": "GET",
-        "path": "/v1/contacts",
+        "method": "POST",
+        "path": "/v1/saleinvoices",
         "success": [
           200
         ],
-        "query": {
-          "PageIndex": "{{pageIndex}}",
-          "PageSize": "{{pageSize}}",
-          "OrderBy": "{{orderBy}}"
+        "body": {
+          "date": "{{date}}",
+          "lines": "{{lines}}",
+          "region": "{{region}}",
+          "subject": "{{subject}}",
+          "vatMode": "{{vatMode}}",
+          "vatNote": "{{vatNote}}",
+          "metadata": "{{metadata}}",
+          "customerId": "{{customerId}}",
+          "internalId": "{{internalId}}",
+          "footerNotes": "{{footerNotes}}",
+          "headerNotes": "{{headerNotes}}",
+          "liableToVat": "{{liableToVat}}",
+          "shippingVat": "{{shippingVat}}",
+          "customerName": "{{customerName}}",
+          "internalNotes": "{{internalNotes}}",
+          "billingAddress": "{{billingAddress}}",
+          "billingContact": "{{billingContact}}",
+          "customerNumber": "{{customerNumber}}",
+          "globalDiscount": "{{globalDiscount}}",
+          "shippingAmount": "{{shippingAmount}}",
+          "shippingAddress": "{{shippingAddress}}",
+          "shippingContact": "{{shippingContact}}",
+          "vendorReference": "{{vendorReference}}",
+          "vatReverseCharge": "{{vatReverseCharge}}",
+          "customerVatNumber": "{{customerVatNumber}}",
+          "useTaxIncludedPrices": "{{useTaxIncludedPrices}}",
+          "customerOrderReference": "{{customerOrderReference}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
         }
       },
       "enforceOutputSchema": true,
       "validationMode": "strict-generated",
       "responseFormat": "json"
     },
-    "contacts.get": {
+    "sale-invoices.delete": {
       "kind": "action",
-      "sideEffect": "read",
+      "sideEffect": "destructive",
       "timeoutMs": 15000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
-      "title": "Get contact",
-      "description": "Retrieve one Altoviz contact by numeric id.",
+      "title": "Delete draft sale invoice",
+      "description": "Delete a draft sale invoice. Finalized invoices cannot be deleted.",
       "inputSchema": {
         "type": "object",
+        "additionalProperties": false,
         "properties": {
-          "contactId": {
+          "id": {
             "type": "integer",
-            "minimum": 1,
-            "description": "Numeric resource id."
+            "description": "id to delete.",
+            "minimum": 1
           }
         },
-        "additionalProperties": false,
         "required": [
-          "contactId"
+          "id"
         ]
       },
       "outputSchema": {
         "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "deleted": {
+            "type": "boolean"
+          },
+          "id": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "deleted"
+        ]
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/v1/saleinvoices/{{id}}",
+        "success": [
+          200
+        ],
+        "result": {
+          "deleted": true,
+          "id": "{{input.id}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "sale-invoices.download": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 10485760,
+      "title": "Download sale invoice PDF",
+      "description": "Download a sale invoice as a PDF by numeric id.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "integer",
+            "description": "id of the document to download.",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
         "required": [
           "data"
         ],
         "properties": {
           "data": {}
-        },
-        "additionalProperties": false
+        }
       },
       "request": {
         "method": "GET",
-        "path": "/v1/contacts/{{contactId}}",
+        "path": "/v1/saleinvoices/download/{{id}}",
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated"
+    },
+    "sale-invoices.find": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Find sale invoices",
+      "description": "Find sale invoices by internal id and/or invoice number.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "internalId": {
+            "type": "string",
+            "description": "Invoice internal id.",
+            "minLength": 1
+          },
+          "number": {
+            "type": "string",
+            "description": "Invoice number.",
+            "minLength": 1
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/saleinvoices/find",
+        "success": [
+          200
+        ],
+        "query": {
+          "internalId": "{{internalId}}",
+          "number": "{{number}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "sale-invoices.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get sale invoice",
+      "description": "Retrieve one sale invoice by numeric id.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "integer",
+            "description": "id to retrieve.",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/saleinvoices/{{id}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "sale-invoices.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List sale invoices",
+      "description": "List sale invoices with pagination and optional date, customer, and status filters.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "pageIndex": {
+            "type": "integer",
+            "description": "One-based page index.",
+            "minimum": 1
+          },
+          "pageSize": {
+            "type": "integer",
+            "description": "Page size.",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "orderBy": {
+            "type": "string",
+            "description": "Field ordering expression.",
+            "minLength": 1
+          },
+          "query": {
+            "type": "string",
+            "description": "Full-text search query.",
+            "minLength": 1
+          },
+          "from": {
+            "type": "string",
+            "description": "Inclusive start date (YYYY-MM-DD)."
+          },
+          "to": {
+            "type": "string",
+            "description": "Inclusive end date (YYYY-MM-DD)."
+          },
+          "customerId": {
+            "type": "integer",
+            "description": "Filter by customer id.",
+            "minimum": 1
+          },
+          "status": {
+            "type": "string",
+            "description": "Invoice status filter.",
+            "enum": [
+              "Draft",
+              "Incoming",
+              "Expired",
+              "Paid",
+              "ToSend"
+            ]
+          },
+          "cancelled": {
+            "type": "boolean",
+            "description": "Include cancelled invoices."
+          },
+          "processed": {
+            "type": "boolean",
+            "description": "Filter processed invoices."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/saleinvoices",
+        "success": [
+          200
+        ],
+        "query": {
+          "PageIndex": "{{pageIndex}}",
+          "PageSize": "{{pageSize}}",
+          "OrderBy": "{{orderBy}}",
+          "query": "{{query}}",
+          "From": "{{from}}",
+          "To": "{{to}}",
+          "CustomerId": "{{customerId}}",
+          "Status": "{{status}}",
+          "Cancelled": "{{cancelled}}",
+          "Processed": "{{processed}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "sale-quotes.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Delete sale quote",
+      "description": "Permanently delete a sale quote by numeric id.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "integer",
+            "description": "id to delete.",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "deleted": {
+            "type": "boolean"
+          },
+          "id": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "deleted"
+        ]
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/v1/salequotes/{{id}}",
+        "success": [
+          200
+        ],
+        "result": {
+          "deleted": true,
+          "id": "{{input.id}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "sale-quotes.find": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Find sale quotes",
+      "description": "Find sale quotes by internal id and/or quote number.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "internalId": {
+            "type": "string",
+            "description": "Quote internal id.",
+            "minLength": 1
+          },
+          "number": {
+            "type": "string",
+            "description": "Quote number.",
+            "minLength": 1
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/salequotes/find",
+        "success": [
+          200
+        ],
+        "query": {
+          "internalId": "{{internalId}}",
+          "number": "{{number}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "sale-quotes.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List sale quotes",
+      "description": "List sale quotes with pagination and optional date/customer filters.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "pageIndex": {
+            "type": "integer",
+            "description": "One-based page index.",
+            "minimum": 1
+          },
+          "pageSize": {
+            "type": "integer",
+            "description": "Page size.",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "orderBy": {
+            "type": "string",
+            "description": "Field ordering expression.",
+            "minLength": 1
+          },
+          "query": {
+            "type": "string",
+            "description": "Full-text search query.",
+            "minLength": 1
+          },
+          "from": {
+            "type": "string",
+            "description": "Inclusive start date (YYYY-MM-DD)."
+          },
+          "to": {
+            "type": "string",
+            "description": "Inclusive end date (YYYY-MM-DD)."
+          },
+          "customerId": {
+            "type": "integer",
+            "description": "Filter by customer id.",
+            "minimum": 1
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/salequotes",
+        "success": [
+          200
+        ],
+        "query": {
+          "PageIndex": "{{pageIndex}}",
+          "PageSize": "{{pageSize}}",
+          "OrderBy": "{{orderBy}}",
+          "query": "{{query}}",
+          "From": "{{from}}",
+          "To": "{{to}}",
+          "CustomerId": "{{customerId}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "settings.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get settings",
+      "description": "Retrieve application settings for the authenticated Altoviz company.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/settings",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "suppliers.contacts.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List supplier contacts",
+      "description": "List contacts belonging to one supplier.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "integer",
+            "description": "Supplier id whose contacts to list.",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/suppliers/{{id}}/contacts",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "suppliers.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Delete supplier",
+      "description": "Permanently delete a supplier by numeric id.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "integer",
+            "description": "id to delete.",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "deleted": {
+            "type": "boolean"
+          },
+          "id": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "deleted"
+        ]
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/v1/suppliers/{{id}}",
+        "success": [
+          200
+        ],
+        "result": {
+          "deleted": true,
+          "id": "{{input.id}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "suppliers.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get supplier",
+      "description": "Retrieve one supplier by numeric id.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "integer",
+            "description": "id to retrieve.",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/suppliers/{{id}}",
         "success": [
           200
         ]
@@ -1095,38 +4166,43 @@
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
       "title": "List suppliers",
-      "description": "List Altoviz suppliers with optional paging.",
+      "description": "List suppliers with optional pagination, order, and full-text query.",
       "inputSchema": {
         "type": "object",
+        "additionalProperties": false,
         "properties": {
           "pageIndex": {
             "type": "integer",
-            "minimum": 1,
-            "description": "1-based page index."
+            "description": "One-based page index.",
+            "minimum": 1
           },
           "pageSize": {
             "type": "integer",
-            "minimum": 1,
             "description": "Page size.",
+            "minimum": 1,
             "maximum": 100
           },
           "orderBy": {
             "type": "string",
-            "minLength": 1,
-            "description": "Order-by expression."
+            "description": "Field ordering expression.",
+            "minLength": 1
+          },
+          "query": {
+            "type": "string",
+            "description": "Full-text search query.",
+            "minLength": 1
           }
-        },
-        "additionalProperties": false
+        }
       },
       "outputSchema": {
         "type": "object",
+        "additionalProperties": false,
         "required": [
           "data"
         ],
         "properties": {
           "data": {}
-        },
-        "additionalProperties": false
+        }
       },
       "request": {
         "method": "GET",
@@ -1137,8 +4213,456 @@
         "query": {
           "PageIndex": "{{pageIndex}}",
           "PageSize": "{{pageSize}}",
-          "OrderBy": "{{orderBy}}"
+          "OrderBy": "{{orderBy}}",
+          "query": "{{query}}"
         }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "suppliers.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Update supplier",
+      "description": "Update a supplier. Only supplied fields are sent.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "integer",
+            "description": "Supplier id to update.",
+            "minimum": 1
+          },
+          "name": {
+            "type": "string",
+            "description": "Supplier name."
+          },
+          "email": {
+            "type": "string",
+            "description": "Email."
+          },
+          "phone": {
+            "type": "string",
+            "description": "Phone."
+          },
+          "title": {
+            "type": "string",
+            "description": "Title/salutation."
+          },
+          "number": {
+            "type": "string",
+            "description": "Supplier number."
+          },
+          "address": {
+            "type": "object",
+            "description": "Address fields."
+          },
+          "lastName": {
+            "type": "string",
+            "description": "Contact last name."
+          },
+          "cellPhone": {
+            "type": "string",
+            "description": "Mobile phone."
+          },
+          "firstName": {
+            "type": "string",
+            "description": "Contact first name."
+          },
+          "internalId": {
+            "type": "string",
+            "description": "Caller-supplied internal id."
+          },
+          "internalNotes": {
+            "type": "string",
+            "description": "Private notes."
+          },
+          "companyInformations": {
+            "type": "object",
+            "description": "Company registration information."
+          },
+          "defaultPaymentMethod": {
+            "type": "string",
+            "description": "Default payment method.",
+            "enum": [
+              "Transfer",
+              "Order",
+              "Check",
+              "Cash",
+              "Card",
+              "Bill",
+              "Usec",
+              "Other"
+            ]
+          },
+          "active": {
+            "type": "boolean",
+            "description": "Whether the supplier is active."
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/v1/suppliers/{{id}}",
+        "success": [
+          200
+        ],
+        "body": {
+          "name": "{{name}}",
+          "email": "{{email}}",
+          "phone": "{{phone}}",
+          "title": "{{title}}",
+          "number": "{{number}}",
+          "address": "{{address}}",
+          "lastName": "{{lastName}}",
+          "cellPhone": "{{cellPhone}}",
+          "firstName": "{{firstName}}",
+          "internalId": "{{internalId}}",
+          "internalNotes": "{{internalNotes}}",
+          "companyInformations": "{{companyInformations}}",
+          "defaultPaymentMethod": "{{defaultPaymentMethod}}",
+          "active": "{{active}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "units.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List units",
+      "description": "List units of measurement used on products and document lines.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "pageIndex": {
+            "type": "integer",
+            "description": "One-based page index.",
+            "minimum": 1
+          },
+          "pageSize": {
+            "type": "integer",
+            "description": "Page size.",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "orderBy": {
+            "type": "string",
+            "description": "Field ordering expression.",
+            "minLength": 1
+          },
+          "query": {
+            "type": "string",
+            "description": "Full-text search query.",
+            "minLength": 1
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/units",
+        "success": [
+          200
+        ],
+        "query": {
+          "PageIndex": "{{pageIndex}}",
+          "PageSize": "{{pageSize}}",
+          "OrderBy": "{{orderBy}}",
+          "query": "{{query}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "users.me": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get current user",
+      "description": "Retrieve the authenticated Altoviz user.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/users/me",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "vats.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List VAT rates",
+      "description": "List available VAT rates.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/vats",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "webhooks.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Register webhook",
+      "description": "Register a webhook URL for Altoviz events.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "HTTPS endpoint that receives events.",
+            "minLength": 1
+          },
+          "name": {
+            "type": "string",
+            "description": "Webhook name.",
+            "minLength": 1
+          },
+          "types": {
+            "type": "array",
+            "description": "Event types that trigger this webhook.",
+            "items": {
+              "type": "string",
+              "enum": [
+                "CustomerCreated",
+                "InvoiceCreated",
+                "CustomerDeleted",
+                "CustomerUpdated",
+                "ProductCreated",
+                "ProductUpdated",
+                "ProductDeleted",
+                "InvoiceUpdated",
+                "ContactUpdated",
+                "ContactCreated",
+                "QuoteUpdated",
+                "QuoteCreated",
+                "ContactDeleted",
+                "QuoteDeleted",
+                "InvoiceDeleted"
+              ]
+            }
+          },
+          "secretKey": {
+            "type": "string",
+            "description": "Optional secret used to sign webhook payloads."
+          }
+        },
+        "required": [
+          "url",
+          "name",
+          "types"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/webhooks",
+        "success": [
+          201
+        ],
+        "body": {
+          "url": "{{url}}",
+          "name": "{{name}}",
+          "types": "{{types}}",
+          "secretKey": "{{secretKey}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "webhooks.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Unregister webhook",
+      "description": "Unregister a webhook by numeric id and/or URL. Supply at least one.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "integer",
+            "description": "Webhook id to unregister.",
+            "minimum": 1
+          },
+          "url": {
+            "type": "string",
+            "description": "Webhook URL to unregister.",
+            "minLength": 1
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "deleted": {
+            "type": "boolean"
+          },
+          "id": {
+            "type": "integer"
+          },
+          "url": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "deleted"
+        ]
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/v1/webhooks",
+        "success": [
+          200
+        ],
+        "query": {
+          "id": "{{id}}",
+          "url": "{{url}}"
+        },
+        "result": {
+          "deleted": true,
+          "id": "{{input.id}}",
+          "url": "{{input.url}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "webhooks.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List webhooks",
+      "description": "List configured webhooks.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/webhooks",
+        "success": [
+          200
+        ]
       },
       "enforceOutputSchema": true,
       "validationMode": "strict-generated",
@@ -1147,16 +4671,11 @@
   },
   "provenance": {
     "source": {
-      "url": "https://github.com/oomol-lab/open-connector",
-      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
+      "url": "https://github.com/oomol-lab/open-connector"
     }
   },
-  "evidence": {
-    "fixture": {
-      "status": "supplied"
-    },
-    "live": {
-      "status": "unverified"
-    }
-  }
+  "runtime": "bun",
+  "version": "0.2.0",
+  "visibility": "public"
 }

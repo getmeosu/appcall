@@ -1,20 +1,10 @@
 # Better Stack
 
-Read-only international Better Stack Uptime API recipe. Configure a global or team Uptime API token from Better Stack → API tokens. The runner sends `Authorization: Bearer` plus `Accept: application/json` to `https://uptime.betterstack.com`. Logs/telemetry hosts are a different edition and are not allowlisted.
+International Better Stack Uptime API recipe, plus Telemetry source-group routes. Configure a global or team API token from Better Stack → API tokens. The runner sends `Authorization: Bearer` plus `Accept: application/json` to `https://uptime.betterstack.com`. Source-group create/update/delete use `https://telemetry.betterstack.com`.
 
-## Operations
+Covered operations follow the official Uptime REST API (`/api/v2` and documented `/api/v3` incident, policy, metadata, and timeline routes) and the Composio `BETTER_STACK` toolkit (117 tools). `GET_UPTIME_API_TOKEN` is omitted because Better Stack does not expose an HTTP endpoint that returns the configured token.
 
-- `healthcheck`: `GET /api/v3/incidents?per_page=1` with empty input (pinned credential validator).
-- `incidents.list`: `GET /api/v3/incidents` with optional `team_name`, `from`, `to`, `monitor_id`, `heartbeat_id`, `resolved`, `acknowledged`, `page`, and `per_page` (max 50).
-- `incidents.get`: `GET /api/v3/incidents/{incident_id}`.
-- `comments.list`: `GET /api/v2/incidents/{incident_id}/comments`.
-- `metadata.list`: `GET /api/v3/metadata` with optional `team_name`, `owner_id`, `owner_type`, `page`, and `per_page`.
-
-Create/acknowledge/escalate/resolve writes and nested metadata query filters are omitted. Native category is `dev-tools` (source Developer Tools).
-
-## Adaptations
-
-Pinned source and official Uptime docs agree on Bearer tokens at `uptime.betterstack.com`. Comments remain on the documented v2 path. Native returns raw Better Stack JSON under `data`. The upstream user-agent is not sent.
+Native category is `dev-tools`. EventOnly webhooks stay on incident start/ack/resolve and on-call change.
 
 ## License and evidence
 

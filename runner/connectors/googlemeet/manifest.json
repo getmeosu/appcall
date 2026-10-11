@@ -1,14 +1,19 @@
 {
   "key": "googlemeet",
   "name": "Google Meet",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "runtime": "bun",
   "visibility": "public",
-  "categories": ["scheduling"],
+  "categories": [
+    "scheduling"
+  ],
   "auth": {
     "type": "external_bearer",
     "scopes": [
-      "https://www.googleapis.com/auth/calendar.events"
+      "https://www.googleapis.com/auth/calendar.events",
+      "https://www.googleapis.com/auth/meetings.space.created",
+      "https://www.googleapis.com/auth/meetings.space.readonly",
+      "https://www.googleapis.com/auth/meetings.space.settings"
     ],
     "setup": {
       "mode": "external_bearer",
@@ -16,7 +21,10 @@
     }
   },
   "network": {
-    "allowedHosts": ["www.googleapis.com"]
+    "allowedHosts": [
+      "www.googleapis.com",
+      "meet.googleapis.com"
+    ]
   },
   "operations": {
     "meetings.create": {
@@ -31,29 +39,55 @@
         "summary": "Intro call",
         "start": "2026-06-01T09:00:00Z",
         "end": "2026-06-01T09:30:00Z",
-        "attendees": ["prospect@example.com"]
+        "attendees": [
+          "prospect@example.com"
+        ]
       },
       "inputSchema": {
         "type": "object",
         "properties": {
-          "summary": { "type": "string", "description": "Meeting title shown on the calendar event." },
-          "start": { "type": "string", "description": "Start time, RFC3339 (e.g. 2026-06-01T09:00:00Z)." },
-          "end": { "type": "string", "description": "End time, RFC3339." },
-          "description": { "type": "string", "description": "Optional event description." },
+          "summary": {
+            "type": "string",
+            "description": "Meeting title shown on the calendar event."
+          },
+          "start": {
+            "type": "string",
+            "description": "Start time, RFC3339 (e.g. 2026-06-01T09:00:00Z)."
+          },
+          "end": {
+            "type": "string",
+            "description": "End time, RFC3339."
+          },
+          "description": {
+            "type": "string",
+            "description": "Optional event description."
+          },
           "attendees": {
             "type": "array",
-            "items": { "type": "string" },
+            "items": {
+              "type": "string"
+            },
             "description": "Optional. Attendee email addresses to invite; Google emails them a calendar invite."
           }
         },
-        "required": ["summary", "start", "end"]
+        "required": [
+          "summary",
+          "start",
+          "end"
+        ]
       },
       "outputSchema": {
         "type": "object",
         "properties": {
-          "connector": { "type": "string" },
-          "action": { "type": "string" },
-          "meeting": { "type": "object" }
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "meeting": {
+            "type": "object"
+          }
         }
       }
     },
@@ -65,19 +99,31 @@
       "title": "List Meetings",
       "description": "List upcoming Google Calendar events that carry a Google Meet conference link.",
       "sideEffect": "read",
-      "sample": { "maxResults": 10 },
+      "sample": {
+        "maxResults": 10
+      },
       "inputSchema": {
         "type": "object",
         "properties": {
-          "maxResults": { "type": "number", "description": "Optional. Maximum number of upcoming meetings to return. Default 50." }
+          "maxResults": {
+            "type": "number",
+            "description": "Optional. Maximum number of upcoming meetings to return. Default 50."
+          }
         }
       },
       "outputSchema": {
         "type": "object",
         "properties": {
-          "connector": { "type": "string" },
-          "action": { "type": "string" },
-          "meetings": { "type": "array", "description": "Normalized upcoming meetings." }
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "meetings": {
+            "type": "array",
+            "description": "Normalized upcoming meetings."
+          }
         }
       }
     },
@@ -89,20 +135,33 @@
       "title": "Get Meeting",
       "description": "Retrieve a Google Calendar event (with Meet link) by its event/meeting ID.",
       "sideEffect": "read",
-      "sample": { "meetingId": "evt_123" },
+      "sample": {
+        "meetingId": "evt_123"
+      },
       "inputSchema": {
         "type": "object",
         "properties": {
-          "meetingId": { "type": "string", "description": "Google Calendar event ID for the meeting." }
+          "meetingId": {
+            "type": "string",
+            "description": "Google Calendar event ID for the meeting."
+          }
         },
-        "required": ["meetingId"]
+        "required": [
+          "meetingId"
+        ]
       },
       "outputSchema": {
         "type": "object",
         "properties": {
-          "connector": { "type": "string" },
-          "action": { "type": "string" },
-          "meeting": { "type": "object" }
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "meeting": {
+            "type": "object"
+          }
         }
       }
     },
@@ -123,25 +182,50 @@
       "inputSchema": {
         "type": "object",
         "properties": {
-          "meetingId": { "type": "string", "description": "Google Calendar event ID for the meeting to update." },
-          "summary": { "type": "string", "description": "Optional. Updated meeting title." },
-          "start": { "type": "string", "description": "Optional. Updated start time, RFC3339." },
-          "end": { "type": "string", "description": "Optional. Updated end time, RFC3339." },
-          "description": { "type": "string", "description": "Optional. Updated event description." },
+          "meetingId": {
+            "type": "string",
+            "description": "Google Calendar event ID for the meeting to update."
+          },
+          "summary": {
+            "type": "string",
+            "description": "Optional. Updated meeting title."
+          },
+          "start": {
+            "type": "string",
+            "description": "Optional. Updated start time, RFC3339."
+          },
+          "end": {
+            "type": "string",
+            "description": "Optional. Updated end time, RFC3339."
+          },
+          "description": {
+            "type": "string",
+            "description": "Optional. Updated event description."
+          },
           "attendees": {
             "type": "array",
-            "items": { "type": "string" },
+            "items": {
+              "type": "string"
+            },
             "description": "Optional. Replacement attendee email list; Google emails updates when sendUpdates=all."
           }
         },
-        "required": ["meetingId"]
+        "required": [
+          "meetingId"
+        ]
       },
       "outputSchema": {
         "type": "object",
         "properties": {
-          "connector": { "type": "string" },
-          "action": { "type": "string" },
-          "meeting": { "type": "object" }
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "meeting": {
+            "type": "object"
+          }
         }
       }
     },
@@ -153,21 +237,36 @@
       "title": "Delete Meeting",
       "description": "Delete a Google Calendar event (and its Meet conference). This action is irreversible.",
       "sideEffect": "write",
-      "sample": { "meetingId": "evt_123" },
+      "sample": {
+        "meetingId": "evt_123"
+      },
       "inputSchema": {
         "type": "object",
         "properties": {
-          "meetingId": { "type": "string", "description": "Google Calendar event ID for the meeting to delete." }
+          "meetingId": {
+            "type": "string",
+            "description": "Google Calendar event ID for the meeting to delete."
+          }
         },
-        "required": ["meetingId"]
+        "required": [
+          "meetingId"
+        ]
       },
       "outputSchema": {
         "type": "object",
         "properties": {
-          "connector": { "type": "string" },
-          "action": { "type": "string" },
-          "deleted": { "type": "boolean" },
-          "meetingId": { "type": "string" }
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "deleted": {
+            "type": "boolean"
+          },
+          "meetingId": {
+            "type": "string"
+          }
         }
       }
     },
@@ -179,9 +278,744 @@
       "title": "Healthcheck",
       "description": "Verify the supplied Google access token can read the primary calendar.",
       "sideEffect": "read",
-      "inputSchema": { "type": "object", "properties": {} },
-      "outputSchema": { "type": "object", "properties": { "status": { "type": "string" } } }
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "spaces.create": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Create Meet space",
+      "description": "Create a Google Meet space via spaces.create. Does not attach a Calendar event.",
+      "sideEffect": "write",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "config": {
+            "type": "object",
+            "description": "Optional Space.config (accessType, entryPointAccess)."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object"
+          },
+          "status": {
+            "type": "string"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/spaces",
+        "success": [
+          200
+        ]
+      },
+      "sample": {
+        "config": {
+          "accessType": "TRUSTED"
+        }
+      }
+    },
+    "spaces.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get Meet space",
+      "description": "Get a Google Meet space by space id or spaces/{space} resource name.",
+      "sideEffect": "read",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "space_name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Space id or spaces/{space}."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "space_name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object"
+          },
+          "status": {
+            "type": "string"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/spaces/{space}",
+        "success": [
+          200
+        ]
+      },
+      "sample": {
+        "space_name": "abc"
+      }
+    },
+    "spaces.update": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Update Meet space",
+      "description": "Patch a Google Meet space config via spaces.patch. Requires meetings.space.created.",
+      "sideEffect": "write",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Space id or spaces/{space}."
+          },
+          "config": {
+            "type": "object",
+            "description": "Space.config fields to write."
+          },
+          "updateMask": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Comma-separated field mask, for example config.accessType."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object"
+          },
+          "status": {
+            "type": "string"
+          }
+        }
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/spaces/{space}",
+        "success": [
+          200
+        ]
+      },
+      "sample": {
+        "name": "spaces/abc",
+        "updateMask": "config.accessType"
+      }
+    },
+    "spaces.end-active-conference": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "End active conference",
+      "description": "End the active conference in a Meet space via spaces.endActiveConference.",
+      "sideEffect": "write",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "space_name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Space id or spaces/{space}."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "space_name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object"
+          },
+          "status": {
+            "type": "string"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/spaces/{space}:endActiveConference",
+        "success": [
+          200
+        ]
+      },
+      "sample": {
+        "space_name": "spaces/jQCFfuBOdN5z"
+      }
+    },
+    "conference-records.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get conference record",
+      "description": "Get one conference record by conferenceRecords/{id}.",
+      "sideEffect": "read",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "conferenceRecords/{conferenceRecord} or the bare id."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object"
+          },
+          "status": {
+            "type": "string"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/conferenceRecords/{conferenceRecord}",
+        "success": [
+          200
+        ]
+      },
+      "sample": {
+        "name": "conferenceRecords/rec-1"
+      }
+    },
+    "conference-records.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "List conference records",
+      "description": "List conference records. Filter supports space.meeting_code, space.name, start_time, and end_time.",
+      "sideEffect": "read",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "filter": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Optional EBNF filter."
+          },
+          "page_size": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Maximum records to return."
+          },
+          "page_token": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Page token from a previous list call."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object"
+          },
+          "status": {
+            "type": "string"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/conferenceRecords",
+        "success": [
+          200
+        ]
+      },
+      "sample": {
+        "page_size": 25
+      }
+    },
+    "participants.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "List participants",
+      "description": "List participants of a conference record.",
+      "sideEffect": "read",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "parent": {
+            "type": "string",
+            "minLength": 1,
+            "description": "conferenceRecords/{conferenceRecord}."
+          },
+          "filter": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Optional EBNF filter."
+          },
+          "page_size": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Maximum participants."
+          },
+          "page_token": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Page token."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "parent"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object"
+          },
+          "status": {
+            "type": "string"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/conferenceRecords/{conferenceRecord}/participants",
+        "success": [
+          200
+        ]
+      },
+      "sample": {
+        "parent": "conferenceRecords/rec-1"
+      }
+    },
+    "participant-sessions.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get participant session",
+      "description": "Get one participant session by its full resource name.",
+      "sideEffect": "read",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Full participantSessions resource name."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object"
+          },
+          "status": {
+            "type": "string"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/conferenceRecords/{conferenceRecord}/participants/{participant}/participantSessions/{participantSession}",
+        "success": [
+          200
+        ]
+      }
+    },
+    "participant-sessions.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "List participant sessions",
+      "description": "List join/leave sessions for one participant in a conference record.",
+      "sideEffect": "read",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "conference_record_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Conference record id."
+          },
+          "participant_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Participant id."
+          },
+          "filter": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Optional EBNF filter."
+          },
+          "page_size": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Maximum sessions."
+          },
+          "page_token": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Page token."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "conference_record_id",
+          "participant_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object"
+          },
+          "status": {
+            "type": "string"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/conferenceRecords/{conferenceRecord}/participants/{participant}/participantSessions",
+        "success": [
+          200
+        ]
+      }
+    },
+    "recordings.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "List recordings",
+      "description": "List recording resources for a conference record parent.",
+      "sideEffect": "read",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "parent": {
+            "type": "string",
+            "minLength": 1,
+            "description": "conferenceRecords/{conferenceRecord}."
+          },
+          "page_size": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Maximum recordings."
+          },
+          "page_token": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Page token."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "parent"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object"
+          },
+          "status": {
+            "type": "string"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/conferenceRecords/{conferenceRecord}/recordings",
+        "success": [
+          200
+        ]
+      }
+    },
+    "recordings.by-conference": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "List recordings by conference record",
+      "description": "List recordings for one conference record id. Same recordings.list collection, addressed by conference_record_id.",
+      "sideEffect": "read",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "conference_record_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Conference record id."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "conference_record_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object"
+          },
+          "status": {
+            "type": "string"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/conferenceRecords/{conferenceRecord}/recordings",
+        "success": [
+          200
+        ]
+      }
+    },
+    "transcripts.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get transcript",
+      "description": "Get one transcript by conferenceRecords/{id}/transcripts/{transcript}.",
+      "sideEffect": "read",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Full transcript resource name."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object"
+          },
+          "status": {
+            "type": "string"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/conferenceRecords/{conferenceRecord}/transcripts/{transcript}",
+        "success": [
+          200
+        ]
+      }
+    },
+    "transcripts.by-conference": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "List transcripts by conference record",
+      "description": "List transcripts for one conference record.",
+      "sideEffect": "read",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "conference_record_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Conference record id."
+          },
+          "page_size": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Maximum transcripts."
+          },
+          "page_token": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Page token."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "conference_record_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object"
+          },
+          "status": {
+            "type": "string"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/conferenceRecords/{conferenceRecord}/transcripts",
+        "success": [
+          200
+        ]
+      }
+    },
+    "transcript-entries.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get transcript entry",
+      "description": "Get one transcript entry by its full resource name.",
+      "sideEffect": "read",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Full transcript entry resource name."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object"
+          },
+          "status": {
+            "type": "string"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/conferenceRecords/{conferenceRecord}/transcripts/{transcript}/entries/{entry}",
+        "success": [
+          200
+        ]
+      }
+    },
+    "transcript-entries.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "List transcript entries",
+      "description": "List transcript entries for one transcript in a conference record.",
+      "sideEffect": "read",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "conference_record_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Conference record id."
+          },
+          "transcript_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Transcript id."
+          },
+          "page_size": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Maximum entries."
+          },
+          "page_token": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Page token."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "conference_record_id",
+          "transcript_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object"
+          },
+          "status": {
+            "type": "string"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/conferenceRecords/{conferenceRecord}/transcripts/{transcript}/entries",
+        "success": [
+          200
+        ]
+      }
     }
   },
-  "models": ["meeting"]
+  "models": [
+    "meeting"
+  ]
 }

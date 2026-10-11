@@ -4,7 +4,7 @@ import manifest from "../manifest.json";
 describe("jira manifest", () => {
   it("has correct key and version", () => {
     expect(manifest.key).toBe("jira");
-    expect(manifest.version).toBe("0.2.0");
+    expect(manifest.version).toBe("0.3.0");
     expect(manifest.runtime).toBe("bun");
   });
 
@@ -50,6 +50,11 @@ describe("jira manifest", () => {
     expect(ops).toContain("webhook.jira.issue_created");
     expect(ops).toContain("webhook.jira.issue_updated");
     expect(ops).toContain("webhook.comment_created");
+    expect(ops).toContain("attachments.add");
+    expect(ops).toContain("issues.search.action");
+    expect(ops).toContain("boards.list");
+    expect(ops).toContain("webhook.sprint_closed");
+    expect(ops).toContain("webhook.version_released");
   });
 
   it("has at least 15 operations total", () => {

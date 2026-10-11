@@ -1,20 +1,24 @@
 # Stormboard
 
-Read-only international Stormboard REST API v1 recipe. Copy the API key from the API tab of a Stormboard account (`https://www.stormboard.com/users/account#api`). The runner sends `X-API-Key` and `Accept: application/json` to `https://api.stormboard.com`.
+International Stormboard REST API v1 recipe covering the Composio STORMBOARD toolkit. Copy the API key from the API tab of a Stormboard account (`https://www.stormboard.com/users/account#api`). The runner sends `X-API-Key` and `Accept: application/json` to `https://api.stormboard.com`.
 
 ## Operations
 
-- `healthcheck`: `GET /users/profile` with empty input (pinned credential validator).
-- `storms.list`: `GET /storms/list` with optional `team`, `folder`, `needle`, `status`, `start`, `order`, and `results` (1–100).
-- `storms.get`: `GET /storms/{stormId}`.
+Origin ops kept:
+
+- `healthcheck`: `GET /users/profile` (also maps `STORMBOARD_GET_INFO_ABOUT_YOUR_USER`).
+- `storms.list`: `GET /storms/list` (`STORMBOARD_GET_A_LIST_OF_YOUR_STORMS`).
+- `storms.get`: `GET /storms/{stormId}` (`STORMBOARD_DETAILS`).
 - `templates.categories.list`: `GET /templates/categories`.
 - `templates.list`: `GET /templates`.
 
-Idea/user/connector/tag lists, writes, OAuth, and optional `/templates/{category}` path switching are omitted. Native returns raw Stormboard JSON under `data`.
+Added Composio tools as real HTTP operations for storms (create/close/reopen/duplicate/join/invite/favorite/access/template/legend/section/ideas/users/connectors/tags), ideas (create/get/connectors/tags), chat, and users (test/auth/create/verify/profile/notifications).
+
+Native returns raw Stormboard JSON under `data`. Composio `storm_id` / `idea_id` / `connector_id` path fields are used on new ops; origin `storms.get` still requires `stormId`.
 
 ## Adaptations
 
-Pinned source and official auth docs agree on `https://api.stormboard.com` and `X-API-Key`. Official auth examples also demonstrate `GET /users`; healthcheck stays on pinned `/users/profile`. Optional category path switching is omitted because native templates cannot express an optional path prefix. Native category is `productivity`. The upstream user-agent is not sent.
+Official docs at `https://api.stormboard.com/json` plus Composio STORMBOARD (41 tools). Auth is `X-API-Key`. `STORMBOARD_UPDATE_NOTIFICATIONS.email_notifications` is sent as `dailyemail`. `STORMBOARD_CREATE_A_NEW_STORM.teamId` is sent as `team_id`. `STORMBOARD_JOIN_A_STORM` sends `stormid`/`stormkey`. Legend color fields are nested under `color`. The upstream user-agent is not sent. No inbound webhook ops (Composio triggers = 0).
 
 ## License and evidence
 

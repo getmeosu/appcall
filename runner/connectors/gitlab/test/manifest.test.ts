@@ -1,5 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import manifest from "../manifest.json";
+import { ADDED_ACTIONS } from "./deepened.test";
 
 const operations = manifest.operations as Record<string, Record<string, unknown>>;
 const actionOps = Object.fromEntries(Object.entries(operations).filter(([, op]) => op.kind === "action"));
@@ -9,6 +10,7 @@ describe("gitlab manifest", () => {
   it("declares the connector identity the control plane keys on", () => {
     expect(manifest.key).toBe("gitlab");
     expect(manifest.runtime).toBe("bun");
+    expect(manifest.version).toBe("0.3.0");
     expect(manifest.categories).toEqual(["productivity"]);
     expect(manifest.models.length).toBeGreaterThan(0);
   });
@@ -62,6 +64,7 @@ describe("gitlab manifest", () => {
         "webhook.merge_request",
         "webhook.issue",
         "webhook.pipeline",
+        ...ADDED_ACTIONS,
       ].sort(),
     );
   });
@@ -206,8 +209,15 @@ describe("gitlab manifest", () => {
   });
 
   it("maps the next offset page from the x-next-page response header on every list operation", () => {
-    for (const key of ["issues.list", "mergeRequests.list", "pipelines.list", "projects.list", "jobs.list", "groups.list", "branches.list", "repository.commits.list"]) {
-      const result = JSON.stringify((operations[key]!.request as Record<string, unknown>).result ?? {});
+    const paginated = Object.entries(actionOps).filter(([, op]) =>
+      Object.prototype.hasOwnProperty.call(((op.request as Record<string, unknown>).result ?? {}), "nextPage"),
+    );
+    expect(paginated.map(([key]) => key)).toEqual(expect.arrayContaining([
+      "issues.list", "mergeRequests.list", "pipelines.list", "projects.list", "jobs.list", "groups.list", "branches.list", "repository.commits.list",
+    ]));
+    expect(paginated.length).toBeGreaterThan(8);
+    for (const [key, op] of paginated) {
+      const result = JSON.stringify((op.request as Record<string, unknown>).result ?? {});
       expect(result, key).toContain("{{headers.x-next-page}}");
     }
   });

@@ -20,8 +20,8 @@ export function createApifyClient(options: ApifyClientOptions) {
       const response = await httpClient.fetchText(`https://api.apify.com/v2${path}`, {
         ...init,
         headers: {
-          "Authorization": `Bearer ${options.apiKey}`,
-          "Content-Type": "application/json",
+          Authorization: `Bearer ${options.apiKey}`,
+          ...(init.body ? { "Content-Type": "application/json" } : {}),
           ...(init.headers as Record<string, string>),
         },
       });

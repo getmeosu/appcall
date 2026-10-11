@@ -15,6 +15,7 @@ import emailsListFixture from "../fixtures/emails_list.json";
 import domainsListFixture from "../fixtures/domains_list.json";
 import domainsGetFixture from "../fixtures/domains_get.json";
 import contactsListFixture from "../fixtures/contacts_list.json";
+import emailSendExtendedFixture from "../fixtures/email_send_extended.json";
 
 describe("sendEmail (validated-echo, no apiKey)", () => {
   it("returns the validated payload without apiKey", () => {
@@ -34,6 +35,20 @@ describe("sendEmail (validated-echo, no apiKey)", () => {
     const validated = result.validated as Record<string, unknown>;
     expect(validated.to).toEqual(["b@y.com", "c@y.com"]);
     expect(validated.html).toBe("<p>Hi</p>");
+  });
+
+  it("serializes headers, schedule time, and tags for a real send", async () => {
+    let capturedBody: Record<string, unknown> | undefined;
+    const fixture = emailSendExtendedFixture as { input: Record<string, unknown>; expectedBody: Record<string, unknown> };
+    await sendEmail({
+      apiKey: "re_test",
+      ...fixture.input,
+      fetch: async (_input, init) => {
+        capturedBody = JSON.parse(String(init?.body));
+        return Response.json({ id: "scheduled-email-id" }, { status: 200 });
+      },
+    });
+    expect(capturedBody).toEqual(fixture.expectedBody);
   });
 
   it("throws when from is missing", () => {
@@ -469,5 +484,51 @@ describe("objects normalizers", () => {
     const parsed = parseContactsListResponse(contactsListFixture);
     expect(parsed.contacts).toHaveLength(2);
     expect(parsed.hasMore).toBe(false);
+  });
+});
+
+describe("SMTP scheduled-send guard", () => {
+  it("rejects scheduledAt before opening an SMTP connection", async () => {
+    let connections = 0;
+    const writes: string[] = [];
+    const replies = [
+      "220 ready",
+      "250 AUTH LOGIN",
+      "334 user",
+      "334 pass",
+      "235 ok",
+      "250 mail ok",
+      "250 rcpt ok",
+      "354 data",
+      "250 queued",
+      "221 bye",
+    ];
+    let replyIndex = 0;
+    const __connect = async () => {
+      connections += 1;
+      return {
+        write: (data: string) => void writes.push(data),
+        read: async () => replies[replyIndex++],
+        upgradeTls: async () => {},
+        close: () => {},
+      };
+    };
+
+    await expect(Promise.resolve().then(() => sendEmail({
+      smtpHost: "smtp.example.com",
+      smtpPort: "587",
+      smtpSecure: true,
+      smtpUser: "u",
+      smtpPassword: "p",
+      from: "a@example.com",
+      to: "b@example.com",
+      subject: "Scheduled",
+      text: "Must not be sent immediately.",
+      scheduledAt: "2099-01-01T00:00:00Z",
+      __connect,
+    }))).rejects.toThrow(/scheduled.*SMTP|SMTP.*scheduled/i);
+
+    expect(connections).toBe(0);
+    expect(writes).toHaveLength(0);
   });
 });

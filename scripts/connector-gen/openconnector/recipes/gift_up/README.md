@@ -1,9 +1,20 @@
 # Gift Up
 
-Read-only Gift Up API recipe. Configure the dashboard API key. The runner sends `Authorization: Bearer <apiKey>` and `Accept: application/json` to `https://api.giftup.app`.
+International **Gift Up REST API** recipe covering the origin healthcheck plus every Composio `GIFT_UP_*` HTTP tool (44 tools, 46 operations including origin `healthcheck` and `orders.list`).
 
-Selected operations are `healthcheck` and `company.get` (`GET /company`), `gift-cards.list` (`GET /gift-cards` with optional `limit` and `offset`), `gift-cards.get` (`GET /gift-cards/{code}`), and `orders.list` (`GET /orders`). Redeem, void, top-up, and other mutations are omitted. `code` is a required non-empty string and is URL-encoded as a path segment.
+## Setup
 
-Adaptations versus the pinned OpenConnector source: the native key is `gift-up` while the upstream directory is `gift_up`; the upstream user-agent is not sent; responses keep raw provider JSON under `data` instead of the source normalized company/giftCard wrappers.
+Create an API key from the Gift Up dashboard under Integrations → API keys. Store it as `apiKey`. Requests send `Authorization: Bearer <key>` and `Accept: application/json` to `https://api.giftup.app`.
 
-Source attribution: oomol-lab/open-connector at `33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a` (Apache License 2.0). Official docs: https://developer.giftup.com/api. Fixtures are independently derived and do not represent live provider access. Live smoke remains unverified: configure the API key, call `healthcheck` with `{}`, then `gift-cards.list`.
+## Operations
+
+- Origin reads: `healthcheck` and `company.get` (`GET /company`), `gift-cards.list` / `gift-cards.get`, `orders.list`.
+- Gift cards: redeem, redeem-in-full, top-up, void, reactivate, undo-redemption, JSON Patch update.
+- Catalog: items and item groups (create/list/get/update/delete).
+- Orders: create, get, JSON Patch update, add note.
+- Settings: checkout, email, gift-card, shipping, artwork list/upload.
+- Reports, locations, promotions, users, webhooks, Stripe connection, GET/POST `/ping`.
+
+JSON Patch updates send `Content-Type: application/json-patch+json` with an RFC 6902 operations array. Composio artwork `Url` maps to official `url`. DELETE and some empty 200 writes return `{success: true}`. Optional `test_mode` / `x_giftup_testmode` set `x-giftup-testmode`. Successful JSON responses are raw provider JSON under AppCall `data`.
+
+Source attribution: oomol-lab/open-connector at `33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a`. Official docs: https://developer.giftup.com/api. Live authentication is unverified.

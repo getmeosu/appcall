@@ -1,10 +1,10 @@
 # BidSketch
 
-International BidSketch REST API v1 recipe (v0.2.0). Configure an API token from the workspace `/account/api_tokens` page (admin users only). The runner sends `Authorization: Token token="<token>"` and `Accept: application/json` to `https://bidsketch.com/api/v1`.
+International BidSketch REST API v1 recipe. Configure an API token from the workspace `/account/api_tokens` page (admin users only). The runner sends `Authorization: Token token="<token>"` and `Accept: application/json` to `https://bidsketch.com/api/v1`.
 
-Healthcheck is documented `GET /proposals/stats.json`. Coverage includes client, proposal, fee, section, and template list/get/create/update/delete plus EventOnly webhooks for client and proposal lifecycle events.
+Healthcheck is documented `GET /proposals/stats.json` and covers Composio `BIDSKETCH_GET_PROPOSAL_STATS`. Remaining Composio BIDSKETCH tools are first-party declarative request blocks for clients, proposals, fees, sections, templates, and webhook subscriptions. Inbound EventOnly webhook triggers are not declared (Composio lists 0 triggers); `webhooks.create` / `webhooks.delete` manage subscriptions via `POST`/`DELETE /webhooks.json`. DELETE routes return HTTP 204 and map to `{ data: { deleted: true } }`.
 
-Official docs quote the token in the Authorization header; native follows that quoted `Token token=` form from the BidSketch README and pinned runtime. Native omits the upstream User-Agent. Native category is `productivity`.
+Official docs quote the token in the Authorization header; native follows that quoted `Token token=` form from the BidSketch README and pinned runtime. Native omits the upstream User-Agent. Native category is `productivity` (source Productivity/Marketing).
 
 The native key is `bidsketch`.
 

@@ -13,7 +13,7 @@ const webhookOps = Object.fromEntries(
 describe("linear manifest", () => {
   it("declares the connector identity the control plane keys on", () => {
     expect(manifest.key).toBe("linear");
-    expect(manifest.version).toBe("0.2.0");
+    expect(manifest.version).toBe("0.3.0");
     expect(manifest.runtime).toBe("bun");
     expect(manifest.categories).toEqual(["productivity"]);
     expect(manifest.models.length).toBeGreaterThan(0);
@@ -32,36 +32,62 @@ describe("linear manifest", () => {
     expect(manifest.network.allowedHosts).toEqual(["api.linear.app"]);
   });
 
-  it("declares the existing surface plus archive, comments, projects write, labels, cycles, attachments, and webhooks", () => {
+  it("declares the origin surface plus remaining Composio GraphQL tools", () => {
     expect(Object.keys(operations).sort()).toEqual(
       [
         "attachments.create",
+        "attachments.get",
         "comments.create",
+        "comments.get",
         "comments.list",
+        "comments.listAll",
+        "comments.react",
+        "comments.resolve",
+        "comments.unresolve",
         "comments.update",
         "cycles.list",
+        "cycles.listByTeam",
+        "graphql.execute",
         "healthcheck",
+        "issueDrafts.list",
+        "issueRelations.create",
         "issues.archive",
         "issues.create",
+        "issues.delete",
         "issues.get",
         "issues.list",
+        "issues.listByTeam",
+        "issues.removeLabel",
         "issues.search",
         "issues.update",
         "labels.create",
         "labels.list",
         "organization.get",
+        "projectMilestones.create",
+        "projectUpdates.archive",
+        "projectUpdates.create",
+        "projectUpdates.get",
+        "projectUpdates.list",
+        "projectUpdates.unarchive",
+        "projectUpdates.update",
+        "projects.archive",
         "projects.create",
         "projects.get",
         "projects.list",
         "projects.update",
+        "reactions.remove",
+        "teams.create",
         "teams.get",
+        "teams.issueDefaults",
         "teams.list",
+        "teams.update",
         "users.get",
         "users.list",
+        "users.me",
         "webhook.Comment.create",
         "webhook.Issue.create",
         "webhook.Issue.update",
-        "workflowStates.list",
+        "workflowStates.list"
       ].sort(),
     );
   });
@@ -111,6 +137,10 @@ describe("linear manifest", () => {
     for (const [key, op] of Object.entries(actionOps)) {
       const body = (op.request as Record<string, unknown>).body as Record<string, unknown>;
       const query = String(body.query ?? "");
+      if (query.includes("{{query}}")) {
+        expect(op.sideEffect, `${key} is a GraphQL passthrough`).toBe("write");
+        continue;
+      }
       const isMutation = query.trimStart().startsWith("mutation");
       if (isMutation) {
         expect(["write", "destructive"], `${key} is a GraphQL mutation`).toContain(op.sideEffect);
@@ -183,7 +213,7 @@ describe("linear manifest", () => {
   });
 
   it("does not require anything on the unfiltered list operations", () => {
-    for (const key of ["issues.list", "teams.list", "workflowStates.list", "projects.list", "users.list", "labels.list", "cycles.list"]) {
+    for (const key of ["issues.list", "teams.list", "workflowStates.list", "projects.list", "users.list", "labels.list", "cycles.list", "comments.listAll", "issueDrafts.list", "projectUpdates.list"]) {
       const schema = operations[key]!.inputSchema as { required?: string[] };
       expect(schema.required ?? [], `${key} should not require input`).toEqual([]);
     }
@@ -237,5 +267,22 @@ describe("linear manifest", () => {
   it("does not add the unverified uploads.linear.app host", () => {
     expect(manifest.network.allowedHosts).not.toContain("uploads.linear.app");
     expect(manifest.network.allowedHosts).not.toContain("linear.app");
+  });
+
+  it("requires teamId on issues.listByTeam and cycles.listByTeam", () => {
+    expect((operations["issues.listByTeam"]!.inputSchema as { required?: string[] }).required ?? []).toContain("teamId");
+    expect((operations["cycles.listByTeam"]!.inputSchema as { required?: string[] }).required ?? []).toContain("teamId");
+  });
+
+  it("requires query on graphql.execute and treats it as a write passthrough", () => {
+    const schema = operations["graphql.execute"]!.inputSchema as { required?: string[] };
+    expect(schema.required ?? []).toContain("query");
+    expect(operations["graphql.execute"]!.sideEffect).toBe("write");
+  });
+
+  it("marks project and issue deletes/archives as destructive", () => {
+    expect(operations["projects.archive"]!.sideEffect).toBe("destructive");
+    expect(operations["projectUpdates.archive"]!.sideEffect).toBe("destructive");
+    expect(operations["issues.delete"]!.sideEffect).toBe("destructive");
   });
 });

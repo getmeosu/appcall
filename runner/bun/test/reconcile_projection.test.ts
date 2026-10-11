@@ -47,7 +47,7 @@ describe("Reconcile observe projection: intercom conversation writes", () => {
     });
   }
 
-  test("conversations.reply is a create: returns the primary, no observe", async () => {
+  test("conversations.reply is idempotent: observes conversations.get after the reply", async () => {
     const { calls, impl } = intercomFetch(200, { type: "conversation", id: "147" });
     const settled = await settle(
       defaultConnectorRegistry.executeAction("intercom", "conversations.reply", {
@@ -61,10 +61,12 @@ describe("Reconcile observe projection: intercom conversation writes", () => {
       }),
     );
     expect(settled.error).toBeUndefined();
-    expect(calls).toHaveLength(1);
-    expect(calls[0].method).toBe("POST");
-    expect(new URL(calls[0].url).pathname).toBe("/conversations/147/reply");
-    expect(settled.output).toMatchObject({ id: "147" });
+    expect(settled.failure).toBeUndefined();
+    expect(calls.map((call) => `${call.method} ${new URL(call.url).pathname}`)).toEqual([
+      "POST /conversations/147/reply",
+      "GET /conversations/147",
+    ]);
+    expect(settled.output).toMatchObject({ connector: "intercom", action: "conversations.get", data: { id: "147" } });
   });
 
   test("upstream write failure surfaces CONNECTOR_UPSTREAM_ERROR and never observes", async () => {

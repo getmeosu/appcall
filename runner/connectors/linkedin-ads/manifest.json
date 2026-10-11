@@ -1,14 +1,20 @@
 {
   "key": "linkedin-ads",
   "name": "LinkedIn Ads",
-  "version": "0.2.0",
+  "version": "0.5.0",
   "runtime": "bun",
-  "categories": ["ads"],
+  "categories": [
+    "ads"
+  ],
   "auth": {
     "type": "oauth2",
     "scopes": [
       "r_ads",
-      "r_ads_reporting"
+      "rw_ads",
+      "r_ads_reporting",
+      "r_organization_social",
+      "r_organization_admin",
+      "rw_organization_admin"
     ],
     "setup": {
       "mode": "oauth2",
@@ -25,19 +31,278 @@
       "kind": "sync",
       "timeoutMs": 30000,
       "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880
+      "maxResponseBytes": 5242880,
+      "request": {
+        "method": "GET",
+        "path": "/rest/adAccounts/{{adAccountId}}/adCampaigns",
+        "success": [
+          200
+        ],
+        "headers": {
+          "X-RestLi-Method": "FINDER"
+        },
+        "query": {
+          "q": "search",
+          "search": "{{search}}",
+          "pageSize": "{{pageSize}}",
+          "pageToken": "{{pageToken}}",
+          "sortOrder": "{{sortOrder}}"
+        }
+      },
+      "sideEffect": "read",
+      "title": "Search Campaigns",
+      "description": "Search campaigns in a LinkedIn ad account. Live calls use the versioned adCampaigns finder; a response-only input still normalizes an already fetched payload.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "adAccountId": {
+            "type": [
+              "string",
+              "integer"
+            ],
+            "description": "Ad account ID or urn:li:sponsoredAccount:{id}."
+          },
+          "accountId": {
+            "type": [
+              "string",
+              "integer"
+            ]
+          },
+          "q": {
+            "type": "string"
+          },
+          "ids": {
+            "type": [
+              "array",
+              "string"
+            ],
+            "description": "Campaign IDs for a batch get."
+          },
+          "search": {
+            "type": "string",
+            "description": "Rest.li search expression, for example (status:(values:List(ACTIVE)))."
+          },
+          "status": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "pageSize": {
+            "type": "integer"
+          },
+          "pageToken": {
+            "type": "string"
+          },
+          "sortOrder": {
+            "type": "string",
+            "enum": [
+              "ASCENDING",
+              "DESCENDING"
+            ]
+          },
+          "response": {
+            "description": "Already fetched provider payload for the sync normalizer."
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          }
+        }
+      }
     },
     "ad_accounts.list": {
       "kind": "sync",
       "timeoutMs": 30000,
       "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880
+      "maxResponseBytes": 5242880,
+      "request": {
+        "method": "GET",
+        "path": "/rest/adAccounts",
+        "success": [
+          200
+        ],
+        "headers": {
+          "X-RestLi-Method": "FINDER"
+        },
+        "query": {
+          "q": "search",
+          "search": "{{search}}",
+          "pageSize": "{{pageSize}}",
+          "pageToken": "{{pageToken}}",
+          "sortOrder": "{{sortOrder}}"
+        }
+      },
+      "sideEffect": "read",
+      "title": "Search Ad Accounts",
+      "description": "Search LinkedIn ad accounts by status, type, name, reference, id, or test flag.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "search": {
+            "type": "string"
+          },
+          "status": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "type": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "test": {
+            "type": "boolean"
+          },
+          "name": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "id": {
+            "type": "array"
+          },
+          "reference": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "pageSize": {
+            "type": "integer"
+          },
+          "page_size": {
+            "type": "integer"
+          },
+          "pageToken": {
+            "type": "string"
+          },
+          "page_token": {
+            "type": "string"
+          },
+          "sortOrder": {
+            "type": "string",
+            "enum": [
+              "ASCENDING",
+              "DESCENDING"
+            ]
+          },
+          "sort_order": {
+            "type": "string",
+            "enum": [
+              "ASCENDING",
+              "DESCENDING"
+            ]
+          },
+          "response": {
+            "description": "Already fetched provider payload for the sync normalizer."
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          }
+        }
+      }
     },
     "creative_assets.list": {
       "kind": "sync",
       "timeoutMs": 30000,
       "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880
+      "maxResponseBytes": 5242880,
+      "request": {
+        "method": "GET",
+        "path": "/rest/adAccounts/{{accountId}}/creatives",
+        "success": [
+          200
+        ],
+        "headers": {
+          "X-RestLi-Method": "FINDER"
+        },
+        "query": {
+          "q": "criteria",
+          "intendedStatuses": "{{intendedStatuses}}",
+          "pageSize": "{{pageSize}}"
+        }
+      },
+      "sideEffect": "read",
+      "title": "List Creative Assets",
+      "description": "List creative assets for an ad account with the versioned creatives criteria finder.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "accountId": {
+            "type": [
+              "string",
+              "integer"
+            ]
+          },
+          "adAccountId": {
+            "type": [
+              "string",
+              "integer"
+            ]
+          },
+          "intendedStatuses": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "pageSize": {
+            "type": "integer"
+          },
+          "page_size": {
+            "type": "integer"
+          },
+          "response": {
+            "description": "Already fetched provider payload for the sync normalizer."
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          }
+        }
+      }
     },
     "campaigns.get": {
       "kind": "action",
@@ -56,20 +321,60 @@
           "campaignId": {
             "type": "string",
             "description": "Campaign ID or urn:li:sponsoredCampaign:{id}."
+          },
+          "ad_account_id": {
+            "type": [
+              "string",
+              "integer"
+            ]
+          },
+          "adAccountId": {
+            "type": [
+              "string",
+              "integer"
+            ]
+          },
+          "ad_campaign_id": {
+            "type": [
+              "string",
+              "integer"
+            ]
           }
         },
-        "required": ["accountId", "campaignId"],
+        "required": [
+          "accountId",
+          "campaignId"
+        ],
         "additionalProperties": false
       },
       "outputSchema": {
         "type": "object",
         "properties": {
-          "connector": { "type": "string" },
-          "action": { "type": "string" },
-          "source": { "type": "string" },
-          "campaign": { "type": ["object", "null"] }
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "campaign": {
+            "type": [
+              "object",
+              "null"
+            ]
+          }
         }
-      }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/rest/adAccounts/{{accountId}}/adCampaigns/{{campaignId}}",
+        "success": [
+          200
+        ]
+      },
+      "sideEffect": "read"
     },
     "ad_accounts.get": {
       "kind": "action",
@@ -84,20 +389,53 @@
           "accountId": {
             "type": "string",
             "description": "Ad account ID or urn:li:sponsoredAccount:{id}."
+          },
+          "ad_account_id": {
+            "type": [
+              "string",
+              "integer"
+            ]
+          },
+          "adAccountId": {
+            "type": [
+              "string",
+              "integer"
+            ]
           }
         },
-        "required": ["accountId"],
+        "required": [
+          "accountId"
+        ],
         "additionalProperties": false
       },
       "outputSchema": {
         "type": "object",
         "properties": {
-          "connector": { "type": "string" },
-          "action": { "type": "string" },
-          "source": { "type": "string" },
-          "adAccount": { "type": ["object", "null"] }
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "adAccount": {
+            "type": [
+              "object",
+              "null"
+            ]
+          }
         }
-      }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/rest/adAccounts/{{accountId}}",
+        "success": [
+          200
+        ]
+      },
+      "sideEffect": "read"
     },
     "campaign_groups.list": {
       "kind": "action",
@@ -124,22 +462,68 @@
           "status": {
             "type": "string",
             "description": "Optional status filter, e.g. ACTIVE."
+          },
+          "ad_account_id": {
+            "type": [
+              "string",
+              "integer"
+            ]
+          },
+          "adAccountId": {
+            "type": [
+              "string",
+              "integer"
+            ]
           }
         },
-        "required": ["accountId"],
+        "required": [
+          "accountId"
+        ],
         "additionalProperties": false
       },
       "outputSchema": {
         "type": "object",
         "properties": {
-          "connector": { "type": "string" },
-          "action": { "type": "string" },
-          "source": { "type": "string" },
-          "campaignGroups": { "type": "array" },
-          "nextStart": { "type": ["number", "null"] },
-          "count": { "type": "number" }
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "campaignGroups": {
+            "type": "array"
+          },
+          "nextStart": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "count": {
+            "type": "number"
+          }
         }
-      }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/rest/adAccounts/{{accountId}}/adCampaignGroups",
+        "success": [
+          200
+        ],
+        "headers": {
+          "X-RestLi-Method": "FINDER"
+        },
+        "query": {
+          "q": "search",
+          "start": "{{start}}",
+          "count": "{{count}}",
+          "status": "{{status}}"
+        }
+      },
+      "sideEffect": "read"
     },
     "creatives.list": {
       "kind": "action",
@@ -170,22 +554,152 @@
           "intendedStatus": {
             "type": "string",
             "description": "Optional intendedStatus filter, e.g. ACTIVE."
+          },
+          "ad_account_id": {
+            "type": [
+              "string",
+              "integer"
+            ]
+          },
+          "adAccountId": {
+            "type": [
+              "string",
+              "integer"
+            ]
+          },
+          "campaigns": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "creatives": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "intendedStatuses": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "intended_statuses": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "contentReferences": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "content_references": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "leadgenCreativeCallToActionDestinations": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "leadgen_creative_call_to_action_destinations": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "isTestAccount": {
+            "type": "boolean"
+          },
+          "is_test_account": {
+            "type": "boolean"
+          },
+          "pageSize": {
+            "type": "integer"
+          },
+          "page_size": {
+            "type": "integer"
+          },
+          "pageToken": {
+            "type": "string"
+          },
+          "page_token": {
+            "type": "string"
+          },
+          "sortOrder": {
+            "type": "string",
+            "enum": [
+              "ASCENDING",
+              "DESCENDING"
+            ]
+          },
+          "sort_order": {
+            "type": "string",
+            "enum": [
+              "ASCENDING",
+              "DESCENDING"
+            ]
           }
         },
-        "required": ["accountId"],
+        "required": [
+          "accountId"
+        ],
         "additionalProperties": false
       },
       "outputSchema": {
         "type": "object",
         "properties": {
-          "connector": { "type": "string" },
-          "action": { "type": "string" },
-          "source": { "type": "string" },
-          "creatives": { "type": "array" },
-          "nextStart": { "type": ["number", "null"] },
-          "count": { "type": "number" }
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "creatives": {
+            "type": "array"
+          },
+          "nextStart": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "count": {
+            "type": "number"
+          }
         }
-      }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/rest/adAccounts/{{accountId}}/creatives",
+        "success": [
+          200
+        ],
+        "headers": {
+          "X-RestLi-Method": "FINDER"
+        },
+        "query": {
+          "q": "criteria",
+          "campaigns": "{{campaigns}}",
+          "creatives": "{{creatives}}",
+          "intendedStatuses": "{{intendedStatuses}}",
+          "contentReferences": "{{contentReferences}}",
+          "pageSize": "{{pageSize}}",
+          "pageToken": "{{pageToken}}",
+          "sortOrder": "{{sortOrder}}"
+        }
+      },
+      "sideEffect": "read"
     },
     "analytics.report.get": {
       "kind": "action",
@@ -193,28 +707,36 @@
       "maxInputBytes": 65536,
       "maxResponseBytes": 10485760,
       "title": "Get Analytics Report",
-      "description": "Fetch aggregated LinkedIn Ads analytics via /rest/adAnalytics (q=analytics). Requires dateRangeStart and at least one of accounts/campaigns/campaignGroups/creatives.",
+      "description": "Fetch aggregated LinkedIn Ads analytics via /rest/adAnalytics. q is analytics or statistics. Requires pivot, a start date (dateRangeStart, startDate, or dateRange.start), and at least one of accounts, campaigns, campaignGroups, or creatives.",
       "inputSchema": {
         "type": "object",
         "properties": {
           "accounts": {
             "type": "array",
-            "items": { "type": "string" },
+            "items": {
+              "type": "string"
+            },
             "description": "Sponsored account IDs or URNs."
           },
           "campaigns": {
             "type": "array",
-            "items": { "type": "string" },
+            "items": {
+              "type": "string"
+            },
             "description": "Sponsored campaign IDs or URNs."
           },
           "campaignGroups": {
             "type": "array",
-            "items": { "type": "string" },
+            "items": {
+              "type": "string"
+            },
             "description": "Sponsored campaign group IDs or URNs."
           },
           "creatives": {
             "type": "array",
-            "items": { "type": "string" },
+            "items": {
+              "type": "string"
+            },
             "description": "Sponsored creative IDs or URNs."
           },
           "pivot": {
@@ -240,26 +762,76 @@
             "description": "Alias for dateRangeEnd (YYYY-MM-DD)."
           },
           "fields": {
-            "type": "array",
-            "items": { "type": "string" },
-            "description": "Optional metrics projection (max 20)."
+            "type": [
+              "array",
+              "string"
+            ],
+            "items": {
+              "type": "string"
+            },
+            "description": "Metric projection. An array or a comma-separated string. Maximum 20 metrics."
+          },
+          "q": {
+            "type": "string",
+            "enum": [
+              "analytics",
+              "statistics"
+            ]
+          },
+          "dateRange": {
+            "type": "object",
+            "description": "Composio date range with start and optional end of {year,month,day}."
           }
         },
-        "required": ["pivot", "dateRangeStart"],
+        "required": [
+          "pivot"
+        ],
         "additionalProperties": false
       },
       "outputSchema": {
         "type": "object",
         "properties": {
-          "connector": { "type": "string" },
-          "action": { "type": "string" },
-          "source": { "type": "string" },
-          "pivot": { "type": "string" },
-          "timeGranularity": { "type": "string" },
-          "rows": { "type": "array" },
-          "rowCount": { "type": "number" }
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "pivot": {
+            "type": "string"
+          },
+          "timeGranularity": {
+            "type": "string"
+          },
+          "rows": {
+            "type": "array"
+          },
+          "rowCount": {
+            "type": "number"
+          }
         }
-      }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/rest/adAnalytics",
+        "success": [
+          200
+        ],
+        "headers": {
+          "X-RestLi-Method": "FINDER"
+        },
+        "query": {
+          "q": "{{q}}",
+          "pivot": "{{pivot}}",
+          "timeGranularity": "{{timeGranularity}}",
+          "dateRange": "{{dateRange}}",
+          "fields": "{{fields}}"
+        }
+      },
+      "sideEffect": "read"
     },
     "healthcheck": {
       "kind": "action",
@@ -281,7 +853,1858 @@
             "description": "Connector health status, e.g. \"ok\" or \"error\"."
           }
         }
-      }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/rest/adAccounts",
+        "success": [
+          200
+        ],
+        "headers": {
+          "X-RestLi-Method": "FINDER"
+        },
+        "query": {
+          "q": "search",
+          "count": "1"
+        },
+        "echo": {
+          "status": "ok"
+        }
+      },
+      "sideEffect": "read"
+    },
+    "campaign_groups.get": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get Campaign Group",
+      "description": "Fetch a campaign group by account and campaign group ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "accountId": {
+            "type": "string"
+          },
+          "campaignGroupId": {
+            "type": "string"
+          },
+          "ad_account_id": {
+            "type": [
+              "string",
+              "integer"
+            ]
+          },
+          "adAccountId": {
+            "type": [
+              "string",
+              "integer"
+            ]
+          },
+          "ad_campaign_group_id": {
+            "type": [
+              "string",
+              "integer"
+            ]
+          },
+          "adCampaignGroupId": {
+            "type": [
+              "string",
+              "integer"
+            ]
+          }
+        },
+        "required": [
+          "accountId",
+          "campaignGroupId"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "campaignGroup": {
+            "type": [
+              "object",
+              "null"
+            ]
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/rest/adAccounts/{{accountId}}/adCampaignGroups/{{campaignGroupId}}",
+        "success": [
+          200
+        ]
+      },
+      "sideEffect": "read"
+    },
+    "audience_counts.get": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get Audience Counts",
+      "description": "Estimate audience size for a LinkedIn targetingCriteriaV2 Rest.li expression. Requires the LinkedIn Marketing API program.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "targetingCriteria": {
+            "type": "string",
+            "description": "Rest.li targeting expression, for example (include:(and:List(...))). The runner encodes it as one query value."
+          },
+          "targeting_criteria": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "targetingCriteria"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "audienceCounts": {
+            "type": "array"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/rest/audienceCounts",
+        "success": [
+          200
+        ],
+        "headers": {
+          "X-RestLi-Method": "FINDER"
+        },
+        "query": {
+          "q": "targetingCriteriaV2",
+          "targetingCriteria": "{{targetingCriteria}}"
+        }
+      },
+      "sideEffect": "read"
+    },
+    "targeting.facets.list": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get Targeting Facets",
+      "description": "List available LinkedIn Ads targeting facets.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "facets": {
+            "type": "array"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/rest/adTargetingFacets",
+        "success": [
+          200
+        ]
+      },
+      "sideEffect": "read"
+    },
+    "targeting.entities.list": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get Targeting Entities",
+      "description": "Find LinkedIn targeting entities by facet, typeahead, URN list, or similar entities.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "facetUrn": {
+            "type": "string",
+            "description": "urn:li:adTargetingFacet:..."
+          },
+          "entityType": {
+            "type": "string"
+          },
+          "entityUrns": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "maxItems": 100,
+            "description": "Entity URNs used as the seed set for similarity search."
+          },
+          "q": {
+            "type": "string",
+            "enum": [
+              "adTargetingFacet",
+              "typeahead",
+              "urns",
+              "similarEntities"
+            ],
+            "description": "Finder. Defaults to similarEntities when entityUrns is set."
+          },
+          "facet": {
+            "type": "string",
+            "description": "urn:li:adTargetingFacet:{name}."
+          },
+          "query": {
+            "type": "string",
+            "description": "Typeahead text."
+          },
+          "entities": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "urns": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "queryVersion": {
+            "type": "string",
+            "description": "Defaults to QUERY_USES_URNS."
+          },
+          "locale_language": {
+            "type": "string"
+          },
+          "locale_country": {
+            "type": "string"
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "entities": {
+            "type": "array"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/rest/adTargetingEntities",
+        "success": [
+          200
+        ],
+        "headers": {
+          "X-RestLi-Method": "FINDER"
+        },
+        "query": {
+          "q": "{{q}}",
+          "facet": "{{facet}}",
+          "query": "{{query}}",
+          "queryVersion": "{{queryVersion}}"
+        }
+      },
+      "sideEffect": "read"
+    },
+    "supply_forecasts.get": {
+      "kind": "action",
+      "timeoutMs": 60000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get Ad Supply Forecasts",
+      "description": "Estimate LinkedIn ad supply for a time range, targeting criteria, and optional bid, budget, and objective fields.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "accountId": {
+            "type": "string"
+          },
+          "campaignType": {
+            "type": "string",
+            "enum": [
+              "SPONSORED_UPDATES",
+              "SPONSORED_INMAILS",
+              "DYNAMIC"
+            ]
+          },
+          "startTime": {
+            "type": "number"
+          },
+          "endTime": {
+            "type": "number"
+          },
+          "targetingCriteria": {
+            "type": "string"
+          },
+          "account": {
+            "type": "string",
+            "description": "Sponsored account URN or ID. Alias of accountId."
+          },
+          "timeRange": {
+            "type": "object",
+            "description": "{start,end} millisecond timestamps. Alias of startTime and endTime."
+          },
+          "targeting_criteria": {
+            "type": "string"
+          },
+          "campaign": {
+            "type": "string"
+          },
+          "creativeType": {
+            "type": "string"
+          },
+          "objectiveType": {
+            "type": "string"
+          },
+          "optimizationTarget": {
+            "type": "string"
+          },
+          "dailyBudget": {
+            "type": "object"
+          },
+          "totalBudget": {
+            "type": "object"
+          },
+          "competingBid": {
+            "type": "object"
+          },
+          "costCap": {
+            "type": [
+              "string",
+              "number"
+            ]
+          },
+          "targetCost": {
+            "type": [
+              "string",
+              "number"
+            ]
+          },
+          "enableAudienceNetwork": {
+            "type": "boolean"
+          },
+          "enableAudienceExpansion": {
+            "type": "boolean"
+          },
+          "connectedTelevisionOnly": {
+            "type": "boolean"
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "forecasts": {
+            "type": "array"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/rest/adSupplyForecasts",
+        "success": [
+          200
+        ],
+        "headers": {
+          "X-RestLi-Method": "FINDER"
+        },
+        "query": {
+          "q": "criteriaV2",
+          "account": "{{account}}",
+          "campaignType": "{{campaignType}}",
+          "targetingCriteria": "{{targetingCriteria}}"
+        }
+      },
+      "sideEffect": "read"
+    },
+    "lead_forms.list": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List Lead Forms",
+      "description": "List lead forms by sponsored account, organization, or a batch of form IDs.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "ownerType": {
+            "type": "string",
+            "enum": [
+              "sponsoredAccount",
+              "organization"
+            ]
+          },
+          "ownerId": {
+            "type": "string"
+          },
+          "start": {
+            "type": "number"
+          },
+          "count": {
+            "type": "number"
+          },
+          "q": {
+            "type": "string"
+          },
+          "ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "owner_organization": {
+            "type": "string"
+          },
+          "owner_sponsored_account": {
+            "type": "string"
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "leadForms": {
+            "type": "array"
+          },
+          "nextStart": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "count": {
+            "type": "number"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/rest/leadForms",
+        "success": [
+          200
+        ],
+        "headers": {
+          "X-RestLi-Method": "FINDER"
+        },
+        "query": {
+          "q": "{{q}}",
+          "owner": "{{owner}}",
+          "start": "{{start}}",
+          "count": "{{count}}"
+        }
+      },
+      "sideEffect": "read"
+    },
+    "lead_forms.get": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get Lead Form",
+      "description": "Fetch a LinkedIn lead form by its ID. Requires LinkedIn Lead Sync program access.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "leadFormId": {
+            "type": "string"
+          },
+          "form_id": {
+            "type": "string"
+          },
+          "formId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "leadFormId"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "leadForm": {
+            "type": [
+              "object",
+              "null"
+            ]
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/rest/leadForms/{{leadFormId}}",
+        "success": [
+          200
+        ]
+      },
+      "sideEffect": "read"
+    },
+    "ad_accounts.create": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create Ad Account",
+      "description": "Create a LinkedIn Ads BUSINESS ad account for an organization or person. ENTERPRISE is reserved for LinkedIn internal use. Requires rw_ads.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Account label."
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "BUSINESS"
+            ],
+            "description": "Must be BUSINESS when creating accounts through the API."
+          },
+          "reference": {
+            "type": "string",
+            "description": "urn:li:person:{id} or urn:li:organization:{id}."
+          },
+          "currency": {
+            "type": "string",
+            "description": "ISO-4217 currency code. Defaults to USD."
+          },
+          "test": {
+            "type": "boolean",
+            "description": "Create a non-serving test account. Immutable after creation."
+          },
+          "notifiedOnEndOfCampaign": {
+            "type": "boolean"
+          },
+          "notifiedOnCreativeApproval": {
+            "type": "boolean"
+          },
+          "notifiedOnCreativeRejection": {
+            "type": "boolean"
+          },
+          "notifiedOnNewFeaturesEnabled": {
+            "type": "boolean"
+          },
+          "notifiedOnCampaignOptimization": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "name",
+          "type",
+          "reference"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "adAccount": {
+            "type": [
+              "object",
+              "null"
+            ]
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/rest/adAccounts",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "name": "{{name}}",
+          "type": "{{type}}",
+          "currency": "{{currency}}",
+          "reference": "{{reference}}",
+          "test": "{{test}}",
+          "notifiedOnEndOfCampaign": "{{notifiedOnEndOfCampaign}}",
+          "notifiedOnCreativeApproval": "{{notifiedOnCreativeApproval}}",
+          "notifiedOnCreativeRejection": "{{notifiedOnCreativeRejection}}",
+          "notifiedOnNewFeaturesEnabled": "{{notifiedOnNewFeaturesEnabled}}",
+          "notifiedOnCampaignOptimization": "{{notifiedOnCampaignOptimization}}"
+        }
+      },
+      "sideEffect": "write"
+    },
+    "lead_forms.create": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create Lead Form",
+      "description": "Create a LinkedIn lead generation form owned by a sponsored account or organization. Requires LinkedIn Lead Sync / rw_ads access.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Internal form name."
+          },
+          "owner": {
+            "type": "object",
+            "description": "Union of sponsoredAccount or organization URNs."
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "DRAFT",
+              "PUBLISHED",
+              "ARCHIVED"
+            ]
+          },
+          "creationLocale": {
+            "type": "object",
+            "description": "{language, country} locale, e.g. {language:\"en\", country:\"US\"}."
+          },
+          "content": {
+            "type": "object",
+            "description": "Form content including questions, headline, and legal info."
+          },
+          "hiddenFields": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            },
+            "description": "Hidden tracking fields (max 20)."
+          }
+        },
+        "required": [
+          "name",
+          "owner",
+          "state",
+          "creationLocale",
+          "content"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "leadForm": {
+            "type": [
+              "object",
+              "null"
+            ]
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/rest/leadForms",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "name": "{{name}}",
+          "owner": "{{owner}}",
+          "state": "{{state}}",
+          "creationLocale": "{{creationLocale}}",
+          "content": "{{content}}",
+          "hiddenFields": "{{hiddenFields}}"
+        }
+      },
+      "sideEffect": "write"
+    },
+    "organizations.network_size.get": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get organization follower count",
+      "description": "Retrieve first-degree follower count for a LinkedIn organization via /rest/networkSizes.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "organization_urn": {
+            "type": "string",
+            "description": "Organization URN or numeric ID."
+          },
+          "organizationUrn": {
+            "type": "string"
+          },
+          "organization": {
+            "type": "string"
+          },
+          "edge_type": {
+            "type": "string",
+            "enum": [
+              "COMPANY_FOLLOWED_BY_MEMBER"
+            ]
+          },
+          "edgeType": {
+            "type": "string",
+            "enum": [
+              "COMPANY_FOLLOWED_BY_MEMBER"
+            ]
+          }
+        },
+        "required": [
+          "organization_urn"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "firstDegreeSize": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "networkSize": {
+            "type": [
+              "object",
+              "null"
+            ]
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/rest/networkSizes/{{organization_urn}}",
+        "success": [
+          200
+        ],
+        "query": {
+          "edgeType": "{{edgeType}}"
+        }
+      },
+      "sideEffect": "read"
+    },
+    "organizations.acls.list": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get organization access control list",
+      "description": "List organization ACLs by organization URN or by the authenticated member (roleAssignee).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "q": {
+            "type": "string",
+            "enum": [
+              "organization",
+              "roleAssignee"
+            ]
+          },
+          "organization": {
+            "type": "string",
+            "description": "Required when q=organization."
+          },
+          "role": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "APPROVED",
+              "REJECTED",
+              "REQUESTED",
+              "REVOKED"
+            ]
+          },
+          "start": {
+            "type": "number"
+          },
+          "count": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "q"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "acls": {
+            "type": "array"
+          },
+          "nextStart": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "count": {
+            "type": "number"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/rest/organizationAcls",
+        "success": [
+          200
+        ],
+        "headers": {
+          "X-RestLi-Method": "FINDER"
+        },
+        "query": {
+          "q": "{{q}}",
+          "organization": "{{organization}}",
+          "role": "{{role}}",
+          "state": "{{state}}",
+          "start": "{{start}}",
+          "count": "{{count}}"
+        }
+      },
+      "sideEffect": "read"
+    },
+    "organizations.page_statistics.get": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get organization page statistics",
+      "description": "Retrieve lifetime or time-bound page view and click statistics for an organization the member administers.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "organization": {
+            "type": "string",
+            "description": "Organization URN or numeric ID."
+          },
+          "organizationUrn": {
+            "type": "string"
+          },
+          "timeIntervals": {
+            "type": "object",
+            "description": "{timeGranularityType, timeRange:{start,end}} in milliseconds."
+          }
+        },
+        "required": [
+          "organization"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "pageStatistics": {
+            "type": "array"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/rest/organizationPageStatistics",
+        "success": [
+          200
+        ],
+        "headers": {
+          "X-RestLi-Method": "FINDER"
+        },
+        "query": {
+          "q": "organization",
+          "organization": "{{organization}}"
+        }
+      },
+      "sideEffect": "read"
+    },
+    "organizations.follower_statistics.get": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get organization follower statistics",
+      "description": "Retrieve follower demographics or time-bound follower growth for an organization.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "organizationalEntity": {
+            "type": "string"
+          },
+          "organization": {
+            "type": "string"
+          },
+          "timeIntervals": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "organizationalEntity"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "followerStatistics": {
+            "type": "array"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/rest/organizationalEntityFollowerStatistics",
+        "success": [
+          200
+        ],
+        "headers": {
+          "X-RestLi-Method": "FINDER"
+        },
+        "query": {
+          "q": "organizationalEntity",
+          "organizationalEntity": "{{organizationalEntity}}"
+        }
+      },
+      "sideEffect": "read"
+    },
+    "organizations.share_statistics.get": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get organization share statistics",
+      "description": "Retrieve organic share engagement statistics for an organization, optionally filtered to share or ugcPost URNs.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "organizationalEntity": {
+            "type": "string"
+          },
+          "organization": {
+            "type": "string"
+          },
+          "shares": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "ugcPosts": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "timeIntervals": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "organizationalEntity"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "shareStatistics": {
+            "type": "array"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/rest/organizationalEntityShareStatistics",
+        "success": [
+          200
+        ],
+        "headers": {
+          "X-RestLi-Method": "FINDER"
+        },
+        "query": {
+          "q": "organizationalEntity",
+          "organizationalEntity": "{{organizationalEntity}}"
+        }
+      },
+      "sideEffect": "read"
+    },
+    "conversion_rules.list": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List Conversion Rules",
+      "description": "List conversion tracking rules for a sponsored ad account.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "account": {
+            "type": "string",
+            "description": "Sponsored account ID or URN."
+          },
+          "accountId": {
+            "type": "string"
+          },
+          "start": {
+            "type": "number"
+          },
+          "count": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "account"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "conversionRules": {
+            "type": "array"
+          },
+          "nextStart": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "count": {
+            "type": "number"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/rest/conversions",
+        "success": [
+          200
+        ],
+        "headers": {
+          "X-RestLi-Method": "FINDER"
+        },
+        "query": {
+          "q": "account",
+          "account": "{{account}}",
+          "start": "{{start}}",
+          "count": "{{count}}"
+        }
+      },
+      "sideEffect": "read"
+    },
+    "dmp_segments.list": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List DMP Segments",
+      "description": "List DMP audience segments by ad account or by segment IDs.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "q": {
+            "type": "string"
+          },
+          "account": {
+            "type": "string"
+          },
+          "ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "start": {
+            "type": "number"
+          },
+          "count": {
+            "type": "number"
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "dmpSegments": {
+            "type": "array"
+          },
+          "nextStart": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "count": {
+            "type": "number"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/rest/dmpSegments",
+        "success": [
+          200
+        ],
+        "headers": {
+          "X-RestLi-Method": "FINDER"
+        },
+        "query": {
+          "q": "{{q}}",
+          "account": "{{account}}",
+          "start": "{{start}}",
+          "count": "{{count}}"
+        }
+      },
+      "sideEffect": "read"
+    },
+    "organizations.list": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List Organizations",
+      "description": "Find LinkedIn organizations by vanity name, parent organization, or batch IDs.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "q": {
+            "type": "string",
+            "enum": [
+              "vanityName",
+              "parentOrganization"
+            ]
+          },
+          "ids": {
+            "type": "array"
+          },
+          "vanityName": {
+            "type": "string"
+          },
+          "parent": {
+            "type": "string"
+          },
+          "page_size": {
+            "type": "number"
+          },
+          "page_token": {
+            "type": "string"
+          },
+          "start": {
+            "type": "number"
+          },
+          "count": {
+            "type": "number"
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "organizations": {
+            "type": "array"
+          },
+          "nextStart": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "count": {
+            "type": "number"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/rest/organizations",
+        "success": [
+          200
+        ],
+        "headers": {
+          "X-RestLi-Method": "FINDER"
+        },
+        "query": {
+          "q": "{{q}}",
+          "vanityName": "{{vanityName}}",
+          "parent": "{{parent}}",
+          "start": "{{start}}",
+          "count": "{{count}}"
+        }
+      },
+      "sideEffect": "read"
+    },
+    "posts.list": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List LinkedIn posts",
+      "description": "List posts by author or sponsored ad account, or batch-get posts by share/ugcPost URNs.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "q": {
+            "type": "string",
+            "enum": [
+              "author",
+              "dscAdAccount"
+            ]
+          },
+          "ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "author": {
+            "type": "string"
+          },
+          "dscAdAccount": {
+            "type": "string"
+          },
+          "sort_by": {
+            "type": "string",
+            "enum": [
+              "LAST_MODIFIED",
+              "CREATED"
+            ]
+          },
+          "sortBy": {
+            "type": "string",
+            "enum": [
+              "LAST_MODIFIED",
+              "CREATED"
+            ]
+          },
+          "start": {
+            "type": "number"
+          },
+          "count": {
+            "type": "number"
+          },
+          "linkedin_version": {
+            "type": "string",
+            "description": "Optional LinkedIn-Version override in YYYYMM."
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "posts": {
+            "type": "array"
+          },
+          "nextStart": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "count": {
+            "type": "number"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/rest/posts",
+        "success": [
+          200
+        ],
+        "headers": {
+          "X-RestLi-Method": "FINDER"
+        },
+        "query": {
+          "q": "{{q}}",
+          "author": "{{author}}",
+          "dscAdAccount": "{{dscAdAccount}}",
+          "sortBy": "{{sortBy}}",
+          "start": "{{start}}",
+          "count": "{{count}}"
+        }
+      },
+      "sideEffect": "read"
+    },
+    "organizations.lookup": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Lookup organizations",
+      "description": "Batch-lookup organization profiles by numeric IDs without requiring admin access.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "ids": {
+            "type": "array",
+            "description": "Numeric organization IDs."
+          },
+          "linkedin_version": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "ids"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "organizations": {
+            "type": "array"
+          },
+          "results": {
+            "type": [
+              "object",
+              "null"
+            ]
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/rest/organizationsLookup",
+        "success": [
+          200
+        ],
+        "query": {
+          "ids": "{{ids}}"
+        }
+      },
+      "sideEffect": "read"
+    },
+    "uploads.register": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Register Upload",
+      "description": "Register a LinkedIn media asset upload (image or video) and return the upload URL. Does not PUT binary bytes.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Person or organization URN."
+          },
+          "recipes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "serviceRelationships": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "supportedUploadMechanism": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "owner",
+          "recipes",
+          "serviceRelationships",
+          "supportedUploadMechanism"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "upload": {
+            "type": [
+              "object",
+              "null"
+            ]
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/rest/assets",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "query": {
+          "action": "registerUpload"
+        },
+        "body": {
+          "registerUploadRequest": {
+            "owner": "{{owner}}",
+            "recipes": "{{recipes}}",
+            "serviceRelationships": "{{serviceRelationships}}",
+            "supportedUploadMechanism": "{{supportedUploadMechanism}}"
+          }
+        }
+      },
+      "sideEffect": "write"
+    },
+    "events.search": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Search Events",
+      "description": "Search LinkedIn events by organizer, optionally filtered to lead-gen-enabled events.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "organizer": {
+            "type": "string"
+          },
+          "q": {
+            "type": "string",
+            "enum": [
+              "eventsByOrganizer",
+              "organizerLeadGenFormEnabledEvents"
+            ]
+          },
+          "sortOrder": {
+            "type": "string",
+            "enum": [
+              "START_TIME_ASC",
+              "END_TIME_DESC"
+            ]
+          },
+          "entryCriteria": {
+            "type": "string",
+            "enum": [
+              "PUBLIC",
+              "GATED"
+            ]
+          },
+          "lifeCycleState": {
+            "type": "string",
+            "enum": [
+              "UPCOMING",
+              "ONGOING",
+              "PAST"
+            ]
+          },
+          "excludeCancelled": {
+            "type": "boolean"
+          },
+          "start": {
+            "type": "number"
+          },
+          "count": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "organizer"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "events": {
+            "type": "array"
+          },
+          "nextStart": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "count": {
+            "type": "number"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/rest/events",
+        "success": [
+          200
+        ],
+        "headers": {
+          "X-RestLi-Method": "FINDER"
+        },
+        "query": {
+          "q": "{{q}}",
+          "organizer": "{{organizer}}",
+          "sortOrder": "{{sortOrder}}",
+          "entryCriteria": "{{entryCriteria}}",
+          "lifeCycleState": "{{lifeCycleState}}",
+          "excludeCancelled": "{{excludeCancelled}}",
+          "start": "{{start}}",
+          "count": "{{count}}"
+        }
+      },
+      "sideEffect": "read"
+    },
+    "lead_forms.update": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Update lead form",
+      "description": "Partially update a LinkedIn lead form via Rest.li PARTIAL_UPDATE. Published forms only accept a subset of fields.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "form_id": {
+            "type": "string"
+          },
+          "formId": {
+            "type": "string"
+          },
+          "leadFormId": {
+            "type": "string"
+          },
+          "patch": {
+            "type": "object",
+            "description": "Rest.li patch object containing $set."
+          }
+        },
+        "required": [
+          "form_id",
+          "patch"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "leadForm": {
+            "type": [
+              "object",
+              "null"
+            ]
+          },
+          "leadFormId": {
+            "type": "string"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/rest/leadForms/{{form_id}}",
+        "success": [
+          200,
+          204
+        ],
+        "headers": {
+          "Content-Type": "application/json",
+          "X-RestLi-Method": "PARTIAL_UPDATE"
+        },
+        "body": {
+          "patch": "{{patch}}"
+        }
+      },
+      "sideEffect": "write"
+    },
+    "organizations.acls.update": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Update organization access control",
+      "description": "Request an organization ACL role for the authenticated member. External apps can only request DIRECT_SPONSORED_CONTENT_POSTER in REQUESTED state.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "role": {
+            "type": "string",
+            "enum": [
+              "ADMINISTRATOR",
+              "DIRECT_SPONSORED_CONTENT_POSTER",
+              "RECRUITING_POSTER",
+              "LEAD_CAPTURE_ADMINISTRATOR",
+              "LEAD_GEN_FORMS_MANAGER",
+              "ANALYST",
+              "CURATOR",
+              "CONTENT_ADMINISTRATOR"
+            ]
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "APPROVED",
+              "REJECTED",
+              "REQUESTED",
+              "REVOKED"
+            ]
+          },
+          "organization": {
+            "type": "string"
+          },
+          "roleAssignee": {
+            "type": "string",
+            "description": "Person URN of the member receiving the role."
+          }
+        },
+        "required": [
+          "role",
+          "state",
+          "organization",
+          "roleAssignee"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "acl": {
+            "type": [
+              "object",
+              "null"
+            ]
+          }
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/rest/organizationAcls/(organization:{{organization}},role:{{role}},roleAssignee:{{roleAssignee}})",
+        "success": [
+          200,
+          201,
+          204
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "role": "{{role}}",
+          "state": "{{state}}",
+          "organization": "{{organization}}",
+          "roleAssignee": "{{roleAssignee}}"
+        }
+      },
+      "sideEffect": "write"
     }
   },
   "models": [
@@ -290,6 +2713,35 @@
     "creative_asset",
     "campaign_group",
     "creative",
-    "analytics_result"
-  ]
+    "analytics_result",
+    "lead_form",
+    "organization"
+  ],
+  "http": {
+    "baseUrl": "https://api.linkedin.com",
+    "auth": {
+      "field": "accessToken",
+      "in": "header",
+      "name": "Authorization",
+      "value": "Bearer {{accessToken}}"
+    },
+    "headers": {
+      "X-Restli-Protocol-Version": "2.0.0",
+      "LinkedIn-Version": "202608"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after",
+      "retryAfterKind": "seconds",
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "message",
+        "error.message",
+        "error",
+        "status"
+      ]
+    }
+  }
 }

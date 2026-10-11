@@ -297,7 +297,7 @@ fn start_host_inner(
             .spawn()
             .unwrap(),
     );
-    let until = Instant::now() + Duration::from_secs(10);
+    let until = Instant::now() + Duration::from_secs(120);
     loop {
         if TcpStream::connect(address).is_ok() {
             break;

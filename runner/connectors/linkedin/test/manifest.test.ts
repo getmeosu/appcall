@@ -4,7 +4,7 @@ import manifest from "../manifest.json";
 describe("linkedin manifest", () => {
   it("has correct key and version", () => {
     expect(manifest.key).toBe("linkedin");
-    expect(manifest.version).toBe("0.1.1");
+    expect(manifest.version).toBe("0.2.0");
     expect(manifest.runtime).toBe("bun");
   });
 
@@ -40,7 +40,9 @@ describe("linkedin manifest", () => {
     expect(ops).toContain("organizations.list");
     expect(ops).toContain("posts.create");
     expect(ops).toContain("healthcheck");
-    expect(ops).toHaveLength(5);
+    expect(ops).toContain("posts.publish");
+    expect(ops).toContain("profile.whoami");
+    expect(ops).toHaveLength(30);
   });
 
   it("has correct models", () => {

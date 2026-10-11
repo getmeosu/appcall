@@ -70,6 +70,21 @@ describe("createCalComClient", () => {
     await client.fetchJSON("/slots", {}, "2024-09-04");
     expect(requests[0].headers.get("cal-api-version")).toBe("2024-09-04");
   });
+
+  test("forwards extraHeaders such as x-cal-secret-key", async () => {
+    const requests: Request[] = [];
+    const client = createCalComClient({
+      token: "key",
+      extraHeaders: { "x-cal-secret-key": "platform_secret" },
+      fetch: async (input, init) => {
+        requests.push(new Request(input, init));
+        return new Response("{}", { status: 200 });
+      },
+    });
+    await client.fetchJSON("/oauth-clients/abc/users");
+    expect(requests[0].headers.get("Authorization")).toBe("Bearer key");
+    expect(requests[0].headers.get("x-cal-secret-key")).toBe("platform_secret");
+  });
 });
 
 describe("isRecord", () => {

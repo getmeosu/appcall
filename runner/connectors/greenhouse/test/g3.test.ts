@@ -1,41 +1,25 @@
 import { describe, expect, test } from "bun:test";
 import {
-  executeJobsCreate,
-  executeJobsUpdate,
-  executeJobPostsList,
-  executeOpeningsList,
-  executeOpeningsCreate,
-  executeOpeningsUpdate,
-  executeJobOwnersList,
-  executeJobOwnersCreate,
-  executeJobOwnersDelete,
-  executeJobHiringManagersList,
-  executeJobHiringManagersCreate,
-  executeJobHiringManagersDelete,
-  executeJobNotesList,
-  executeJobNotesCreate,
-  executeJobNotesUpdate,
+  G3_OPERATION_KEYS,
+  G3_SPECS,
+  createGreenhouseG3ActionHandlers,
+  executeGreenhouseG3Action,
 } from "../src/g3";
 import { clearGreenhouseTokenCache } from "../src/http";
 import manifest from "../manifest.json";
-import jobCreated from "../fixtures/job_created.json";
-import jobUpdated from "../fixtures/job_updated.json";
-import jobPostsList from "../fixtures/job_posts_list.json";
-import openingsList from "../fixtures/openings_list.json";
-import openingCreated from "../fixtures/opening_created.json";
-import openingUpdated from "../fixtures/opening_updated.json";
-import jobOwnersList from "../fixtures/job_owners_list.json";
-import jobOwnerCreated from "../fixtures/job_owner_created.json";
-import jobOwnerDeleted from "../fixtures/job_owner_deleted.json";
-import hiringManagersList from "../fixtures/job_hiring_managers_list.json";
-import hiringManagerCreated from "../fixtures/job_hiring_manager_created.json";
-import jobNotesList from "../fixtures/job_notes_list.json";
-import jobNoteCreated from "../fixtures/job_note_created.json";
-import jobNoteUpdated from "../fixtures/job_note_updated.json";
+import listFixture from "../fixtures/g3_list.json";
+import createdFixture from "../fixtures/g3_created.json";
+import bulkFixture from "../fixtures/g3_bulk.json";
+import userFixture from "../fixtures/g3_user.json";
 
-/** Auth carries the credential `userId` (OAuth sub) on purpose: it must never become a wire user_id. */
-const auth = { clientId: "fixture-client", clientSecret: "fixture-secret", userId: "9999" };
+const auth = { clientId: "fixture-client", clientSecret: "fixture-secret" };
 
+function isToken(url: string) {
+  return String(url).includes("auth.greenhouse.io/token");
+}
+function isIntrospect(url: string) {
+  return String(url).includes("auth.greenhouse.io/introspect");
+}
 function harvestCalls(calls: Array<{ url: string; init?: RequestInit }>) {
   return calls.filter((c) => c.url.includes("harvest.greenhouse.io"));
 }
@@ -44,9 +28,17 @@ function stub(body: string, status = 200, headers: Record<string, string> = {}) 
   const calls: Array<{ url: string; init?: RequestInit }> = [];
   const impl = (url: string | URL | Request, init?: RequestInit) => {
     calls.push({ url: String(url), init });
-    if (String(url).includes("auth.greenhouse.io/token")) {
+    if (isToken(String(url))) {
       return Promise.resolve(
         new Response(JSON.stringify({ access_token: "tok", expires_in: 3600 }), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        }),
+      );
+    }
+    if (isIntrospect(String(url))) {
+      return Promise.resolve(
+        new Response(JSON.stringify({ active: true, sub: "1049756", username: "u@example.com" }), {
           status: 200,
           headers: { "content-type": "application/json" },
         }),
@@ -59,326 +51,245 @@ function stub(body: string, status = 200, headers: Record<string, string> = {}) 
   return { calls, impl };
 }
 
-const noNet = (async () => {
-  throw new Error("network must not be called");
-}) as any;
-
-function first(calls: Array<{ url: string; init?: RequestInit }>) {
-  const call = harvestCalls(calls)[0]!;
-  return {
-    url: new URL(call.url),
-    method: call.init?.method,
-    body: call.init?.body ? JSON.parse(String(call.init.body)) : undefined,
-  };
+function sampleInput(spec: (typeof G3_SPECS)[string]): Record<string, unknown> {
+  const input: Record<string, unknown> = { ...auth };
+  for (const name of spec.required) {
+    if (name === "data") input.data = [{ id: 1, name: "row" }];
+    else if (name === "fields") input.fields = ["full_name"];
+    else if (name === "sequential") input.sequential = true;
+    else if (name === "approver_groups") input.approver_groups = [{ approvals_required: 1, approver_ids: [1] }];
+    else if (name === "interviewers") input.interviewers = [{ user_id: 1, response_status: "accepted" }];
+    else if (name.endsWith("_ids") || name.endsWith("s") && name !== "fields") {
+      // leave arrays to explicit cases
+      input[name] = name.endsWith("_id") || !name.endsWith("s") ? 9 : [9];
+    } else if (name.endsWith("_id") || name === "id" || name.endsWith("Id")) input[name] = 11;
+    else if (name === "email" || name === "primary_email") input[name] = "user@example.com";
+    else if (name === "value") input[name] = "192.0.2.1";
+    else if (name === "source_type") input[name] = "ip_address";
+    else if (name === "approval_type") input[name] = "open_job";
+    else if (name === "field_type") input[name] = "job";
+    else if (name === "value_type") input[name] = "short_text";
+    else if (name === "type" && spec.slug.includes("OWNER")) input[name] = "recruiter";
+    else if (name === "type") input[name] = "resume";
+    else if (name === "filename") input[name] = "resume.pdf";
+    else if (name === "body") input[name] = "hello";
+    else if (name === "name" || name === "first_name" || name === "last_name" || name === "job_name") {
+      input[name] = "Ada";
+    } else if (name === "number_of_openings" || name === "sort_order" || name === "template_job_id") {
+      input[name] = 2;
+    } else input[name] = "x";
+  }
+  return input;
 }
 
-describe("Greenhouse G3 jobs.create / jobs.update", () => {
-  test("create maps template + openings + v3 custom_fields", async () => {
-    clearGreenhouseTokenCache();
-    const { calls, impl } = stub(JSON.stringify(jobCreated), 201);
-    const result = await executeJobsCreate({
-      ...auth,
-      templateJobId: "10",
-      numberOfOpenings: 2,
-      jobName: "Job Name",
-      jobPostName: "Post",
-      departmentId: 5,
-      officeIds: [1, "2"],
-      requisitionId: "req-2",
-      notes: "n",
-      openingIds: ["op-1"],
-      customFields: [{ name_key: "employment_type", value: "Full-time" }],
-      fetch: impl,
-    });
-    expect(result.id).toBe(1);
-    const call = first(calls);
-    expect(call.method).toBe("POST");
-    expect(call.url.pathname).toBe("/v3/jobs");
-    expect(call.body).toEqual({
-      template_job_id: 10,
-      number_of_openings: 2,
-      job_name: "Job Name",
-      job_post_name: "Post",
-      department_id: 5,
-      office_ids: [1, 2],
-      requisition_id: "req-2",
-      notes: "n",
-      opening_ids: ["op-1"],
-      custom_fields: [{ name_key: "employment_type", value: "Full-time" }],
-    });
-  });
-
-  test("create validation before network", async () => {
-    const base = { ...auth, templateJobId: 1, fetch: noNet };
-    await expect(executeJobsCreate({ ...base, numberOfOpenings: 0 })).rejects.toThrow(/numberOfOpenings/);
-    await expect(
-      executeJobsCreate({ ...base, numberOfOpenings: 1, openingIds: ["a", "b"] }),
-    ).rejects.toThrow(/openingIds/);
-    await expect(
-      executeJobsCreate({ ...base, numberOfOpenings: 1, customFields: { a: 1 } as any }),
-    ).rejects.toThrow(/array/);
-    await expect(
-      executeJobsCreate({ ...auth, templateJobId: undefined as any, numberOfOpenings: 1, fetch: noNet }),
-    ).rejects.toThrow(/templateJobId/);
-  });
-
-  test("update PATCHes fields and supports null clears", async () => {
-    clearGreenhouseTokenCache();
-    const { calls, impl } = stub(JSON.stringify(jobUpdated));
-    const result = await executeJobsUpdate({
-      ...auth,
-      id: "1",
-      name: "New Name",
-      notes: "New Notes",
-      requisitionId: null,
-      departmentId: null,
-      anywhere: true,
-      officeIds: [3],
-      fetch: impl,
-    });
-    expect(result.id).toBe(1);
-    const call = first(calls);
-    expect(call.method).toBe("PATCH");
-    expect(call.url.pathname).toBe("/v3/jobs/1");
-    expect(call.body).toEqual({
-      name: "New Name",
-      notes: "New Notes",
-      requisition_id: null,
-      office_ids: [3],
-      department_id: null,
-      anywhere: true,
-    });
-    await expect(executeJobsUpdate({ ...auth, id: "1", fetch: noNet })).rejects.toThrow(/at least one/);
-  });
-});
-
-describe("Greenhouse G3 lists", () => {
-  test("job_posts / openings / job_owners / hiring managers / job_notes", async () => {
-    const cases = [
-      [executeJobPostsList, jobPostsList, "/v3/job_posts", "jobPosts", { jobIds: [1, 2], jobBoardIds: 3, live: true, featured: false }, { job_ids: "1,2", job_board_ids: "3", live: "true", featured: "false" }],
-      [executeOpeningsList, openingsList, "/v3/openings", "openings", { jobIds: "1", closeReasonIds: [4], open: false, openingId: "op-1" }, { job_ids: "1", close_reason_ids: "4", open: "false", opening_id: "op-1" }],
-      [executeJobOwnersList, jobOwnersList, "/v3/job_owners", "jobOwners", { jobIds: [1], userIds: [7, 8], type: "recruiter" }, { job_ids: "1", user_ids: "7,8", type: "recruiter" }],
-      [executeJobHiringManagersList, hiringManagersList, "/v3/job_hiring_managers", "jobHiringManagers", { jobIds: [1], userIds: 7 }, { job_ids: "1", user_ids: "7" }],
-      [executeJobNotesList, jobNotesList, "/v3/job_notes", "jobNotes", { jobIds: [1], visibility: "privately_visible" }, { job_ids: "1", visibility: "privately_visible" }],
-    ] as const;
-    for (const [fn, fixture, path, key, extra, expected] of cases) {
-      clearGreenhouseTokenCache();
-      const { calls, impl } = stub(JSON.stringify(fixture), 200, {
-        link: '<https://harvest.greenhouse.io/v3/x?cursor=NEXT9&per_page=5>; rel="next"',
-      });
-      const result = (await (fn as any)({ ...auth, ...extra, ids: [9], perPage: 5, cursor: "C1", fetch: impl })) as any;
-      expect(result[key].length).toBeGreaterThan(0);
-      expect(result.nextCursor).toBe("NEXT9");
-      const { url, method } = first(calls);
-      expect(method).toBe("GET");
-      expect(url.pathname).toBe(path);
-      expect(url.searchParams.get("ids")).toBe("9");
-      expect(url.searchParams.get("per_page")).toBe("5");
-      expect(url.searchParams.get("cursor")).toBe("C1");
-      for (const [k, v] of Object.entries(expected)) expect(url.searchParams.get(k)).toBe(v);
-    }
-  });
-
-  test("list enum filters rejected before network", async () => {
-    await expect(executeJobOwnersList({ ...auth, type: "hiring_manager", fetch: noNet })).rejects.toThrow(/type/);
-    await expect(executeJobNotesList({ ...auth, visibility: "publicly_visible", fetch: noNet })).rejects.toThrow(
-      /visibility/,
-    );
-  });
-});
-
-describe("Greenhouse G3 openings writes", () => {
-  test("create + update", async () => {
-    clearGreenhouseTokenCache();
-    const created = stub(JSON.stringify(openingCreated), 201);
-    const result = await executeOpeningsCreate({
-      ...auth,
-      jobId: "1",
-      openingId: "1234-abc",
-      customFields: [{ custom_field_id: 3, value: "x" }],
-      fetch: created.impl,
-    });
-    expect(result.id).toBe(1);
-    expect(first(created.calls).url.pathname).toBe("/v3/openings");
-    expect(first(created.calls).body).toEqual({
-      job_id: 1,
-      opening_id: "1234-abc",
-      custom_fields: [{ custom_field_id: 3, value: "x" }],
-    });
-
-    clearGreenhouseTokenCache();
-    const updated = stub(JSON.stringify(openingUpdated));
-    await executeOpeningsUpdate({
-      ...auth,
-      id: "1",
-      status: "closed",
-      closeReasonId: "2",
-      targetStartOn: "2026-11-01",
-      fetch: updated.impl,
-    });
-    const call = first(updated.calls);
-    expect(call.method).toBe("PATCH");
-    expect(call.url.pathname).toBe("/v3/openings/1");
-    expect(call.body).toEqual({ status: "closed", close_reason_id: 2, target_start_on: "2026-11-01" });
-  });
-
-  test("update validation before network", async () => {
-    await expect(executeOpeningsUpdate({ ...auth, id: "1", status: "filled", fetch: noNet })).rejects.toThrow(
-      /status/,
-    );
-    await expect(executeOpeningsUpdate({ ...auth, id: "1", fetch: noNet })).rejects.toThrow(/at least one/);
-    await expect(executeOpeningsCreate({ ...auth, jobId: undefined as any, fetch: noNet })).rejects.toThrow(/jobId/);
-  });
-});
-
-describe("Greenhouse G3 hiring team (role-specific user ids, never credential userId)", () => {
-  test("job_owners.create wires ownerUserId → user_id", async () => {
-    clearGreenhouseTokenCache();
-    const { calls, impl } = stub(JSON.stringify(jobOwnerCreated), 201);
-    const result = await executeJobOwnersCreate({
-      ...auth,
-      jobId: 1,
-      ownerUserId: "42",
-      type: "recruiter",
-      candidateResponsibility: "active",
-      fetch: impl,
-    });
-    expect(result.id).toBe(1);
-    expect(first(calls).url.pathname).toBe("/v3/job_owners");
-    expect(first(calls).body).toEqual({ job_id: 1, user_id: 42, type: "recruiter", candidate_responsibility: "active" });
-  });
-
-  test("job_owners.create validation before network", async () => {
-    const base = { ...auth, jobId: 1, ownerUserId: 42, fetch: noNet };
-    await expect(executeJobOwnersCreate({ ...base, type: "hiring_manager" })).rejects.toThrow(/type/);
-    await expect(executeJobOwnersCreate({ ...base, type: undefined as any })).rejects.toThrow(/type is required/);
-    await expect(
-      executeJobOwnersCreate({ ...base, type: "recruiter", candidateResponsibility: "some" }),
-    ).rejects.toThrow(/candidateResponsibility/);
-    await expect(
-      executeJobOwnersCreate({ ...auth, jobId: 1, ownerUserId: undefined as any, type: "sourcer", fetch: noNet }),
-    ).rejects.toThrow(/ownerUserId/);
-  });
-
-  test("job_hiring_managers.create wires hiringManagerUserId → user_id", async () => {
-    clearGreenhouseTokenCache();
-    const { calls, impl } = stub(JSON.stringify(hiringManagerCreated), 201);
-    const result = await executeJobHiringManagersCreate({ ...auth, jobId: "1", hiringManagerUserId: 7, fetch: impl });
-    expect(result.id).toBe(1);
-    expect(first(calls).url.pathname).toBe("/v3/job_hiring_managers");
-    expect(first(calls).body).toEqual({ job_id: 1, user_id: 7 });
-    await expect(
-      executeJobHiringManagersCreate({ ...auth, jobId: 1, hiringManagerUserId: undefined as any, fetch: noNet }),
-    ).rejects.toThrow(/hiringManagerUserId/);
-  });
-});
-
-describe("Greenhouse G3 job notes", () => {
-  test("create wires authorUserId → user_id; update patches body/visibility", async () => {
-    clearGreenhouseTokenCache();
-    const created = stub(JSON.stringify(jobNoteCreated), 201);
-    const result = await executeJobNotesCreate({
-      ...auth,
-      jobId: 1,
-      authorUserId: 3,
-      body: "ceci n'est pas un travail",
-      visibility: "admin_only_visible",
-      fetch: created.impl,
-    });
-    expect(result.id).toBe(1);
-    expect(first(created.calls).url.pathname).toBe("/v3/job_notes");
-    expect(first(created.calls).body).toEqual({
-      job_id: 1,
-      user_id: 3,
-      body: "ceci n'est pas un travail",
-      visibility: "admin_only_visible",
-    });
-
-    clearGreenhouseTokenCache();
-    const updated = stub(JSON.stringify(jobNoteUpdated));
-    await executeJobNotesUpdate({ ...auth, id: "1", visibility: "privately_visible", fetch: updated.impl });
-    expect(first(updated.calls).method).toBe("PATCH");
-    expect(first(updated.calls).url.pathname).toBe("/v3/job_notes/1");
-    expect(first(updated.calls).body).toEqual({ visibility: "privately_visible" });
-  });
-
-  test("validation before network", async () => {
-    const base = { ...auth, jobId: 1, authorUserId: 3, body: "x", fetch: noNet };
-    await expect(executeJobNotesCreate({ ...base, visibility: "public" })).rejects.toThrow(/visibility/);
-    await expect(executeJobNotesCreate({ ...base, visibility: undefined as any })).rejects.toThrow(/visibility is required/);
-    await expect(executeJobNotesCreate({ ...base, body: "", visibility: "privately_visible" })).rejects.toThrow(/body/);
-    await expect(executeJobNotesUpdate({ ...auth, id: "1", fetch: noNet })).rejects.toThrow(/body and\/or visibility/);
-  });
-});
-
-describe("Greenhouse G3 deletes", () => {
-  const cases = [
-    [executeJobOwnersDelete, "/v3/job_owners/77"],
-    [executeJobHiringManagersDelete, "/v3/job_hiring_managers/77"],
-  ] as const;
-
-  test("DELETE returns { ok: true }", async () => {
-    for (const [fn, path] of cases) {
-      clearGreenhouseTokenCache();
-      const { calls, impl } = stub(JSON.stringify(jobOwnerDeleted));
-      expect(await fn({ ...auth, id: "77", fetch: impl })).toEqual({ ok: true });
-      expect(first(calls).method).toBe("DELETE");
-      expect(first(calls).url.pathname).toBe(path);
-    }
-  });
-
-  test("DELETE 404 → CONNECTOR_UPSTREAM_ERROR", async () => {
-    for (const [fn] of cases) {
-      clearGreenhouseTokenCache();
-      const { impl } = stub(JSON.stringify({ errors: [{ message: "Not Found" }] }), 404);
-      await expect(fn({ ...auth, id: "404404", fetch: impl })).rejects.toMatchObject({
-        code: "CONNECTOR_UPSTREAM_ERROR",
-      });
-    }
-  });
-});
-
-describe("Greenhouse G3 manifest", () => {
-  const G3 = {
-    "jobs.create": "write",
-    "jobs.update": "write",
-    "job_posts.list": "read",
-    "openings.list": "read",
-    "openings.create": "write",
-    "openings.update": "write",
-    "job_owners.list": "read",
-    "job_owners.create": "write",
-    "job_owners.delete": "destructive",
-    "job_hiring_managers.list": "read",
-    "job_hiring_managers.create": "write",
-    "job_hiring_managers.delete": "destructive",
-    "job_notes.list": "read",
-    "job_notes.create": "write",
-    "job_notes.update": "write",
-  } as const;
-
-  test("15 G3 ops: agent actions, locked sideEffects, no effect keys", () => {
-    expect(Object.keys(G3)).toHaveLength(15);
-    for (const [id, sideEffect] of Object.entries(G3)) {
-      const op = (manifest.operations as Record<string, Record<string, unknown>>)[id]!;
-      expect(op).toBeTruthy();
+describe("Greenhouse G3 Composio coverage", () => {
+  test("registers 88 handwritten handlers matching the manifest", () => {
+    const handlers = createGreenhouseG3ActionHandlers();
+    expect(G3_OPERATION_KEYS).toHaveLength(88);
+    expect(Object.keys(handlers).sort()).toEqual([...G3_OPERATION_KEYS].sort());
+    for (const key of G3_OPERATION_KEYS) {
+      expect(manifest.operations[key as keyof typeof manifest.operations]).toBeTruthy();
+      const op = manifest.operations[key as keyof typeof manifest.operations] as {
+        kind: string;
+        title: string;
+        description: string;
+        inputSchema: { type: string };
+        request?: unknown;
+      };
       expect(op.kind).toBe("action");
-      expect(op.sideEffect).toBe(sideEffect);
-      expect(op.effectPolicy).toBeUndefined();
-      expect(op.reconcile).toBeUndefined();
-      expect(op.effect).toBeUndefined();
+      expect(op.title.length).toBeGreaterThan(0);
+      expect(op.description).toContain("/v3");
+      expect(op.inputSchema.type).toBe("object");
+      expect(op.request).toBeUndefined();
     }
   });
 
-  test("no op exposes the credential key userId as an input", () => {
-    for (const [id, op] of Object.entries(manifest.operations as Record<string, any>)) {
-      const props = op.inputSchema?.properties ?? {};
-      expect([id, "userId" in props]).toEqual([id, false]);
+  test("every G3 spec issues the documented Harvest v3 method and path", async () => {
+    for (const key of G3_OPERATION_KEYS) {
+      if (key === "users.me") continue;
+      clearGreenhouseTokenCache();
+      const spec = G3_SPECS[key]!;
+      const body = spec.method === "GET" ? JSON.stringify(listFixture) : JSON.stringify(createdFixture);
+      const status = spec.emptyOk ? 204 : spec.method === "POST" ? 201 : 200;
+      const { calls, impl } = stub(spec.emptyOk ? "" : body, spec.emptyOk ? 204 : status);
+      const result = await executeGreenhouseG3Action(key, { ...sampleInput(spec), fetch: impl } as any);
+      const harvest = harvestCalls(calls);
+      expect(harvest.length).toBeGreaterThan(0);
+      const url = new URL(harvest[0]!.url);
+      const expected = spec.path.replace(/\{[a-z0-9_]+\}/g, "11");
+      expect(url.pathname).toBe(`/v3${expected}`);
+      expect(String(harvest[0]!.init?.method ?? "GET").toUpperCase()).toBe(spec.method);
+      if (spec.method === "GET" && spec.listKey) {
+        expect((result as any)[spec.listKey].length).toBeGreaterThan(0);
+      }
     }
-    const ops = manifest.operations as Record<string, { inputSchema: { required: string[] } }>;
-    expect(ops["job_owners.create"]!.inputSchema.required).toEqual(["jobId", "ownerUserId", "type"]);
-    expect(ops["job_hiring_managers.create"]!.inputSchema.required).toEqual(["jobId", "hiringManagerUserId"]);
-    expect(ops["job_notes.create"]!.inputSchema.required).toEqual(["jobId", "authorUserId", "body", "visibility"]);
-    expect(ops["jobs.create"]!.inputSchema.required).toEqual(["templateJobId", "numberOfOpenings"]);
+  });
+
+  test("users.me introspects the token then GETs /v3/users?ids=", async () => {
+    clearGreenhouseTokenCache();
+    const { calls, impl } = stub(JSON.stringify([userFixture]));
+    const result = (await executeGreenhouseG3Action("users.me", { ...auth, fetch: impl } as any)) as any;
+    const introspect = calls.find((c) => isIntrospect(c.url));
+    expect(introspect).toBeTruthy();
+    expect(String(introspect!.init?.method ?? "POST").toUpperCase()).toBe("POST");
+    const harvest = harvestCalls(calls)[0]!;
+    const url = new URL(harvest.url);
+    expect(url.pathname).toBe("/v3/users");
+    expect(url.searchParams.get("ids")).toBe("1049756");
+    expect(result.user.id).toBe(1049756);
+    expect(result.introspect.sub).toBe("1049756");
+  });
+
+  test("creates send snake_case JSON and optional On-Behalf-Of", async () => {
+    clearGreenhouseTokenCache();
+    const { calls, impl } = stub(JSON.stringify(createdFixture), 201);
+    await executeGreenhouseG3Action("departments.create", {
+      ...auth,
+      name: "Engineering",
+      parent_id: 3,
+      on_behalf_of: "99",
+      fetch: impl,
+    } as any);
+    const call = harvestCalls(calls)[0]!;
+    expect(new URL(call.url).pathname).toBe("/v3/departments");
+    expect(JSON.parse(String(call.init?.body))).toEqual({ name: "Engineering", parent_id: 3 });
+    const headers = call.init?.headers as Record<string, string>;
+    expect(headers["On-Behalf-Of"]).toBe("99");
+  });
+
+  test("bulk create posts data + callback_url to /bulk", async () => {
+    clearGreenhouseTokenCache();
+    const { calls, impl } = stub(JSON.stringify(bulkFixture), 201);
+    const result = (await executeGreenhouseG3Action("openings.bulk_create", {
+      ...auth,
+      data: [{ job_id: 1 }],
+      callback_url: "https://example.test/hook",
+      fetch: impl,
+    } as any)) as any;
+    const call = harvestCalls(calls)[0]!;
+    expect(call.init?.method).toBe("POST");
+    expect(new URL(call.url).pathname).toBe("/v3/openings/bulk");
+    expect(JSON.parse(String(call.init?.body))).toEqual({
+      data: [{ job_id: 1 }],
+      callback_url: "https://example.test/hook",
+    });
+    expect(result.bulk_action_uuid).toBe("bulk-1");
+  });
+
+  test("bulk delete custom field options sends DELETE with JSON body", async () => {
+    clearGreenhouseTokenCache();
+    const { calls, impl } = stub(JSON.stringify(bulkFixture), 200);
+    await executeGreenhouseG3Action("custom_field_options.bulk_delete", {
+      ...auth,
+      data: [1, 2, 3],
+      fetch: impl,
+    } as any);
+    const call = harvestCalls(calls)[0]!;
+    expect(call.init?.method).toBe("DELETE");
+    expect(new URL(call.url).pathname).toBe("/v3/custom_field_options/bulk");
+    expect(JSON.parse(String(call.init?.body))).toEqual({ data: [1, 2, 3] });
+  });
+
+  test("replace approver PUTs add/remove user ids", async () => {
+    clearGreenhouseTokenCache();
+    const { calls, impl } = stub(JSON.stringify(createdFixture));
+    await executeGreenhouseG3Action("approver_groups.replace_approver", {
+      ...auth,
+      id: "44",
+      add_user_id: 8,
+      remove_user_id: 7,
+      fetch: impl,
+    } as any);
+    const call = harvestCalls(calls)[0]!;
+    expect(call.init?.method).toBe("PUT");
+    expect(new URL(call.url).pathname).toBe("/v3/approver_groups/44/replace_approver");
+    expect(JSON.parse(String(call.init?.body))).toEqual({ add_user_id: 8, remove_user_id: 7 });
+  });
+
+  test("anonymize PATCHes /candidates/{id}/anonymize", async () => {
+    clearGreenhouseTokenCache();
+    const { calls, impl } = stub(JSON.stringify({ id: 5 }), 200);
+    await executeGreenhouseG3Action("candidates.anonymize", {
+      ...auth,
+      id: 5,
+      fields: ["full_name", "email_addresses"],
+      fetch: impl,
+    } as any);
+    const call = harvestCalls(calls)[0]!;
+    expect(call.init?.method).toBe("PATCH");
+    expect(new URL(call.url).pathname).toBe("/v3/candidates/5/anonymize");
+    expect(JSON.parse(String(call.init?.body))).toEqual({ fields: ["full_name", "email_addresses"] });
+  });
+
+  test("applications.search GETs /v3/applications with search query", async () => {
+    clearGreenhouseTokenCache();
+    const { calls, impl } = stub(JSON.stringify(listFixture));
+    const result = (await executeGreenhouseG3Action("applications.search", {
+      ...auth,
+      search: "Ada",
+      job_ids: [10, 11],
+      stage_status: "in_process",
+      fetch: impl,
+    } as any)) as any;
+    const url = new URL(harvestCalls(calls)[0]!.url);
+    expect(url.pathname).toBe("/v3/applications");
+    expect(url.searchParams.get("search")).toBe("Ada");
+    expect(url.searchParams.get("job_ids")).toBe("10,11");
+    expect(url.searchParams.get("stage_status")).toBe("in_process");
+    expect(result.applications).toHaveLength(1);
+  });
+
+  test("activate/deactivate/revoke hit user member routes and treat 204 as ok", async () => {
+    for (const [key, path] of [
+      ["users.activate", "/v3/users/11/activate"],
+      ["users.deactivate", "/v3/users/11/deactivate"],
+      ["users.revoke_permissions", "/v3/users/11/revoke_permissions"],
+    ] as const) {
+      clearGreenhouseTokenCache();
+      const { calls, impl } = stub("", 204);
+      const result = await executeGreenhouseG3Action(key, { ...auth, id: "11", fetch: impl } as any);
+      expect(result).toEqual({ ok: true });
+      expect(new URL(harvestCalls(calls)[0]!.url).pathname).toBe(path);
+      expect(harvestCalls(calls)[0]!.init?.method).toBe("POST");
+    }
+  });
+
+  test("rejects unsafe path ids before network", async () => {
+    await expect(
+      executeGreenhouseG3Action("jobs.update", {
+        ...auth,
+        id: "../evil",
+        name: "x",
+        fetch: async () => {
+          throw new Error("network must not be called");
+        },
+      } as any),
+    ).rejects.toThrow();
+  });
+
+  test("upstream 404 becomes CONNECTOR_UPSTREAM_ERROR", async () => {
+    clearGreenhouseTokenCache();
+    const { impl } = stub(JSON.stringify({ errors: [{ message: "Not Found" }] }), 404);
+    let caught: any;
+    try {
+      await executeGreenhouseG3Action("job_notes.delete", { ...auth, id: "9", fetch: impl } as any);
+    } catch (err) {
+      caught = err;
+    }
+    expect(caught?.code).toBe("CONNECTOR_UPSTREAM_ERROR");
+  });
+
+  test("camelCase aliases map onto Harvest snake_case query/body", async () => {
+    clearGreenhouseTokenCache();
+    const { calls, impl } = stub(JSON.stringify(listFixture));
+    await executeGreenhouseG3Action("openings.list", {
+      ...auth,
+      jobIds: [5],
+      perPage: 2,
+      fetch: impl,
+    } as any);
+    const url = new URL(harvestCalls(calls)[0]!.url);
+    expect(url.searchParams.get("job_ids")).toBe("5");
+    expect(url.searchParams.get("per_page")).toBe("2");
   });
 });

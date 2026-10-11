@@ -1,9 +1,23 @@
 # Bannerbear
 
-Read-only international Bannerbear V2 REST API recipe. Configure a project API key from Project → Settings. The runner sends `Authorization: Bearer` to `https://api.bannerbear.com`. Full Access Master `project_id` and V5 keys/endpoints are not expressed.
+International Bannerbear V2 REST API recipe covering origin healthcheck plus every Composio `BANNERBEAR_*` HTTP tool (33 tools, 33 operations; `healthcheck` is `BANNERBEAR_GET_AUTH`).
 
-Covered operations: credential-only `healthcheck` (`GET /v2/auth`), `templates.list`, `templates.get`, and `images.get`. Image create, including `sync.api.bannerbear.com`, is omitted as a write or billable render.
+## Setup
 
-Adaptations versus the pinned OpenConnector source: responses are raw Bannerbear JSON under `data` (template lists are JSON arrays); optional page/limit/tag/name/extended/project_id query parameters are omitted; the upstream user-agent is not sent. Native category is `utility` (source Design & Media/Marketing).
+Configure a project API key from Project → Settings, or a Master API Key from account API keys. The runner sends `Authorization: Bearer` and `Accept: application/json` to `https://api.bannerbear.com`. Full Access Master keys should pass optional `project_id` on project-scoped endpoints. V5 keys/endpoints are not expressed.
 
-Source attribution: oomol-lab/open-connector at `33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a` (Apache License 2.0). Official docs: https://developers.bannerbear.com/v2/. Fixtures are independently derived and do not represent live provider access. Live smoke remains unverified: configure the project API key, call `healthcheck` with `{}`, then `templates.list`.
+## Operations
+
+- Auth / account: `healthcheck` (`GET /v2/auth`), `account.get`, `fonts.list`, `effects.list`.
+- Projects (Master key): `projects.create`, `projects.list`, `projects.get`, `projects.hydrate`.
+- Templates: `templates.list`, `templates.get`, `templates.create`, `templates.delete`, `templates.import`.
+- Template sets: `template_sets.create`, `template_sets.list`, `template_sets.get`, `template_sets.update`.
+- Signed bases: `signed_bases.create`, `signed_bases.list`.
+- Images / GIFs / screenshots / videos / collections: list and get variants present in Composio.
+- Video templates: `video_templates.create`, `video_templates.list`.
+- Webhooks: `webhooks.create`, `webhooks.get`, `webhooks.delete` (outbound registration; Composio triggers = 0).
+- Utilities: `pdfs.join` (`pdf_urls` → official `pdf_inputs`).
+
+Successful JSON responses are raw Bannerbear JSON under AppCall `data`. DELETE maps empty or JSON bodies to `{success: true}`. Optional query/body fields are omitted when unset. The upstream user-agent is not sent.
+
+Source attribution: oomol-lab/open-connector at `33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a` (Apache License 2.0). Official docs: https://developers.bannerbear.com/v2/. Fixtures are independently derived and do not represent live provider access. Live smoke remains unverified.

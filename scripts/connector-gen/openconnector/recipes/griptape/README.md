@@ -8,7 +8,7 @@ Create an API key in the Griptape Cloud console. Store it as `apiKey`. Requests 
 
 ## Operations
 
-Organization, assistant, assistant-run, structure, structure-run, thread, bucket, knowledge-base, and ruleset HTTP actions. Existing keys `healthcheck`, `organizations.get`, `assistants.list`, `assistants.get`, and `assistant-runs.get` are unchanged. Griptape Cloud run events are streamed over the run APIs rather than inbound HTTP webhooks, so no EventOnly webhook operations are declared.
+Organization, assistant, assistant-run, structure, structure-run, thread, bucket, knowledge-base, ruleset, tool, function, retriever, model, secret, integration, library, budget, engine, session, license, and related Griptape Cloud HTTP actions. Existing keys are unchanged. Added remaining official OpenAPI families plus Composio-mapped CRUD from `https://griptape-cloud-assets.s3.amazonaws.com/Griptape.openapi.yaml`. Assistant-run logs share GET /assistant-runs/{id}/events. Two Composio tools have no Cloud route: assistant-run retry and list embedding drivers. Griptape Cloud run events are streamed over the run APIs rather than inbound HTTP webhooks, so no EventOnly webhook operations are declared.
 
 ## License and evidence
 

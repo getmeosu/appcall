@@ -1,17 +1,7 @@
 {
-  "key": "alchemy",
-  "name": "Alchemy",
-  "version": "0.2.0",
-  "runtime": "bun",
-  "visibility": "public",
-  "categories": [
-    "dev-tools"
-  ],
   "auth": {
-    "type": "api_key",
     "scopes": [],
     "setup": {
-      "mode": "api_key",
       "fields": [
         {
           "key": "apiKey",
@@ -19,138 +9,325 @@
           "required": true,
           "secret": true
         }
-      ]
-    }
+      ],
+      "mode": "api_key"
+    },
+    "type": "api_key"
   },
-  "provenance": {
-    "source": {
-      "url": "https://github.com/oomol-lab/open-connector",
-      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"
-    }
-  },
-  "network": {
-    "allowedHosts": [
-      "eth-mainnet.g.alchemy.com"
-    ]
-  },
-  "models": [
-    "token",
-    "nft",
-    "transaction",
-    "block"
+  "categories": [
+    "dev-tools"
   ],
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
+    }
+  },
   "http": {
-    "baseUrl": "https://eth-mainnet.g.alchemy.com",
     "auth": {
       "field": "apiKey",
       "in": "header",
       "name": "Authorization",
       "value": "Bearer {{apiKey}}"
     },
-    "headers": {
-      "Accept": "application/json"
-    },
+    "baseUrl": "https://eth-mainnet.g.alchemy.com",
     "errors": {
-      "rateLimitStatuses": [
-        429
+      "bodyErrorPaths": [
+        "error"
       ],
-      "retryAfterHeader": "retry-after",
       "defaultRetryAfterSeconds": 30,
       "messagePaths": [
         "error.message",
         "message",
         "error"
       ],
-      "bodyErrorPaths": [
-        "error"
-      ]
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after"
+    },
+    "headers": {
+      "Accept": "application/json"
     }
+  },
+  "key": "alchemy",
+  "models": [
+    "token",
+    "nft",
+    "price",
+    "transaction"
+  ],
+  "name": "Alchemy",
+  "network": {
+    "allowedHosts": [
+      "eth-mainnet.g.alchemy.com",
+      "api.g.alchemy.com"
+    ]
   },
   "operations": {
     "healthcheck": {
+      "description": "Validate the Alchemy API key with JSON-RPC eth_gasPrice.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {},
+        "type": "object"
+      },
       "kind": "action",
-      "sideEffect": "read",
-      "timeoutMs": 5000,
       "maxInputBytes": 4096,
       "maxResponseBytes": 65536,
-      "title": "Healthcheck",
-      "description": "Validate the Alchemy API key with JSON-RPC eth_gasPrice.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {},
-        "additionalProperties": false
-      },
       "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
+        "additionalProperties": false,
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "additionalProperties": false
+        "required": [
+          "data"
+        ],
+        "type": "object"
       },
       "request": {
-        "method": "POST",
-        "path": "/v2",
-        "headers": {
-          "Content-Type": "application/json"
-        },
         "body": {
           "id": 1,
           "jsonrpc": "2.0",
           "method": "eth_gasPrice",
           "params": []
         },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "method": "POST",
+        "path": "/v2",
         "success": [
           200
         ]
       },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "token.metadata.get": {
-      "kind": "action",
+      "responseFormat": "json",
       "sideEffect": "read",
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "title": "Get token metadata",
-      "description": "Retrieve ERC-20 token metadata for one contract on Ethereum mainnet.",
+      "timeoutMs": 5000,
+      "title": "Healthcheck",
+      "validationMode": "strict-generated"
+    },
+    "nft.metadata.get": {
+      "description": "Retrieve metadata for one NFT on Ethereum mainnet.",
+      "enforceOutputSchema": true,
       "inputSchema": {
-        "type": "object",
-        "required": [
-          "contractAddress"
-        ],
+        "additionalProperties": false,
         "properties": {
           "contractAddress": {
-            "type": "string",
-            "minLength": 1
+            "minLength": 1,
+            "type": "string"
+          },
+          "tokenId": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "tokenType": {
+            "enum": [
+              "ERC721",
+              "ERC1155"
+            ],
+            "type": "string"
+          },
+          "refreshCache": {
+            "type": "boolean"
+          },
+          "tokenUriTimeoutInMs": {
+            "minimum": 0,
+            "type": "integer"
           }
         },
-        "additionalProperties": false
-      },
-      "outputSchema": {
-        "type": "object",
         "required": [
-          "data"
+          "contractAddress",
+          "tokenId"
         ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "additionalProperties": false
+        "required": [
+          "data"
+        ],
+        "type": "object"
       },
       "request": {
-        "method": "POST",
-        "path": "/v2",
-        "headers": {
-          "Content-Type": "application/json"
+        "method": "GET",
+        "path": "/nft/v3/getNFTMetadata",
+        "query": {
+          "contractAddress": "{{contractAddress}}",
+          "tokenId": "{{tokenId}}",
+          "tokenType": "{{tokenType}}",
+          "refreshCache": "{{refreshCache}}",
+          "tokenUriTimeoutInMs": "{{tokenUriTimeoutInMs}}"
         },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get NFT metadata",
+      "validationMode": "strict-generated"
+    },
+    "nfts.owner.list": {
+      "description": "List NFTs currently owned by an address on Ethereum mainnet.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "owner": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "pageKey": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "pageSize": {
+            "maximum": 100,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "withMetadata": {
+            "type": "boolean"
+          },
+          "orderBy": {
+            "enum": [
+              "transferTime"
+            ],
+            "type": "string"
+          },
+          "excludeFilters": {
+            "items": {
+              "enum": [
+                "SPAM",
+                "AIRDROPS"
+              ],
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "includeFilters": {
+            "items": {
+              "enum": [
+                "SPAM",
+                "AIRDROPS"
+              ],
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "contractAddresses": {
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "spamConfidenceLevel": {
+            "enum": [
+              "VERY_HIGH",
+              "HIGH",
+              "MEDIUM",
+              "LOW"
+            ],
+            "type": "string"
+          },
+          "tokenUriTimeoutInMs": {
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "owner"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/nft/v3/getNFTsForOwner",
+        "query": {
+          "owner": "{{owner}}",
+          "pageKey": "{{pageKey}}",
+          "pageSize": "{{pageSize}}",
+          "withMetadata": "{{withMetadata}}",
+          "orderBy": "{{orderBy}}",
+          "excludeFilters[]": "{{excludeFilters}}",
+          "includeFilters[]": "{{includeFilters}}",
+          "contractAddresses[]": "{{contractAddresses}}",
+          "spamConfidenceLevel": "{{spamConfidenceLevel}}",
+          "tokenUriTimeoutInMs": "{{tokenUriTimeoutInMs}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List NFTs for owner",
+      "validationMode": "strict-generated"
+    },
+    "token.metadata.get": {
+      "description": "Retrieve ERC-20 token metadata for one contract on Ethereum mainnet.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "contractAddress": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "contractAddress"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
         "body": {
           "id": 1,
           "jsonrpc": "2.0",
@@ -159,136 +336,2052 @@
             "{{contractAddress}}"
           ]
         },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "method": "POST",
+        "path": "/v2",
         "success": [
           200
         ]
       },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "nfts.owner.list": {
-      "kind": "action",
+      "responseFormat": "json",
       "sideEffect": "read",
       "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "title": "List NFTs for owner",
-      "description": "List NFTs currently owned by an address on Ethereum mainnet.",
-      "inputSchema": {
-        "type": "object",
-        "required": [
-          "owner"
-        ],
-        "properties": {
-          "owner": {
-            "type": "string",
-            "minLength": 1
-          },
-          "withMetadata": {
-            "type": "boolean"
-          },
-          "pageKey": {
-            "type": "string",
-            "minLength": 1
-          },
-          "pageSize": {
-            "type": "integer",
-            "minimum": 1,
-            "maximum": 100
-          }
-        },
-        "additionalProperties": false
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "GET",
-        "path": "/nft/v3/getNFTsForOwner",
-        "query": {
-          "owner": "{{owner}}",
-          "withMetadata": "{{withMetadata}}",
-          "pageKey": "{{pageKey}}",
-          "pageSize": "{{pageSize}}"
-        },
-        "success": [
-          200
-        ]
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
+      "title": "Get token metadata",
+      "validationMode": "strict-generated"
     },
-    "nft.metadata.get": {
-      "kind": "action",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "title": "Get NFT metadata",
-      "description": "Retrieve metadata for one NFT on Ethereum mainnet.",
+    "nft.rarity.compute": {
+      "description": "Compute trait rarity for one NFT against the rest of its collection.",
+      "enforceOutputSchema": true,
       "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "contractAddress": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "tokenId": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
         "type": "object",
         "required": [
           "contractAddress",
           "tokenId"
-        ],
-        "properties": {
-          "contractAddress": {
-            "type": "string",
-            "minLength": 1
-          },
-          "tokenId": {
-            "type": "string",
-            "minLength": 1
-          },
-          "tokenType": {
-            "type": "string",
-            "enum": [
-              "ERC721",
-              "ERC1155"
-            ]
-          }
-        },
-        "additionalProperties": false
+        ]
       },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
       "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
+        "additionalProperties": false,
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "additionalProperties": false
+        "required": [
+          "data"
+        ],
+        "type": "object"
       },
       "request": {
         "method": "GET",
-        "path": "/nft/v3/getNFTMetadata",
-        "query": {
-          "contractAddress": "{{contractAddress}}",
-          "tokenId": "{{tokenId}}",
-          "tokenType": "{{tokenType}}"
-        },
+        "path": "/nft/v3/computeRarity",
         "success": [
           200
+        ],
+        "query": {
+          "contractAddress": "{{contractAddress}}",
+          "tokenId": "{{tokenId}}"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Compute NFT rarity",
+      "validationMode": "strict-generated"
+    },
+    "nft.collection.metadata.get": {
+      "description": "Get collection-level metadata from an OpenSea slug.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "collectionSlug": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "type": "object",
+        "required": [
+          "collectionSlug"
         ]
       },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/nft/v3/getCollectionMetadata",
+        "success": [
+          200
+        ],
+        "query": {
+          "collectionSlug": "{{collectionSlug}}"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get NFT collection metadata",
+      "validationMode": "strict-generated"
+    },
+    "nfts.collections.owner.list": {
+      "description": "List NFT collections held by a wallet on Ethereum mainnet.",
       "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "owner": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "pageKey": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "pageSize": {
+            "maximum": 100,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "withMetadata": {
+            "type": "boolean"
+          },
+          "excludeFilters": {
+            "items": {
+              "enum": [
+                "SPAM",
+                "AIRDROPS"
+              ],
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "includeFilters": {
+            "items": {
+              "enum": [
+                "SPAM",
+                "AIRDROPS"
+              ],
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "type": "object",
+        "required": [
+          "owner"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/nft/v3/getCollectionsForOwner",
+        "success": [
+          200
+        ],
+        "query": {
+          "owner": "{{owner}}",
+          "pageKey": "{{pageKey}}",
+          "pageSize": "{{pageSize}}",
+          "withMetadata": "{{withMetadata}}",
+          "excludeFilters[]": "{{excludeFilters}}",
+          "includeFilters[]": "{{includeFilters}}"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get collections for owner",
+      "validationMode": "strict-generated"
+    },
+    "nft.contract.metadata.batch": {
+      "description": "Retrieve metadata for multiple NFT contracts in one request.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "contractAddresses": {
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "minItems": 1,
+            "type": "array"
+          }
+        },
+        "type": "object",
+        "required": [
+          "contractAddresses"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "POST",
+        "path": "/nft/v3/getContractMetadataBatch",
+        "success": [
+          200
+        ],
+        "body": {
+          "contractAddresses": "{{contractAddresses}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get contract metadata batch",
+      "validationMode": "strict-generated"
+    },
+    "nft.contract.metadata.get": {
+      "description": "Get name, symbol, supply, and token type for one NFT contract.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "contractAddress": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "type": "object",
+        "required": [
+          "contractAddress"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/nft/v3/getContractMetadata",
+        "success": [
+          200
+        ],
+        "query": {
+          "contractAddress": "{{contractAddress}}"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get contract metadata",
+      "validationMode": "strict-generated"
+    },
+    "nfts.contracts.owner.list": {
+      "description": "List NFT contracts owned by a wallet, with optional spam filters.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "owner": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "orderBy": {
+            "enum": [
+              "transferTime"
+            ],
+            "type": "string"
+          },
+          "pageKey": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "pageSize": {
+            "maximum": 100,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "withMetadata": {
+            "type": "boolean"
+          },
+          "excludeFilters": {
+            "items": {
+              "enum": [
+                "SPAM",
+                "AIRDROPS"
+              ],
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "includeFilters": {
+            "items": {
+              "enum": [
+                "SPAM",
+                "AIRDROPS"
+              ],
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "spamConfidenceLevel": {
+            "enum": [
+              "VERY_HIGH",
+              "HIGH",
+              "MEDIUM",
+              "LOW"
+            ],
+            "type": "string"
+          }
+        },
+        "type": "object",
+        "required": [
+          "owner"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/nft/v3/getContractsForOwner",
+        "success": [
+          200
+        ],
+        "query": {
+          "owner": "{{owner}}",
+          "orderBy": "{{orderBy}}",
+          "pageKey": "{{pageKey}}",
+          "pageSize": "{{pageSize}}",
+          "withMetadata": "{{withMetadata}}",
+          "excludeFilters[]": "{{excludeFilters}}",
+          "includeFilters[]": "{{includeFilters}}",
+          "spamConfidenceLevel": "{{spamConfidenceLevel}}"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get contracts for owner",
+      "validationMode": "strict-generated"
+    },
+    "nft.floor-price.get": {
+      "description": "Get the floor price for an NFT collection across marketplaces.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "contractAddress": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "collectionSlug": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "type": "object",
+        "required": [
+          "contractAddress"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/nft/v3/getFloorPrice",
+        "success": [
+          200
+        ],
+        "query": {
+          "contractAddress": "{{contractAddress}}",
+          "collectionSlug": "{{collectionSlug}}"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get NFT floor price",
+      "validationMode": "strict-generated"
+    },
+    "prices.historical.get": {
+      "description": "Get historical token prices by symbol or by network and address.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "symbol": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "network": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "address": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "start_time": {
+            "type": [
+              "string",
+              "integer"
+            ]
+          },
+          "end_time": {
+            "type": [
+              "string",
+              "integer"
+            ]
+          },
+          "interval": {
+            "enum": [
+              "5m",
+              "1h",
+              "1d"
+            ],
+            "type": "string"
+          },
+          "with_market_data": {
+            "type": "boolean"
+          }
+        },
+        "type": "object",
+        "required": [
+          "start_time",
+          "end_time"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "POST",
+        "path": "/prices/v1/tokens/historical",
+        "success": [
+          200
+        ],
+        "baseUrl": "https://api.g.alchemy.com",
+        "body": {
+          "symbol": "{{symbol}}",
+          "network": "{{network}}",
+          "address": "{{address}}",
+          "startTime": "{{start_time}}",
+          "endTime": "{{end_time}}",
+          "interval": "{{interval}}",
+          "withMarketData": "{{with_market_data}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get historical token prices",
+      "validationMode": "strict-generated"
+    },
+    "nfts.contracts.by-address": {
+      "description": "Get NFT contracts held by wallets across networks via the Portfolio API.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "addresses": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "address": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "networks": {
+                  "items": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "minItems": 1,
+                  "type": "array"
+                }
+              },
+              "required": [
+                "address",
+                "networks"
+              ],
+              "type": "object"
+            },
+            "minItems": 1,
+            "type": "array"
+          },
+          "pageKey": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "pageSize": {
+            "maximum": 100,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "withMetadata": {
+            "type": "boolean"
+          },
+          "excludeFilters": {
+            "items": {
+              "enum": [
+                "SPAM",
+                "AIRDROPS"
+              ],
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "includeFilters": {
+            "items": {
+              "enum": [
+                "SPAM",
+                "AIRDROPS"
+              ],
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "spamConfidenceLevel": {
+            "enum": [
+              "VERY_HIGH",
+              "HIGH",
+              "MEDIUM",
+              "LOW"
+            ],
+            "type": "string"
+          }
+        },
+        "type": "object",
+        "required": [
+          "addresses"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "POST",
+        "path": "/data/v1/assets/nfts/contracts/by-address",
+        "success": [
+          200
+        ],
+        "baseUrl": "https://api.g.alchemy.com",
+        "body": {
+          "addresses": "{{addresses}}",
+          "pageKey": "{{pageKey}}",
+          "pageSize": "{{pageSize}}",
+          "withMetadata": "{{withMetadata}}",
+          "excludeFilters": "{{excludeFilters}}",
+          "includeFilters": "{{includeFilters}}",
+          "spamConfidenceLevel": "{{spamConfidenceLevel}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get NFT contracts by address",
+      "validationMode": "strict-generated"
+    },
+    "nft.metadata.batch": {
+      "description": "Retrieve metadata for up to 100 NFTs in one request.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "tokens": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "contractAddress": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "tokenId": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "tokenType": {
+                  "enum": [
+                    "ERC721",
+                    "ERC1155"
+                  ],
+                  "type": "string"
+                }
+              },
+              "required": [
+                "contractAddress",
+                "tokenId"
+              ],
+              "type": "object"
+            },
+            "minItems": 1,
+            "type": "array"
+          },
+          "refreshCache": {
+            "type": "boolean"
+          },
+          "tokenUriTimeoutInMs": {
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "type": "object",
+        "required": [
+          "tokens"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "POST",
+        "path": "/nft/v3/getNFTMetadataBatch",
+        "success": [
+          200
+        ],
+        "body": {
+          "tokens": "{{tokens}}",
+          "refreshCache": "{{refreshCache}}",
+          "tokenUriTimeoutInMs": "{{tokenUriTimeoutInMs}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get NFT metadata batch",
+      "validationMode": "strict-generated"
+    },
+    "nft.sales.list": {
+      "description": "List on-chain NFT sales with optional marketplace and party filters.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "limit": {
+            "maximum": 100,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "order": {
+            "enum": [
+              "asc",
+              "desc"
+            ],
+            "type": "string"
+          },
+          "taker": {
+            "enum": [
+              "buyer",
+              "seller"
+            ],
+            "type": "string"
+          },
+          "page_key": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "to_block": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "token_id": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "from_block": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "marketplace": {
+            "enum": [
+              "seaport",
+              "looksrare",
+              "x2y2",
+              "wyvern",
+              "blur",
+              "cryptopunks"
+            ],
+            "type": "string"
+          },
+          "buyer_address": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "seller_address": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "contract_address": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/nft/v3/getNFTSales",
+        "success": [
+          200
+        ],
+        "query": {
+          "limit": "{{limit}}",
+          "order": "{{order}}",
+          "taker": "{{taker}}",
+          "pageKey": "{{page_key}}",
+          "toBlock": "{{to_block}}",
+          "tokenId": "{{token_id}}",
+          "fromBlock": "{{from_block}}",
+          "marketplace": "{{marketplace}}",
+          "buyerAddress": "{{buyer_address}}",
+          "sellerAddress": "{{seller_address}}",
+          "contractAddress": "{{contract_address}}"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get NFT sales",
+      "validationMode": "strict-generated"
+    },
+    "nfts.collection.list": {
+      "description": "List NFTs in a collection by OpenSea slug or contract address.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "limit": {
+            "maximum": 100,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "start_token": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "with_metadata": {
+            "type": "boolean"
+          },
+          "collection_slug": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "contract_address": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "token_uri_timeout_ms": {
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/nft/v3/getNFTsForCollection",
+        "success": [
+          200
+        ],
+        "query": {
+          "limit": "{{limit}}",
+          "startToken": "{{start_token}}",
+          "withMetadata": "{{with_metadata}}",
+          "collectionSlug": "{{collection_slug}}",
+          "contractAddress": "{{contract_address}}",
+          "tokenUriTimeoutInMs": "{{token_uri_timeout_ms}}"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get NFTs for collection",
+      "validationMode": "strict-generated"
+    },
+    "nfts.contract.list": {
+      "description": "List NFTs for an ERC-721 or ERC-1155 contract address.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "limit": {
+            "maximum": 100,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "start_token": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "with_metadata": {
+            "type": "boolean"
+          },
+          "contract_address": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "token_uri_timeout_ms": {
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "type": "object",
+        "required": [
+          "contract_address"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/nft/v3/getNFTsForContract",
+        "success": [
+          200
+        ],
+        "query": {
+          "limit": "{{limit}}",
+          "startToken": "{{start_token}}",
+          "withMetadata": "{{with_metadata}}",
+          "contractAddress": "{{contract_address}}",
+          "tokenUriTimeoutInMs": "{{token_uri_timeout_ms}}"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get NFTs for contract",
+      "validationMode": "strict-generated"
+    },
+    "nft.owners.contract.list": {
+      "description": "List owners of NFTs in a contract, optionally with token balances.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "pageKey": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "contractAddress": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "withTokenBalances": {
+            "type": "boolean"
+          }
+        },
+        "type": "object",
+        "required": [
+          "contractAddress"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/nft/v3/getOwnersForContract",
+        "success": [
+          200
+        ],
+        "query": {
+          "pageKey": "{{pageKey}}",
+          "contractAddress": "{{contractAddress}}",
+          "withTokenBalances": "{{withTokenBalances}}"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get owners for contract",
+      "validationMode": "strict-generated"
+    },
+    "nft.owners.nft.list": {
+      "description": "List current owners of one NFT (single owner for ERC-721).",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "tokenId": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "contractAddress": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "type": "object",
+        "required": [
+          "tokenId",
+          "contractAddress"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/nft/v3/getOwnersForNFT",
+        "success": [
+          200
+        ],
+        "query": {
+          "tokenId": "{{tokenId}}",
+          "contractAddress": "{{contractAddress}}"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get owners for NFT",
+      "validationMode": "strict-generated"
+    },
+    "nfts.portfolio.by-address": {
+      "description": "Fetch NFTs owned by wallets across networks via the Portfolio API.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "orderBy": {
+            "enum": [
+              "transferTime"
+            ],
+            "type": "string"
+          },
+          "pageKey": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "pageSize": {
+            "maximum": 100,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "addresses": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "address": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "networks": {
+                  "items": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "minItems": 1,
+                  "type": "array"
+                }
+              },
+              "required": [
+                "address",
+                "networks"
+              ],
+              "type": "object"
+            },
+            "minItems": 1,
+            "type": "array"
+          },
+          "sortOrder": {
+            "enum": [
+              "asc",
+              "desc"
+            ],
+            "type": "string"
+          },
+          "withMetadata": {
+            "type": "boolean"
+          },
+          "excludeFilters": {
+            "items": {
+              "enum": [
+                "SPAM",
+                "AIRDROPS"
+              ],
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "includeFilters": {
+            "items": {
+              "enum": [
+                "SPAM",
+                "AIRDROPS"
+              ],
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "spamConfidenceLevel": {
+            "enum": [
+              "VERY_HIGH",
+              "HIGH",
+              "MEDIUM",
+              "LOW"
+            ],
+            "type": "string"
+          }
+        },
+        "type": "object",
+        "required": [
+          "addresses"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "POST",
+        "path": "/data/v1/assets/nfts/by-address",
+        "success": [
+          200
+        ],
+        "baseUrl": "https://api.g.alchemy.com",
+        "body": {
+          "orderBy": "{{orderBy}}",
+          "pageKey": "{{pageKey}}",
+          "pageSize": "{{pageSize}}",
+          "addresses": "{{addresses}}",
+          "sortOrder": "{{sortOrder}}",
+          "withMetadata": "{{withMetadata}}",
+          "excludeFilters": "{{excludeFilters}}",
+          "includeFilters": "{{includeFilters}}",
+          "spamConfidenceLevel": "{{spamConfidenceLevel}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get portfolio NFTs by address",
+      "validationMode": "strict-generated"
+    },
+    "prices.by-symbol.get": {
+      "description": "Get current token prices by symbol from aggregated CEX and DEX data.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "symbols": {
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "minItems": 1,
+            "type": "array"
+          }
+        },
+        "type": "object",
+        "required": [
+          "symbols"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/prices/v1/tokens/by-symbol",
+        "success": [
+          200
+        ],
+        "baseUrl": "https://api.g.alchemy.com",
+        "query": {
+          "symbols": "{{symbols}}"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get token prices by symbol",
+      "validationMode": "strict-generated"
+    },
+    "token.balances.get": {
+      "description": "Get ERC-20 token balances for a wallet via JSON-RPC alchemy_getTokenBalances.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "address": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "contract_addresses": {
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "minItems": 1,
+            "type": "array"
+          }
+        },
+        "type": "object",
+        "required": [
+          "address"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v2",
+        "success": [
+          200
+        ],
+        "body": {
+          "id": 1,
+          "jsonrpc": "2.0",
+          "method": "alchemy_getTokenBalances",
+          "params": [
+            "{{address}}",
+            "{{contract_addresses}}"
+          ]
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get token balances",
+      "validationMode": "strict-generated"
+    },
+    "tokens.balances.by-address": {
+      "description": "Get lightweight token balances for wallets across networks.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "pageKey": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "addresses": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "address": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "networks": {
+                  "items": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "minItems": 1,
+                  "type": "array"
+                }
+              },
+              "required": [
+                "address",
+                "networks"
+              ],
+              "type": "object"
+            },
+            "minItems": 1,
+            "type": "array"
+          },
+          "includeErc20Tokens": {
+            "type": "boolean"
+          },
+          "includeNativeTokens": {
+            "type": "boolean"
+          }
+        },
+        "type": "object",
+        "required": [
+          "addresses"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "POST",
+        "path": "/data/v1/assets/tokens/balances/by-address",
+        "success": [
+          200
+        ],
+        "baseUrl": "https://api.g.alchemy.com",
+        "body": {
+          "pageKey": "{{pageKey}}",
+          "addresses": "{{addresses}}",
+          "includeErc20Tokens": "{{includeErc20Tokens}}",
+          "includeNativeTokens": "{{includeNativeTokens}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get token balances by address",
+      "validationMode": "strict-generated"
+    },
+    "prices.by-address.get": {
+      "description": "Get current DEX-aggregated token prices by network and contract address.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "addresses": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "network": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "address": {
+                  "minLength": 1,
+                  "type": "string"
+                }
+              },
+              "required": [
+                "network",
+                "address"
+              ],
+              "type": "object"
+            },
+            "minItems": 1,
+            "type": "array"
+          }
+        },
+        "type": "object",
+        "required": [
+          "addresses"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "POST",
+        "path": "/prices/v1/tokens/by-address",
+        "success": [
+          200
+        ],
+        "baseUrl": "https://api.g.alchemy.com",
+        "body": {
+          "addresses": "{{addresses}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get token prices by address",
+      "validationMode": "strict-generated"
+    },
+    "tokens.by-address": {
+      "description": "Fetch fungible tokens with balances, metadata, and prices for wallets.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "pageKey": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "addresses": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "address": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "networks": {
+                  "items": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "minItems": 1,
+                  "type": "array"
+                }
+              },
+              "required": [
+                "address",
+                "networks"
+              ],
+              "type": "object"
+            },
+            "minItems": 1,
+            "type": "array"
+          },
+          "withPrices": {
+            "type": "boolean"
+          },
+          "withMetadata": {
+            "type": "boolean"
+          },
+          "includeErc20Tokens": {
+            "type": "boolean"
+          },
+          "includeNativeTokens": {
+            "type": "boolean"
+          }
+        },
+        "type": "object",
+        "required": [
+          "addresses"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "POST",
+        "path": "/data/v1/assets/tokens/by-address",
+        "success": [
+          200
+        ],
+        "baseUrl": "https://api.g.alchemy.com",
+        "body": {
+          "pageKey": "{{pageKey}}",
+          "addresses": "{{addresses}}",
+          "withPrices": "{{withPrices}}",
+          "withMetadata": "{{withMetadata}}",
+          "includeErc20Tokens": "{{includeErc20Tokens}}",
+          "includeNativeTokens": "{{includeNativeTokens}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get tokens by address",
+      "validationMode": "strict-generated"
+    },
+    "transaction.count.get": {
+      "description": "Get the transaction count (nonce) for an address via eth_getTransactionCount.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "address": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "block_tag": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "type": "object",
+        "required": [
+          "address"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v2",
+        "success": [
+          200
+        ],
+        "body": {
+          "id": 1,
+          "jsonrpc": "2.0",
+          "method": "eth_getTransactionCount",
+          "params": [
+            "{{address}}",
+            "{{block_tag}}"
+          ]
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get transaction count",
+      "validationMode": "strict-generated"
+    },
+    "transactions.history.by-address": {
+      "description": "Get transaction history for wallets across networks via the Data API.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "after": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "limit": {
+            "maximum": 50,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "before": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "pageKey": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "addresses": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "address": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "networks": {
+                  "items": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "minItems": 1,
+                  "type": "array"
+                }
+              },
+              "required": [
+                "address",
+                "networks"
+              ],
+              "type": "object"
+            },
+            "minItems": 1,
+            "type": "array"
+          }
+        },
+        "type": "object",
+        "required": [
+          "addresses"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "POST",
+        "path": "/data/v1/transactions/history/by-address",
+        "success": [
+          200
+        ],
+        "baseUrl": "https://api.g.alchemy.com",
+        "body": {
+          "after": "{{after}}",
+          "limit": "{{limit}}",
+          "before": "{{before}}",
+          "pageKey": "{{pageKey}}",
+          "addresses": "{{addresses}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get transactions history by address",
+      "validationMode": "strict-generated"
+    },
+    "nft.contract.invalidate": {
+      "description": "Invalidate cached metadata for an NFT contract so the next read refreshes it.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "contractAddress": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "type": "object",
+        "required": [
+          "contractAddress"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/nft/v3/invalidateContract",
+        "success": [
+          200
+        ],
+        "query": {
+          "contractAddress": "{{contractAddress}}"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Invalidate NFT contract cache",
+      "validationMode": "strict-generated"
+    },
+    "nft.airdrop.check": {
+      "description": "Check whether a specific NFT token is classified as an airdrop.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "tokenId": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "contractAddress": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "type": "object",
+        "required": [
+          "tokenId",
+          "contractAddress"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/nft/v3/isAirdropNFT",
+        "success": [
+          200
+        ],
+        "query": {
+          "tokenId": "{{tokenId}}",
+          "contractAddress": "{{contractAddress}}"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Check if NFT is airdrop",
+      "validationMode": "strict-generated"
+    },
+    "nft.holder.check": {
+      "description": "Check whether a wallet holds any NFT from a contract.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "wallet": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "contractAddress": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "type": "object",
+        "required": [
+          "wallet",
+          "contractAddress"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/nft/v3/isHolderOfContract",
+        "success": [
+          200
+        ],
+        "query": {
+          "wallet": "{{wallet}}",
+          "contractAddress": "{{contractAddress}}"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Check NFT holder status",
+      "validationMode": "strict-generated"
+    },
+    "nft.spam.check": {
+      "description": "Check whether an NFT contract is marked as spam by Alchemy.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "contractAddress": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "type": "object",
+        "required": [
+          "contractAddress"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/nft/v3/isSpamContract",
+        "success": [
+          200
+        ],
+        "query": {
+          "contractAddress": "{{contractAddress}}"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Check if contract is spam",
+      "validationMode": "strict-generated"
+    },
+    "nft.contract.search": {
+      "description": "Search ERC-721 and ERC-1155 contract metadata by keyword.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "query": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "type": "object",
+        "required": [
+          "query"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/nft/v3/searchContractMetadata",
+        "success": [
+          200
+        ],
+        "query": {
+          "query": "{{query}}"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Search NFT contract metadata",
+      "validationMode": "strict-generated"
+    },
+    "nft.attributes.summarize": {
+      "description": "Summarize trait counts and distribution for an NFT collection.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "contract_address": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "type": "object",
+        "required": [
+          "contract_address"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/nft/v3/summarizeNFTAttributes",
+        "success": [
+          200
+        ],
+        "query": {
+          "contractAddress": "{{contract_address}}"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Summarize NFT attributes",
+      "validationMode": "strict-generated"
     },
     "eth.blockNumber.get": {
       "kind": "action",
@@ -561,62 +2654,6 @@
       "validationMode": "strict-generated",
       "responseFormat": "json"
     },
-    "token.balances.get": {
-      "kind": "action",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "title": "Get token balances",
-      "description": "JSON-RPC alchemy_getTokenBalances for one address on Ethereum mainnet.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "address": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Wallet address."
-          }
-        },
-        "additionalProperties": false,
-        "required": [
-          "address"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "POST",
-        "path": "/v2",
-        "success": [
-          200
-        ],
-        "body": {
-          "id": 1,
-          "jsonrpc": "2.0",
-          "method": "alchemy_getTokenBalances",
-          "params": [
-            "{{address}}"
-          ]
-        },
-        "headers": {
-          "Content-Type": "application/json"
-        }
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
     "asset.transfers.list": {
       "kind": "action",
       "sideEffect": "read",
@@ -708,533 +2745,15 @@
       "enforceOutputSchema": true,
       "validationMode": "strict-generated",
       "responseFormat": "json"
-    },
-    "nfts.contract.list": {
-      "kind": "action",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "title": "List NFTs for contract",
-      "description": "List NFTs in a contract on Ethereum mainnet.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "contractAddress": {
-            "type": "string",
-            "minLength": 1,
-            "description": "NFT contract address."
-          },
-          "withMetadata": {
-            "type": "boolean",
-            "description": "Include metadata."
-          },
-          "startToken": {
-            "type": "string",
-            "description": "Pagination start token."
-          },
-          "limit": {
-            "type": "integer",
-            "minimum": 1,
-            "maximum": 100,
-            "description": "Page size."
-          }
-        },
-        "additionalProperties": false,
-        "required": [
-          "contractAddress"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "GET",
-        "path": "/nft/v3/getNFTsForContract",
-        "success": [
-          200
-        ],
-        "query": {
-          "contractAddress": "{{contractAddress}}",
-          "withMetadata": "{{withMetadata}}",
-          "startToken": "{{startToken}}",
-          "limit": "{{limit}}"
-        }
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "nft.owners.get": {
-      "kind": "action",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "title": "Get owners for NFT",
-      "description": "List owners of one NFT on Ethereum mainnet.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "contractAddress": {
-            "type": "string",
-            "minLength": 1,
-            "description": "NFT contract address."
-          },
-          "tokenId": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Token ID."
-          }
-        },
-        "additionalProperties": false,
-        "required": [
-          "contractAddress",
-          "tokenId"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "GET",
-        "path": "/nft/v3/getOwnersForNFT",
-        "success": [
-          200
-        ],
-        "query": {
-          "contractAddress": "{{contractAddress}}",
-          "tokenId": "{{tokenId}}"
-        }
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "nfts.contract.owners.list": {
-      "kind": "action",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "title": "List owners for contract",
-      "description": "List owners of an NFT contract on Ethereum mainnet.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "contractAddress": {
-            "type": "string",
-            "minLength": 1,
-            "description": "NFT contract address."
-          },
-          "withTokenBalances": {
-            "type": "boolean",
-            "description": "Include per-token balances."
-          },
-          "pageKey": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Pagination key."
-          }
-        },
-        "additionalProperties": false,
-        "required": [
-          "contractAddress"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "GET",
-        "path": "/nft/v3/getOwnersForContract",
-        "success": [
-          200
-        ],
-        "query": {
-          "contractAddress": "{{contractAddress}}",
-          "withTokenBalances": "{{withTokenBalances}}",
-          "pageKey": "{{pageKey}}"
-        }
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "nft.contract.metadata.get": {
-      "kind": "action",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "title": "Get contract metadata",
-      "description": "Get NFT contract metadata on Ethereum mainnet.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "contractAddress": {
-            "type": "string",
-            "minLength": 1,
-            "description": "NFT contract address."
-          }
-        },
-        "additionalProperties": false,
-        "required": [
-          "contractAddress"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "GET",
-        "path": "/nft/v3/getContractMetadata",
-        "success": [
-          200
-        ],
-        "query": {
-          "contractAddress": "{{contractAddress}}"
-        }
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "nft.floor.price.get": {
-      "kind": "action",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "title": "Get floor price",
-      "description": "Get NFT collection floor price on Ethereum mainnet.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "contractAddress": {
-            "type": "string",
-            "minLength": 1,
-            "description": "NFT contract address."
-          }
-        },
-        "additionalProperties": false,
-        "required": [
-          "contractAddress"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "GET",
-        "path": "/nft/v3/getFloorPrice",
-        "success": [
-          200
-        ],
-        "query": {
-          "contractAddress": "{{contractAddress}}"
-        }
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "nft.sales.list": {
-      "kind": "action",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "title": "List NFT sales",
-      "description": "List NFT marketplace sales on Ethereum mainnet.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "contractAddress": {
-            "type": "string",
-            "minLength": 1,
-            "description": "NFT contract address."
-          },
-          "tokenId": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Token ID."
-          },
-          "fromBlock": {
-            "type": "string",
-            "description": "Start block."
-          },
-          "toBlock": {
-            "type": "string",
-            "description": "End block."
-          },
-          "limit": {
-            "type": "integer",
-            "minimum": 1,
-            "maximum": 1000,
-            "description": "Max sales."
-          }
-        },
-        "additionalProperties": false
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "GET",
-        "path": "/nft/v3/getNFTSales",
-        "success": [
-          200
-        ],
-        "query": {
-          "contractAddress": "{{contractAddress}}",
-          "tokenId": "{{tokenId}}",
-          "fromBlock": "{{fromBlock}}",
-          "toBlock": "{{toBlock}}",
-          "limit": "{{limit}}"
-        }
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "nfts.contracts.owner.list": {
-      "kind": "action",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "title": "List contracts for owner",
-      "description": "List NFT contracts owned by an address on Ethereum mainnet.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "owner": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Wallet address."
-          },
-          "pageKey": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Pagination key."
-          },
-          "pageSize": {
-            "type": "integer",
-            "minimum": 1,
-            "maximum": 100,
-            "description": "Page size."
-          },
-          "withMetadata": {
-            "type": "boolean",
-            "description": "Include metadata."
-          }
-        },
-        "additionalProperties": false,
-        "required": [
-          "owner"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "GET",
-        "path": "/nft/v3/getContractsForOwner",
-        "success": [
-          200
-        ],
-        "query": {
-          "owner": "{{owner}}",
-          "pageKey": "{{pageKey}}",
-          "pageSize": "{{pageSize}}",
-          "withMetadata": "{{withMetadata}}"
-        }
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "nft.rarity.compute": {
-      "kind": "action",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "title": "Compute NFT rarity",
-      "description": "Compute trait rarity for one NFT on Ethereum mainnet.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "contractAddress": {
-            "type": "string",
-            "minLength": 1,
-            "description": "NFT contract address."
-          },
-          "tokenId": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Token ID."
-          }
-        },
-        "additionalProperties": false,
-        "required": [
-          "contractAddress",
-          "tokenId"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "GET",
-        "path": "/nft/v3/computeRarity",
-        "success": [
-          200
-        ],
-        "query": {
-          "contractAddress": "{{contractAddress}}",
-          "tokenId": "{{tokenId}}"
-        }
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "nft.holder.check": {
-      "kind": "action",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "title": "Check NFT holder",
-      "description": "Check whether a wallet holds any token of an NFT contract.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "contractAddress": {
-            "type": "string",
-            "minLength": 1,
-            "description": "NFT contract address."
-          },
-          "wallet": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Wallet address."
-          }
-        },
-        "additionalProperties": false,
-        "required": [
-          "contractAddress",
-          "wallet"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "GET",
-        "path": "/nft/v3/isHolderOfContract",
-        "success": [
-          200
-        ],
-        "query": {
-          "contractAddress": "{{contractAddress}}",
-          "wallet": "{{wallet}}"
-        }
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
     }
   },
-  "evidence": {
-    "fixture": {
-      "status": "supplied"
-    },
-    "live": {
-      "status": "unverified"
+  "provenance": {
+    "source": {
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
+      "url": "https://github.com/oomol-lab/open-connector"
     }
-  }
+  },
+  "runtime": "bun",
+  "version": "0.2.0",
+  "visibility": "public"
 }

@@ -70,7 +70,7 @@ describe("github composio-class webhook triggers", () => {
       expect(op?.maxResponseBytes).toBe(1048576);
       expect(op?.effectPolicy).toBeUndefined();
       expect(op?.reconcile).toBeUndefined();
-      expect(op?.sideEffect).toBeUndefined();
+      expect(op?.sideEffect).toBe("read");
       expect(typeof op?.title).toBe("string");
       expect((op?.title as string).length > 0).toBe(true);
       expect(typeof op?.description).toBe("string");
@@ -95,8 +95,8 @@ describe("github composio-class webhook triggers", () => {
     }
   });
 
-  test("version and operation count match 0.78.1 / 685", () => {
-    expect(manifest.version).toBe("0.78.1");
-    expect(Object.keys(manifest.operations)).toHaveLength(812);
+  test("version and operation count match 0.79.0 / 685", () => {
+    expect(manifest.version).toBe("0.80.0");
+    expect(Object.keys(manifest.operations)).toHaveLength(910);
   });
 });

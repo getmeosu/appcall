@@ -130,26 +130,12 @@ describe("shortcut write depth", () => {
     expect(actions["webhook.story"]).toBeUndefined();
     expect(manifest.operations["webhook.story"].kind).toBe("webhook");
     expect(manifest.operations["webhook.epic"].request).toBeUndefined();
-    expect(Object.keys(actions).sort()).toEqual([
-      "comments.create",
-      "comments.delete",
-      "comments.list",
-      "comments.update",
-      "epics.create",
-      "epics.get",
-      "epics.list",
-      "healthcheck",
-      "iterations.list",
-      "members.list",
-      "projects.get",
-      "projects.list",
-      "stories.create",
-      "stories.delete",
-      "stories.get",
-      "stories.list",
-      "stories.search",
-      "stories.update",
-      "workflows.list",
-    ]);
+    const compiled = Object.entries(manifest.operations)
+      .filter(([, operation]) => operation.kind === "action" && operation.request)
+      .map(([key]) => key)
+      .sort();
+    expect(Object.keys(actions).sort()).toEqual(compiled);
+    expect(actions["files.upload"]).toBeUndefined();
+    expect(manifest.operations["files.upload"].request).toBeUndefined();
   });
 });

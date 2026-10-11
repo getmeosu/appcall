@@ -1,7 +1,7 @@
 {
   "key": "whatsapp",
   "name": "WhatsApp",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "runtime": "bun",
   "categories": [
     "messaging"
@@ -753,7 +753,7 @@
       "kind": "action",
       "timeoutMs": 20000,
       "maxInputBytes": 1048576,
-      "maxResponseBytes": 65536,
+      "maxResponseBytes": 1048576,
       "sideEffect": "write",
       "title": "Upload WhatsApp Media",
       "description": "Upload media bytes to the WhatsApp Cloud API and receive a media ID that can be used in subsequent send calls. Provide filename, MIME type, and the file contents as base64. The connector posts multipart form data to the phone number's media endpoint.",
@@ -1097,6 +1097,2471 @@
         }
       }
     },
+    "users.block": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Block WhatsApp Users",
+      "description": "Block one or more WhatsApp users from messaging a business phone number via POST /{phone-number-id}/block_users.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "phoneNumberId": {
+            "type": "string",
+            "description": "WhatsApp Business phone number ID assigned by Meta, not the dialable number."
+          },
+          "blockUsers": {
+            "type": "array",
+            "description": "Users to block. Each item is {user: international phone number without +}. Maximum 100.",
+            "items": {
+              "type": "object"
+            }
+          }
+        },
+        "required": [
+          "phoneNumberId",
+          "blockUsers"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "description": "Graph API response body."
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v25.0/{{phoneNumberId}}/block_users",
+        "success": [
+          200,
+          201
+        ],
+        "body": {
+          "messaging_product": "whatsapp",
+          "block_users": "{{blockUsers}}"
+        }
+      }
+    },
+    "conversationalAutomation.configure": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Configure Conversational Automation",
+      "description": "Configure welcome messages, ice-breaker prompts, and commands for a business phone number via POST /{phone-number-id}/conversational_automation.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "phoneNumberId": {
+            "type": "string",
+            "description": "WhatsApp Business phone number ID assigned by Meta, not the dialable number."
+          },
+          "enableWelcomeMessage": {
+            "type": "boolean",
+            "description": "Enable the automated welcome message for new conversations."
+          },
+          "prompts": {
+            "type": "array",
+            "description": "Ice-breaker prompts shown to customers (max 3, 1-80 characters each).",
+            "items": {
+              "type": "string"
+            }
+          },
+          "commands": {
+            "type": "array",
+            "description": "Bot commands (max 30). Each item has command_name and command_description.",
+            "items": {
+              "type": "object"
+            }
+          }
+        },
+        "required": [
+          "phoneNumberId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "description": "Graph API response body."
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v25.0/{{phoneNumberId}}/conversational_automation",
+        "success": [
+          200,
+          201
+        ],
+        "body": {
+          "enable_welcome_message": "{{enableWelcomeMessage}}",
+          "prompts": "{{prompts}}",
+          "commands": "{{commands}}"
+        }
+      }
+    },
+    "flows.create": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Create WhatsApp Flow",
+      "description": "Create a WhatsApp Flow in DRAFT status for a WABA via POST /{waba-id}/flows.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "wabaId": {
+            "type": "string",
+            "description": "WhatsApp Business Account ID (WABA ID)."
+          },
+          "name": {
+            "type": "string",
+            "description": "Flow name. Maximum 80 characters and unique within the WABA."
+          },
+          "categories": {
+            "type": "array",
+            "description": "Flow categories such as OTHER, LEAD_GENERATION, SIGN_UP.",
+            "items": {
+              "type": "string"
+            }
+          },
+          "endpointUri": {
+            "type": "string",
+            "description": "HTTPS endpoint that serves Flow data requests."
+          },
+          "cloneFlowId": {
+            "type": "string",
+            "description": "Optional existing flow ID to clone."
+          }
+        },
+        "required": [
+          "wabaId",
+          "name",
+          "categories"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "description": "Graph API response body."
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v25.0/{{wabaId}}/flows",
+        "success": [
+          200,
+          201
+        ],
+        "body": {
+          "name": "{{name}}",
+          "categories": "{{categories}}",
+          "endpoint_uri": "{{endpointUri}}",
+          "clone_flow_id": "{{cloneFlowId}}"
+        }
+      }
+    },
+    "pricing.maxPriceAgreements.create": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Create Max Price Agreement",
+      "description": "Create a WhatsApp max-price agreement that caps per-message spend for a business via POST /{business-id}/max_price_agreements.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "businessId": {
+            "type": "string",
+            "description": "WhatsApp Business Account ID used as the pricing agreement owner."
+          },
+          "currency": {
+            "type": "string",
+            "description": "ISO 4217 currency code such as USD or EUR."
+          },
+          "signerName": {
+            "type": "string",
+            "description": "Full name of the person signing the agreement."
+          },
+          "signerEmail": {
+            "type": "string",
+            "description": "Email of the person signing the agreement."
+          },
+          "messageType": {
+            "type": "string",
+            "description": "Message category this ceiling applies to.",
+            "enum": [
+              "marketing",
+              "utility",
+              "authentication"
+            ]
+          },
+          "maxPriceMicros": {
+            "type": "integer",
+            "description": "Maximum price in micros (1_000_000 micros = 1 unit of currency)."
+          }
+        },
+        "required": [
+          "businessId",
+          "currency",
+          "signerName",
+          "signerEmail",
+          "messageType",
+          "maxPriceMicros"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "description": "Graph API response body."
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v25.0/{{businessId}}/max_price_agreements",
+        "success": [
+          200,
+          201
+        ],
+        "body": {
+          "currency": "{{currency}}",
+          "signer_name": "{{signerName}}",
+          "signer_email": "{{signerEmail}}",
+          "message_type": "{{messageType}}",
+          "max_price_micros": "{{maxPriceMicros}}"
+        }
+      }
+    },
+    "templates.create": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Create Message Template",
+      "description": "Create a message template on a WABA via POST /{waba-id}/message_templates. Meta must approve the template before it can be sent.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "wabaId": {
+            "type": "string",
+            "description": "WhatsApp Business Account ID (WABA ID)."
+          },
+          "name": {
+            "type": "string",
+            "description": "Unique template name: lowercase alphanumeric plus underscores, max 512 characters."
+          },
+          "category": {
+            "type": "string",
+            "description": "Template category.",
+            "enum": [
+              "AUTHENTICATION",
+              "MARKETING",
+              "UTILITY"
+            ]
+          },
+          "language": {
+            "type": "string",
+            "description": "Template language code such as en_US."
+          },
+          "components": {
+            "type": "array",
+            "description": "Template components. Required when creating from scratch; omit when cloning a library template.",
+            "items": {
+              "type": "object"
+            }
+          },
+          "allowCategoryChange": {
+            "type": "boolean",
+            "description": "Allow Meta to reassign the template category."
+          },
+          "libraryTemplateName": {
+            "type": "string",
+            "description": "Exact Template Library name to clone instead of creating from scratch."
+          },
+          "libraryTemplateBodyInputs": {
+            "type": "object",
+            "description": "Body-level inputs when cloning a library template."
+          },
+          "libraryTemplateButtonInputs": {
+            "type": "array",
+            "description": "Button inputs when cloning a library template.",
+            "items": {
+              "type": "object"
+            }
+          }
+        },
+        "required": [
+          "wabaId",
+          "name",
+          "category",
+          "language"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "description": "Graph API response body."
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v25.0/{{wabaId}}/message_templates",
+        "success": [
+          200,
+          201
+        ],
+        "body": {
+          "name": "{{name}}",
+          "category": "{{category}}",
+          "language": "{{language}}",
+          "components": "{{components}}",
+          "allow_category_change": "{{allowCategoryChange}}",
+          "library_template_name": "{{libraryTemplateName}}",
+          "library_template_body_inputs": "{{libraryTemplateBodyInputs}}",
+          "library_template_button_inputs": "{{libraryTemplateButtonInputs}}"
+        }
+      }
+    },
+    "qrCodes.create": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Create QR Code",
+      "description": "Create a message QR code with a prefilled message via POST /{phone-number-id}/message_qrdls.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "phoneNumberId": {
+            "type": "string",
+            "description": "WhatsApp Business phone number ID assigned by Meta, not the dialable number."
+          },
+          "prefilledMessage": {
+            "type": "string",
+            "description": "Message text prefilled when a customer scans the QR code."
+          },
+          "generateQrImage": {
+            "type": "string",
+            "description": "Optional QR image format.",
+            "enum": [
+              "PNG",
+              "SVG"
+            ]
+          }
+        },
+        "required": [
+          "phoneNumberId",
+          "prefilledMessage"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "description": "Graph API response body."
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v25.0/{{phoneNumberId}}/message_qrdls",
+        "success": [
+          200,
+          201
+        ],
+        "body": {
+          "prefilled_message": "{{prefilledMessage}}",
+          "generate_qr_image": "{{generateQrImage}}"
+        }
+      }
+    },
+    "uploads.createSession": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Create Upload Session",
+      "description": "Create a Graph resumable upload session via POST /{app-id}/uploads for large image or video files.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "appId": {
+            "type": "string",
+            "description": "Meta app ID that owns the resumable upload session."
+          },
+          "fileType": {
+            "type": "string",
+            "description": "MIME type of the file.",
+            "enum": [
+              "image/jpeg",
+              "image/png",
+              "video/mp4"
+            ]
+          },
+          "fileLength": {
+            "type": "integer",
+            "description": "Exact file size in bytes."
+          },
+          "fileName": {
+            "type": "string",
+            "description": "Optional file name for the upload session."
+          }
+        },
+        "required": [
+          "appId",
+          "fileType",
+          "fileLength"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "description": "Graph API response body."
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v25.0/{{appId}}/uploads",
+        "success": [
+          200,
+          201
+        ],
+        "query": {
+          "file_type": "{{fileType}}",
+          "file_length": "{{fileLength}}",
+          "file_name": "{{fileName}}"
+        },
+        "body": {}
+      }
+    },
+    "templates.delete": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "destructive",
+      "title": "Delete Message Template",
+      "description": "Delete a WABA message template by name via DELETE /{waba-id}/message_templates. Names cannot be reused for 30 days.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "wabaId": {
+            "type": "string",
+            "description": "WhatsApp Business Account ID (WABA ID)."
+          },
+          "name": {
+            "type": "string",
+            "description": "Template name. Deletes every language variant of this name unless hsmId is also set."
+          },
+          "hsmId": {
+            "type": "string",
+            "description": "Optional template ID. Combined with name, deletes only that language variant."
+          }
+        },
+        "required": [
+          "wabaId",
+          "name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "description": "Graph API response body."
+          }
+        }
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/v25.0/{{wabaId}}/message_templates",
+        "success": [
+          200,
+          201
+        ],
+        "query": {
+          "name": "{{name}}",
+          "hsm_id": "{{hsmId}}"
+        }
+      }
+    },
+    "qrCodes.delete": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "destructive",
+      "title": "Delete QR Code",
+      "description": "Permanently delete a message QR code via DELETE /{phone-number-id}/message_qrdls.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "phoneNumberId": {
+            "type": "string",
+            "description": "WhatsApp Business phone number ID assigned by Meta, not the dialable number."
+          },
+          "qrCodeId": {
+            "type": "string",
+            "description": "14-character QR code identifier returned at creation time."
+          }
+        },
+        "required": [
+          "phoneNumberId",
+          "qrCodeId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "description": "Graph API response body."
+          }
+        }
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/v25.0/{{phoneNumberId}}/message_qrdls",
+        "success": [
+          200,
+          201
+        ],
+        "query": {
+          "code": "{{qrCodeId}}"
+        }
+      }
+    },
+    "phoneNumbers.deregister": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "destructive",
+      "title": "Deregister Phone Number",
+      "description": "Deregister a business phone number from Cloud API via POST /{phone-number-id}/deregister. The number cannot send until it is registered again.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "phoneNumberId": {
+            "type": "string",
+            "description": "WhatsApp Business phone number ID assigned by Meta, not the dialable number."
+          }
+        },
+        "required": [
+          "phoneNumberId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "description": "Graph API response body."
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v25.0/{{phoneNumberId}}/deregister",
+        "success": [
+          200,
+          201
+        ],
+        "body": {}
+      }
+    },
+    "activities.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Get Business Account Activities",
+      "description": "List WABA activity history such as phone verifications and user additions via GET /{waba-id}/activities.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "wabaId": {
+            "type": "string",
+            "description": "WhatsApp Business Account ID (WABA ID)."
+          },
+          "after": {
+            "type": "string",
+            "description": "Cursor for the next page of results."
+          },
+          "before": {
+            "type": "string",
+            "description": "Cursor for the previous page of results."
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Maximum number of records to return per page (1-100)."
+          },
+          "since": {
+            "type": "string",
+            "description": "Unix timestamp or ISO-8601 time. Only activities after this time."
+          },
+          "until": {
+            "type": "string",
+            "description": "Unix timestamp or ISO-8601 time. Only activities before this time."
+          },
+          "fields": {
+            "type": "string",
+            "description": "Comma-separated Graph fields to return."
+          },
+          "activityType": {
+            "type": "string",
+            "description": "Activity type filter, or a comma-separated list of types."
+          }
+        },
+        "required": [
+          "wabaId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "description": "Graph API response body."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v25.0/{{wabaId}}/activities",
+        "success": [
+          200,
+          201
+        ],
+        "query": {
+          "after": "{{after}}",
+          "before": "{{before}}",
+          "limit": "{{limit}}",
+          "since": "{{since}}",
+          "until": "{{until}}",
+          "fields": "{{fields}}",
+          "activity_type": "{{activityType}}"
+        }
+      }
+    },
+    "businessAccounts.get": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Get Business Account Details",
+      "description": "Retrieve WABA configuration, review status, and ownership via GET /{waba-id}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "wabaId": {
+            "type": "string",
+            "description": "WhatsApp Business Account ID (WABA ID)."
+          },
+          "fields": {
+            "type": "string",
+            "description": "Comma-separated Graph fields to return."
+          }
+        },
+        "required": [
+          "wabaId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "description": "Graph API response body."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v25.0/{{wabaId}}",
+        "success": [
+          200,
+          201
+        ],
+        "query": {
+          "fields": "{{fields}}"
+        }
+      }
+    },
+    "compliance.get": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Get Business Compliance Info",
+      "description": "Retrieve business compliance details for a phone number via GET /{phone-number-id}/business_compliance_info.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "phoneNumberId": {
+            "type": "string",
+            "description": "WhatsApp Business phone number ID assigned by Meta, not the dialable number."
+          },
+          "fields": {
+            "type": "string",
+            "description": "Comma-separated Graph fields to return."
+          }
+        },
+        "required": [
+          "phoneNumberId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "description": "Graph API response body."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v25.0/{{phoneNumberId}}/business_compliance_info",
+        "success": [
+          200,
+          201
+        ],
+        "query": {
+          "fields": "{{fields}}"
+        }
+      }
+    },
+    "encryption.get": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Get Business Encryption",
+      "description": "Retrieve the WhatsApp Business public key and signature status via GET /{phone-number-id}/whatsapp_business_encryption.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "phoneNumberId": {
+            "type": "string",
+            "description": "WhatsApp Business phone number ID assigned by Meta, not the dialable number."
+          },
+          "fields": {
+            "type": "string",
+            "description": "Comma-separated Graph fields to return."
+          }
+        },
+        "required": [
+          "phoneNumberId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "description": "Graph API response body."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v25.0/{{phoneNumberId}}/whatsapp_business_encryption",
+        "success": [
+          200,
+          201
+        ],
+        "query": {
+          "fields": "{{fields}}"
+        }
+      }
+    },
+    "businessAccounts.listClient": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Get Client Business Accounts",
+      "description": "List client WABAs shared with or managed by a business portfolio via GET /{business-id}/client_whatsapp_business_accounts.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "businessId": {
+            "type": "string",
+            "description": "Meta Business portfolio ID."
+          },
+          "find": {
+            "type": "string",
+            "description": "Find a specific client WABA by ID."
+          },
+          "after": {
+            "type": "string",
+            "description": "Cursor for the next page of results."
+          },
+          "before": {
+            "type": "string",
+            "description": "Cursor for the previous page of results."
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Maximum number of records to return per page (1-100)."
+          },
+          "fields": {
+            "type": "string",
+            "description": "Comma-separated Graph fields to return."
+          },
+          "businessType": {
+            "type": "string",
+            "description": "Filter by WABA type such as STANDARD or PREMIUM."
+          }
+        },
+        "required": [
+          "businessId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "description": "Graph API response body."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v25.0/{{businessId}}/client_whatsapp_business_accounts",
+        "success": [
+          200,
+          201
+        ],
+        "query": {
+          "find": "{{find}}",
+          "after": "{{after}}",
+          "before": "{{before}}",
+          "limit": "{{limit}}",
+          "fields": "{{fields}}",
+          "business_type": "{{businessType}}"
+        }
+      }
+    },
+    "commerceSettings.get": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Get Commerce Settings",
+      "description": "Get cart and catalog visibility settings via GET /{phone-number-id}/whatsapp_commerce_settings.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "phoneNumberId": {
+            "type": "string",
+            "description": "WhatsApp Business phone number ID assigned by Meta, not the dialable number."
+          }
+        },
+        "required": [
+          "phoneNumberId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "description": "Graph API response body."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v25.0/{{phoneNumberId}}/whatsapp_commerce_settings",
+        "success": [
+          200,
+          201
+        ]
+      }
+    },
+    "flows.getAssets": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Get Flow Assets",
+      "description": "List assets attached to a WhatsApp Flow, including download URLs, via GET /{flow-id}/assets.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "flowId": {
+            "type": "string",
+            "description": "Flow ID assigned by Meta at creation time."
+          }
+        },
+        "required": [
+          "flowId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "description": "Graph API response body."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v25.0/{{flowId}}/assets",
+        "success": [
+          200,
+          201
+        ]
+      }
+    },
+    "groups.getJoinRequests": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Get Group Join Requests",
+      "description": "List pending WhatsApp group join requests via GET /{group-id}/join_requests.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "groupId": {
+            "type": "string",
+            "description": "WhatsApp group ID."
+          },
+          "after": {
+            "type": "string",
+            "description": "Cursor for the next page of results."
+          },
+          "before": {
+            "type": "string",
+            "description": "Cursor for the previous page of results."
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Maximum number of records to return per page (1-100)."
+          }
+        },
+        "required": [
+          "groupId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "description": "Graph API response body."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v25.0/{{groupId}}/join_requests",
+        "success": [
+          200,
+          201
+        ],
+        "query": {
+          "after": "{{after}}",
+          "before": "{{before}}",
+          "limit": "{{limit}}"
+        }
+      }
+    },
+    "messages.history": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Get Message History",
+      "description": "Retrieve paginated message history and delivery events for a business phone number via GET /{phone-number-id}/message_history.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "phoneNumberId": {
+            "type": "string",
+            "description": "WhatsApp Business phone number ID assigned by Meta, not the dialable number."
+          },
+          "after": {
+            "type": "string",
+            "description": "Cursor for the next page of results."
+          },
+          "before": {
+            "type": "string",
+            "description": "Cursor for the previous page of results."
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Maximum number of records to return per page (1-100)."
+          },
+          "fields": {
+            "type": "string",
+            "description": "Comma-separated Graph fields to return."
+          },
+          "messageId": {
+            "type": "string",
+            "description": "Optional WAMID. When set, only history for that message is returned."
+          }
+        },
+        "required": [
+          "phoneNumberId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "description": "Graph API response body."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v25.0/{{phoneNumberId}}/message_history",
+        "success": [
+          200,
+          201
+        ],
+        "query": {
+          "after": "{{after}}",
+          "before": "{{before}}",
+          "limit": "{{limit}}",
+          "fields": "{{fields}}",
+          "message_id": "{{messageId}}"
+        }
+      }
+    },
+    "businessAccounts.listOwned": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Get Owned Business Accounts",
+      "description": "List WABAs owned by a business portfolio via GET /{business-id}/owned_whatsapp_business_accounts.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "businessId": {
+            "type": "string",
+            "description": "Meta Business portfolio ID."
+          },
+          "find": {
+            "type": "string",
+            "description": "Find a specific owned WABA by ID."
+          },
+          "after": {
+            "type": "string",
+            "description": "Cursor for the next page of results."
+          },
+          "before": {
+            "type": "string",
+            "description": "Cursor for the previous page of results."
+          },
+          "first": {
+            "type": "integer",
+            "description": "Forward page size (max 100)."
+          },
+          "last": {
+            "type": "integer",
+            "description": "Backward page size (max 100)."
+          },
+          "fields": {
+            "type": "string",
+            "description": "Comma-separated Graph fields to return."
+          },
+          "businessType": {
+            "type": "string",
+            "description": "Filter by WABA type such as ENTERPRISE or SMB."
+          }
+        },
+        "required": [
+          "businessId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "description": "Graph API response body."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v25.0/{{businessId}}/owned_whatsapp_business_accounts",
+        "success": [
+          200,
+          201
+        ],
+        "query": {
+          "find": "{{find}}",
+          "after": "{{after}}",
+          "before": "{{before}}",
+          "first": "{{first}}",
+          "last": "{{last}}",
+          "fields": "{{fields}}",
+          "business_type": "{{businessType}}"
+        }
+      }
+    },
+    "phoneNumbers.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Get Phone Numbers",
+      "description": "List phone numbers registered to a WABA via GET /{waba-id}/phone_numbers.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "wabaId": {
+            "type": "string",
+            "description": "WhatsApp Business Account ID (WABA ID)."
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Maximum number of records to return per page (1-100)."
+          }
+        },
+        "required": [
+          "wabaId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "description": "Graph API response body."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v25.0/{{wabaId}}/phone_numbers",
+        "success": [
+          200,
+          201
+        ],
+        "query": {
+          "limit": "{{limit}}"
+        }
+      }
+    },
+    "schedules.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Get Campaign Schedules",
+      "description": "List campaign schedules for a WABA via GET /{waba-id}/schedules.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "wabaId": {
+            "type": "string",
+            "description": "WhatsApp Business Account ID (WABA ID)."
+          },
+          "sort": {
+            "type": "string",
+            "description": "Sort order.",
+            "enum": [
+              "created_time.asc",
+              "created_time.desc",
+              "updated_time.asc",
+              "updated_time.desc"
+            ]
+          },
+          "after": {
+            "type": "string",
+            "description": "Cursor for the next page of results."
+          },
+          "before": {
+            "type": "string",
+            "description": "Cursor for the previous page of results."
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Maximum number of records to return per page (1-100)."
+          },
+          "fields": {
+            "type": "string",
+            "description": "Comma-separated Graph fields to return."
+          },
+          "filtering": {
+            "type": "string",
+            "description": "JSON-encoded array of filter conditions."
+          }
+        },
+        "required": [
+          "wabaId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "description": "Graph API response body."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v25.0/{{wabaId}}/schedules",
+        "success": [
+          200,
+          201
+        ],
+        "query": {
+          "sort": "{{sort}}",
+          "after": "{{after}}",
+          "before": "{{before}}",
+          "limit": "{{limit}}",
+          "fields": "{{fields}}",
+          "filtering": "{{filtering}}"
+        }
+      }
+    },
+    "settings.get": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Get Cloud API Settings",
+      "description": "Get calling, storage, and encryption settings for a phone number via GET /{phone-number-id}/settings.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "phoneNumberId": {
+            "type": "string",
+            "description": "WhatsApp Business phone number ID assigned by Meta, not the dialable number."
+          },
+          "includeSipCredentials": {
+            "type": "boolean",
+            "description": "Include SIP credentials. Requires extra permissions."
+          }
+        },
+        "required": [
+          "phoneNumberId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "description": "Graph API response body."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v25.0/{{phoneNumberId}}/settings",
+        "success": [
+          200,
+          201
+        ],
+        "query": {
+          "include_sip_credentials": "{{includeSipCredentials}}"
+        }
+      }
+    },
+    "subscribedApps.list": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Get Subscribed Apps",
+      "description": "List apps subscribed to WABA webhooks via GET /{waba-id}/subscribed_apps.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "wabaId": {
+            "type": "string",
+            "description": "WhatsApp Business Account ID (WABA ID)."
+          },
+          "fields": {
+            "type": "string",
+            "description": "Comma-separated Graph fields to return."
+          }
+        },
+        "required": [
+          "wabaId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "description": "Graph API response body."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v25.0/{{wabaId}}/subscribed_apps",
+        "success": [
+          200,
+          201
+        ],
+        "query": {
+          "fields": "{{fields}}"
+        }
+      }
+    },
+    "templates.library": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Get Template Library",
+      "description": "Browse Meta's pre-built message template library via GET /message_template_library.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "after": {
+            "type": "string",
+            "description": "Cursor for the next page of results."
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Maximum number of records to return per page (1-100)."
+          },
+          "status": {
+            "type": "string",
+            "description": "Filter by template status."
+          },
+          "country": {
+            "type": "string",
+            "description": "Filter by country code such as US."
+          },
+          "category": {
+            "type": "string",
+            "description": "Filter by AUTHENTICATION, MARKETING, or UTILITY."
+          },
+          "language": {
+            "type": "string",
+            "description": "Filter by language code such as en_US."
+          },
+          "nameOrContent": {
+            "type": "string",
+            "description": "Substring match against template name or content."
+          }
+        },
+        "required": []
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "description": "Graph API response body."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v25.0/message_template_library",
+        "success": [
+          200,
+          201
+        ],
+        "query": {
+          "after": "{{after}}",
+          "limit": "{{limit}}",
+          "status": "{{status}}",
+          "country": "{{country}}",
+          "category": "{{category}}",
+          "language": "{{language}}",
+          "search": "{{nameOrContent}}"
+        }
+      }
+    },
+    "templates.get": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Get Template Status",
+      "description": "Get a message template node by ID via GET /{template-id}, including status, category, and rejection reason.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "templateId": {
+            "type": "string",
+            "description": "Message template ID."
+          },
+          "fields": {
+            "type": "string",
+            "description": "Comma-separated Graph fields to return."
+          }
+        },
+        "required": [
+          "templateId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "description": "Graph API response body."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v25.0/{{templateId}}",
+        "success": [
+          200,
+          201
+        ],
+        "query": {
+          "fields": "{{fields}}"
+        }
+      }
+    },
+    "flows.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "List WhatsApp Flows",
+      "description": "List Flows for a WABA via GET /{waba-id}/flows.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "wabaId": {
+            "type": "string",
+            "description": "WhatsApp Business Account ID (WABA ID)."
+          },
+          "after": {
+            "type": "string",
+            "description": "Cursor for the next page of results."
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Maximum number of records to return per page (1-100)."
+          }
+        },
+        "required": [
+          "wabaId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "description": "Graph API response body."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v25.0/{{wabaId}}/flows",
+        "success": [
+          200,
+          201
+        ],
+        "query": {
+          "after": "{{after}}",
+          "limit": "{{limit}}"
+        }
+      }
+    },
+    "groups.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "List WhatsApp Groups",
+      "description": "List active WhatsApp groups for a business phone number via GET /{phone-number-id}/groups.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "phoneNumberId": {
+            "type": "string",
+            "description": "WhatsApp Business phone number ID assigned by Meta, not the dialable number."
+          },
+          "after": {
+            "type": "string",
+            "description": "Cursor for the next page of results."
+          },
+          "before": {
+            "type": "string",
+            "description": "Cursor for the previous page of results."
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Maximum number of records to return per page (1-100)."
+          }
+        },
+        "required": [
+          "phoneNumberId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "description": "Graph API response body."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v25.0/{{phoneNumberId}}/groups",
+        "success": [
+          200,
+          201
+        ],
+        "query": {
+          "after": "{{after}}",
+          "before": "{{before}}",
+          "limit": "{{limit}}"
+        }
+      }
+    },
+    "qrCodes.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "List QR Codes",
+      "description": "List message QR codes for a business phone number via GET /{phone-number-id}/message_qrdls.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "phoneNumberId": {
+            "type": "string",
+            "description": "WhatsApp Business phone number ID assigned by Meta, not the dialable number."
+          },
+          "code": {
+            "type": "string",
+            "description": "Filter to a specific QR code identifier."
+          },
+          "after": {
+            "type": "string",
+            "description": "Cursor for the next page of results."
+          },
+          "before": {
+            "type": "string",
+            "description": "Cursor for the previous page of results."
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Maximum number of records to return per page (1-100)."
+          },
+          "fields": {
+            "type": "string",
+            "description": "Comma-separated Graph fields to return."
+          }
+        },
+        "required": [
+          "phoneNumberId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "description": "Graph API response body."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v25.0/{{phoneNumberId}}/message_qrdls",
+        "success": [
+          200,
+          201
+        ],
+        "query": {
+          "code": "{{code}}",
+          "after": "{{after}}",
+          "before": "{{before}}",
+          "limit": "{{limit}}",
+          "fields": "{{fields}}"
+        }
+      }
+    },
+    "solutions.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "List Multi-Partner Solutions",
+      "description": "List Multi-Partner Solutions associated with a WABA via GET /{waba-id}/solutions.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "wabaId": {
+            "type": "string",
+            "description": "WhatsApp Business Account ID (WABA ID)."
+          },
+          "after": {
+            "type": "string",
+            "description": "Cursor for the next page of results."
+          },
+          "before": {
+            "type": "string",
+            "description": "Cursor for the previous page of results."
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Maximum number of records to return per page (1-100)."
+          },
+          "fields": {
+            "type": "string",
+            "description": "Comma-separated Graph fields to return."
+          }
+        },
+        "required": [
+          "wabaId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "description": "Graph API response body."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v25.0/{{wabaId}}/solutions",
+        "success": [
+          200,
+          201
+        ],
+        "query": {
+          "after": "{{after}}",
+          "before": "{{before}}",
+          "limit": "{{limit}}",
+          "fields": "{{fields}}"
+        }
+      }
+    },
+    "flows.publish": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Publish WhatsApp Flow",
+      "description": "Publish a DRAFT WhatsApp Flow via POST /{flow-id}/publish. Published flows cannot be unpublished.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "flowId": {
+            "type": "string",
+            "description": "Flow ID to publish."
+          }
+        },
+        "required": [
+          "flowId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "description": "Graph API response body."
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v25.0/{{flowId}}/publish",
+        "success": [
+          200,
+          201
+        ],
+        "body": {}
+      }
+    },
+    "phoneNumbers.register": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Register Phone Number",
+      "description": "Register a business phone number for Cloud API via POST /{phone-number-id}/register and set the two-step PIN.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "phoneNumberId": {
+            "type": "string",
+            "description": "WhatsApp Business phone number ID assigned by Meta, not the dialable number."
+          },
+          "pin": {
+            "type": "string",
+            "description": "6-digit two-step verification PIN."
+          },
+          "messagingProduct": {
+            "type": "string",
+            "description": "Must be whatsapp."
+          },
+          "backup": {
+            "type": "object",
+            "description": "Optional backup payload when migrating an existing business account."
+          },
+          "dataLocalizationRegion": {
+            "type": "string",
+            "description": "Optional local storage region code such as DE or IN."
+          }
+        },
+        "required": [
+          "phoneNumberId",
+          "pin"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "description": "Graph API response body."
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v25.0/{{phoneNumberId}}/register",
+        "success": [
+          200,
+          201
+        ],
+        "body": {
+          "messaging_product": "whatsapp",
+          "pin": "{{pin}}",
+          "backup": "{{backup}}",
+          "data_localization_region": "{{dataLocalizationRegion}}"
+        }
+      }
+    },
+    "assignedUsers.remove": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "destructive",
+      "title": "Remove Assigned User",
+      "description": "Revoke a user's access to a WABA via DELETE /{waba-id}/assigned_users.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "wabaId": {
+            "type": "string",
+            "description": "WhatsApp Business Account ID (WABA ID)."
+          },
+          "user": {
+            "type": "string",
+            "description": "Facebook user ID currently assigned to the WABA."
+          }
+        },
+        "required": [
+          "wabaId",
+          "user"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "description": "Graph API response body."
+          }
+        }
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/v25.0/{{wabaId}}/assigned_users",
+        "success": [
+          200,
+          201
+        ],
+        "query": {
+          "user": "{{user}}"
+        }
+      }
+    },
+    "phoneNumbers.setPin": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Set Two-Step Verification PIN",
+      "description": "Set or reset the 6-digit two-step PIN on a registered phone number via POST /{phone-number-id} with body {pin}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "phoneNumberId": {
+            "type": "string",
+            "description": "WhatsApp Business phone number ID assigned by Meta, not the dialable number."
+          },
+          "pin": {
+            "type": "string",
+            "description": "New 6-digit two-step verification PIN."
+          }
+        },
+        "required": [
+          "phoneNumberId",
+          "pin"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "description": "Graph API response body."
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v25.0/{{phoneNumberId}}",
+        "success": [
+          200,
+          201
+        ],
+        "body": {
+          "pin": "{{pin}}"
+        }
+      }
+    },
+    "subscribedApps.subscribe": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Subscribe to WABA Webhooks",
+      "description": "Subscribe the current app to WABA webhook notifications via POST /{waba-id}/subscribed_apps.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "wabaId": {
+            "type": "string",
+            "description": "WhatsApp Business Account ID (WABA ID)."
+          },
+          "verifyToken": {
+            "type": "string",
+            "description": "Optional webhook verify token."
+          },
+          "overrideCallbackUri": {
+            "type": "string",
+            "description": "Optional HTTPS callback URL that overrides the app default."
+          }
+        },
+        "required": [
+          "wabaId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "description": "Graph API response body."
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v25.0/{{wabaId}}/subscribed_apps",
+        "success": [
+          200,
+          201
+        ],
+        "body": {
+          "verify_token": "{{verifyToken}}",
+          "override_callback_uri": "{{overrideCallbackUri}}"
+        }
+      }
+    },
+    "subscribedApps.unsubscribe": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "destructive",
+      "title": "Unsubscribe from WABA Webhooks",
+      "description": "Unsubscribe the current app from WABA webhooks via DELETE /{waba-id}/subscribed_apps.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "wabaId": {
+            "type": "string",
+            "description": "WhatsApp Business Account ID (WABA ID)."
+          }
+        },
+        "required": [
+          "wabaId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "description": "Graph API response body."
+          }
+        }
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/v25.0/{{wabaId}}/subscribed_apps",
+        "success": [
+          200,
+          201
+        ]
+      }
+    },
+    "flows.update": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Update Flow Metadata",
+      "description": "Update a WhatsApp Flow's name, categories, or endpoint URI via POST /{flow-id}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "flowId": {
+            "type": "string",
+            "description": "Flow ID to update."
+          },
+          "name": {
+            "type": "string",
+            "description": "New flow name."
+          },
+          "categories": {
+            "type": "array",
+            "description": "Replacement category list.",
+            "items": {
+              "type": "string"
+            }
+          },
+          "endpointUri": {
+            "type": "string",
+            "description": "Replacement HTTPS Flow endpoint."
+          }
+        },
+        "required": [
+          "flowId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "description": "Graph API response body."
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v25.0/{{flowId}}",
+        "success": [
+          200,
+          201
+        ],
+        "body": {
+          "name": "{{name}}",
+          "categories": "{{categories}}",
+          "endpoint_uri": "{{endpointUri}}"
+        }
+      }
+    },
+    "commerceSettings.update": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Update Commerce Settings",
+      "description": "Enable or disable cart and catalog visibility via POST /{phone-number-id}/whatsapp_commerce_settings.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "phoneNumberId": {
+            "type": "string",
+            "description": "WhatsApp Business phone number ID assigned by Meta, not the dialable number."
+          },
+          "isCartEnabled": {
+            "type": "boolean",
+            "description": "Enable the in-chat shopping cart."
+          },
+          "isCatalogVisible": {
+            "type": "boolean",
+            "description": "Make the product catalog visible to customers."
+          }
+        },
+        "required": [
+          "phoneNumberId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "description": "Graph API response body."
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v25.0/{{phoneNumberId}}/whatsapp_commerce_settings",
+        "success": [
+          200,
+          201
+        ],
+        "query": {
+          "is_cart_enabled": "{{isCartEnabled}}",
+          "is_catalog_visible": "{{isCatalogVisible}}"
+        },
+        "body": {}
+      }
+    },
+    "settings.update": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Update Cloud API Settings",
+      "description": "Update calling, encryption, identity, or storage settings via POST /{phone-number-id}/settings. Send only one setting object per request.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "phoneNumberId": {
+            "type": "string",
+            "description": "WhatsApp Business phone number ID assigned by Meta, not the dialable number."
+          },
+          "calling": {
+            "type": "object",
+            "description": "Calling feature settings."
+          },
+          "payloadEncryption": {
+            "type": "object",
+            "description": "Payload encryption settings."
+          },
+          "userIdentityChange": {
+            "type": "object",
+            "description": "User identity change settings."
+          },
+          "storageConfiguration": {
+            "type": "object",
+            "description": "Storage configuration settings."
+          }
+        },
+        "required": [
+          "phoneNumberId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "description": "Graph API response body."
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v25.0/{{phoneNumberId}}/settings",
+        "success": [
+          200,
+          201
+        ],
+        "body": {
+          "calling": "{{calling}}",
+          "payload_encryption": "{{payloadEncryption}}",
+          "user_identity_change": "{{userIdentityChange}}",
+          "storage_configuration": "{{storageConfiguration}}"
+        }
+      }
+    },
+    "templates.upsert": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Upsert Message Template",
+      "description": "Create or replace a message template on a WABA via POST /{waba-id}/message_templates. Templates still require Meta approval before send.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "wabaId": {
+            "type": "string",
+            "description": "WhatsApp Business Account ID (WABA ID)."
+          },
+          "name": {
+            "type": "string",
+            "description": "Unique template name: lowercase alphanumeric plus underscores."
+          },
+          "category": {
+            "type": "string",
+            "description": "Template category.",
+            "enum": [
+              "AUTHENTICATION",
+              "MARKETING",
+              "UTILITY"
+            ]
+          },
+          "language": {
+            "type": "string",
+            "description": "Template language code such as en_US."
+          },
+          "components": {
+            "type": "array",
+            "description": "Template components. Must include a BODY component.",
+            "items": {
+              "type": "object"
+            }
+          }
+        },
+        "required": [
+          "wabaId",
+          "name",
+          "category",
+          "language",
+          "components"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "description": "Graph API response body."
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v25.0/{{wabaId}}/message_templates",
+        "success": [
+          200,
+          201
+        ],
+        "body": {
+          "name": "{{name}}",
+          "category": "{{category}}",
+          "language": "{{language}}",
+          "components": "{{components}}"
+        }
+      }
+    },
+    "phoneNumbers.verifyCode": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Verify Phone Number OTP",
+      "description": "Submit the 6-digit SMS or voice OTP for a phone number via POST /{phone-number-id}/verify_code.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "phoneNumberId": {
+            "type": "string",
+            "description": "WhatsApp Business phone number ID assigned by Meta, not the dialable number."
+          },
+          "code": {
+            "type": "string",
+            "description": "6-digit verification code."
+          }
+        },
+        "required": [
+          "phoneNumberId",
+          "code"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "description": "Graph API response body."
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v25.0/{{phoneNumberId}}/verify_code",
+        "success": [
+          200,
+          201
+        ],
+        "query": {
+          "code": "{{code}}"
+        },
+        "body": {}
+      }
+    },
+    "me.get": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Who Am I",
+      "description": "Return the identity of the connected Meta user or system user via GET /me.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "description": "Graph API response body."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v25.0/me",
+        "success": [
+          200,
+          201
+        ]
+      }
+    },
+    "messages.sendMedia": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Send WhatsApp Media",
+      "description": "Send an audio, document, image, sticker, or video message by public HTTPS URL via POST /{phone-number-id}/messages.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "phoneNumberId": {
+            "type": "string",
+            "description": "WhatsApp Business phone number ID assigned by Meta, not the dialable number."
+          },
+          "to": {
+            "type": "string",
+            "description": "Recipient WhatsApp number in international format without +."
+          },
+          "mediaType": {
+            "type": "string",
+            "description": "Media type to send.",
+            "enum": [
+              "audio",
+              "document",
+              "image",
+              "sticker",
+              "video"
+            ]
+          },
+          "link": {
+            "type": "string",
+            "description": "Publicly accessible HTTPS URL of the media file."
+          },
+          "caption": {
+            "type": "string",
+            "description": "Optional caption. Supported for image, video, and document only."
+          },
+          "filename": {
+            "type": "string",
+            "description": "Optional document filename."
+          },
+          "replyToMessageId": {
+            "type": "string",
+            "description": "Optional WAMID to quote as a reply."
+          },
+          "graphVersion": {
+            "type": "string",
+            "description": "Graph API version such as v25.0. Defaults to v25.0."
+          }
+        },
+        "required": [
+          "phoneNumberId",
+          "to",
+          "mediaType",
+          "link"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "raw": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "messages.sendMediaById": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Send WhatsApp Media By ID",
+      "description": "Send previously uploaded media by media ID via POST /{phone-number-id}/messages.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "phoneNumberId": {
+            "type": "string",
+            "description": "WhatsApp Business phone number ID assigned by Meta, not the dialable number."
+          },
+          "to": {
+            "type": "string",
+            "description": "Recipient WhatsApp number in international format without +."
+          },
+          "mediaType": {
+            "type": "string",
+            "description": "Media type to send.",
+            "enum": [
+              "audio",
+              "document",
+              "image",
+              "sticker",
+              "video"
+            ]
+          },
+          "mediaId": {
+            "type": "string",
+            "description": "Media ID returned by media.upload."
+          },
+          "caption": {
+            "type": "string",
+            "description": "Optional caption. Supported for image, video, and document only."
+          },
+          "filename": {
+            "type": "string",
+            "description": "Optional document filename."
+          },
+          "replyToMessageId": {
+            "type": "string",
+            "description": "Optional WAMID to quote as a reply."
+          },
+          "graphVersion": {
+            "type": "string",
+            "description": "Graph API version such as v25.0. Defaults to v25.0."
+          }
+        },
+        "required": [
+          "phoneNumberId",
+          "to",
+          "mediaType",
+          "mediaId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "raw": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "flows.updateJson": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Update Flow JSON",
+      "description": "Upload a flow.json asset for an existing WhatsApp Flow via multipart POST /{flow-id}/assets.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "flowId": {
+            "type": "string",
+            "description": "Flow ID whose JSON should be replaced."
+          },
+          "flowJson": {
+            "type": "string",
+            "description": "Flow JSON document as a string. Validated by Meta against the Flow schema."
+          },
+          "assetType": {
+            "type": "string",
+            "description": "Asset type. Defaults to FLOW_JSON."
+          },
+          "graphVersion": {
+            "type": "string",
+            "description": "Graph API version such as v25.0. Defaults to v25.0."
+          }
+        },
+        "required": [
+          "flowId",
+          "flowJson"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "raw": {
+            "type": "object"
+          }
+        }
+      }
+    },
     "webhook.message_received": {
       "kind": "webhook",
       "timeoutMs": 30000,
@@ -1110,5 +3575,29 @@
     "user",
     "template",
     "media"
-  ]
+  ],
+  "http": {
+    "baseUrl": "https://graph.facebook.com",
+    "auth": {
+      "field": "accessToken",
+      "in": "header",
+      "name": "Authorization",
+      "value": "Bearer {{accessToken}}"
+    },
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after",
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "error.message",
+        "error.error_user_msg",
+        "error"
+      ]
+    }
+  }
 }

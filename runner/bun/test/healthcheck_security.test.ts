@@ -6,7 +6,6 @@ import { healthcheck as caldavHealthcheck } from "../../connectors/caldav/src/he
 import { healthcheck as googleMeetHealthcheck } from "../../connectors/googlemeet/src/healthcheck";
 import { healthcheck as klaviyoHealthcheck } from "../../connectors/klaviyo/src/healthcheck";
 import { healthcheck as lushaHealthcheck } from "../../connectors/lusha/src/healthcheck";
-import { healthcheck as notionHealthcheck } from "../../connectors/notion/src/healthcheck";
 import { healthcheck as resendHealthcheck } from "../../connectors/resend/src/healthcheck";
 import { healthcheck as saleshandyHealthcheck } from "../../connectors/saleshandy/src/healthcheck";
 import { healthcheck as sendgridHealthcheck } from "../../connectors/sendgrid/src/healthcheck";
@@ -26,7 +25,6 @@ const nativeHttpHealthchecks: Array<{ name: string; healthcheck: Healthcheck; in
   { name: "googlemeet", healthcheck: googleMeetHealthcheck, input: { accessToken: "test" } },
   { name: "klaviyo", healthcheck: klaviyoHealthcheck, input: { apiKey: "test" } },
   { name: "lusha", healthcheck: lushaHealthcheck, input: { apiKey: "test" } },
-  { name: "notion", healthcheck: notionHealthcheck, input: { notionToken: "test" } },
   { name: "resend", healthcheck: resendHealthcheck, input: { apiKey: "test" } },
   { name: "saleshandy", healthcheck: saleshandyHealthcheck, input: { apiKey: "test" } },
   { name: "sendgrid", healthcheck: sendgridHealthcheck, input: { apiKey: "test" } },

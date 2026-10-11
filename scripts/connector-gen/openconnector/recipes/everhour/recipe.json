@@ -93,36 +93,47 @@
     "providerId": "everhour",
     "appcallId": "everhour",
     "disposition": "APPROVED",
-    "edition": "international Everhour REST API at api.everhour.com",
+    "edition": "international Everhour REST API at api.everhour.com covering Composio EVERHOUR tools",
     "operations": [
       "healthcheck",
-      "users.list",
-      "projects.list",
       "projects.get",
+      "projects.list",
       "time.list",
-      "projects.create",
-      "projects.update",
-      "projects.delete",
-      "clients.list",
-      "clients.get",
+      "users.list",
       "clients.create",
-      "clients.update",
       "clients.delete",
-      "tasks.list",
-      "tasks.get",
-      "tasks.create",
-      "time.create",
-      "timers.current.get",
-      "timers.start",
-      "timers.stop",
-      "sections.list",
+      "clients.list",
+      "timecards.clockIn",
+      "timecards.clockOut",
+      "webhooks.create",
+      "webhooks.delete",
+      "timecards.delete",
+      "timesheets.approval.discard",
+      "expenses.list",
+      "clients.get",
+      "sections.get",
+      "timecards.get",
+      "webhooks.get",
+      "expenseCategories.list",
+      "webhooks.list",
       "invoices.list",
-      "webhook.project_created",
-      "webhook.task_created",
-      "webhook.task_updated",
-      "webhook.timer_started",
-      "webhook.timer_stopped",
-      "webhook.client_created"
+      "sections.list",
+      "tags.list",
+      "teams.get",
+      "timecards.list",
+      "users.timecards.list",
+      "users.timesheets.list",
+      "projects.create",
+      "projects.delete",
+      "timesheets.approval.request",
+      "sections.create",
+      "sections.delete",
+      "tasks.create",
+      "timers.start",
+      "clients.update",
+      "projects.update",
+      "timecards.update",
+      "webhooks.update"
     ],
     "upstreamSha": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
     "marketFocus": "international",
@@ -196,7 +207,8 @@
       "adaptations": [
         "Credential-only healthcheck maps to documented GET /users/me, matching the pinned credential validator.",
         "Auth header uses the official X-Api-Key name. The upstream user-agent is not sent.",
-        "Returns raw Everhour JSON under data rather than the upstream {user} wrapper."
+        "Returns raw Everhour JSON under data rather than the upstream {user} wrapper.",
+        "Covers Composio EVERHOUR_GET_USER_PROFILE."
       ]
     },
     "users.list": {
@@ -213,7 +225,8 @@
       "responseContract": "appcall-provider-json-v1",
       "adaptations": [
         "Calls documented GET /team/users.",
-        "Returns raw Everhour JSON under data rather than the upstream {users} wrapper."
+        "Returns raw Everhour JSON under data rather than the upstream {users} wrapper.",
+        "Covers Composio EVERHOUR_LIST_TEAM_MEMBERS."
       ]
     },
     "projects.list": {
@@ -230,7 +243,8 @@
       "responseContract": "appcall-provider-json-v1",
       "adaptations": [
         "Calls documented GET /projects with optional query, limit, and platform.",
-        "Returns raw Everhour JSON under data rather than the upstream {projects} wrapper."
+        "Returns raw Everhour JSON under data rather than the upstream {projects} wrapper.",
+        "Covers Composio EVERHOUR_LIST_PROJECTS."
       ]
     },
     "projects.get": {
@@ -248,7 +262,8 @@
       "responseContract": "appcall-provider-json-v1",
       "adaptations": [
         "Calls documented GET /projects/{projectId}. Native encodeURIComponent-encodes path segments, so a colon in an integration-backed id such as as:123456 is sent as %3A. Pinned source rewrites %3A back to a literal colon.",
-        "Returns raw Everhour JSON under data rather than the upstream {project} wrapper."
+        "Returns raw Everhour JSON under data rather than the upstream {project} wrapper.",
+        "Covers Composio EVERHOUR_GET_PROJECT."
       ]
     },
     "time.list": {
@@ -268,320 +283,521 @@
         "Returns raw Everhour JSON under data rather than the upstream {timeRecords} wrapper."
       ]
     },
-    "projects.create": {
-      "upstreamActionId": "create_project",
-      "sourceRefs": [
-        "request-headers"
-      ],
-      "documentationUrls": [
-        "https://everhour.docs.apiary.io/"
-      ],
-      "responseContract": "appcall-provider-json-v1",
-      "adaptations": [
-        "Official POST /projects with name and optional client."
-      ]
-    },
-    "projects.update": {
-      "upstreamActionId": "update_project",
-      "sourceRefs": [
-        "request-headers"
-      ],
-      "documentationUrls": [
-        "https://everhour.docs.apiary.io/"
-      ],
-      "responseContract": "appcall-provider-json-v1",
-      "adaptations": [
-        "Official PUT /projects/{id}. Native encodes colon in integration-backed ids."
-      ]
-    },
-    "projects.delete": {
-      "upstreamActionId": "delete_project",
-      "sourceRefs": [
-        "request-headers"
-      ],
-      "documentationUrls": [
-        "https://everhour.docs.apiary.io/"
-      ],
-      "responseContract": "appcall-provider-json-v1",
-      "adaptations": [
-        "Official DELETE /projects/{id}. Mapped to {deleted,id}."
-      ]
-    },
-    "clients.list": {
-      "upstreamActionId": "list_clients",
-      "sourceRefs": [
-        "request-headers"
-      ],
-      "documentationUrls": [
-        "https://everhour.docs.apiary.io/"
-      ],
-      "responseContract": "appcall-provider-json-v1",
-      "adaptations": [
-        "Official GET /clients."
-      ]
-    },
-    "clients.get": {
-      "upstreamActionId": "get_client",
-      "sourceRefs": [
-        "request-headers"
-      ],
-      "documentationUrls": [
-        "https://everhour.docs.apiary.io/"
-      ],
-      "responseContract": "appcall-provider-json-v1",
-      "adaptations": [
-        "Official GET /clients/{id}."
-      ]
-    },
     "clients.create": {
-      "upstreamActionId": "create_client",
+      "upstreamActionId": "clients.create",
       "sourceRefs": [
-        "request-headers"
+        "executor-request"
       ],
       "documentationUrls": [
-        "https://everhour.docs.apiary.io/"
+        "https://everhour.docs.apiary.io/",
+        "https://docs.composio.dev/toolkits/everhour"
       ],
       "responseContract": "appcall-provider-json-v1",
       "adaptations": [
-        "Official POST /clients with name."
-      ]
-    },
-    "clients.update": {
-      "upstreamActionId": "update_client",
-      "sourceRefs": [
-        "request-headers"
-      ],
-      "documentationUrls": [
-        "https://everhour.docs.apiary.io/"
-      ],
-      "responseContract": "appcall-provider-json-v1",
-      "adaptations": [
-        "Official PUT /clients/{id}."
+        "Maps EVERHOUR_CLIENT_CREATE onto documented Everhour REST POST /clients.",
+        "Returns raw Everhour JSON under data."
       ]
     },
     "clients.delete": {
-      "upstreamActionId": "delete_client",
+      "upstreamActionId": "clients.delete",
       "sourceRefs": [
-        "request-headers"
+        "executor-request"
       ],
       "documentationUrls": [
-        "https://everhour.docs.apiary.io/"
+        "https://everhour.docs.apiary.io/",
+        "https://docs.composio.dev/toolkits/everhour"
       ],
       "responseContract": "appcall-provider-json-v1",
       "adaptations": [
-        "Official DELETE /clients/{id}. Mapped to {deleted,id}."
+        "Maps EVERHOUR_CLIENT_DELETE onto documented Everhour REST DELETE /clients/{{client_id}}.",
+        "Returns raw Everhour JSON under data."
       ]
     },
-    "tasks.list": {
-      "upstreamActionId": "list_project_tasks",
+    "clients.list": {
+      "upstreamActionId": "clients.list",
       "sourceRefs": [
-        "request-headers"
+        "executor-request"
       ],
       "documentationUrls": [
-        "https://everhour.docs.apiary.io/"
+        "https://everhour.docs.apiary.io/",
+        "https://docs.composio.dev/toolkits/everhour"
       ],
       "responseContract": "appcall-provider-json-v1",
       "adaptations": [
-        "Official GET /projects/{id}/tasks with optional query, limit, and page."
+        "Maps EVERHOUR_CLIENT_LIST onto documented Everhour REST GET /clients.",
+        "Returns raw Everhour JSON under data."
       ]
     },
-    "tasks.get": {
-      "upstreamActionId": "get_task",
+    "timecards.clockIn": {
+      "upstreamActionId": "timecards.clockIn",
       "sourceRefs": [
-        "request-headers"
+        "executor-request"
       ],
       "documentationUrls": [
-        "https://everhour.docs.apiary.io/"
+        "https://everhour.docs.apiary.io/",
+        "https://docs.composio.dev/toolkits/everhour"
       ],
       "responseContract": "appcall-provider-json-v1",
       "adaptations": [
-        "Official GET /tasks/{id}."
+        "Maps EVERHOUR_CLOCK_IN onto documented Everhour REST POST /users/{{user_id}}/timecards/clock-in.",
+        "Returns raw Everhour JSON under data."
       ]
     },
-    "tasks.create": {
-      "upstreamActionId": "create_task",
+    "timecards.clockOut": {
+      "upstreamActionId": "timecards.clockOut",
       "sourceRefs": [
-        "request-headers"
+        "executor-request"
       ],
       "documentationUrls": [
-        "https://everhour.docs.apiary.io/"
+        "https://everhour.docs.apiary.io/",
+        "https://docs.composio.dev/toolkits/everhour"
       ],
       "responseContract": "appcall-provider-json-v1",
       "adaptations": [
-        "Official POST /projects/{id}/tasks."
+        "Maps EVERHOUR_CLOCK_OUT onto documented Everhour REST POST /users/{{user_id}}/timecards/clock-out.",
+        "Returns raw Everhour JSON under data."
       ]
     },
-    "time.create": {
-      "upstreamActionId": "add_time",
+    "webhooks.create": {
+      "upstreamActionId": "webhooks.create",
       "sourceRefs": [
-        "request-headers"
+        "executor-request"
       ],
       "documentationUrls": [
-        "https://everhour.docs.apiary.io/"
+        "https://everhour.docs.apiary.io/",
+        "https://docs.composio.dev/toolkits/everhour"
       ],
       "responseContract": "appcall-provider-json-v1",
       "adaptations": [
-        "Official POST /tasks/{id}/time. Duration is seconds."
+        "Maps EVERHOUR_CREATE_WEBHOOK onto documented Everhour REST POST /hooks.",
+        "Returns raw Everhour JSON under data."
       ]
     },
-    "timers.current.get": {
-      "upstreamActionId": "get_running_timer",
+    "webhooks.delete": {
+      "upstreamActionId": "webhooks.delete",
       "sourceRefs": [
-        "request-headers"
+        "executor-request"
       ],
       "documentationUrls": [
-        "https://everhour.docs.apiary.io/"
+        "https://everhour.docs.apiary.io/",
+        "https://docs.composio.dev/toolkits/everhour"
       ],
       "responseContract": "appcall-provider-json-v1",
       "adaptations": [
-        "Official GET /timers/current."
+        "Maps EVERHOUR_DELETE_HOOK onto documented Everhour REST DELETE /hooks/{{hook_id}}.",
+        "Returns raw Everhour JSON under data."
       ]
     },
-    "timers.start": {
-      "upstreamActionId": "start_timer",
+    "timecards.delete": {
+      "upstreamActionId": "timecards.delete",
       "sourceRefs": [
-        "request-headers"
+        "executor-request"
       ],
       "documentationUrls": [
-        "https://everhour.docs.apiary.io/"
+        "https://everhour.docs.apiary.io/",
+        "https://docs.composio.dev/toolkits/everhour"
       ],
       "responseContract": "appcall-provider-json-v1",
       "adaptations": [
-        "Official POST /timers with task ID."
+        "Maps EVERHOUR_DELETE_TIMECARD onto documented Everhour REST DELETE /users/{{user_id}}/timecards/{{date}}.",
+        "Returns raw Everhour JSON under data."
       ]
     },
-    "timers.stop": {
-      "upstreamActionId": "stop_timer",
+    "timesheets.approval.discard": {
+      "upstreamActionId": "timesheets.approval.discard",
       "sourceRefs": [
-        "request-headers"
+        "executor-request"
       ],
       "documentationUrls": [
-        "https://everhour.docs.apiary.io/"
+        "https://everhour.docs.apiary.io/",
+        "https://docs.composio.dev/toolkits/everhour"
       ],
       "responseContract": "appcall-provider-json-v1",
       "adaptations": [
-        "Official DELETE /timers/current. Mapped to {deleted,id}."
+        "Maps EVERHOUR_DISCARD_TIMESHEET_APPROVAL onto documented Everhour REST PUT /timesheets/{{timesheet_id}}/discard-approval.",
+        "Returns raw Everhour JSON under data."
       ]
     },
-    "sections.list": {
-      "upstreamActionId": "list_sections",
+    "expenses.list": {
+      "upstreamActionId": "expenses.list",
       "sourceRefs": [
-        "request-headers"
+        "executor-request"
       ],
       "documentationUrls": [
-        "https://everhour.docs.apiary.io/"
+        "https://everhour.docs.apiary.io/",
+        "https://docs.composio.dev/toolkits/everhour"
       ],
       "responseContract": "appcall-provider-json-v1",
       "adaptations": [
-        "Official GET /projects/{id}/sections."
+        "Maps EVERHOUR_EXPENSES_LIST onto documented Everhour REST GET /expenses.",
+        "Returns raw Everhour JSON under data."
+      ]
+    },
+    "clients.get": {
+      "upstreamActionId": "clients.get",
+      "sourceRefs": [
+        "executor-request"
+      ],
+      "documentationUrls": [
+        "https://everhour.docs.apiary.io/",
+        "https://docs.composio.dev/toolkits/everhour"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Maps EVERHOUR_GET_CLIENT onto documented Everhour REST GET /clients/{{client_id}}.",
+        "Returns raw Everhour JSON under data."
+      ]
+    },
+    "sections.get": {
+      "upstreamActionId": "sections.get",
+      "sourceRefs": [
+        "executor-request"
+      ],
+      "documentationUrls": [
+        "https://everhour.docs.apiary.io/",
+        "https://docs.composio.dev/toolkits/everhour"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Maps EVERHOUR_GET_SECTION onto documented Everhour REST GET /sections/{{sectionId}}.",
+        "Returns raw Everhour JSON under data."
+      ]
+    },
+    "timecards.get": {
+      "upstreamActionId": "timecards.get",
+      "sourceRefs": [
+        "executor-request"
+      ],
+      "documentationUrls": [
+        "https://everhour.docs.apiary.io/",
+        "https://docs.composio.dev/toolkits/everhour"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Maps EVERHOUR_GET_TIMECARD onto documented Everhour REST GET /users/{{user_id}}/timecards/{{date}}.",
+        "Returns raw Everhour JSON under data."
+      ]
+    },
+    "webhooks.get": {
+      "upstreamActionId": "webhooks.get",
+      "sourceRefs": [
+        "executor-request"
+      ],
+      "documentationUrls": [
+        "https://everhour.docs.apiary.io/",
+        "https://docs.composio.dev/toolkits/everhour"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Maps EVERHOUR_GET_WEBHOOK onto documented Everhour REST GET /hooks/{{hook_id}}.",
+        "Returns raw Everhour JSON under data."
+      ]
+    },
+    "expenseCategories.list": {
+      "upstreamActionId": "expenseCategories.list",
+      "sourceRefs": [
+        "executor-request"
+      ],
+      "documentationUrls": [
+        "https://everhour.docs.apiary.io/",
+        "https://docs.composio.dev/toolkits/everhour"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Maps EVERHOUR_LIST_EXPENSE_CATEGORIES onto documented Everhour REST GET /expenses/categories.",
+        "Returns raw Everhour JSON under data."
+      ]
+    },
+    "webhooks.list": {
+      "upstreamActionId": "webhooks.list",
+      "sourceRefs": [
+        "executor-request"
+      ],
+      "documentationUrls": [
+        "https://everhour.docs.apiary.io/",
+        "https://docs.composio.dev/toolkits/everhour"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Maps EVERHOUR_LIST_HOOKS onto documented Everhour REST GET /hooks.",
+        "Returns raw Everhour JSON under data."
       ]
     },
     "invoices.list": {
-      "upstreamActionId": "list_invoices",
+      "upstreamActionId": "invoices.list",
       "sourceRefs": [
-        "request-headers"
+        "executor-request"
       ],
       "documentationUrls": [
-        "https://everhour.docs.apiary.io/"
+        "https://everhour.docs.apiary.io/",
+        "https://docs.composio.dev/toolkits/everhour"
       ],
       "responseContract": "appcall-provider-json-v1",
       "adaptations": [
-        "Official GET /invoices."
+        "Maps EVERHOUR_LIST_INVOICES onto documented Everhour REST GET /invoices.",
+        "Returns raw Everhour JSON under data."
       ]
     },
-    "webhook.project_created": {
-      "upstreamActionId": "webhook_project_created",
+    "sections.list": {
+      "upstreamActionId": "sections.list",
       "sourceRefs": [
-        "request-headers"
+        "executor-request"
       ],
       "documentationUrls": [
-        "https://everhour.docs.apiary.io/"
+        "https://everhour.docs.apiary.io/",
+        "https://docs.composio.dev/toolkits/everhour"
       ],
       "responseContract": "appcall-provider-json-v1",
       "adaptations": [
-        "EventOnly inbound webhook for api:project:created. No outbound request."
+        "Maps EVERHOUR_LIST_SECTIONS onto documented Everhour REST GET /projects/{{projectId}}/sections.",
+        "Returns raw Everhour JSON under data."
       ]
     },
-    "webhook.task_created": {
-      "upstreamActionId": "webhook_task_created",
+    "tags.list": {
+      "upstreamActionId": "tags.list",
       "sourceRefs": [
-        "request-headers"
+        "executor-request"
       ],
       "documentationUrls": [
-        "https://everhour.docs.apiary.io/"
+        "https://everhour.docs.apiary.io/",
+        "https://docs.composio.dev/toolkits/everhour"
       ],
       "responseContract": "appcall-provider-json-v1",
       "adaptations": [
-        "EventOnly inbound webhook for api:task:created. No outbound request."
+        "Maps EVERHOUR_LIST_TAGS onto documented Everhour REST GET /tags.",
+        "Returns raw Everhour JSON under data."
       ]
     },
-    "webhook.task_updated": {
-      "upstreamActionId": "webhook_task_updated",
+    "teams.get": {
+      "upstreamActionId": "teams.get",
       "sourceRefs": [
-        "request-headers"
+        "executor-request"
       ],
       "documentationUrls": [
-        "https://everhour.docs.apiary.io/"
+        "https://everhour.docs.apiary.io/",
+        "https://docs.composio.dev/toolkits/everhour"
       ],
       "responseContract": "appcall-provider-json-v1",
       "adaptations": [
-        "EventOnly inbound webhook for api:task:updated. No outbound request."
+        "Maps EVERHOUR_LIST_TEAMS onto documented Everhour REST GET /team.",
+        "Returns raw Everhour JSON under data."
       ]
     },
-    "webhook.timer_started": {
-      "upstreamActionId": "webhook_timer_started",
+    "timecards.list": {
+      "upstreamActionId": "timecards.list",
       "sourceRefs": [
-        "request-headers"
+        "executor-request"
       ],
       "documentationUrls": [
-        "https://everhour.docs.apiary.io/"
+        "https://everhour.docs.apiary.io/",
+        "https://docs.composio.dev/toolkits/everhour"
       ],
       "responseContract": "appcall-provider-json-v1",
       "adaptations": [
-        "EventOnly inbound webhook for api:timer:started. No outbound request."
+        "Maps EVERHOUR_LIST_TIMECARDS onto documented Everhour REST GET /timecards.",
+        "Returns raw Everhour JSON under data."
       ]
     },
-    "webhook.timer_stopped": {
-      "upstreamActionId": "webhook_timer_stopped",
+    "users.timecards.list": {
+      "upstreamActionId": "users.timecards.list",
       "sourceRefs": [
-        "request-headers"
+        "executor-request"
       ],
       "documentationUrls": [
-        "https://everhour.docs.apiary.io/"
+        "https://everhour.docs.apiary.io/",
+        "https://docs.composio.dev/toolkits/everhour"
       ],
       "responseContract": "appcall-provider-json-v1",
       "adaptations": [
-        "EventOnly inbound webhook for api:timer:stopped. No outbound request."
+        "Maps EVERHOUR_LIST_USER_TIMECARDS onto documented Everhour REST GET /users/{{user_id}}/timecards.",
+        "Returns raw Everhour JSON under data."
       ]
     },
-    "webhook.client_created": {
-      "upstreamActionId": "webhook_client_created",
+    "users.timesheets.list": {
+      "upstreamActionId": "users.timesheets.list",
       "sourceRefs": [
-        "request-headers"
+        "executor-request"
       ],
       "documentationUrls": [
-        "https://everhour.docs.apiary.io/"
+        "https://everhour.docs.apiary.io/",
+        "https://docs.composio.dev/toolkits/everhour"
       ],
       "responseContract": "appcall-provider-json-v1",
       "adaptations": [
-        "EventOnly inbound webhook for api:client:created. No outbound request."
+        "Maps EVERHOUR_LIST_USER_TIMESHEETS onto documented Everhour REST GET /users/{{user_id}}/timesheets.",
+        "Returns raw Everhour JSON under data."
+      ]
+    },
+    "projects.create": {
+      "upstreamActionId": "projects.create",
+      "sourceRefs": [
+        "executor-request"
+      ],
+      "documentationUrls": [
+        "https://everhour.docs.apiary.io/",
+        "https://docs.composio.dev/toolkits/everhour"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Maps EVERHOUR_PROJECT_CREATE onto documented Everhour REST POST /projects.",
+        "Returns raw Everhour JSON under data."
+      ]
+    },
+    "projects.delete": {
+      "upstreamActionId": "projects.delete",
+      "sourceRefs": [
+        "executor-request"
+      ],
+      "documentationUrls": [
+        "https://everhour.docs.apiary.io/",
+        "https://docs.composio.dev/toolkits/everhour"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Maps EVERHOUR_PROJECT_DELETE onto documented Everhour REST DELETE /projects/{{project_id}}.",
+        "Returns raw Everhour JSON under data."
+      ]
+    },
+    "timesheets.approval.request": {
+      "upstreamActionId": "timesheets.approval.request",
+      "sourceRefs": [
+        "executor-request"
+      ],
+      "documentationUrls": [
+        "https://everhour.docs.apiary.io/",
+        "https://docs.composio.dev/toolkits/everhour"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Maps EVERHOUR_REQUEST_TIMESHEET_APPROVAL onto documented Everhour REST POST /timesheets/{{timesheetId}}/approval.",
+        "Returns raw Everhour JSON under data."
+      ]
+    },
+    "sections.create": {
+      "upstreamActionId": "sections.create",
+      "sourceRefs": [
+        "executor-request"
+      ],
+      "documentationUrls": [
+        "https://everhour.docs.apiary.io/",
+        "https://docs.composio.dev/toolkits/everhour"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Maps EVERHOUR_SECTION_CREATE onto documented Everhour REST POST /projects/{{project_id}}/sections.",
+        "Returns raw Everhour JSON under data."
+      ]
+    },
+    "sections.delete": {
+      "upstreamActionId": "sections.delete",
+      "sourceRefs": [
+        "executor-request"
+      ],
+      "documentationUrls": [
+        "https://everhour.docs.apiary.io/",
+        "https://docs.composio.dev/toolkits/everhour"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Maps EVERHOUR_SECTION_DELETE onto documented Everhour REST DELETE /sections/{{section_id}}.",
+        "Returns raw Everhour JSON under data."
+      ]
+    },
+    "tasks.create": {
+      "upstreamActionId": "tasks.create",
+      "sourceRefs": [
+        "executor-request"
+      ],
+      "documentationUrls": [
+        "https://everhour.docs.apiary.io/",
+        "https://docs.composio.dev/toolkits/everhour"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Maps EVERHOUR_TASK_CREATE onto documented Everhour REST POST /projects/{{projectId}}/tasks.",
+        "Returns raw Everhour JSON under data."
+      ]
+    },
+    "timers.start": {
+      "upstreamActionId": "timers.start",
+      "sourceRefs": [
+        "executor-request"
+      ],
+      "documentationUrls": [
+        "https://everhour.docs.apiary.io/",
+        "https://docs.composio.dev/toolkits/everhour"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Maps EVERHOUR_TIMER_START onto documented Everhour REST POST /timers.",
+        "Returns raw Everhour JSON under data."
+      ]
+    },
+    "clients.update": {
+      "upstreamActionId": "clients.update",
+      "sourceRefs": [
+        "executor-request"
+      ],
+      "documentationUrls": [
+        "https://everhour.docs.apiary.io/",
+        "https://docs.composio.dev/toolkits/everhour"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Maps EVERHOUR_UPDATE_CLIENT onto documented Everhour REST PUT /clients/{{id}}.",
+        "Returns raw Everhour JSON under data."
+      ]
+    },
+    "projects.update": {
+      "upstreamActionId": "projects.update",
+      "sourceRefs": [
+        "executor-request"
+      ],
+      "documentationUrls": [
+        "https://everhour.docs.apiary.io/",
+        "https://docs.composio.dev/toolkits/everhour"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Maps EVERHOUR_UPDATE_PROJECT onto documented Everhour REST PUT /projects/{{project_id}}.",
+        "Returns raw Everhour JSON under data."
+      ]
+    },
+    "timecards.update": {
+      "upstreamActionId": "timecards.update",
+      "sourceRefs": [
+        "executor-request"
+      ],
+      "documentationUrls": [
+        "https://everhour.docs.apiary.io/",
+        "https://docs.composio.dev/toolkits/everhour"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Maps EVERHOUR_UPDATE_TIMECARD onto documented Everhour REST PUT /users/{{user_id}}/timecards/{{date}}.",
+        "Returns raw Everhour JSON under data."
+      ]
+    },
+    "webhooks.update": {
+      "upstreamActionId": "webhooks.update",
+      "sourceRefs": [
+        "executor-request"
+      ],
+      "documentationUrls": [
+        "https://everhour.docs.apiary.io/",
+        "https://docs.composio.dev/toolkits/everhour"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Maps EVERHOUR_UPDATE_WEBHOOK onto documented Everhour REST PUT /hooks/{{hook_id}}.",
+        "Returns raw Everhour JSON under data."
       ]
     }
   },
   "manifest": {
-    "key": "everhour",
-    "name": "Everhour",
-    "version": "0.2.0",
-    "runtime": "bun",
-    "visibility": "public",
-    "categories": [
-      "productivity"
-    ],
     "auth": {
-      "type": "api_key",
       "scopes": [],
       "setup": {
-        "mode": "api_key",
         "fields": [
           {
             "key": "apiKey",
@@ -589,71 +805,91 @@
             "required": true,
             "secret": true
           }
-        ]
+        ],
+        "mode": "api_key"
+      },
+      "type": "api_key"
+    },
+    "categories": [
+      "productivity"
+    ],
+    "evidence": {
+      "fixture": {
+        "status": "supplied"
+      },
+      "live": {
+        "status": "unverified"
       }
     },
-    "network": {
-      "allowedHosts": [
-        "api.everhour.com"
-      ]
-    },
-    "models": [
-      "user",
-      "project",
-      "time-record",
-      "client",
-      "task",
-      "timer"
-    ],
     "http": {
-      "baseUrl": "https://api.everhour.com",
       "auth": {
         "field": "apiKey",
         "in": "header",
         "name": "X-Api-Key",
         "value": "{{apiKey}}"
       },
-      "headers": {
-        "Accept": "application/json"
-      },
+      "baseUrl": "https://api.everhour.com",
       "errors": {
-        "rateLimitStatuses": [
-          429
-        ],
-        "retryAfterHeader": "retry-after",
         "defaultRetryAfterSeconds": 30,
         "messagePaths": [
           "message",
           "error",
           "details"
-        ]
+        ],
+        "rateLimitStatuses": [
+          429
+        ],
+        "retryAfterHeader": "retry-after"
+      },
+      "headers": {
+        "Accept": "application/json"
       }
+    },
+    "key": "everhour",
+    "models": [
+      "client",
+      "expense",
+      "invoice",
+      "project",
+      "section",
+      "tag",
+      "task",
+      "team",
+      "time-record",
+      "timecard",
+      "timesheet",
+      "user",
+      "webhook"
+    ],
+    "name": "Everhour",
+    "network": {
+      "allowedHosts": [
+        "api.everhour.com"
+      ]
     },
     "operations": {
       "healthcheck": {
-        "timeoutMs": 5000,
+        "description": "Validate the Everhour API key with GET /users/me. Covers EVERHOUR_GET_USER_PROFILE.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {},
+          "type": "object"
+        },
+        "kind": "action",
         "maxInputBytes": 4096,
         "maxResponseBytes": 65536,
-        "kind": "action",
-        "sideEffect": "read",
-        "title": "Healthcheck",
-        "description": "Validate the Everhour API key with GET /users/me.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {},
-          "additionalProperties": false
-        },
         "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
+          "additionalProperties": false,
           "properties": {
             "data": {
               "type": "object"
             }
           },
-          "additionalProperties": false
+          "required": [
+            "data"
+          ],
+          "type": "object"
         },
         "request": {
           "method": "GET",
@@ -662,132 +898,42 @@
             200
           ]
         },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "users.list": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
+        "responseFormat": "json",
         "sideEffect": "read",
-        "title": "List users",
-        "description": "List Everhour team users visible to the API key.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {},
-          "additionalProperties": false
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "array"
-            }
-          },
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "GET",
-          "path": "/team/users",
-          "success": [
-            200
-          ]
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "projects.list": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
-        "sideEffect": "read",
-        "title": "List projects",
-        "description": "List Everhour projects with optional text, limit, and platform filters.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "query": {
-              "type": "string",
-              "minLength": 1
-            },
-            "limit": {
-              "type": "integer",
-              "minimum": 1
-            },
-            "platform": {
-              "type": "string",
-              "minLength": 1
-            }
-          },
-          "additionalProperties": false
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "array"
-            }
-          },
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "GET",
-          "path": "/projects",
-          "query": {
-            "query": "{{query}}",
-            "limit": "{{limit}}",
-            "platform": "{{platform}}"
-          },
-          "success": [
-            200
-          ]
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
+        "timeoutMs": 5000,
+        "title": "Healthcheck",
+        "validationMode": "strict-generated"
       },
       "projects.get": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
-        "sideEffect": "read",
-        "title": "Get project",
-        "description": "Get one Everhour project by project ID.",
+        "description": "Get one Everhour project by project ID. Covers EVERHOUR_GET_PROJECT.",
+        "enforceOutputSchema": true,
         "inputSchema": {
-          "type": "object",
+          "additionalProperties": false,
           "properties": {
             "projectId": {
-              "type": "string",
-              "minLength": 1
+              "minLength": 1,
+              "type": "string"
             }
           },
           "required": [
             "projectId"
           ],
-          "additionalProperties": false
+          "type": "object"
         },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
         "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
+          "additionalProperties": false,
           "properties": {
             "data": {
               "type": "object"
             }
           },
-          "additionalProperties": false
+          "required": [
+            "data"
+          ],
+          "type": "object"
         },
         "request": {
           "method": "GET",
@@ -796,114 +942,1205 @@
             200
           ]
         },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "time.list": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
+        "responseFormat": "json",
         "sideEffect": "read",
-        "title": "List time records",
-        "description": "List Everhour team time records with optional date range and paging.",
+        "timeoutMs": 15000,
+        "title": "Get project",
+        "validationMode": "strict-generated"
+      },
+      "projects.list": {
+        "description": "List Everhour projects with optional text, limit, platform, and status filters. Covers EVERHOUR_LIST_PROJECTS.",
+        "enforceOutputSchema": true,
         "inputSchema": {
-          "type": "object",
+          "additionalProperties": false,
           "properties": {
-            "from": {
-              "type": "string",
-              "minLength": 1
-            },
-            "to": {
-              "type": "string",
-              "minLength": 1
-            },
-            "page": {
-              "type": "integer",
-              "minimum": 1
-            },
             "limit": {
-              "type": "integer",
-              "minimum": 1
+              "minimum": 1,
+              "type": "integer"
+            },
+            "platform": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "query": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "open",
+                "archived",
+                "all"
+              ]
             }
           },
-          "additionalProperties": false
+          "type": "object"
         },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
         "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
+          "additionalProperties": false,
           "properties": {
             "data": {
               "type": "array"
             }
           },
-          "additionalProperties": false
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        },
+        "request": {
+          "method": "GET",
+          "path": "/projects",
+          "query": {
+            "limit": "{{limit}}",
+            "platform": "{{platform}}",
+            "query": "{{query}}",
+            "status": "{{status}}"
+          },
+          "success": [
+            200
+          ]
+        },
+        "responseFormat": "json",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "title": "List projects",
+        "validationMode": "strict-generated"
+      },
+      "time.list": {
+        "description": "List Everhour team time records with optional date range and paging. AppCall-only; not a Composio tool.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "from": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "limit": {
+              "minimum": 1,
+              "type": "integer"
+            },
+            "page": {
+              "minimum": 1,
+              "type": "integer"
+            },
+            "to": {
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "type": "object"
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "array"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
         },
         "request": {
           "method": "GET",
           "path": "/team/time",
           "query": {
             "from": "{{from}}",
-            "to": "{{to}}",
+            "limit": "{{limit}}",
             "page": "{{page}}",
-            "limit": "{{limit}}"
+            "to": "{{to}}"
           },
           "success": [
             200
           ]
         },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
+        "responseFormat": "json",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "title": "List time records",
+        "validationMode": "strict-generated"
       },
-      "projects.create": {
+      "users.list": {
+        "description": "List Everhour team users visible to the API key. Covers EVERHOUR_LIST_TEAM_MEMBERS.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {},
+          "type": "object"
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "array"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        },
+        "request": {
+          "method": "GET",
+          "path": "/team/users",
+          "success": [
+            200
+          ]
+        },
+        "responseFormat": "json",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "title": "List users",
+        "validationMode": "strict-generated"
+      },
+      "clients.create": {
         "kind": "action",
         "sideEffect": "write",
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "title": "Create project",
-        "description": "Create an Everhour project.",
+        "maxResponseBytes": 1048576,
+        "title": "Create Client",
+        "description": "Creates a new client in Everhour for tracking billable work, invoicing, and project organization. Covers EVERHOUR_CLIENT_CREATE.",
         "inputSchema": {
           "type": "object",
+          "additionalProperties": false,
           "properties": {
             "name": {
               "type": "string",
-              "minLength": 1,
-              "description": "Project name."
+              "description": "The name of the client to create. This is the primary identifier shown in the Everhour UI.",
+              "minLength": 1
             },
-            "client": {
-              "type": "integer",
-              "minimum": 1,
-              "description": "Optional client ID."
+            "projects": {
+              "type": "array",
+              "description": "Optional list of project IDs (e.g., 'ev:123456789') to associate with this client.",
+              "items": {
+                "type": "string"
+              }
+            },
+            "businessDetails": {
+              "type": "string",
+              "description": "Optional business details such as address, contact information, or other metadata for invoicing purposes."
             }
           },
-          "additionalProperties": false,
           "required": [
             "name"
           ]
         },
         "outputSchema": {
           "type": "object",
-          "required": [
-            "data"
-          ],
           "properties": {
-            "data": {
-              "type": "object"
+            "data": {}
+          }
+        },
+        "request": {
+          "method": "POST",
+          "path": "/clients",
+          "success": [
+            200,
+            201,
+            202,
+            204
+          ],
+          "body": {
+            "name": "{{name}}",
+            "projects": "{{projects}}",
+            "businessDetails": "{{businessDetails}}"
+          },
+          "headers": {
+            "Content-Type": "application/json"
+          }
+        },
+        "enforceOutputSchema": false
+      },
+      "clients.delete": {
+        "kind": "action",
+        "sideEffect": "destructive",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
+        "title": "Delete a client",
+        "description": "Tool to delete a client. Use when you need to permanently remove a client from Everhour after confirming the client ID. Covers EVERHOUR_CLIENT_DELETE.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "client_id": {
+              "type": "string",
+              "description": "The unique numeric ID of the client to delete.",
+              "minLength": 1
             }
           },
-          "additionalProperties": false
+          "required": [
+            "client_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "data": {}
+          }
+        },
+        "request": {
+          "method": "DELETE",
+          "path": "/clients/{{client_id}}",
+          "success": [
+            200,
+            201,
+            202,
+            204
+          ]
+        },
+        "enforceOutputSchema": false
+      },
+      "clients.list": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
+        "title": "List Clients",
+        "description": "Retrieves all clients in the Everhour workspace. Covers EVERHOUR_CLIENT_LIST.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {}
+        },
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "data": {}
+          }
+        },
+        "request": {
+          "method": "GET",
+          "path": "/clients",
+          "success": [
+            200,
+            201,
+            202,
+            204
+          ]
+        },
+        "enforceOutputSchema": false
+      },
+      "timecards.clockIn": {
+        "kind": "action",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
+        "title": "Clock In User",
+        "description": "Tool to clock in a user for time tracking. Use when you need to start a user's workday or shift in Everhour. Covers EVERHOUR_CLOCK_IN.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "user_id": {
+              "type": "integer",
+              "description": "The unique numeric identifier of the user to clock in.",
+              "minimum": 1
+            }
+          },
+          "required": [
+            "user_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "data": {}
+          }
+        },
+        "request": {
+          "method": "POST",
+          "path": "/users/{{user_id}}/timecards/clock-in",
+          "success": [
+            200,
+            201,
+            202,
+            204
+          ]
+        },
+        "enforceOutputSchema": false
+      },
+      "timecards.clockOut": {
+        "kind": "action",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
+        "title": "Clock Out User",
+        "description": "Tool to clock out a user for time tracking. Use when you need to end a user's workday or shift in Everhour. Covers EVERHOUR_CLOCK_OUT.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "user_id": {
+              "type": "integer",
+              "description": "The unique numeric identifier of the user to clock out.",
+              "minimum": 1
+            }
+          },
+          "required": [
+            "user_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "data": {}
+          }
+        },
+        "request": {
+          "method": "POST",
+          "path": "/users/{{user_id}}/timecards/clock-out",
+          "success": [
+            200,
+            201,
+            202,
+            204
+          ]
+        },
+        "enforceOutputSchema": false
+      },
+      "webhooks.create": {
+        "kind": "action",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
+        "title": "Create Webhook",
+        "description": "Tool to create a new webhook for event notifications in Everhour. Covers EVERHOUR_CREATE_WEBHOOK.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "events": {
+              "type": "array",
+              "description": "List of events to subscribe to.",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "api:client:created",
+                  "api:client:updated",
+                  "api:project:created",
+                  "api:project:updated",
+                  "api:project:removed",
+                  "api:task:created",
+                  "api:task:updated",
+                  "api:task:removed",
+                  "api:timer:started",
+                  "api:timer:stopped",
+                  "api:time:updated",
+                  "api:section:created",
+                  "api:section:updated",
+                  "api:section:removed",
+                  "api:estimate:updated"
+                ]
+              },
+              "minItems": 1
+            },
+            "project": {
+              "type": "string",
+              "description": "Filter events by project ID. If set, only events from this project will trigger the webhook."
+            },
+            "targetUrl": {
+              "type": "string",
+              "description": "Target URL for webhook delivery. Must be a valid URL that responds to Everhour's validation request.",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "events",
+            "targetUrl"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "data": {}
+          }
+        },
+        "request": {
+          "method": "POST",
+          "path": "/hooks",
+          "success": [
+            200,
+            201,
+            202,
+            204
+          ],
+          "body": {
+            "events": "{{events}}",
+            "project": "{{project}}",
+            "targetUrl": "{{targetUrl}}"
+          },
+          "headers": {
+            "Content-Type": "application/json"
+          }
+        },
+        "enforceOutputSchema": false
+      },
+      "webhooks.delete": {
+        "kind": "action",
+        "sideEffect": "destructive",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
+        "title": "Delete Webhook",
+        "description": "Tool to delete a webhook. Use when you need to permanently remove a webhook from Everhour after confirming the webhook ID. Covers EVERHOUR_DELETE_HOOK.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "hook_id": {
+              "type": "integer",
+              "description": "The unique numeric ID of the webhook to delete.",
+              "minimum": 1
+            }
+          },
+          "required": [
+            "hook_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "data": {}
+          }
+        },
+        "request": {
+          "method": "DELETE",
+          "path": "/hooks/{{hook_id}}",
+          "success": [
+            200,
+            201,
+            202,
+            204
+          ]
+        },
+        "enforceOutputSchema": false
+      },
+      "timecards.delete": {
+        "kind": "action",
+        "sideEffect": "destructive",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
+        "title": "Delete a timecard",
+        "description": "Tool to delete a timecard for a user on a specific date. Covers EVERHOUR_DELETE_TIMECARD.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "date": {
+              "type": "string",
+              "description": "The date of the timecard to delete in YYYY-MM-DD format.",
+              "minLength": 1
+            },
+            "user_id": {
+              "type": "integer",
+              "description": "The unique numeric ID of the user whose timecard should be deleted.",
+              "minimum": 1
+            }
+          },
+          "required": [
+            "date",
+            "user_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "data": {}
+          }
+        },
+        "request": {
+          "method": "DELETE",
+          "path": "/users/{{user_id}}/timecards/{{date}}",
+          "success": [
+            200,
+            201,
+            202,
+            204
+          ]
+        },
+        "enforceOutputSchema": false
+      },
+      "timesheets.approval.discard": {
+        "kind": "action",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
+        "title": "Discard Timesheet Approval",
+        "description": "Tool to discard a pending timesheet approval request. Covers EVERHOUR_DISCARD_TIMESHEET_APPROVAL.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "timesheet_id": {
+              "type": "integer",
+              "description": "The unique numeric ID of the timesheet for which to discard the pending approval request.",
+              "minimum": 1
+            }
+          },
+          "required": [
+            "timesheet_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "data": {}
+          }
+        },
+        "request": {
+          "method": "PUT",
+          "path": "/timesheets/{{timesheet_id}}/discard-approval",
+          "success": [
+            200,
+            201,
+            202,
+            204
+          ]
+        },
+        "enforceOutputSchema": false
+      },
+      "expenses.list": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
+        "title": "List Expenses",
+        "description": "Lists expense records from your Everhour workspace. Supports filtering by date range, user, project, category, and billable status. Covers EVERHOUR_EXPENSES_LIST.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "to": {
+              "type": "string",
+              "description": "End date for filtering expenses (inclusive). Format: YYYY-MM-DD."
+            },
+            "from": {
+              "type": "string",
+              "description": "Start date for filtering expenses (inclusive). Format: YYYY-MM-DD."
+            },
+            "user": {
+              "type": "integer",
+              "description": "Filter by user ID."
+            },
+            "limit": {
+              "type": "integer",
+              "description": "Maximum number of expenses to return.",
+              "minimum": 1
+            },
+            "offset": {
+              "type": "integer",
+              "description": "Number of expenses to skip.",
+              "minimum": 0
+            },
+            "project": {
+              "type": "string",
+              "description": "Filter by project ID."
+            },
+            "billable": {
+              "type": "boolean",
+              "description": "Filter by billable status."
+            },
+            "category": {
+              "type": "integer",
+              "description": "Filter by expense category ID."
+            }
+          }
+        },
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "data": {}
+          }
+        },
+        "request": {
+          "method": "GET",
+          "path": "/expenses",
+          "success": [
+            200,
+            201,
+            202,
+            204
+          ],
+          "query": {
+            "to": "{{to}}",
+            "from": "{{from}}",
+            "user": "{{user}}",
+            "limit": "{{limit}}",
+            "offset": "{{offset}}",
+            "project": "{{project}}",
+            "billable": "{{billable}}",
+            "category": "{{category}}"
+          }
+        },
+        "enforceOutputSchema": false
+      },
+      "clients.get": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
+        "title": "Get Client by ID",
+        "description": "Tool to retrieve a specific client by ID. Covers EVERHOUR_GET_CLIENT.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "client_id": {
+              "type": "string",
+              "description": "The unique numeric identifier of the client.",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "client_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "data": {}
+          }
+        },
+        "request": {
+          "method": "GET",
+          "path": "/clients/{{client_id}}",
+          "success": [
+            200,
+            201,
+            202,
+            204
+          ]
+        },
+        "enforceOutputSchema": false
+      },
+      "sections.get": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
+        "title": "Get Section",
+        "description": "Retrieve details of a specific section by its ID. Sections are used to organize tasks within Everhour projects. Covers EVERHOUR_GET_SECTION.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "sectionId": {
+              "type": "string",
+              "description": "Numeric ID of the section to retrieve.",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "sectionId"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "data": {}
+          }
+        },
+        "request": {
+          "method": "GET",
+          "path": "/sections/{{sectionId}}",
+          "success": [
+            200,
+            201,
+            202,
+            204
+          ]
+        },
+        "enforceOutputSchema": false
+      },
+      "timecards.get": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
+        "title": "Get Timecard",
+        "description": "Tool to retrieve a specific timecard for a user on a date. Covers EVERHOUR_GET_TIMECARD.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "date": {
+              "type": "string",
+              "description": "Specific date for the timecard entry in YYYY-MM-DD format.",
+              "minLength": 1
+            },
+            "user_id": {
+              "type": "integer",
+              "description": "Team member identifier whose timecard is requested.",
+              "minimum": 1
+            }
+          },
+          "required": [
+            "date",
+            "user_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "data": {}
+          }
+        },
+        "request": {
+          "method": "GET",
+          "path": "/users/{{user_id}}/timecards/{{date}}",
+          "success": [
+            200,
+            201,
+            202,
+            204
+          ]
+        },
+        "enforceOutputSchema": false
+      },
+      "webhooks.get": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
+        "title": "Get Webhook",
+        "description": "Retrieve details of a specific webhook by its ID. Covers EVERHOUR_GET_WEBHOOK.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "hook_id": {
+              "type": "integer",
+              "description": "The unique numeric identifier of the webhook.",
+              "minimum": 1
+            }
+          },
+          "required": [
+            "hook_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "data": {}
+          }
+        },
+        "request": {
+          "method": "GET",
+          "path": "/hooks/{{hook_id}}",
+          "success": [
+            200,
+            201,
+            202,
+            204
+          ]
+        },
+        "enforceOutputSchema": false
+      },
+      "expenseCategories.list": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
+        "title": "List Expense Categories",
+        "description": "Lists all expense categories available in your Everhour account. Covers EVERHOUR_LIST_EXPENSE_CATEGORIES.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {}
+        },
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "data": {}
+          }
+        },
+        "request": {
+          "method": "GET",
+          "path": "/expenses/categories",
+          "success": [
+            200,
+            201,
+            202,
+            204
+          ]
+        },
+        "enforceOutputSchema": false
+      },
+      "webhooks.list": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
+        "title": "List Webhooks",
+        "description": "Lists all webhooks configured for the Everhour account. Covers EVERHOUR_LIST_HOOKS.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {}
+        },
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "data": {}
+          }
+        },
+        "request": {
+          "method": "GET",
+          "path": "/hooks",
+          "success": [
+            200,
+            201,
+            202,
+            204
+          ]
+        },
+        "enforceOutputSchema": false
+      },
+      "invoices.list": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
+        "title": "List Invoices",
+        "description": "Retrieves all invoices from your Everhour workspace. Covers EVERHOUR_LIST_INVOICES.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {}
+        },
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "data": {}
+          }
+        },
+        "request": {
+          "method": "GET",
+          "path": "/invoices",
+          "success": [
+            200,
+            201,
+            202,
+            204
+          ]
+        },
+        "enforceOutputSchema": false
+      },
+      "sections.list": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
+        "title": "List Sections",
+        "description": "Lists all sections within a specific Everhour project. Covers EVERHOUR_LIST_SECTIONS.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "projectId": {
+              "type": "string",
+              "description": "The unique identifier of the project to list sections for.",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "projectId"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "data": {}
+          }
+        },
+        "request": {
+          "method": "GET",
+          "path": "/projects/{{projectId}}/sections",
+          "success": [
+            200,
+            201,
+            202,
+            204
+          ]
+        },
+        "enforceOutputSchema": false
+      },
+      "tags.list": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
+        "title": "List Tags",
+        "description": "List all tags in the Everhour workspace. Covers EVERHOUR_LIST_TAGS.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {}
+        },
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "data": {}
+          }
+        },
+        "request": {
+          "method": "GET",
+          "path": "/tags",
+          "success": [
+            200,
+            201,
+            202,
+            204
+          ]
+        },
+        "enforceOutputSchema": false
+      },
+      "teams.get": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
+        "title": "List Teams",
+        "description": "Retrieves information about the authenticated team/workspace in Everhour. Covers EVERHOUR_LIST_TEAMS.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {}
+        },
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "data": {}
+          }
+        },
+        "request": {
+          "method": "GET",
+          "path": "/team",
+          "success": [
+            200,
+            201,
+            202,
+            204
+          ]
+        },
+        "enforceOutputSchema": false
+      },
+      "timecards.list": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
+        "title": "List Timecards",
+        "description": "Tool to retrieve all team timecards with optional date filtering. Covers EVERHOUR_LIST_TIMECARDS.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "to": {
+              "type": "string",
+              "description": "End date for filtering timecards (format: YYYY-MM-DD)."
+            },
+            "from": {
+              "type": "string",
+              "description": "Start date for filtering timecards (format: YYYY-MM-DD)."
+            }
+          }
+        },
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "data": {}
+          }
+        },
+        "request": {
+          "method": "GET",
+          "path": "/timecards",
+          "success": [
+            200,
+            201,
+            202,
+            204
+          ],
+          "query": {
+            "to": "{{to}}",
+            "from": "{{from}}"
+          }
+        },
+        "enforceOutputSchema": false
+      },
+      "users.timecards.list": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
+        "title": "List User Timecards",
+        "description": "Tool to retrieve timecards for a specific user with optional date filtering. Covers EVERHOUR_LIST_USER_TIMECARDS.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "to": {
+              "type": "string",
+              "description": "End date for filtering timecards (format: YYYY-MM-DD)."
+            },
+            "from": {
+              "type": "string",
+              "description": "Start date for filtering timecards (format: YYYY-MM-DD)."
+            },
+            "user_id": {
+              "type": "integer",
+              "description": "Numeric ID of the user whose timecards to retrieve.",
+              "minimum": 1
+            }
+          },
+          "required": [
+            "user_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "data": {}
+          }
+        },
+        "request": {
+          "method": "GET",
+          "path": "/users/{{user_id}}/timecards",
+          "success": [
+            200,
+            201,
+            202,
+            204
+          ],
+          "query": {
+            "to": "{{to}}",
+            "from": "{{from}}"
+          }
+        },
+        "enforceOutputSchema": false
+      },
+      "users.timesheets.list": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
+        "title": "List User Timesheets",
+        "description": "Tool to retrieve timesheets for a specific user. Covers EVERHOUR_LIST_USER_TIMESHEETS.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "limit": {
+              "type": "integer",
+              "description": "Maximum number of weeks to retrieve.",
+              "minimum": 1
+            },
+            "user_id": {
+              "type": "integer",
+              "description": "Unique identifier of the user whose timesheets to retrieve.",
+              "minimum": 1
+            }
+          },
+          "required": [
+            "user_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "data": {}
+          }
+        },
+        "request": {
+          "method": "GET",
+          "path": "/users/{{user_id}}/timesheets",
+          "success": [
+            200,
+            201,
+            202,
+            204
+          ],
+          "query": {
+            "limit": "{{limit}}"
+          }
+        },
+        "enforceOutputSchema": false
+      },
+      "projects.create": {
+        "kind": "action",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
+        "title": "Create Project",
+        "description": "Tool to create a new project in Everhour. Covers EVERHOUR_PROJECT_CREATE.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "name": {
+              "type": "string",
+              "description": "The name of the project.",
+              "minLength": 1
+            },
+            "client": {
+              "type": "integer",
+              "description": "Numeric ID of the client to associate with the project."
+            }
+          },
+          "required": [
+            "name"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "data": {}
+          }
         },
         "request": {
           "method": "POST",
           "path": "/projects",
           "success": [
             200,
-            201
+            201,
+            202,
+            204
           ],
           "body": {
             "name": "{{name}}",
@@ -913,855 +2150,656 @@
             "Content-Type": "application/json"
           }
         },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "projects.update": {
-        "kind": "action",
-        "sideEffect": "write",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "title": "Update project",
-        "description": "Update an Everhour project by project ID.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "projectId": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Project ID, e.g. ev:123."
-            },
-            "name": {
-              "type": "string",
-              "description": "Project name."
-            },
-            "status": {
-              "type": "string",
-              "enum": [
-                "open",
-                "archived"
-              ],
-              "description": "Project status."
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "projectId"
-          ]
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "PUT",
-          "path": "/projects/{{projectId}}",
-          "success": [
-            200,
-            201
-          ],
-          "body": {
-            "name": "{{name}}",
-            "status": "{{status}}"
-          },
-          "headers": {
-            "Content-Type": "application/json"
-          }
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
+        "enforceOutputSchema": false
       },
       "projects.delete": {
         "kind": "action",
         "sideEffect": "destructive",
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
-        "maxResponseBytes": 65536,
-        "title": "Delete project",
-        "description": "Delete an Everhour project by project ID.",
+        "maxResponseBytes": 1048576,
+        "title": "Delete a project",
+        "description": "Tool to delete a project. Use when you need to permanently remove a project from Everhour after confirming the project ID. Covers EVERHOUR_PROJECT_DELETE.",
         "inputSchema": {
           "type": "object",
-          "properties": {
-            "projectId": {
-              "type": "string",
-              "minLength": 1,
-              "description": "projectId to delete."
-            }
-          },
           "additionalProperties": false,
-          "required": [
-            "projectId"
-          ]
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "deleted",
-            "id"
-          ],
           "properties": {
-            "deleted": {
-              "type": "boolean"
-            },
-            "id": {
+            "project_id": {
               "type": "string",
+              "description": "Unique identifier of the project to delete. Format is 'ev:{numeric_id}' for native Everhour projects.",
               "minLength": 1
             }
           },
-          "additionalProperties": false
+          "required": [
+            "project_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "data": {}
+          }
         },
         "request": {
           "method": "DELETE",
-          "path": "/projects/{{projectId}}",
+          "path": "/projects/{{project_id}}",
           "success": [
-            204,
-            200
-          ],
-          "result": {
-            "deleted": true,
-            "id": "{{input.projectId}}"
-          }
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "clients.list": {
-        "kind": "action",
-        "sideEffect": "read",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "title": "List clients",
-        "description": "List Everhour clients visible to the API key.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {},
-          "additionalProperties": false
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "array"
-            }
-          },
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "GET",
-          "path": "/clients",
-          "success": [
-            200
+            200,
+            201,
+            202,
+            204
           ]
         },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
+        "enforceOutputSchema": false
       },
-      "clients.get": {
-        "kind": "action",
-        "sideEffect": "read",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "title": "Get client",
-        "description": "Get one Everhour client by client ID.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "clientId": {
-              "type": "integer",
-              "minimum": 1,
-              "description": "Client ID."
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "clientId"
-          ]
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "GET",
-          "path": "/clients/{{clientId}}",
-          "success": [
-            200
-          ]
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "clients.create": {
+      "timesheets.approval.request": {
         "kind": "action",
         "sideEffect": "write",
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "title": "Create client",
-        "description": "Create an Everhour client.",
+        "maxResponseBytes": 1048576,
+        "title": "Request Timesheet Approval",
+        "description": "Tool to request approval for a timesheet or approve a week (for admins). Covers EVERHOUR_REQUEST_TIMESHEET_APPROVAL.",
         "inputSchema": {
           "type": "object",
+          "additionalProperties": false,
           "properties": {
-            "name": {
+            "comment": {
               "type": "string",
-              "minLength": 1,
-              "description": "Client name."
+              "description": "Optional text feedback or comment to include with the approval request."
             },
-            "businessDetails": {
-              "type": "string",
-              "description": "Optional billing details."
+            "reviewer": {
+              "type": "integer",
+              "description": "Admin user ID who will review the timesheet submission."
+            },
+            "timesheetId": {
+              "type": "integer",
+              "description": "Unique identifier of the timesheet to request approval for or approve.",
+              "minimum": 1
+            },
+            "sendNotification": {
+              "type": "boolean",
+              "description": "Whether to send a notification to the reviewer when requesting approval."
             }
           },
-          "additionalProperties": false,
           "required": [
-            "name"
+            "timesheetId"
           ]
         },
         "outputSchema": {
           "type": "object",
-          "required": [
-            "data"
-          ],
           "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
+            "data": {}
+          }
         },
         "request": {
           "method": "POST",
-          "path": "/clients",
+          "path": "/timesheets/{{timesheetId}}/approval",
           "success": [
             200,
-            201
+            201,
+            202,
+            204
           ],
           "body": {
-            "name": "{{name}}",
-            "businessDetails": "{{businessDetails}}"
+            "comment": "{{comment}}",
+            "reviewer": "{{reviewer}}",
+            "sendNotification": "{{sendNotification}}"
           },
           "headers": {
             "Content-Type": "application/json"
           }
         },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
+        "enforceOutputSchema": false
       },
-      "clients.update": {
+      "sections.create": {
         "kind": "action",
         "sideEffect": "write",
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "title": "Update client",
-        "description": "Update an Everhour client by client ID.",
+        "maxResponseBytes": 1048576,
+        "title": "Create Section",
+        "description": "Tool to create a new section in a project. Covers EVERHOUR_SECTION_CREATE.",
         "inputSchema": {
           "type": "object",
+          "additionalProperties": false,
           "properties": {
-            "clientId": {
-              "type": "integer",
-              "minimum": 1,
-              "description": "Client ID."
-            },
             "name": {
               "type": "string",
-              "description": "Client name."
+              "description": "Name of the section to be created.",
+              "minLength": 1
             },
-            "businessDetails": {
+            "project_id": {
               "type": "string",
-              "description": "Optional billing details."
+              "description": "The unique identifier of the project to add the section to.",
+              "minLength": 1
             }
           },
-          "additionalProperties": false,
           "required": [
-            "clientId"
+            "name",
+            "project_id"
           ]
         },
         "outputSchema": {
           "type": "object",
-          "required": [
-            "data"
-          ],
           "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
+            "data": {}
+          }
         },
         "request": {
-          "method": "PUT",
-          "path": "/clients/{{clientId}}",
+          "method": "POST",
+          "path": "/projects/{{project_id}}/sections",
           "success": [
             200,
-            201
+            201,
+            202,
+            204
           ],
           "body": {
-            "name": "{{name}}",
-            "businessDetails": "{{businessDetails}}"
+            "name": "{{name}}"
           },
           "headers": {
             "Content-Type": "application/json"
           }
         },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
+        "enforceOutputSchema": false
       },
-      "clients.delete": {
+      "sections.delete": {
         "kind": "action",
         "sideEffect": "destructive",
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
-        "maxResponseBytes": 65536,
-        "title": "Delete client",
-        "description": "Delete an Everhour client by client ID.",
+        "maxResponseBytes": 1048576,
+        "title": "Delete a section",
+        "description": "Tool to delete a section. Use when you need to permanently remove a section from Everhour after confirming the section ID. Covers EVERHOUR_SECTION_DELETE.",
         "inputSchema": {
           "type": "object",
+          "additionalProperties": false,
           "properties": {
-            "clientId": {
-              "type": "integer",
-              "minimum": 1,
-              "description": "clientId to delete."
+            "section_id": {
+              "type": "string",
+              "description": "Numeric ID of the section to delete.",
+              "minLength": 1
             }
           },
-          "additionalProperties": false,
           "required": [
-            "clientId"
+            "section_id"
           ]
         },
         "outputSchema": {
           "type": "object",
-          "required": [
-            "deleted",
-            "id"
-          ],
           "properties": {
-            "deleted": {
-              "type": "boolean"
-            },
-            "id": {
-              "type": "integer",
-              "minimum": 1
-            }
-          },
-          "additionalProperties": false
+            "data": {}
+          }
         },
         "request": {
           "method": "DELETE",
-          "path": "/clients/{{clientId}}",
+          "path": "/sections/{{section_id}}",
           "success": [
-            204,
-            200
-          ],
-          "result": {
-            "deleted": true,
-            "id": "{{input.clientId}}"
-          }
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "tasks.list": {
-        "kind": "action",
-        "sideEffect": "read",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "title": "List project tasks",
-        "description": "List tasks in an Everhour project.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "projectId": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Project ID."
-            },
-            "query": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Optional name filter."
-            },
-            "limit": {
-              "type": "integer",
-              "minimum": 1,
-              "description": "Max tasks to return."
-            },
-            "page": {
-              "type": "integer",
-              "minimum": 1,
-              "description": "Page number."
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "projectId"
+            200,
+            201,
+            202,
+            204
           ]
         },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "array"
-            }
-          },
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "GET",
-          "path": "/projects/{{projectId}}/tasks",
-          "success": [
-            200
-          ],
-          "query": {
-            "query": "{{query}}",
-            "limit": "{{limit}}",
-            "page": "{{page}}"
-          }
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "tasks.get": {
-        "kind": "action",
-        "sideEffect": "read",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "title": "Get task",
-        "description": "Get one Everhour task by task ID.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "taskId": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Task ID, e.g. ev:1."
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "taskId"
-          ]
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "GET",
-          "path": "/tasks/{{taskId}}",
-          "success": [
-            200
-          ]
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
+        "enforceOutputSchema": false
       },
       "tasks.create": {
         "kind": "action",
         "sideEffect": "write",
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "title": "Create task",
-        "description": "Create a task in an Everhour project.",
+        "maxResponseBytes": 1048576,
+        "title": "Create Task",
+        "description": "Creates a new task in an Everhour project. Use this to add tasks for time tracking. Covers EVERHOUR_TASK_CREATE.",
         "inputSchema": {
           "type": "object",
+          "additionalProperties": false,
           "properties": {
-            "projectId": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Project ID."
-            },
             "name": {
               "type": "string",
-              "minLength": 1,
-              "description": "Task name."
+              "description": "Name/title of the task to create.",
+              "minLength": 1
+            },
+            "tags": {
+              "type": "array",
+              "description": "List of tag IDs to apply to the task.",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "parent": {
+              "type": "string",
+              "description": "Parent task ID to create this as a subtask."
             },
             "section": {
+              "type": "string",
+              "description": "Section ID to place the task in."
+            },
+            "assignee": {
               "type": "integer",
-              "minimum": 1,
-              "description": "Optional section ID."
+              "description": "User ID to assign the task to."
+            },
+            "estimate": {
+              "type": "integer",
+              "description": "Time estimate for the task in seconds."
+            },
+            "projectId": {
+              "type": "string",
+              "description": "The Everhour project ID where the task will be created.",
+              "minLength": 1
             }
           },
-          "additionalProperties": false,
           "required": [
-            "projectId",
-            "name"
+            "name",
+            "projectId"
           ]
         },
         "outputSchema": {
           "type": "object",
-          "required": [
-            "data"
-          ],
           "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
+            "data": {}
+          }
         },
         "request": {
           "method": "POST",
           "path": "/projects/{{projectId}}/tasks",
           "success": [
             200,
-            201
+            201,
+            202,
+            204
           ],
           "body": {
             "name": "{{name}}",
-            "section": "{{section}}"
+            "tags": "{{tags}}",
+            "parent": "{{parent}}",
+            "section": "{{section}}",
+            "assignee": "{{assignee}}",
+            "estimate": "{{estimate}}"
           },
           "headers": {
             "Content-Type": "application/json"
           }
         },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "time.create": {
-        "kind": "action",
-        "sideEffect": "write",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "title": "Add time",
-        "description": "Add a time record to an Everhour task. Time is in seconds.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "taskId": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Task ID."
-            },
-            "time": {
-              "type": "integer",
-              "minimum": 1,
-              "description": "Duration in seconds."
-            },
-            "date": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Date YYYY-MM-DD."
-            },
-            "comment": {
-              "type": "string",
-              "description": "Optional comment."
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "taskId",
-            "time"
-          ]
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "POST",
-          "path": "/tasks/{{taskId}}/time",
-          "success": [
-            200,
-            201
-          ],
-          "body": {
-            "time": "{{time}}",
-            "date": "{{date}}",
-            "comment": "{{comment}}"
-          },
-          "headers": {
-            "Content-Type": "application/json"
-          }
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "timers.current.get": {
-        "kind": "action",
-        "sideEffect": "read",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "title": "Get running timer",
-        "description": "Get the current running Everhour timer for the API key.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {},
-          "additionalProperties": false
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "GET",
-          "path": "/timers/current",
-          "success": [
-            200
-          ]
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
+        "enforceOutputSchema": false
       },
       "timers.start": {
         "kind": "action",
         "sideEffect": "write",
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "title": "Start timer",
-        "description": "Start an Everhour timer on a task.",
+        "maxResponseBytes": 1048576,
+        "title": "Start Timer",
+        "description": "Tool to start a new timer for a task. Use when you need to begin tracking time on a specific task. Covers EVERHOUR_TIMER_START.",
         "inputSchema": {
           "type": "object",
+          "additionalProperties": false,
           "properties": {
-            "taskId": {
+            "task": {
               "type": "string",
-              "minLength": 1,
-              "description": "Task ID to time."
+              "description": "The Everhour task ID to start the timer on. Format: 'ev:<numeric_id>'.",
+              "minLength": 1
             }
           },
-          "additionalProperties": false,
           "required": [
-            "taskId"
+            "task"
           ]
         },
         "outputSchema": {
           "type": "object",
-          "required": [
-            "data"
-          ],
           "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
+            "data": {}
+          }
         },
         "request": {
           "method": "POST",
           "path": "/timers",
           "success": [
             200,
-            201
+            201,
+            202,
+            204
           ],
           "body": {
-            "task": "{{taskId}}"
+            "task": "{{task}}"
           },
           "headers": {
             "Content-Type": "application/json"
           }
         },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
+        "enforceOutputSchema": false
       },
-      "timers.stop": {
+      "clients.update": {
         "kind": "action",
         "sideEffect": "write",
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
-        "maxResponseBytes": 65536,
-        "title": "Stop timer",
-        "description": "Stop the current running Everhour timer.",
+        "maxResponseBytes": 1048576,
+        "title": "Update Client",
+        "description": "Tool to update an existing client in Everhour. Covers EVERHOUR_UPDATE_CLIENT.",
         "inputSchema": {
           "type": "object",
-          "properties": {},
-          "additionalProperties": false
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "type": "integer",
+              "description": "Numeric ID of the client to update.",
+              "minimum": 1
+            },
+            "name": {
+              "type": "string",
+              "description": "New name for the client."
+            },
+            "status": {
+              "type": "string",
+              "description": "Client status: 'active' or 'archived'.",
+              "enum": [
+                "active",
+                "archived"
+              ]
+            },
+            "businessDetails": {
+              "type": "string",
+              "description": "Business details or address information for the client."
+            }
+          },
+          "required": [
+            "id"
+          ]
         },
         "outputSchema": {
           "type": "object",
-          "required": [
-            "deleted",
-            "id"
-          ],
           "properties": {
-            "deleted": {
-              "type": "boolean"
-            },
-            "id": {
-              "type": "string"
-            }
-          },
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "DELETE",
-          "path": "/timers/current",
-          "success": [
-            204,
-            200
-          ],
-          "result": {
-            "deleted": true,
-            "id": "current"
+            "data": {}
           }
         },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
+        "request": {
+          "method": "PUT",
+          "path": "/clients/{{id}}",
+          "success": [
+            200,
+            201,
+            202,
+            204
+          ],
+          "body": {
+            "name": "{{name}}",
+            "status": "{{status}}",
+            "businessDetails": "{{businessDetails}}"
+          },
+          "headers": {
+            "Content-Type": "application/json"
+          }
+        },
+        "enforceOutputSchema": false
       },
-      "sections.list": {
+      "projects.update": {
         "kind": "action",
-        "sideEffect": "read",
+        "sideEffect": "write",
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "title": "List project sections",
-        "description": "List sections in an Everhour project.",
+        "maxResponseBytes": 1048576,
+        "title": "Update an existing project",
+        "description": "Updates an existing Everhour project's settings. Use this to modify project name, budget, billing configuration, or notes. Covers EVERHOUR_UPDATE_PROJECT.",
         "inputSchema": {
           "type": "object",
-          "properties": {
-            "projectId": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Project ID."
-            }
-          },
           "additionalProperties": false,
+          "properties": {
+            "name": {
+              "type": "string",
+              "description": "New name of the project."
+            },
+            "note": {
+              "type": "string",
+              "description": "Additional notes about the project."
+            },
+            "budget": {
+              "type": "number",
+              "description": "Total budget for the project.",
+              "minimum": 0
+            },
+            "billable": {
+              "type": "boolean",
+              "description": "Whether the project is billable by default."
+            },
+            "budgetType": {
+              "type": "string",
+              "description": "Type of budget: 'hours' or 'amount'.",
+              "enum": [
+                "hours",
+                "amount"
+              ]
+            },
+            "hourlyRate": {
+              "type": "number",
+              "description": "Hourly rate (required if billingMethod is 'time').",
+              "minimum": 0
+            },
+            "project_id": {
+              "type": "string",
+              "description": "The unique project identifier in format 'ev:XXXXXXXXX'.",
+              "minLength": 1
+            },
+            "budgetReset": {
+              "type": "string",
+              "description": "Budget reset period.",
+              "enum": [
+                "never",
+                "weekly",
+                "monthly"
+              ]
+            },
+            "billingMethod": {
+              "type": "string",
+              "description": "Billing method.",
+              "enum": [
+                "none",
+                "time",
+                "fixedFee"
+              ]
+            },
+            "budgetIncludeExpenses": {
+              "type": "boolean",
+              "description": "Whether to include expenses in the budget."
+            }
+          },
           "required": [
-            "projectId"
+            "project_id"
           ]
         },
         "outputSchema": {
           "type": "object",
-          "required": [
-            "data"
-          ],
           "properties": {
-            "data": {
-              "type": "array"
-            }
-          },
-          "additionalProperties": false
+            "data": {}
+          }
         },
         "request": {
-          "method": "GET",
-          "path": "/projects/{{projectId}}/sections",
+          "method": "PUT",
+          "path": "/projects/{{project_id}}",
           "success": [
-            200
-          ]
+            200,
+            201,
+            202,
+            204
+          ],
+          "body": {
+            "name": "{{name}}",
+            "note": "{{note}}",
+            "budget": "{{budget}}",
+            "billable": "{{billable}}",
+            "budgetType": "{{budgetType}}",
+            "hourlyRate": "{{hourlyRate}}",
+            "budgetReset": "{{budgetReset}}",
+            "billingMethod": "{{billingMethod}}",
+            "budgetIncludeExpenses": "{{budgetIncludeExpenses}}"
+          },
+          "headers": {
+            "Content-Type": "application/json"
+          }
         },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
+        "enforceOutputSchema": false
       },
-      "invoices.list": {
+      "timecards.update": {
         "kind": "action",
-        "sideEffect": "read",
+        "sideEffect": "write",
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "title": "List invoices",
-        "description": "List Everhour invoices visible to the API key.",
+        "maxResponseBytes": 1048576,
+        "title": "Update Timecard",
+        "description": "Tool to update a timecard for a user on a specific date. Covers EVERHOUR_UPDATE_TIMECARD.",
         "inputSchema": {
           "type": "object",
-          "properties": {},
-          "additionalProperties": false
+          "additionalProperties": false,
+          "properties": {
+            "date": {
+              "type": "string",
+              "description": "Date for the timecard in YYYY-MM-DD format.",
+              "minLength": 1
+            },
+            "clockIn": {
+              "type": "string",
+              "description": "Clock in time in user's local timezone using HH:MM format."
+            },
+            "user_id": {
+              "type": "integer",
+              "description": "Numeric ID of the user whose timecard is being updated.",
+              "minimum": 1
+            },
+            "clockOut": {
+              "type": "string",
+              "description": "Clock out time in user's local timezone using HH:MM format."
+            },
+            "breakTime": {
+              "type": "integer",
+              "description": "Break duration in seconds.",
+              "minimum": 0
+            }
+          },
+          "required": [
+            "date",
+            "user_id"
+          ]
         },
         "outputSchema": {
           "type": "object",
-          "required": [
-            "data"
-          ],
           "properties": {
-            "data": {
-              "type": "array"
-            }
-          },
-          "additionalProperties": false
+            "data": {}
+          }
         },
         "request": {
-          "method": "GET",
-          "path": "/invoices",
+          "method": "PUT",
+          "path": "/users/{{user_id}}/timecards/{{date}}",
           "success": [
-            200
+            200,
+            201,
+            202,
+            204
+          ],
+          "body": {
+            "clockIn": "{{clockIn}}",
+            "clockOut": "{{clockOut}}",
+            "breakTime": "{{breakTime}}"
+          },
+          "headers": {
+            "Content-Type": "application/json"
+          }
+        },
+        "enforceOutputSchema": false
+      },
+      "webhooks.update": {
+        "kind": "action",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
+        "title": "Update Webhook",
+        "description": "Tool to update an existing webhook configuration in Everhour. Covers EVERHOUR_UPDATE_WEBHOOK.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "events": {
+              "type": "array",
+              "description": "List of events to subscribe to.",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "api:client:created",
+                  "api:client:updated",
+                  "api:project:created",
+                  "api:project:updated",
+                  "api:project:removed",
+                  "api:task:created",
+                  "api:task:updated",
+                  "api:task:removed",
+                  "api:timer:started",
+                  "api:timer:stopped",
+                  "api:time:updated",
+                  "api:section:created",
+                  "api:section:updated",
+                  "api:section:removed",
+                  "api:estimate:updated"
+                ]
+              },
+              "minItems": 1
+            },
+            "hook_id": {
+              "type": "integer",
+              "description": "Webhook ID to update.",
+              "minimum": 1
+            },
+            "project": {
+              "type": "string",
+              "description": "Filter events by project ID."
+            },
+            "targetUrl": {
+              "type": "string",
+              "description": "Target URL for webhook delivery.",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "events",
+            "hook_id",
+            "targetUrl"
           ]
         },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "data": {}
+          }
+        },
+        "request": {
+          "method": "PUT",
+          "path": "/hooks/{{hook_id}}",
+          "success": [
+            200,
+            201,
+            202,
+            204
+          ],
+          "body": {
+            "events": "{{events}}",
+            "project": "{{project}}",
+            "targetUrl": "{{targetUrl}}"
+          },
+          "headers": {
+            "Content-Type": "application/json"
+          }
+        },
+        "enforceOutputSchema": false
       }
     },
     "provenance": {
       "source": {
-        "url": "https://github.com/oomol-lab/open-connector",
-        "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"
+        "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
+        "url": "https://github.com/oomol-lab/open-connector"
       }
     },
-    "evidence": {
-      "fixture": {
-        "status": "supplied"
-      },
-      "live": {
-        "status": "unverified"
-      }
-    }
+    "runtime": "bun",
+    "version": "0.2.0",
+    "visibility": "public"
   }
 }

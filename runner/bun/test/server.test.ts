@@ -322,7 +322,7 @@ describe("runner protocol", () => {
           params: {
             connectorKey: "notion",
             action: "credentials.validate",
-            input: { notionToken: "secret_notion_token" },
+            input: {},
           },
         }),
       }),
@@ -333,7 +333,7 @@ describe("runner protocol", () => {
     expect(body.ok).toBe(true);
     expect(body.result.output.connector).toBe("notion");
     expect(body.result.output.action).toBe("credentials.validate");
-    expect(body.result.output.valid).toBe(true);
+    expect(body.result.output.validated).toEqual({});
   });
 
   test("connector.action.execute validates notion comments list", async () => {
@@ -541,7 +541,7 @@ describe("runner protocol", () => {
             action: "databases.items.query",
             input: {
               databaseId: "44444444-4444-4444-4444-444444444444",
-              filters: [{ property: "Status", type: "status", equals: "Todo" }],
+              filter: { property: "Status", status: { equals: "Todo" } },
             },
           },
         }),
@@ -555,7 +555,7 @@ describe("runner protocol", () => {
     expect(body.result.output.action).toBe("databases.items.query");
     expect(body.result.output.validated).toEqual({
       databaseId: "44444444-4444-4444-4444-444444444444",
-      filters: [{ property: "Status", type: "status", equals: "Todo" }],
+      filter: { property: "Status", status: { equals: "Todo" } },
     });
   });
 
@@ -692,7 +692,6 @@ describe("runner protocol", () => {
             action: "documents.blocks.list",
             input: {
               blockId: "33333333-3333-3333-3333-333333333333",
-              depth: 2,
               pageSize: 50,
             },
           },
@@ -707,7 +706,6 @@ describe("runner protocol", () => {
     expect(body.result.output.action).toBe("documents.blocks.list");
     expect(body.result.output.validated).toEqual({
       blockId: "33333333-3333-3333-3333-333333333333",
-      depth: 2,
       pageSize: 50,
     });
   });
@@ -978,32 +976,16 @@ describe("runner protocol", () => {
     expect(body.result.output.items[0].id).toBe("telegram:1001:42");
   });
 
-  test("connector.sync.list dispatches Notion users.list through connector-owned sync handler", async () => {
+  test("connector.action.execute validates notion users.list as a request-backed action", async () => {
     const response = await handleRPC(
       new Request("http://runner.local/rpc", {
         method: "POST",
         body: JSON.stringify({
-          method: "connector.sync.list",
+          method: "connector.action.execute",
           params: {
             connectorKey: "notion",
-            sync: "users.list",
-            input: {
-              response: {
-                object: "list",
-                type: "user",
-                user: {},
-                next_cursor: null,
-                has_more: false,
-                results: [{
-                  object: "user",
-                  id: "11111111-1111-1111-1111-111111111111",
-                  name: "Ada Lovelace",
-                  avatar_url: null,
-                  type: "person",
-                  person: { email: "ada@example.com" },
-                }],
-              },
-            },
+            action: "users.list",
+            input: { pageSize: 25 },
           },
         }),
       }),
@@ -1013,9 +995,8 @@ describe("runner protocol", () => {
     const body = await response.json();
     expect(body.ok).toBe(true);
     expect(body.result.output.connector).toBe("notion");
-    expect(body.result.output.sync).toBe("users.list");
-    expect(body.result.output.provider).toBe("notion");
-    expect(body.result.output.items[0].id).toBe("notion:11111111-1111-1111-1111-111111111111");
+    expect(body.result.output.action).toBe("users.list");
+    expect(body.result.output.validated).toEqual({ pageSize: 25 });
   });
 
   test("connector.sync.list rejects manifest action operations", async () => {

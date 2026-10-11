@@ -1,17 +1,7 @@
 {
-  "key": "bolna",
-  "name": "Bolna",
-  "version": "0.2.0",
-  "runtime": "bun",
-  "visibility": "public",
-  "categories": [
-    "messaging"
-  ],
   "auth": {
-    "type": "api_key",
     "scopes": [],
     "setup": {
-      "mode": "api_key",
       "fields": [
         {
           "key": "apiKey",
@@ -19,106 +9,555 @@
           "required": true,
           "secret": true
         }
-      ]
+      ],
+      "mode": "api_key"
+    },
+    "type": "api_key"
+  },
+  "categories": [
+    "messaging"
+  ],
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
     }
   },
-  "network": {
-    "allowedHosts": [
-      "api.bolna.ai"
-    ]
-  },
-  "models": [
-    "user",
-    "agent",
-    "execution",
-    "call",
-    "batch",
-    "phone_number"
-  ],
   "http": {
-    "baseUrl": "https://api.bolna.ai",
     "auth": {
       "field": "apiKey",
       "in": "header",
       "name": "Authorization",
       "value": "Bearer {{apiKey}}"
     },
+    "baseUrl": "https://api.bolna.ai",
     "errors": {
-      "rateLimitStatuses": [
-        429
-      ],
-      "retryAfterHeader": "retry-after",
       "defaultRetryAfterSeconds": 30,
       "messagePaths": [
         "message",
         "error"
-      ]
+      ],
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after"
     },
     "headers": {
       "Accept": "application/json"
     }
   },
+  "key": "bolna",
+  "models": [
+    "agent",
+    "batch",
+    "execution",
+    "knowledgebase",
+    "phone_number",
+    "provider",
+    "user",
+    "voice"
+  ],
+  "name": "Bolna",
+  "network": {
+    "allowedHosts": [
+      "api.bolna.ai"
+    ]
+  },
   "operations": {
-    "healthcheck": {
-      "kind": "action",
-      "sideEffect": "read",
-      "timeoutMs": 5000,
-      "maxInputBytes": 4096,
-      "maxResponseBytes": 65536,
-      "title": "Healthcheck",
-      "description": "Validate the Bolna API key by reading the current user.",
+    "agents.copy": {
+      "description": "Create a duplicate copy of an existing Bolna voice AI agent with a new name.",
+      "enforceOutputSchema": true,
       "inputSchema": {
-        "type": "object",
-        "properties": {},
-        "additionalProperties": false
-      },
-      "outputSchema": {
-        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "agent_id": {
+            "description": "UUID of the existing Bolna agent to copy.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "agent_name": {
+            "description": "Display name for the copied agent.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "is_api_request": {
+            "description": "Flag indicating this is an API request.",
+            "type": "boolean"
+          },
+          "sub_account_id": {
+            "description": "Optional sub-account identifier for multi-tenant scoping.",
+            "type": "string"
+          },
+          "user_id": {
+            "description": "Optional user identifier for multi-tenant scoping.",
+            "type": "string"
+          }
+        },
         "required": [
-          "data"
+          "agent_id",
+          "agent_name"
         ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "additionalProperties": false
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "body": {
+          "agent_name": "{{agent_name}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "method": "POST",
+        "path": "/v2/agent/{{agent_id}}/copy",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Copy agent",
+      "validationMode": "strict-generated"
+    },
+    "agents.create": {
+      "description": "Create a new Bolna Voice AI agent using the v2 API with LLM, synthesizer, transcriber, and task configuration.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "agent_config": {
+            "additionalProperties": true,
+            "description": "Complete agent configuration. Required fields include agent_name and tasks.",
+            "type": "object"
+          },
+          "agent_prompts": {
+            "additionalProperties": true,
+            "description": "Prompt configurations keyed by task, e.g. task_1.system_prompt.",
+            "type": "object"
+          }
+        },
+        "required": [
+          "agent_config",
+          "agent_prompts"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "body": {
+          "agent_config": "{{agent_config}}",
+          "agent_prompts": "{{agent_prompts}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "method": "POST",
+        "path": "/v2/agent",
+        "success": [
+          200,
+          201
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Create agent",
+      "validationMode": "strict-generated"
+    },
+    "agents.create_template": {
+      "description": "Create a Bolna Voice AI agent from a predefined template instead of a full v2 config.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "about_business": {
+            "description": "Description of the business domain and purpose.",
+            "type": "string"
+          },
+          "agent_name": {
+            "description": "Name for the template agent.",
+            "type": "string"
+          },
+          "agent_type": {
+            "description": "Type or category of the agent template, e.g. support, sales, other.",
+            "type": "string"
+          },
+          "business_name": {
+            "description": "Name of the business for the template agent.",
+            "type": "string"
+          },
+          "is_api_request": {
+            "description": "Optional API-request flag as a string boolean.",
+            "type": "string"
+          },
+          "prompt": {
+            "description": "System prompt or instructions that define agent behavior.",
+            "type": "string"
+          },
+          "return_prompt": {
+            "description": "Return the generated prompt in the response.",
+            "type": "boolean"
+          },
+          "service_details": {
+            "description": "Details about the services the agent can discuss.",
+            "type": "string"
+          },
+          "template_agent": {
+            "description": "Identifier or name of the base template.",
+            "type": "string"
+          },
+          "transcript": {
+            "description": "Enable transcript recording for this agent.",
+            "type": "boolean"
+          },
+          "user_id": {
+            "description": "Optional user ID to associate with the template agent.",
+            "type": "string"
+          },
+          "variable_dict": {
+            "additionalProperties": true,
+            "description": "Custom string variables substituted in the template.",
+            "type": "object"
+          }
+        },
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "body": {
+          "about_business": "{{about_business}}",
+          "agent_name": "{{agent_name}}",
+          "agent_type": "{{agent_type}}",
+          "business_name": "{{business_name}}",
+          "prompt": "{{prompt}}",
+          "return_prompt": "{{return_prompt}}",
+          "service_details": "{{service_details}}",
+          "template_agent": "{{template_agent}}",
+          "transcript": "{{transcript}}",
+          "user_id": "{{user_id}}",
+          "variable_dict": "{{variable_dict}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "method": "POST",
+        "path": "/v2/agent/from-template",
+        "success": [
+          200,
+          201
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Create template agent",
+      "validationMode": "strict-generated"
+    },
+    "agents.delete": {
+      "description": "Permanently delete a Voice AI agent and associated batches, executions, and configurations.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "agent_id": {
+            "description": "UUID of the agent to delete.",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "agent_id"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/v2/agent/{{agent_id}}",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "title": "Delete agent",
+      "validationMode": "strict-generated"
+    },
+    "agents.get": {
+      "description": "Get one Bolna voice agent by agent_id.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "agent_id": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "agent_id"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
       },
       "request": {
         "method": "GET",
-        "path": "/user/me",
+        "path": "/v2/agent/{{agent_id}}",
         "success": [
           200
         ]
       },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "agents.list": {
-      "kind": "action",
+      "responseFormat": "json",
       "sideEffect": "read",
       "timeoutMs": 15000,
+      "title": "Get agent",
+      "validationMode": "strict-generated"
+    },
+    "agents.get_v1": {
+      "description": "Retrieve Voice AI agent details using the deprecated v1 GET /agent/{agent_id} endpoint.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "agent_uuid": {
+            "description": "UUID of the Bolna voice agent to retrieve.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "agent_version_id": {
+            "description": "Optional version identifier to retrieve a specific agent version.",
+            "type": "string"
+          },
+          "is_api_request": {
+            "description": "Flag indicating this is an API request (string boolean).",
+            "type": "string"
+          },
+          "sub_account_id": {
+            "description": "Optional sub-account identifier for multi-tenant scoping.",
+            "type": "string"
+          },
+          "user_id": {
+            "description": "Optional user identifier for multi-tenant scoping.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "agent_uuid"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
-      "title": "List agents",
-      "description": "List Bolna voice agents in the authenticated workspace.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {},
-        "additionalProperties": false
-      },
       "outputSchema": {
-        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
         "required": [
           "data"
         ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/agent/{{agent_uuid}}",
+        "query": {
+          "agent_version_id": "{{agent_version_id}}",
+          "is_api_request": "{{is_api_request}}",
+          "sub_account_id": "{{sub_account_id}}",
+          "user_id": "{{user_id}}"
+        },
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get agent (v1 deprecated)",
+      "validationMode": "strict-generated"
+    },
+    "agents.import": {
+      "description": "Import an existing Bolna voice AI agent by ID, optionally renaming or pinning a version.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "agent_id": {
+            "description": "UUID of the agent to import.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "agent_name": {
+            "description": "Optional name for the imported agent.",
+            "type": "string"
+          },
+          "agent_version_id": {
+            "description": "Optional version UUID to import; latest if omitted.",
+            "type": "string"
+          },
+          "is_api_request": {
+            "description": "Flag indicating this is an API request.",
+            "type": "boolean"
+          },
+          "sub_account_id": {
+            "description": "Optional sub-account identifier for multi-tenant scoping.",
+            "type": "string"
+          },
+          "user_id": {
+            "description": "Optional user identifier for multi-tenant scoping.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "agent_id"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "body": {
+          "agent_id": "{{agent_id}}",
+          "agent_name": "{{agent_name}}",
+          "agent_version_id": "{{agent_version_id}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "method": "POST",
+        "path": "/v2/agent/import",
+        "success": [
+          200,
+          201
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Import agent",
+      "validationMode": "strict-generated"
+    },
+    "agents.list": {
+      "description": "List Bolna voice agents in the authenticated workspace.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {},
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
         "properties": {
           "data": {
             "type": "array"
           }
         },
-        "additionalProperties": false
+        "required": [
+          "data"
+        ],
+        "type": "object"
       },
       "request": {
         "method": "GET",
@@ -127,144 +566,878 @@
           200
         ]
       },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "agents.get": {
-      "kind": "action",
+      "responseFormat": "json",
       "sideEffect": "read",
       "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "title": "Get agent",
-      "description": "Get one Bolna voice agent by agent_id.",
-      "inputSchema": {
-        "type": "object",
-        "required": [
-          "agent_id"
-        ],
-        "properties": {
-          "agent_id": {
-            "type": "string",
-            "minLength": 1
-          }
-        },
-        "additionalProperties": false
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "GET",
-        "path": "/v2/agent/{{agent_id}}",
-        "success": [
-          200
-        ]
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
+      "title": "List agents",
+      "validationMode": "strict-generated"
     },
-    "executions.list": {
-      "kind": "action",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "title": "List executions",
-      "description": "List execution history for one Bolna voice agent.",
+    "agents.list_paginated": {
+      "description": "Retrieve a paginated list of agents, optionally filtered by user_id or sub_account_id.",
+      "enforceOutputSchema": true,
       "inputSchema": {
-        "type": "object",
-        "required": [
-          "agent_id"
-        ],
+        "additionalProperties": false,
         "properties": {
-          "agent_id": {
-            "type": "string",
-            "minLength": 1
+          "is_api_request": {
+            "description": "Flag indicating this is an API request (string boolean).",
+            "type": "string"
           },
           "page_number": {
-            "type": "integer",
+            "description": "1-based page number.",
+            "maximum": 9999,
             "minimum": 1,
-            "maximum": 9999
+            "type": "integer"
           },
           "page_size": {
-            "type": "integer",
+            "description": "Number of agents to return per page.",
+            "maximum": 1000,
             "minimum": 1,
-            "maximum": 50
+            "type": "integer"
+          },
+          "sub_account_id": {
+            "description": "Optional sub-account identifier for multi-tenant scoping.",
+            "type": "string"
+          },
+          "user_id": {
+            "description": "Optional user identifier for multi-tenant scoping.",
+            "type": "string"
           }
         },
-        "additionalProperties": false
+        "type": "object"
       },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
       "outputSchema": {
-        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "array"
+          }
+        },
         "required": [
           "data"
         ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/agent/all",
+        "query": {
+          "is_api_request": "{{is_api_request}}",
+          "page_number": "{{page_number}}",
+          "page_size": "{{page_size}}",
+          "sub_account_id": "{{sub_account_id}}",
+          "user_id": "{{user_id}}"
+        },
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List agents (paginated)",
+      "validationMode": "strict-generated"
+    },
+    "agents.patch_v1": {
+      "description": "Partially update a Voice AI agent using the deprecated v1 PATCH /agent/{agent_id} endpoint.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "agent_config": {
+            "additionalProperties": true,
+            "description": "Partial agent configuration to patch.",
+            "type": "object"
+          },
+          "agent_prompts": {
+            "additionalProperties": true,
+            "description": "Partial agent prompts configuration to patch.",
+            "type": "object"
+          },
+          "agent_uuid": {
+            "description": "UUID of the agent to update.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "is_api_request": {
+            "description": "Flag indicating this is an API request.",
+            "type": "boolean"
+          },
+          "sub_account_id": {
+            "description": "Optional sub-account identifier for multi-tenant scoping.",
+            "type": "string"
+          },
+          "user_id": {
+            "description": "Optional user identifier for multi-tenant scoping.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "agent_uuid"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "additionalProperties": false
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "body": {
+          "agent_config": "{{agent_config}}",
+          "agent_prompts": "{{agent_prompts}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "method": "PATCH",
+        "path": "/agent/{{agent_uuid}}",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Patch agent (v1 deprecated)",
+      "validationMode": "strict-generated"
+    },
+    "agents.stop_calls": {
+      "description": "Stop all queued or scheduled calls for a specific Voice AI agent.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "agent_id": {
+            "description": "UUID of the agent whose queued or scheduled calls should be stopped.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "is_api_request": {
+            "description": "Flag indicating this is an API request.",
+            "type": "boolean"
+          },
+          "sub_account_id": {
+            "description": "Optional sub-account identifier for multi-tenant scoping.",
+            "type": "string"
+          },
+          "user_id": {
+            "description": "Optional user identifier for multi-tenant scoping.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "agent_id"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v2/agent/{{agent_id}}/stop",
+        "query": {
+          "is_api_request": "{{is_api_request}}",
+          "sub_account_id": "{{sub_account_id}}",
+          "user_id": "{{user_id}}"
+        },
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Stop agent calls",
+      "validationMode": "strict-generated"
+    },
+    "agents.update": {
+      "description": "Replace all settings of an existing Bolna Voice AI agent using the v2 PUT API.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "agent_config": {
+            "additionalProperties": true,
+            "description": "Complete agent configuration including agent_name and tasks.",
+            "type": "object"
+          },
+          "agent_id": {
+            "description": "UUID of the agent to update.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "agent_prompts": {
+            "additionalProperties": true,
+            "description": "Prompt configurations keyed by task, e.g. task_1.system_prompt.",
+            "type": "object"
+          },
+          "is_api_request": {
+            "description": "Flag indicating this is an API request.",
+            "type": "boolean"
+          },
+          "sub_account_id": {
+            "description": "Optional sub-account identifier for multi-tenant scoping.",
+            "type": "string"
+          },
+          "user_id": {
+            "description": "Optional user identifier for multi-tenant scoping.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "agent_id",
+          "agent_config",
+          "agent_prompts"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "body": {
+          "agent_config": "{{agent_config}}",
+          "agent_prompts": "{{agent_prompts}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "method": "PUT",
+        "path": "/v2/agent/{{agent_id}}",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Update agent",
+      "validationMode": "strict-generated"
+    },
+    "batches.create": {
+      "description": "Create an outbound calling batch by uploading a CSV of contacts. Schedule separately.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "agent_id": {
+            "description": "UUID of the agent to use for the batch campaign.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "contentBase64": {
+            "description": "Base64-encoded CSV contents.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "contentType": {
+            "description": "MIME type of the uploaded file. Defaults to text/csv.",
+            "type": "string"
+          },
+          "fileName": {
+            "description": "CSV file name. Must include contact_number in E.164 format.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "from_phone_number": {
+            "description": "Caller ID in E.164 format when initiating batch calls.",
+            "type": "string"
+          },
+          "from_phone_numbers": {
+            "description": "Originating phone numbers in E.164 format.",
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "retry_config": {
+            "description": "JSON string containing retry configuration for failed calls.",
+            "type": "string"
+          },
+          "webhook_url": {
+            "description": "URL that receives the batch payload when processing finishes.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "agent_id",
+          "fileName",
+          "contentBase64"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 6291456,
+      "maxResponseBytes": 6291456,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 60000,
+      "title": "Create batch",
+      "validationMode": "strict-generated"
+    },
+    "batches.delete": {
+      "description": "Permanently delete a batch campaign by ID.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "batch_id": {
+            "description": "Batch identifier (UUID or 32-character hex).",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "batch_id"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/batches/{{batch_id}}",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "title": "Delete batch",
+      "validationMode": "strict-generated"
+    },
+    "batches.executions.list": {
+      "description": "Retrieve executions from a batch with pagination.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "batch_id": {
+            "description": "Batch identifier (UUID or 32-character hex).",
+            "minLength": 1,
+            "type": "string"
+          },
+          "page_number": {
+            "description": "1-based page number.",
+            "maximum": 9999,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "page_size": {
+            "description": "Number of results per page (maximum 50).",
+            "maximum": 50,
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "batch_id"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
       },
       "request": {
         "method": "GET",
-        "path": "/v2/agent/{{agent_id}}/executions",
+        "path": "/v2/batches/{{batch_id}}/executions",
         "query": {
           "page_number": "{{page_number}}",
           "page_size": "{{page_size}}"
         },
         "success": [
-          200
+          200,
+          201,
+          202,
+          204
         ]
       },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "executions.get": {
-      "kind": "action",
+      "responseFormat": "json",
       "sideEffect": "read",
       "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "title": "Get execution",
-      "description": "Get one Bolna execution by execution_id.",
+      "title": "List batch executions",
+      "validationMode": "strict-generated"
+    },
+    "batches.get": {
+      "description": "Retrieve details of a specific batch including status, schedule, and contact counts.",
+      "enforceOutputSchema": true,
       "inputSchema": {
-        "type": "object",
-        "required": [
-          "execution_id"
-        ],
+        "additionalProperties": false,
         "properties": {
-          "execution_id": {
-            "type": "string",
-            "minLength": 1
+          "batch_id": {
+            "description": "Batch identifier in 32-character hex or UUID format.",
+            "minLength": 1,
+            "type": "string"
           }
         },
-        "additionalProperties": false
-      },
-      "outputSchema": {
-        "type": "object",
         "required": [
-          "data"
+          "batch_id"
         ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "additionalProperties": false
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/batches/{{batch_id}}",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get batch",
+      "validationMode": "strict-generated"
+    },
+    "batches.list": {
+      "description": "Retrieve all batches associated with a specific Bolna Voice AI agent.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "agent_id": {
+            "description": "UUID of the agent whose batches to retrieve.",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "agent_id"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "array"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/batches/{{agent_id}}/all",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List batches",
+      "validationMode": "strict-generated"
+    },
+    "batches.schedule": {
+      "description": "Schedule a created batch to execute at a future time.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "batch_id": {
+            "description": "UUID of the batch to schedule.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "bypass_call_guardrails": {
+            "description": "Skip time validation for all calls in this batch.",
+            "type": "boolean"
+          },
+          "scheduled_at": {
+            "description": "Scheduled execution time in ISO 8601 with a numeric UTC offset (not Z).",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "batch_id",
+          "scheduled_at"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "body": {
+          "bypass_call_guardrails": "{{bypass_call_guardrails}}",
+          "scheduled_at": "{{scheduled_at}}"
+        },
+        "bodyEncoding": "form",
+        "headers": {
+          "Content-Type": "application/x-www-form-urlencoded"
+        },
+        "method": "POST",
+        "path": "/batches/{{batch_id}}/schedule",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Schedule batch",
+      "validationMode": "strict-generated"
+    },
+    "batches.stop": {
+      "description": "Stop a running batch by ID, cancelling queued calls that have not started.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "batch_id": {
+            "description": "Batch identifier (UUID or 32-character hex).",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "batch_id"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "POST",
+        "path": "/batches/{{batch_id}}/stop",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Stop batch",
+      "validationMode": "strict-generated"
+    },
+    "calls.create": {
+      "description": "Initiate an outbound phone call from a configured Bolna Voice AI agent.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "agent_data": {
+            "additionalProperties": true,
+            "description": "Per-call overrides such as voice_id or language.",
+            "type": "object"
+          },
+          "agent_id": {
+            "description": "UUID of the Bolna agent that initiates the outbound call.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "bypass_call_guardrails": {
+            "description": "Skip time-window guardrails and dial immediately.",
+            "type": "boolean"
+          },
+          "from_phone_number": {
+            "description": "Optional caller ID in E.164 format.",
+            "type": "string"
+          },
+          "recipient_phone_number": {
+            "description": "Recipient phone number in E.164 format, including the + prefix.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "retry_config": {
+            "additionalProperties": true,
+            "description": "Auto-retry configuration for failed calls.",
+            "type": "object"
+          },
+          "scheduled_at": {
+            "description": "Optional ISO 8601 timestamp to schedule the call.",
+            "type": "string"
+          },
+          "user_data": {
+            "additionalProperties": true,
+            "description": "Custom variables referenced in the agent prompt template.",
+            "type": "object"
+          }
+        },
+        "required": [
+          "agent_id",
+          "recipient_phone_number"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "body": {
+          "agent_data": "{{agent_data}}",
+          "agent_id": "{{agent_id}}",
+          "bypass_call_guardrails": "{{bypass_call_guardrails}}",
+          "from_phone_number": "{{from_phone_number}}",
+          "recipient_phone_number": "{{recipient_phone_number}}",
+          "retry_config": "{{retry_config}}",
+          "scheduled_at": "{{scheduled_at}}",
+          "user_data": "{{user_data}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "method": "POST",
+        "path": "/call",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Make a phone call",
+      "validationMode": "strict-generated"
+    },
+    "executions.agent.get": {
+      "description": "Retrieve a specific execution (call) for an agent, including transcript, costs, and telephony data.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "agent_id": {
+            "description": "UUID of the agent.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "execution_id": {
+            "description": "UUID of the execution.",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "agent_id",
+          "execution_id"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/agent/{{agent_id}}/execution/{{execution_id}}",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get agent execution details",
+      "validationMode": "strict-generated"
+    },
+    "executions.get": {
+      "description": "Get one Bolna execution by execution_id.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "execution_id": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "execution_id"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
       },
       "request": {
         "method": "GET",
@@ -273,773 +1446,964 @@
           200
         ]
       },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "agents.create": {
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "kind": "action",
-      "sideEffect": "write",
-      "title": "Create agent",
-      "description": "Create a Bolna voice AI agent from agent_config and agent_prompts.",
-      "inputSchema": {
-        "type": "object",
-        "required": [
-          "agent_config",
-          "agent_prompts"
-        ],
-        "additionalProperties": false,
-        "properties": {
-          "agent_config": {
-            "type": "object",
-            "description": "Agent configuration including agent_name and tasks."
-          },
-          "agent_prompts": {
-            "type": "object",
-            "description": "Prompts keyed by task, for example task_1.system_prompt."
-          }
-        }
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "POST",
-        "path": "/v2/agent",
-        "success": [
-          200,
-          201
-        ],
-        "headers": {
-          "Content-Type": "application/json"
-        },
-        "body": {
-          "agent_config": "{{agent_config}}",
-          "agent_prompts": "{{agent_prompts}}"
-        }
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "agents.update": {
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "kind": "action",
-      "sideEffect": "write",
-      "title": "Patch agent",
-      "description": "Partially update a Bolna voice agent. Unlike PUT, only supplied fields change.",
-      "inputSchema": {
-        "type": "object",
-        "required": [
-          "agent_id"
-        ],
-        "additionalProperties": false,
-        "properties": {
-          "agent_id": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Agent ID."
-          },
-          "agent_config": {
-            "type": "object",
-            "description": "Partial agent_config update."
-          },
-          "agent_prompts": {
-            "type": "object",
-            "description": "Partial prompt update."
-          }
-        }
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "PATCH",
-        "path": "/v2/agent/{{agent_id}}",
-        "success": [
-          200
-        ],
-        "headers": {
-          "Content-Type": "application/json"
-        },
-        "body": {
-          "agent_config": "{{agent_config}}",
-          "agent_prompts": "{{agent_prompts}}"
-        }
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "agents.delete": {
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "kind": "action",
-      "sideEffect": "destructive",
-      "title": "Delete agent",
-      "description": "Delete a Bolna voice agent and its related batches and executions.",
-      "inputSchema": {
-        "type": "object",
-        "required": [
-          "agent_id"
-        ],
-        "additionalProperties": false,
-        "properties": {
-          "agent_id": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Agent ID."
-          }
-        }
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "DELETE",
-        "path": "/v2/agent/{{agent_id}}",
-        "success": [
-          200
-        ]
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "agents.stop": {
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "kind": "action",
-      "sideEffect": "write",
-      "title": "Stop queued agent calls",
-      "description": "Stop all queued or scheduled calls for one Bolna agent.",
-      "inputSchema": {
-        "type": "object",
-        "required": [
-          "agent_id"
-        ],
-        "additionalProperties": false,
-        "properties": {
-          "agent_id": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Agent ID."
-          }
-        }
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "POST",
-        "path": "/v2/agent/{{agent_id}}/stop",
-        "success": [
-          200
-        ]
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "calls.create": {
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "kind": "action",
-      "sideEffect": "write",
-      "title": "Make call",
-      "description": "Place an outbound Bolna voice call to a recipient phone number.",
-      "inputSchema": {
-        "type": "object",
-        "required": [
-          "agent_id",
-          "recipient_phone_number"
-        ],
-        "additionalProperties": false,
-        "properties": {
-          "agent_id": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Agent ID that places the call."
-          },
-          "recipient_phone_number": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Recipient phone number in E.164 format."
-          },
-          "from_phone_number": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Optional originating E.164 number."
-          },
-          "user_data": {
-            "type": "object",
-            "description": "Optional prompt variables for this call."
-          }
-        }
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "POST",
-        "path": "/call",
-        "success": [
-          200
-        ],
-        "headers": {
-          "Content-Type": "application/json"
-        },
-        "body": {
-          "agent_id": "{{agent_id}}",
-          "recipient_phone_number": "{{recipient_phone_number}}",
-          "from_phone_number": "{{from_phone_number}}",
-          "user_data": "{{user_data}}"
-        }
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "calls.stop": {
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "kind": "action",
-      "sideEffect": "write",
-      "title": "Stop call",
-      "description": "Stop a queued or scheduled Bolna call by execution ID.",
-      "inputSchema": {
-        "type": "object",
-        "required": [
-          "execution_id"
-        ],
-        "additionalProperties": false,
-        "properties": {
-          "execution_id": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Execution ID of the call to stop."
-          }
-        }
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "POST",
-        "path": "/call/{{execution_id}}/stop",
-        "success": [
-          200
-        ]
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "executions.logs.get": {
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "kind": "action",
+      "responseFormat": "json",
       "sideEffect": "read",
-      "title": "Get execution logs",
-      "description": "Fetch raw logs for one Bolna execution, including prompts and model traffic.",
-      "inputSchema": {
-        "type": "object",
-        "required": [
-          "execution_id"
-        ],
-        "additionalProperties": false,
-        "properties": {
-          "execution_id": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Execution ID."
-          }
-        }
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": [
-              "object",
-              "array"
-            ]
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "GET",
-        "path": "/executions/{{execution_id}}/log",
-        "success": [
-          200
-        ]
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "batches.list": {
       "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "kind": "action",
-      "sideEffect": "read",
-      "title": "List batches",
-      "description": "List all batches for one Bolna agent.",
+      "title": "Get execution",
+      "validationMode": "strict-generated"
+    },
+    "executions.list": {
+      "description": "List execution history for one Bolna voice agent, with optional status, call type, provider, voicemail, batch, and date filters.",
+      "enforceOutputSchema": true,
       "inputSchema": {
-        "type": "object",
-        "required": [
-          "agent_id"
-        ],
         "additionalProperties": false,
         "properties": {
           "agent_id": {
-            "type": "string",
             "minLength": 1,
-            "description": "Agent ID."
-          }
-        }
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "array"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "GET",
-        "path": "/batches/{{agent_id}}/all",
-        "success": [
-          200
-        ]
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "batches.get": {
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "kind": "action",
-      "sideEffect": "read",
-      "title": "Get batch",
-      "description": "Retrieve one Bolna batch by batch ID.",
-      "inputSchema": {
-        "type": "object",
-        "required": [
-          "batch_id"
-        ],
-        "additionalProperties": false,
-        "properties": {
-          "batch_id": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Batch ID."
-          }
-        }
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "GET",
-        "path": "/batches/{{batch_id}}",
-        "success": [
-          200
-        ]
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "batches.schedule": {
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "kind": "action",
-      "sideEffect": "write",
-      "title": "Schedule batch",
-      "description": "Schedule a created Bolna batch to start calling at scheduled_at.",
-      "inputSchema": {
-        "type": "object",
-        "required": [
-          "batch_id",
-          "scheduled_at"
-        ],
-        "additionalProperties": false,
-        "properties": {
-          "batch_id": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Batch ID."
+            "type": "string"
           },
-          "scheduled_at": {
-            "type": "string",
-            "minLength": 1,
-            "description": "ISO-8601 start time with a numeric UTC offset such as +00:00."
-          }
-        }
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "POST",
-        "path": "/batches/{{batch_id}}/schedule",
-        "success": [
-          200
-        ],
-        "headers": {
-          "Content-Type": "application/json"
-        },
-        "body": {
-          "scheduled_at": "{{scheduled_at}}"
-        }
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "batches.stop": {
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "kind": "action",
-      "sideEffect": "write",
-      "title": "Stop batch",
-      "description": "Stop a running Bolna batch by batch ID.",
-      "inputSchema": {
-        "type": "object",
-        "required": [
-          "batch_id"
-        ],
-        "additionalProperties": false,
-        "properties": {
+          "answered_by_voice_mail": {
+            "description": "Filter by whether the call reached voicemail.",
+            "type": "boolean"
+          },
           "batch_id": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Batch ID."
-          }
-        }
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "POST",
-        "path": "/batches/{{batch_id}}/stop",
-        "success": [
-          200
-        ]
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "batches.delete": {
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "kind": "action",
-      "sideEffect": "destructive",
-      "title": "Delete batch",
-      "description": "Delete a Bolna batch by batch ID.",
-      "inputSchema": {
-        "type": "object",
-        "required": [
-          "batch_id"
-        ],
-        "additionalProperties": false,
-        "properties": {
-          "batch_id": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Batch ID."
-          }
-        }
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "DELETE",
-        "path": "/batches/{{batch_id}}",
-        "success": [
-          200
-        ]
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "batches.executions.list": {
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "kind": "action",
-      "sideEffect": "read",
-      "title": "List batch executions",
-      "description": "List executions for one Bolna batch with optional pagination.",
-      "inputSchema": {
-        "type": "object",
-        "required": [
-          "batch_id"
-        ],
-        "additionalProperties": false,
-        "properties": {
-          "batch_id": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Batch ID."
+            "description": "Filter executions by batch identifier.",
+            "type": "string"
+          },
+          "call_type": {
+            "description": "Filter inbound or outbound calls.",
+            "enum": [
+              "inbound",
+              "outbound"
+            ],
+            "type": "string"
+          },
+          "from": {
+            "description": "Inclusive created_at start (UTC ISO 8601). Must be sent with to.",
+            "type": "string"
           },
           "page_number": {
-            "type": "integer",
-            "description": "Page number starting at 1.",
-            "minimum": 1
+            "maximum": 9999,
+            "minimum": 1,
+            "type": "integer"
           },
           "page_size": {
-            "type": "integer",
-            "description": "Results per page.",
+            "maximum": 50,
             "minimum": 1,
-            "maximum": 1000
+            "type": "integer"
+          },
+          "provider": {
+            "description": "Filter by conversation provider.",
+            "enum": [
+              "plivo",
+              "twilio",
+              "websocket",
+              "web-call"
+            ],
+            "type": "string"
+          },
+          "status": {
+            "description": "Filter executions by call status.",
+            "enum": [
+              "scheduled",
+              "queued",
+              "rescheduled",
+              "ringing",
+              "initiated",
+              "in-progress",
+              "call-disconnected",
+              "completed",
+              "balance-low",
+              "busy",
+              "no-answer",
+              "canceled",
+              "failed",
+              "stopped",
+              "error"
+            ],
+            "type": "string"
+          },
+          "to": {
+            "description": "Inclusive created_at end (UTC ISO 8601). Must be sent with from.",
+            "type": "string"
           }
-        }
-      },
-      "outputSchema": {
-        "type": "object",
+        },
         "required": [
-          "data"
+          "agent_id"
         ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "GET",
-        "path": "/v2/batches/{{batch_id}}/executions",
-        "success": [
-          200
-        ],
-        "query": {
-          "page_number": "{{page_number}}",
-          "page_size": "{{page_size}}"
-        }
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "phone_numbers.list": {
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "kind": "action",
-      "sideEffect": "read",
-      "title": "List phone numbers",
-      "description": "List Bolna phone numbers on the authenticated account.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {},
-        "additionalProperties": false
-      },
-      "outputSchema": {
-        "type": "object",
         "required": [
           "data"
         ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/agent/{{agent_id}}/executions",
+        "query": {
+          "answered_by_voice_mail": "{{answered_by_voice_mail}}",
+          "batch_id": "{{batch_id}}",
+          "call_type": "{{call_type}}",
+          "from": "{{from}}",
+          "page_number": "{{page_number}}",
+          "page_size": "{{page_size}}",
+          "provider": "{{provider}}",
+          "status": "{{status}}",
+          "to": "{{to}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List executions",
+      "validationMode": "strict-generated"
+    },
+    "healthcheck": {
+      "description": "Validate the Bolna API key by reading the current user.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {},
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/user/me",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 5000,
+      "title": "Healthcheck",
+      "validationMode": "strict-generated"
+    },
+    "inbound.setup": {
+      "description": "Associate a Bolna Voice AI agent with a phone number to handle inbound calls.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "agent_id": {
+            "description": "Agent UUID that handles inbound calls. Telephony provider must be Twilio for default routing.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "allow_multiple": {
+            "description": "Allow this Plivo number to be linked to multiple mappings.",
+            "type": "boolean"
+          },
+          "ivr_config": {
+            "additionalProperties": true,
+            "description": "Optional IVR configuration for Plivo phone numbers.",
+            "type": "object"
+          },
+          "phone_number_id": {
+            "description": "Telephone number UUID from the phone number list API.",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "agent_id",
+          "phone_number_id"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "body": {
+          "agent_id": "{{agent_id}}",
+          "allow_multiple": "{{allow_multiple}}",
+          "ivr_config": "{{ivr_config}}",
+          "phone_number_id": "{{phone_number_id}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "method": "POST",
+        "path": "/inbound/setup",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Setup inbound call",
+      "validationMode": "strict-generated"
+    },
+    "knowledgebases.create": {
+      "description": "Create a knowledgebase from a PDF upload or a URL. Provide file or url, not both.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "chunk_size": {
+            "description": "Size of text chunks for vector embeddings.",
+            "maximum": 10000,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "contentBase64": {
+            "description": "Base64-encoded PDF contents.",
+            "type": "string"
+          },
+          "contentType": {
+            "description": "MIME type of the uploaded file. Defaults to application/pdf.",
+            "type": "string"
+          },
+          "fileName": {
+            "description": "PDF file name when uploading a document.",
+            "type": "string"
+          },
+          "is_api_request": {
+            "description": "Flag indicating this is an API request.",
+            "type": "boolean"
+          },
+          "language_support": {
+            "description": "Enable multilingual retrieval across 100+ languages.",
+            "enum": [
+              "multilingual"
+            ],
+            "type": "string"
+          },
+          "overlapping": {
+            "description": "Characters to overlap between consecutive chunks.",
+            "maximum": 5000,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "similarity_top_k": {
+            "description": "Number of similar chunks to retrieve.",
+            "maximum": 100,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "sub_account_id": {
+            "description": "Optional sub-account identifier for multi-tenant scoping.",
+            "type": "string"
+          },
+          "url": {
+            "description": "URL to ingest as the knowledgebase source.",
+            "type": "string"
+          },
+          "user_id": {
+            "description": "Optional user identifier for multi-tenant scoping.",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 8388608,
+      "maxResponseBytes": 8388608,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 60000,
+      "title": "Create knowledgebase",
+      "validationMode": "strict-generated"
+    },
+    "knowledgebases.delete": {
+      "description": "Permanently delete a knowledgebase from the Bolna account.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "is_api_request": {
+            "description": "Flag indicating this is an API request (string boolean).",
+            "type": "string"
+          },
+          "rag_id": {
+            "description": "UUID of the knowledgebase to delete.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "sub_account_id": {
+            "description": "Optional sub-account identifier for multi-tenant scoping.",
+            "type": "string"
+          },
+          "user_id": {
+            "description": "Optional user identifier for multi-tenant scoping.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "rag_id"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/knowledgebase/{{rag_id}}",
+        "query": {
+          "is_api_request": "{{is_api_request}}",
+          "sub_account_id": "{{sub_account_id}}",
+          "user_id": "{{user_id}}"
+        },
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "title": "Delete knowledgebase",
+      "validationMode": "strict-generated"
+    },
+    "knowledgebases.get": {
+      "description": "Retrieve a knowledgebase by ID, including processing status and embedding parameters.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "is_api_request": {
+            "description": "Flag indicating this is an API request.",
+            "type": "boolean"
+          },
+          "rag_id": {
+            "description": "UUID of the knowledgebase to retrieve.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "sub_account_id": {
+            "description": "Optional sub-account identifier for multi-tenant scoping.",
+            "type": "string"
+          },
+          "user_id": {
+            "description": "Optional user identifier for multi-tenant scoping.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "rag_id"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/knowledgebase/{{rag_id}}",
+        "query": {
+          "is_api_request": "{{is_api_request}}",
+          "sub_account_id": "{{sub_account_id}}",
+          "user_id": "{{user_id}}"
+        },
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get knowledgebase",
+      "validationMode": "strict-generated"
+    },
+    "knowledgebases.list": {
+      "description": "List knowledgebases, optionally filtered by processing status.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "is_api_request": {
+            "description": "Flag indicating this is an API request (string boolean).",
+            "type": "string"
+          },
+          "page_number": {
+            "description": "1-based page number.",
+            "maximum": 9999,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "page_size": {
+            "description": "Number of knowledgebases to return per page.",
+            "maximum": 1000,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "status": {
+            "description": "Status of a knowledgebase.",
+            "enum": [
+              "processing",
+              "processed"
+            ],
+            "type": "string"
+          },
+          "sub_account_id": {
+            "description": "Optional sub-account identifier for multi-tenant scoping.",
+            "type": "string"
+          },
+          "user_id": {
+            "description": "Optional user identifier for multi-tenant scoping.",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
         "properties": {
           "data": {
             "type": "array"
           }
         },
-        "additionalProperties": false
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/knowledgebase/all",
+        "query": {
+          "is_api_request": "{{is_api_request}}",
+          "page_number": "{{page_number}}",
+          "page_size": "{{page_size}}",
+          "status": "{{status}}",
+          "sub_account_id": "{{sub_account_id}}",
+          "user_id": "{{user_id}}"
+        },
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List knowledgebases",
+      "validationMode": "strict-generated"
+    },
+    "phone_numbers.list": {
+      "description": "List phone numbers on the Bolna account, including provider, agent, and rental status.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {},
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "array"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
       },
       "request": {
         "method": "GET",
         "path": "/phone-numbers/all",
         "success": [
-          200
+          200,
+          201,
+          202,
+          204
         ]
       },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List phone numbers",
+      "validationMode": "strict-generated"
     },
     "phone_numbers.search": {
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "kind": "action",
-      "sideEffect": "read",
-      "title": "Search phone numbers",
-      "description": "Search available Bolna phone numbers by optional country code.",
+      "description": "Search available phone numbers that can be purchased, filtered by country or prefix.",
+      "enforceOutputSchema": true,
       "inputSchema": {
-        "type": "object",
         "additionalProperties": false,
         "properties": {
           "country": {
-            "type": "string",
-            "minLength": 1,
-            "description": "ISO country code such as US or IN."
+            "description": "Country code for the phone number search.",
+            "enum": [
+              "US",
+              "IN"
+            ],
+            "type": "string"
+          },
+          "pattern": {
+            "description": "Optional 3-character prefix used to filter numbers.",
+            "type": "string"
+          },
+          "provider": {
+            "description": "Optional telephony provider filter.",
+            "enum": [
+              "twilio",
+              "plivo",
+              "vobiz"
+            ],
+            "type": "string"
           }
-        }
+        },
+        "required": [
+          "country"
+        ],
+        "type": "object"
       },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
       "outputSchema": {
-        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "array"
+          }
+        },
         "required": [
           "data"
         ],
-        "properties": {
-          "data": {
-            "type": [
-              "object",
-              "array"
-            ]
-          }
-        },
-        "additionalProperties": false
+        "type": "object"
       },
       "request": {
         "method": "GET",
         "path": "/phone-numbers/search",
-        "success": [
-          200
-        ],
         "query": {
-          "country": "{{country}}"
-        }
+          "country": "{{country}}",
+          "pattern": "{{pattern}}",
+          "provider": "{{provider}}"
+        },
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ]
       },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Search phone numbers",
+      "validationMode": "strict-generated"
+    },
+    "providers.add": {
+      "description": "Add a telephony or voice service provider API key to the Bolna account.",
       "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "is_api_request": {
+            "description": "Flag indicating this is an API request.",
+            "type": "boolean"
+          },
+          "provider_name": {
+            "description": "Provider name or key, e.g. twilio, deepgram, elevenlabs, OPENAI_API_KEY.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "provider_value": {
+            "description": "API key or authentication value for the provider.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "sub_account_id": {
+            "description": "Optional sub-account identifier for multi-tenant scoping.",
+            "type": "string"
+          },
+          "user_id": {
+            "description": "Optional user identifier for multi-tenant scoping.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "provider_name",
+          "provider_value"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "body": {
+          "provider_name": "{{provider_name}}",
+          "provider_value": "{{provider_value}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "method": "POST",
+        "path": "/providers",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Add provider",
+      "validationMode": "strict-generated"
+    },
+    "providers.list": {
+      "description": "List configured Bolna providers with masked secrets and creation timestamps.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {},
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "array"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/providers",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List providers",
+      "validationMode": "strict-generated"
+    },
+    "providers.remove": {
+      "description": "Remove a provider from the Bolna account by its key name.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "is_api_request": {
+            "description": "Flag indicating this is an API request.",
+            "type": "boolean"
+          },
+          "provider_key_name": {
+            "description": "Unique key name of the provider to remove, e.g. TEST_PROVIDER.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "sub_account_id": {
+            "description": "Optional sub-account identifier for multi-tenant scoping.",
+            "type": "string"
+          },
+          "user_id": {
+            "description": "Optional user identifier for multi-tenant scoping.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "provider_key_name"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/providers/{{provider_key_name}}",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "title": "Remove provider",
+      "validationMode": "strict-generated"
+    },
+    "users.me": {
+      "description": "Retrieve the authenticated Bolna user, wallet balance, and concurrency limits.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "is_api_request": {
+            "description": "Flag to indicate if this is an API request.",
+            "type": "boolean"
+          },
+          "user_id": {
+            "description": "Optional user ID to fetch information for a specific user.",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/user/me",
+        "query": {
+          "is_api_request": "{{is_api_request}}",
+          "user_id": "{{user_id}}"
+        },
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get user information",
+      "validationMode": "strict-generated"
+    },
+    "voices.list": {
+      "description": "List available TTS voices for a provider and model. provider_id and model_id come from GET /api/v1/voice-config/tts.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "is_api_request": {
+            "description": "Flag indicating this is an API request (string boolean).",
+            "type": "string"
+          },
+          "language": {
+            "description": "Optional BCP-47 language code to filter voices.",
+            "type": "string"
+          },
+          "model_id": {
+            "description": "Model UUID from GET /api/v1/voice-config/tts.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "page": {
+            "description": "1-indexed page number.",
+            "maximum": 9999,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "page_size": {
+            "description": "Voices per page, capped at 100.",
+            "maximum": 100,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "provider_id": {
+            "description": "Provider UUID from GET /api/v1/voice-config/tts.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "sub_account_id": {
+            "description": "Optional sub-account identifier for multi-tenant scoping.",
+            "type": "string"
+          },
+          "user_id": {
+            "description": "Optional user identifier for multi-tenant scoping.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "provider_id",
+          "model_id"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/voice-config/tts/voices",
+        "query": {
+          "is_api_request": "{{is_api_request}}",
+          "language": "{{language}}",
+          "model_id": "{{model_id}}",
+          "page": "{{page}}",
+          "page_size": "{{page_size}}",
+          "provider_id": "{{provider_id}}",
+          "user_id": "{{user_id}}"
+        },
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List voices",
+      "validationMode": "strict-generated"
     }
   },
   "provenance": {
     "source": {
-      "url": "https://github.com/oomol-lab/open-connector",
-      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
+      "url": "https://github.com/oomol-lab/open-connector"
     }
   },
-  "evidence": {
-    "fixture": {
-      "status": "supplied"
-    },
-    "live": {
-      "status": "unverified"
-    }
-  }
+  "runtime": "bun",
+  "version": "0.2.0",
+  "visibility": "public"
 }

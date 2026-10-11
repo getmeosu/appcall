@@ -2,6 +2,7 @@ import { createConnectorHttpClient } from "../../../bun/src/http";
 import manifest from "../manifest.json";
 
 const RESTLI_PROTOCOL_VERSION = "2.0.0";
+export const LINKEDIN_VERSION = "202608";
 
 export type LinkedInAdsRateLimitResult =
   | { limited: true; retryAfterSeconds: number }
@@ -52,17 +53,21 @@ export function createLinkedInAdsClient(options: LinkedInAdsClientOptions) {
   return {
     async fetchJSON(path: string, init: RequestInit = {}): Promise<{ status: number; headers: Record<string, string>; body: unknown }> {
       const url = path.startsWith("http") ? path : `https://api.linkedin.com${path}`;
-      const response = await httpClient.fetchText(url, {
-        ...init,
-        headers: {
-          Authorization: `Bearer ${options.accessToken}`,
-          "X-Restli-Protocol-Version": RESTLI_PROTOCOL_VERSION,
-          "Content-Type": "application/json",
-          ...(init.headers as Record<string, string>),
-        },
-      });
+      const headers: Record<string, string> = {
+        Authorization: `Bearer ${options.accessToken}`,
+        "X-Restli-Protocol-Version": RESTLI_PROTOCOL_VERSION,
+        "LinkedIn-Version": LINKEDIN_VERSION,
+      };
+      if (init.body != null && init.body !== "") headers["Content-Type"] = "application/json";
+      const extra = init.headers;
+      if (extra && typeof extra === "object" && !Array.isArray(extra)) {
+        for (const [key, value] of Object.entries(extra as Record<string, string>)) {
+          if (value != null) headers[key] = String(value);
+        }
+      }
+      const response = await httpClient.fetchText(url, { ...init, headers });
       let body: unknown;
-      try { body = JSON.parse(response.body); } catch { body = response.body; }
+      try { body = response.body === "" ? null : JSON.parse(response.body); } catch { body = response.body; }
       return { status: response.status, headers: response.headers, body };
     },
   };

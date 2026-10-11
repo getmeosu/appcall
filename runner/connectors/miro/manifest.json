@@ -1,7 +1,7 @@
 {
   "key": "miro",
   "name": "Miro",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "runtime": "bun",
   "visibility": "public",
   "provenance": {
@@ -381,7 +381,7 @@
       "sideEffect": "write",
       "enforceOutputSchema": true,
       "title": "Create Board",
-      "description": "Create a Miro board via POST /v2/boards. Name is required.",
+      "description": "Create a Miro board via POST /v2/boards. Covers MIRO_CREATE_BOARD.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -394,6 +394,20 @@
             "type": "string",
             "minLength": 1,
             "description": "Board description."
+          },
+          "teamId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Team where the board will be created."
+          },
+          "projectId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Project or space for the board."
+          },
+          "policy": {
+            "type": "object",
+            "description": "Sharing and permissions policy object."
           }
         },
         "required": [
@@ -419,7 +433,10 @@
         ],
         "body": {
           "name": "{{name}}",
-          "description": "{{description}}"
+          "description": "{{description}}",
+          "teamId": "{{teamId}}",
+          "projectId": "{{projectId}}",
+          "policy": "{{policy}}"
         },
         "result": {
           "board": "{{response}}"
@@ -434,7 +451,7 @@
       "sideEffect": "write",
       "enforceOutputSchema": true,
       "title": "Update Board",
-      "description": "Update a Miro board via PATCH /v2/boards/{boardId}.",
+      "description": "Update a board via PATCH /v2/boards/{boardId}. Covers MIRO_UPDATE_BOARD.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -452,6 +469,20 @@
             "type": "string",
             "minLength": 1,
             "description": "Updated board description."
+          },
+          "teamId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Team to move the board into."
+          },
+          "projectId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Project or space to move the board into."
+          },
+          "policy": {
+            "type": "object",
+            "description": "Updated sharing and permissions policy."
           }
         },
         "required": [
@@ -477,7 +508,10 @@
         ],
         "body": {
           "name": "{{name}}",
-          "description": "{{description}}"
+          "description": "{{description}}",
+          "teamId": "{{teamId}}",
+          "projectId": "{{projectId}}",
+          "policy": "{{policy}}"
         },
         "result": {
           "board": "{{response}}"
@@ -789,7 +823,7 @@
       "sideEffect": "read",
       "enforceOutputSchema": true,
       "title": "List Board Members",
-      "description": "List members of a Miro board via GET /v2/boards/{boardId}/members.",
+      "description": "List members of a Miro board via GET /v2/boards/{boardId}/members. Covers MIRO_GET_BOARD_MEMBERS.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -808,6 +842,11 @@
             "type": "integer",
             "minimum": 0,
             "description": "Zero-based offset."
+          },
+          "cursor": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Composio pagination cursor."
           }
         },
         "required": [
@@ -837,7 +876,8 @@
         "path": "/boards/{{boardId}}/members",
         "query": {
           "limit": "{{limit}}",
-          "offset": "{{offset}}"
+          "offset": "{{offset}}",
+          "cursor": "{{cursor}}"
         },
         "success": [
           200
@@ -1094,12 +1134,4786 @@
           "tag": "{{response}}"
         }
       }
+    },
+    "boards.share": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "enforceOutputSchema": true,
+      "title": "Share Board",
+      "description": "Invite up to 20 users by email via POST /v2/boards/{boardId}/members. Covers MIRO_SHARE_BOARD.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "boardId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique identifier of the Miro board."
+          },
+          "board_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Composio alias of boardId."
+          },
+          "emails": {
+            "type": "array",
+            "description": "Email addresses to invite, max 20.",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "role": {
+            "type": "string",
+            "description": "Role for the invited members.",
+            "enum": [
+              "viewer",
+              "commenter",
+              "editor",
+              "coowner",
+              "owner"
+            ]
+          },
+          "message": {
+            "type": "string",
+            "description": "Optional invitation message."
+          }
+        },
+        "required": [
+          "boardId",
+          "emails"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "members": {}
+        },
+        "required": [
+          "members"
+        ]
+      },
+      "request": {
+        "method": "POST",
+        "path": "/boards/{{boardId}}/members",
+        "body": {
+          "emails": "{{emails}}",
+          "role": "{{role}}",
+          "message": "{{message}}"
+        },
+        "success": [
+          201
+        ],
+        "result": {
+          "members": "{{response}}"
+        }
+      }
+    },
+    "members.update": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "enforceOutputSchema": true,
+      "title": "Update Board Member",
+      "description": "Update a board member role via PATCH /v2/boards/{boardId}/members/{memberId}. Covers MIRO_UPDATE_BOARD_MEMBER.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "boardId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique identifier of the Miro board."
+          },
+          "board_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Composio alias of boardId."
+          },
+          "memberId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique identifier of the board member."
+          },
+          "board_member_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Composio alias of memberId."
+          },
+          "role": {
+            "type": "string",
+            "description": "Updated member role.",
+            "enum": [
+              "viewer",
+              "commenter",
+              "editor",
+              "coowner",
+              "owner"
+            ]
+          }
+        },
+        "required": [
+          "boardId",
+          "memberId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "member": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "member"
+        ]
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/boards/{{boardId}}/members/{{memberId}}",
+        "body": {
+          "role": "{{role}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "member": "{{response}}"
+        }
+      }
+    },
+    "items.create_bulk": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "write",
+      "enforceOutputSchema": true,
+      "title": "Create Items in Bulk",
+      "description": "Create 1-20 items via POST /v2/boards/{boardId}/items/bulk. Body is a JSON array. Covers MIRO_CREATE_ITEMS_IN_BULK.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "boardId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique identifier of the Miro board."
+          },
+          "board_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Composio alias of boardId."
+          },
+          "items": {
+            "type": "array",
+            "description": "Items to create, 1-20 entries.",
+            "items": {
+              "type": "object"
+            }
+          }
+        },
+        "required": [
+          "boardId",
+          "items"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "data": {}
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "request": {
+        "method": "POST",
+        "path": "/boards/{{boardId}}/items/bulk",
+        "body": "{{items}}",
+        "success": [
+          201
+        ],
+        "result": {
+          "items": "{{response.data}}",
+          "data": "{{response}}"
+        }
+      }
+    },
+    "items.list_within_frame": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "enforceOutputSchema": true,
+      "title": "List Items Within Frame",
+      "description": "List child items of a frame via GET /v2/boards/{boardId}/items?parent_item_id=. Covers MIRO_GET_ITEMS_WITHIN_FRAME.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "boardId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique identifier of the Miro board."
+          },
+          "board_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Composio alias of boardId."
+          },
+          "parentItemId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Frame (parent item) ID whose children should be listed."
+          },
+          "parent_item_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Composio alias of parentItemId."
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Page size.",
+            "minimum": 1,
+            "maximum": 50
+          },
+          "cursor": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Cursor from a previous page."
+          },
+          "type": {
+            "type": "string",
+            "description": "Optional item type filter.",
+            "enum": [
+              "ai_generation_result",
+              "app_card",
+              "card",
+              "data_table_format",
+              "diagram",
+              "doc_format",
+              "document",
+              "embed",
+              "frame",
+              "image",
+              "mindmap_node",
+              "preview",
+              "shape",
+              "sticky_note",
+              "text"
+            ]
+          }
+        },
+        "required": [
+          "boardId",
+          "parentItemId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "pagination": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "items",
+          "pagination"
+        ]
+      },
+      "request": {
+        "method": "GET",
+        "path": "/boards/{{boardId}}/items",
+        "query": {
+          "parent_item_id": "{{parentItemId}}",
+          "limit": "{{limit}}",
+          "cursor": "{{cursor}}",
+          "type": "{{type}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "items": "{{response.data}}",
+          "pagination": {
+            "cursor": "{{response.cursor}}"
+          }
+        }
+      }
+    },
+    "items.update_position": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "enforceOutputSchema": true,
+      "title": "Update Item Position or Parent",
+      "description": "Move an item or reparent it via PATCH /v2/boards/{boardId}/items/{itemId}. Covers MIRO_UPDATE_ITEM_POSITION_OR_PARENT.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "boardId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique identifier of the Miro board."
+          },
+          "board_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Composio alias of boardId."
+          },
+          "itemId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique identifier of the board item."
+          },
+          "item_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Composio alias of itemId."
+          },
+          "parent": {
+            "type": "object",
+            "description": "Parent frame reference."
+          },
+          "position": {
+            "type": "object",
+            "description": "Updated board position."
+          }
+        },
+        "required": [
+          "boardId",
+          "itemId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "item": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "item"
+        ]
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/boards/{{boardId}}/items/{{itemId}}",
+        "body": {
+          "parent": "{{parent}}",
+          "position": "{{position}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "item": "{{response}}"
+        }
+      }
+    },
+    "appCards.create": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "enforceOutputSchema": true,
+      "title": "Create App Card Item",
+      "description": "Create a app card via POST /v2/boards/{boardId}/app_cards. Covers MIRO_CREATE_APP_CARD_ITEM.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "boardId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique identifier of the Miro board."
+          },
+          "board_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Composio alias of boardId."
+          },
+          "data": {
+            "type": "object",
+            "description": "Item data payload forwarded to Miro."
+          },
+          "style": {
+            "type": "object",
+            "description": "Item style payload forwarded to Miro."
+          },
+          "parent": {
+            "type": "object",
+            "description": "Parent frame reference, typically {id}."
+          },
+          "geometry": {
+            "type": "object",
+            "description": "Width, height, and rotation."
+          },
+          "position": {
+            "type": "object",
+            "description": "Board position, typically {x, y, origin}."
+          }
+        },
+        "required": [
+          "boardId",
+          "data"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "item": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "item"
+        ]
+      },
+      "request": {
+        "method": "POST",
+        "path": "/boards/{{boardId}}/app_cards",
+        "body": {
+          "data": "{{data}}",
+          "style": "{{style}}",
+          "parent": "{{parent}}",
+          "geometry": "{{geometry}}",
+          "position": "{{position}}"
+        },
+        "success": [
+          201
+        ],
+        "result": {
+          "item": "{{response}}"
+        }
+      }
+    },
+    "appCards.get": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "enforceOutputSchema": true,
+      "title": "Get App Card Item",
+      "description": "Get a app card via GET /v2/boards/{boardId}/app_cards/{itemId}. Covers MIRO_GET_APP_CARD_ITEM2.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "boardId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique identifier of the Miro board."
+          },
+          "board_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Composio alias of boardId."
+          },
+          "itemId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique identifier of the board item."
+          },
+          "item_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Composio alias of itemId."
+          }
+        },
+        "required": [
+          "boardId",
+          "itemId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "item": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "item"
+        ]
+      },
+      "request": {
+        "method": "GET",
+        "path": "/boards/{{boardId}}/app_cards/{{itemId}}",
+        "success": [
+          200
+        ],
+        "result": {
+          "item": "{{response}}"
+        }
+      }
+    },
+    "appCards.update": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "enforceOutputSchema": true,
+      "title": "Update App Card Item",
+      "description": "Update a app card via PATCH /v2/boards/{boardId}/app_cards/{itemId}. Covers MIRO_UPDATE_APP_CARD_ITEM2.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "boardId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique identifier of the Miro board."
+          },
+          "board_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Composio alias of boardId."
+          },
+          "itemId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique identifier of the board item."
+          },
+          "item_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Composio alias of itemId."
+          },
+          "data": {
+            "type": "object",
+            "description": "Item data payload forwarded to Miro."
+          },
+          "style": {
+            "type": "object",
+            "description": "Item style payload forwarded to Miro."
+          },
+          "parent": {
+            "type": "object",
+            "description": "Parent frame reference, typically {id}."
+          },
+          "geometry": {
+            "type": "object",
+            "description": "Width, height, and rotation."
+          },
+          "position": {
+            "type": "object",
+            "description": "Board position, typically {x, y, origin}."
+          }
+        },
+        "required": [
+          "boardId",
+          "itemId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "item": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "item"
+        ]
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/boards/{{boardId}}/app_cards/{{itemId}}",
+        "body": {
+          "data": "{{data}}",
+          "style": "{{style}}",
+          "parent": "{{parent}}",
+          "geometry": "{{geometry}}",
+          "position": "{{position}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "item": "{{response}}"
+        }
+      }
+    },
+    "appCards.delete": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "destructive",
+      "enforceOutputSchema": true,
+      "title": "Delete App Card Item",
+      "description": "Delete a app card via DELETE /v2/boards/{boardId}/app_cards/{itemId}. Covers MIRO_DELETE_APP_CARD_ITEM.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "boardId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique identifier of the Miro board."
+          },
+          "board_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Composio alias of boardId."
+          },
+          "itemId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique identifier of the board item."
+          },
+          "item_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Composio alias of itemId."
+          }
+        },
+        "required": [
+          "boardId",
+          "itemId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/boards/{{boardId}}/app_cards/{{itemId}}",
+        "success": [
+          204
+        ],
+        "result": {
+          "status": "ok"
+        }
+      }
+    },
+    "cards.create": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "enforceOutputSchema": true,
+      "title": "Create Card Item",
+      "description": "Create a card via POST /v2/boards/{boardId}/cards. Covers MIRO_CREATE_CARD_ITEM.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "boardId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique identifier of the Miro board."
+          },
+          "board_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Composio alias of boardId."
+          },
+          "data": {
+            "type": "object",
+            "description": "Item data payload forwarded to Miro."
+          },
+          "style": {
+            "type": "object",
+            "description": "Item style payload forwarded to Miro."
+          },
+          "parent": {
+            "type": "object",
+            "description": "Parent frame reference, typically {id}."
+          },
+          "geometry": {
+            "type": "object",
+            "description": "Width, height, and rotation."
+          },
+          "position": {
+            "type": "object",
+            "description": "Board position, typically {x, y, origin}."
+          }
+        },
+        "required": [
+          "boardId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "item": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "item"
+        ]
+      },
+      "request": {
+        "method": "POST",
+        "path": "/boards/{{boardId}}/cards",
+        "body": {
+          "data": "{{data}}",
+          "style": "{{style}}",
+          "parent": "{{parent}}",
+          "geometry": "{{geometry}}",
+          "position": "{{position}}"
+        },
+        "success": [
+          201
+        ],
+        "result": {
+          "item": "{{response}}"
+        }
+      }
+    },
+    "cards.get": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "enforceOutputSchema": true,
+      "title": "Get Card Item",
+      "description": "Get a card via GET /v2/boards/{boardId}/cards/{itemId}. Covers MIRO_GET_CARD_ITEM.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "boardId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique identifier of the Miro board."
+          },
+          "board_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Composio alias of boardId."
+          },
+          "itemId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique identifier of the board item."
+          },
+          "item_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Composio alias of itemId."
+          }
+        },
+        "required": [
+          "boardId",
+          "itemId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "item": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "item"
+        ]
+      },
+      "request": {
+        "method": "GET",
+        "path": "/boards/{{boardId}}/cards/{{itemId}}",
+        "success": [
+          200
+        ],
+        "result": {
+          "item": "{{response}}"
+        }
+      }
+    },
+    "cards.update": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "enforceOutputSchema": true,
+      "title": "Update Card Item",
+      "description": "Update a card via PATCH /v2/boards/{boardId}/cards/{itemId}. Covers MIRO_UPDATE_CARD_ITEM.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "boardId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique identifier of the Miro board."
+          },
+          "board_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Composio alias of boardId."
+          },
+          "itemId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique identifier of the board item."
+          },
+          "item_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Composio alias of itemId."
+          },
+          "data": {
+            "type": "object",
+            "description": "Item data payload forwarded to Miro."
+          },
+          "style": {
+            "type": "object",
+            "description": "Item style payload forwarded to Miro."
+          },
+          "parent": {
+            "type": "object",
+            "description": "Parent frame reference, typically {id}."
+          },
+          "geometry": {
+            "type": "object",
+            "description": "Width, height, and rotation."
+          },
+          "position": {
+            "type": "object",
+            "description": "Board position, typically {x, y, origin}."
+          }
+        },
+        "required": [
+          "boardId",
+          "itemId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "item": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "item"
+        ]
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/boards/{{boardId}}/cards/{{itemId}}",
+        "body": {
+          "data": "{{data}}",
+          "style": "{{style}}",
+          "parent": "{{parent}}",
+          "geometry": "{{geometry}}",
+          "position": "{{position}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "item": "{{response}}"
+        }
+      }
+    },
+    "cards.delete": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "destructive",
+      "enforceOutputSchema": true,
+      "title": "Delete Card Item",
+      "description": "Delete a card via DELETE /v2/boards/{boardId}/cards/{itemId}. Covers MIRO_DELETE_CARD_ITEM.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "boardId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique identifier of the Miro board."
+          },
+          "board_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Composio alias of boardId."
+          },
+          "itemId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique identifier of the board item."
+          },
+          "item_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Composio alias of itemId."
+          }
+        },
+        "required": [
+          "boardId",
+          "itemId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/boards/{{boardId}}/cards/{{itemId}}",
+        "success": [
+          204
+        ],
+        "result": {
+          "status": "ok"
+        }
+      }
+    },
+    "embeds.create": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "enforceOutputSchema": true,
+      "title": "Create Embed Item",
+      "description": "Create a embed via POST /v2/boards/{boardId}/embeds. Covers MIRO_CREATE_EMBED_ITEM.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "boardId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique identifier of the Miro board."
+          },
+          "board_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Composio alias of boardId."
+          },
+          "data": {
+            "type": "object",
+            "description": "Item data payload forwarded to Miro."
+          },
+          "style": {
+            "type": "object",
+            "description": "Item style payload forwarded to Miro."
+          },
+          "parent": {
+            "type": "object",
+            "description": "Parent frame reference, typically {id}."
+          },
+          "geometry": {
+            "type": "object",
+            "description": "Width, height, and rotation."
+          },
+          "position": {
+            "type": "object",
+            "description": "Board position, typically {x, y, origin}."
+          }
+        },
+        "required": [
+          "boardId",
+          "data"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "item": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "item"
+        ]
+      },
+      "request": {
+        "method": "POST",
+        "path": "/boards/{{boardId}}/embeds",
+        "body": {
+          "data": "{{data}}",
+          "style": "{{style}}",
+          "parent": "{{parent}}",
+          "geometry": "{{geometry}}",
+          "position": "{{position}}"
+        },
+        "success": [
+          201
+        ],
+        "result": {
+          "item": "{{response}}"
+        }
+      }
+    },
+    "embeds.get": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "enforceOutputSchema": true,
+      "title": "Get Embed Item",
+      "description": "Get a embed via GET /v2/boards/{boardId}/embeds/{itemId}. Covers MIRO_GET_EMBED_ITEM.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "boardId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique identifier of the Miro board."
+          },
+          "board_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Composio alias of boardId."
+          },
+          "itemId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique identifier of the board item."
+          },
+          "item_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Composio alias of itemId."
+          }
+        },
+        "required": [
+          "boardId",
+          "itemId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "item": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "item"
+        ]
+      },
+      "request": {
+        "method": "GET",
+        "path": "/boards/{{boardId}}/embeds/{{itemId}}",
+        "success": [
+          200
+        ],
+        "result": {
+          "item": "{{response}}"
+        }
+      }
+    },
+    "embeds.update": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "enforceOutputSchema": true,
+      "title": "Update Embed Item",
+      "description": "Update a embed via PATCH /v2/boards/{boardId}/embeds/{itemId}. Covers MIRO_UPDATE_EMBED_ITEM.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "boardId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique identifier of the Miro board."
+          },
+          "board_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Composio alias of boardId."
+          },
+          "itemId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique identifier of the board item."
+          },
+          "item_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Composio alias of itemId."
+          },
+          "data": {
+            "type": "object",
+            "description": "Item data payload forwarded to Miro."
+          },
+          "style": {
+            "type": "object",
+            "description": "Item style payload forwarded to Miro."
+          },
+          "parent": {
+            "type": "object",
+            "description": "Parent frame reference, typically {id}."
+          },
+          "geometry": {
+            "type": "object",
+            "description": "Width, height, and rotation."
+          },
+          "position": {
+            "type": "object",
+            "description": "Board position, typically {x, y, origin}."
+          }
+        },
+        "required": [
+          "boardId",
+          "itemId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "item": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "item"
+        ]
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/boards/{{boardId}}/embeds/{{itemId}}",
+        "body": {
+          "data": "{{data}}",
+          "style": "{{style}}",
+          "parent": "{{parent}}",
+          "geometry": "{{geometry}}",
+          "position": "{{position}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "item": "{{response}}"
+        }
+      }
+    },
+    "embeds.delete": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "destructive",
+      "enforceOutputSchema": true,
+      "title": "Delete Embed Item",
+      "description": "Delete a embed via DELETE /v2/boards/{boardId}/embeds/{itemId}. Covers MIRO_DELETE_EMBED_ITEM.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "boardId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique identifier of the Miro board."
+          },
+          "board_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Composio alias of boardId."
+          },
+          "itemId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique identifier of the board item."
+          },
+          "item_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Composio alias of itemId."
+          }
+        },
+        "required": [
+          "boardId",
+          "itemId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/boards/{{boardId}}/embeds/{{itemId}}",
+        "success": [
+          204
+        ],
+        "result": {
+          "status": "ok"
+        }
+      }
+    },
+    "frames.create": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "enforceOutputSchema": true,
+      "title": "Create Frame Item",
+      "description": "Create a frame via POST /v2/boards/{boardId}/frames. Covers MIRO_CREATE_FRAME_ITEM.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "boardId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique identifier of the Miro board."
+          },
+          "board_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Composio alias of boardId."
+          },
+          "data": {
+            "type": "object",
+            "description": "Item data payload forwarded to Miro."
+          },
+          "style": {
+            "type": "object",
+            "description": "Item style payload forwarded to Miro."
+          },
+          "parent": {
+            "type": "object",
+            "description": "Parent frame reference, typically {id}."
+          },
+          "geometry": {
+            "type": "object",
+            "description": "Width, height, and rotation."
+          },
+          "position": {
+            "type": "object",
+            "description": "Board position, typically {x, y, origin}."
+          }
+        },
+        "required": [
+          "boardId",
+          "data"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "item": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "item"
+        ]
+      },
+      "request": {
+        "method": "POST",
+        "path": "/boards/{{boardId}}/frames",
+        "body": {
+          "data": "{{data}}",
+          "style": "{{style}}",
+          "parent": "{{parent}}",
+          "geometry": "{{geometry}}",
+          "position": "{{position}}"
+        },
+        "success": [
+          201
+        ],
+        "result": {
+          "item": "{{response}}"
+        }
+      }
+    },
+    "frames.get": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "enforceOutputSchema": true,
+      "title": "Get Frame Item",
+      "description": "Get a frame via GET /v2/boards/{boardId}/frames/{itemId}. Covers MIRO_GET_FRAME_ITEM.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "boardId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique identifier of the Miro board."
+          },
+          "board_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Composio alias of boardId."
+          },
+          "itemId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique identifier of the board item."
+          },
+          "item_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Composio alias of itemId."
+          }
+        },
+        "required": [
+          "boardId",
+          "itemId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "item": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "item"
+        ]
+      },
+      "request": {
+        "method": "GET",
+        "path": "/boards/{{boardId}}/frames/{{itemId}}",
+        "success": [
+          200
+        ],
+        "result": {
+          "item": "{{response}}"
+        }
+      }
+    },
+    "frames.update": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "enforceOutputSchema": true,
+      "title": "Update Frame Item",
+      "description": "Update a frame via PATCH /v2/boards/{boardId}/frames/{itemId}. Covers MIRO_UPDATE_FRAME_ITEM.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "boardId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique identifier of the Miro board."
+          },
+          "board_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Composio alias of boardId."
+          },
+          "itemId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique identifier of the board item."
+          },
+          "item_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Composio alias of itemId."
+          },
+          "data": {
+            "type": "object",
+            "description": "Item data payload forwarded to Miro."
+          },
+          "style": {
+            "type": "object",
+            "description": "Item style payload forwarded to Miro."
+          },
+          "parent": {
+            "type": "object",
+            "description": "Parent frame reference, typically {id}."
+          },
+          "geometry": {
+            "type": "object",
+            "description": "Width, height, and rotation."
+          },
+          "position": {
+            "type": "object",
+            "description": "Board position, typically {x, y, origin}."
+          }
+        },
+        "required": [
+          "boardId",
+          "itemId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "item": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "item"
+        ]
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/boards/{{boardId}}/frames/{{itemId}}",
+        "body": {
+          "data": "{{data}}",
+          "style": "{{style}}",
+          "parent": "{{parent}}",
+          "geometry": "{{geometry}}",
+          "position": "{{position}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "item": "{{response}}"
+        }
+      }
+    },
+    "frames.delete": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "destructive",
+      "enforceOutputSchema": true,
+      "title": "Delete Frame Item",
+      "description": "Delete a frame via DELETE /v2/boards/{boardId}/frames/{itemId}. Covers MIRO_DELETE_FRAME_ITEM.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "boardId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique identifier of the Miro board."
+          },
+          "board_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Composio alias of boardId."
+          },
+          "itemId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique identifier of the board item."
+          },
+          "item_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Composio alias of itemId."
+          }
+        },
+        "required": [
+          "boardId",
+          "itemId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/boards/{{boardId}}/frames/{{itemId}}",
+        "success": [
+          204
+        ],
+        "result": {
+          "status": "ok"
+        }
+      }
+    },
+    "shapes.create": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "enforceOutputSchema": true,
+      "title": "Create Shape Item",
+      "description": "Create a shape via POST /v2/boards/{boardId}/shapes. Covers MIRO_CREATE_SHAPE_ITEM2.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "boardId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique identifier of the Miro board."
+          },
+          "board_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Composio alias of boardId."
+          },
+          "data": {
+            "type": "object",
+            "description": "Item data payload forwarded to Miro."
+          },
+          "style": {
+            "type": "object",
+            "description": "Item style payload forwarded to Miro."
+          },
+          "parent": {
+            "type": "object",
+            "description": "Parent frame reference, typically {id}."
+          },
+          "geometry": {
+            "type": "object",
+            "description": "Width, height, and rotation."
+          },
+          "position": {
+            "type": "object",
+            "description": "Board position, typically {x, y, origin}."
+          }
+        },
+        "required": [
+          "boardId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "item": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "item"
+        ]
+      },
+      "request": {
+        "method": "POST",
+        "path": "/boards/{{boardId}}/shapes",
+        "body": {
+          "data": "{{data}}",
+          "style": "{{style}}",
+          "parent": "{{parent}}",
+          "geometry": "{{geometry}}",
+          "position": "{{position}}"
+        },
+        "success": [
+          201
+        ],
+        "result": {
+          "item": "{{response}}"
+        }
+      }
+    },
+    "shapes.get": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "enforceOutputSchema": true,
+      "title": "Get Shape Item",
+      "description": "Get a shape via GET /v2/boards/{boardId}/shapes/{itemId}. Covers MIRO_GET_SHAPE_ITEM.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "boardId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique identifier of the Miro board."
+          },
+          "board_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Composio alias of boardId."
+          },
+          "itemId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique identifier of the board item."
+          },
+          "item_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Composio alias of itemId."
+          }
+        },
+        "required": [
+          "boardId",
+          "itemId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "item": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "item"
+        ]
+      },
+      "request": {
+        "method": "GET",
+        "path": "/boards/{{boardId}}/shapes/{{itemId}}",
+        "success": [
+          200
+        ],
+        "result": {
+          "item": "{{response}}"
+        }
+      }
+    },
+    "shapes.update": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "enforceOutputSchema": true,
+      "title": "Update Shape Item",
+      "description": "Update a shape via PATCH /v2/boards/{boardId}/shapes/{itemId}. Covers MIRO_UPDATE_SHAPE_ITEM.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "boardId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique identifier of the Miro board."
+          },
+          "board_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Composio alias of boardId."
+          },
+          "itemId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique identifier of the board item."
+          },
+          "item_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Composio alias of itemId."
+          },
+          "data": {
+            "type": "object",
+            "description": "Item data payload forwarded to Miro."
+          },
+          "style": {
+            "type": "object",
+            "description": "Item style payload forwarded to Miro."
+          },
+          "parent": {
+            "type": "object",
+            "description": "Parent frame reference, typically {id}."
+          },
+          "geometry": {
+            "type": "object",
+            "description": "Width, height, and rotation."
+          },
+          "position": {
+            "type": "object",
+            "description": "Board position, typically {x, y, origin}."
+          }
+        },
+        "required": [
+          "boardId",
+          "itemId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "item": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "item"
+        ]
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/boards/{{boardId}}/shapes/{{itemId}}",
+        "body": {
+          "data": "{{data}}",
+          "style": "{{style}}",
+          "parent": "{{parent}}",
+          "geometry": "{{geometry}}",
+          "position": "{{position}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "item": "{{response}}"
+        }
+      }
+    },
+    "shapes.delete": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "destructive",
+      "enforceOutputSchema": true,
+      "title": "Delete Shape Item",
+      "description": "Delete a shape via DELETE /v2/boards/{boardId}/shapes/{itemId}. Covers MIRO_DELETE_SHAPE_ITEM.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "boardId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique identifier of the Miro board."
+          },
+          "board_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Composio alias of boardId."
+          },
+          "itemId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique identifier of the board item."
+          },
+          "item_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Composio alias of itemId."
+          }
+        },
+        "required": [
+          "boardId",
+          "itemId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/boards/{{boardId}}/shapes/{{itemId}}",
+        "success": [
+          204
+        ],
+        "result": {
+          "status": "ok"
+        }
+      }
+    },
+    "frames.createDeprecated": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "enforceOutputSchema": true,
+      "title": "Create Frame Item (Deprecated)",
+      "description": "DEPRECATED alias of frames.create. Same POST /v2/boards/{boardId}/frames. Covers MIRO_CREATE_FRAME_ITEM2.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "boardId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique identifier of the Miro board."
+          },
+          "board_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Composio alias of boardId."
+          },
+          "data": {
+            "type": "object",
+            "description": "Item data payload forwarded to Miro."
+          },
+          "style": {
+            "type": "object",
+            "description": "Item style payload forwarded to Miro."
+          },
+          "parent": {
+            "type": "object",
+            "description": "Parent frame reference, typically {id}."
+          },
+          "geometry": {
+            "type": "object",
+            "description": "Width, height, and rotation."
+          },
+          "position": {
+            "type": "object",
+            "description": "Board position, typically {x, y, origin}."
+          }
+        },
+        "required": [
+          "boardId",
+          "data"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "item": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "item"
+        ]
+      },
+      "request": {
+        "method": "POST",
+        "path": "/boards/{{boardId}}/frames",
+        "body": {
+          "data": "{{data}}",
+          "style": "{{style}}",
+          "parent": "{{parent}}",
+          "geometry": "{{geometry}}",
+          "position": "{{position}}"
+        },
+        "success": [
+          201
+        ],
+        "result": {
+          "item": "{{response}}"
+        }
+      }
+    },
+    "shapes.createDeprecated": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "enforceOutputSchema": true,
+      "title": "Create Shape Item (Deprecated)",
+      "description": "DEPRECATED alias of shapes.create. Same POST /v2/boards/{boardId}/shapes. Covers MIRO_CREATE_SHAPE_ITEM.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "boardId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique identifier of the Miro board."
+          },
+          "board_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Composio alias of boardId."
+          },
+          "data": {
+            "type": "object",
+            "description": "Item data payload forwarded to Miro."
+          },
+          "style": {
+            "type": "object",
+            "description": "Item style payload forwarded to Miro."
+          },
+          "parent": {
+            "type": "object",
+            "description": "Parent frame reference, typically {id}."
+          },
+          "geometry": {
+            "type": "object",
+            "description": "Width, height, and rotation."
+          },
+          "position": {
+            "type": "object",
+            "description": "Board position, typically {x, y, origin}."
+          }
+        },
+        "required": [
+          "boardId",
+          "data"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "item": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "item"
+        ]
+      },
+      "request": {
+        "method": "POST",
+        "path": "/boards/{{boardId}}/shapes",
+        "body": {
+          "data": "{{data}}",
+          "style": "{{style}}",
+          "parent": "{{parent}}",
+          "geometry": "{{geometry}}",
+          "position": "{{position}}"
+        },
+        "success": [
+          201
+        ],
+        "result": {
+          "item": "{{response}}"
+        }
+      }
+    },
+    "stickyNotes.get": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "enforceOutputSchema": true,
+      "title": "Get Sticky Note Item",
+      "description": "Get a sticky note via GET /v2/boards/{boardId}/sticky_notes/{itemId}. Covers MIRO_GET_STICKY_NOTE_ITEM.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "boardId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique identifier of the Miro board."
+          },
+          "board_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Composio alias of boardId."
+          },
+          "itemId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique identifier of the board item."
+          },
+          "item_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Composio alias of itemId."
+          }
+        },
+        "required": [
+          "boardId",
+          "itemId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "item": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "item"
+        ]
+      },
+      "request": {
+        "method": "GET",
+        "path": "/boards/{{boardId}}/sticky_notes/{{itemId}}",
+        "success": [
+          200
+        ],
+        "result": {
+          "item": "{{response}}"
+        }
+      }
+    },
+    "stickyNotes.update": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "enforceOutputSchema": true,
+      "title": "Update Sticky Note Item",
+      "description": "Update a sticky note via PATCH /v2/boards/{boardId}/sticky_notes/{itemId}. Covers MIRO_UPDATE_STICKY_NOTE_ITEM.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "boardId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique identifier of the Miro board."
+          },
+          "board_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Composio alias of boardId."
+          },
+          "itemId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique identifier of the board item."
+          },
+          "item_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Composio alias of itemId."
+          },
+          "data": {
+            "type": "object",
+            "description": "Item data payload forwarded to Miro."
+          },
+          "style": {
+            "type": "object",
+            "description": "Item style payload forwarded to Miro."
+          },
+          "parent": {
+            "type": "object",
+            "description": "Parent frame reference, typically {id}."
+          },
+          "geometry": {
+            "type": "object",
+            "description": "Width, height, and rotation."
+          },
+          "position": {
+            "type": "object",
+            "description": "Board position, typically {x, y, origin}."
+          }
+        },
+        "required": [
+          "boardId",
+          "itemId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "item": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "item"
+        ]
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/boards/{{boardId}}/sticky_notes/{{itemId}}",
+        "body": {
+          "data": "{{data}}",
+          "style": "{{style}}",
+          "parent": "{{parent}}",
+          "geometry": "{{geometry}}",
+          "position": "{{position}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "item": "{{response}}"
+        }
+      }
+    },
+    "stickyNotes.delete": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "destructive",
+      "enforceOutputSchema": true,
+      "title": "Delete Sticky Note Item",
+      "description": "Delete a sticky note via DELETE /v2/boards/{boardId}/sticky_notes/{itemId}. Covers MIRO_DELETE_STICKY_NOTE_ITEM.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "boardId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique identifier of the Miro board."
+          },
+          "board_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Composio alias of boardId."
+          },
+          "itemId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique identifier of the board item."
+          },
+          "item_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Composio alias of itemId."
+          }
+        },
+        "required": [
+          "boardId",
+          "itemId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/boards/{{boardId}}/sticky_notes/{{itemId}}",
+        "success": [
+          204
+        ],
+        "result": {
+          "status": "ok"
+        }
+      }
+    },
+    "texts.get": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "enforceOutputSchema": true,
+      "title": "Get Text Item",
+      "description": "Get a text via GET /v2/boards/{boardId}/texts/{itemId}. Covers MIRO_GET_TEXT_ITEM.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "boardId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique identifier of the Miro board."
+          },
+          "board_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Composio alias of boardId."
+          },
+          "itemId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique identifier of the board item."
+          },
+          "item_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Composio alias of itemId."
+          }
+        },
+        "required": [
+          "boardId",
+          "itemId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "item": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "item"
+        ]
+      },
+      "request": {
+        "method": "GET",
+        "path": "/boards/{{boardId}}/texts/{{itemId}}",
+        "success": [
+          200
+        ],
+        "result": {
+          "item": "{{response}}"
+        }
+      }
+    },
+    "texts.update": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "enforceOutputSchema": true,
+      "title": "Update Text Item",
+      "description": "Update a text via PATCH /v2/boards/{boardId}/texts/{itemId}. Covers MIRO_UPDATE_TEXT_ITEM.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "boardId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique identifier of the Miro board."
+          },
+          "board_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Composio alias of boardId."
+          },
+          "itemId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique identifier of the board item."
+          },
+          "item_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Composio alias of itemId."
+          },
+          "data": {
+            "type": "object",
+            "description": "Item data payload forwarded to Miro."
+          },
+          "style": {
+            "type": "object",
+            "description": "Item style payload forwarded to Miro."
+          },
+          "parent": {
+            "type": "object",
+            "description": "Parent frame reference, typically {id}."
+          },
+          "geometry": {
+            "type": "object",
+            "description": "Width, height, and rotation."
+          },
+          "position": {
+            "type": "object",
+            "description": "Board position, typically {x, y, origin}."
+          }
+        },
+        "required": [
+          "boardId",
+          "itemId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "item": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "item"
+        ]
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/boards/{{boardId}}/texts/{{itemId}}",
+        "body": {
+          "data": "{{data}}",
+          "style": "{{style}}",
+          "parent": "{{parent}}",
+          "geometry": "{{geometry}}",
+          "position": "{{position}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "item": "{{response}}"
+        }
+      }
+    },
+    "texts.delete": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "destructive",
+      "enforceOutputSchema": true,
+      "title": "Delete Text Item",
+      "description": "Delete a text via DELETE /v2/boards/{boardId}/texts/{itemId}. Covers MIRO_DELETE_TEXT_ITEM.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "boardId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique identifier of the Miro board."
+          },
+          "board_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Composio alias of boardId."
+          },
+          "itemId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique identifier of the board item."
+          },
+          "item_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Composio alias of itemId."
+          }
+        },
+        "required": [
+          "boardId",
+          "itemId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/boards/{{boardId}}/texts/{{itemId}}",
+        "success": [
+          204
+        ],
+        "result": {
+          "status": "ok"
+        }
+      }
+    },
+    "documents.create": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "enforceOutputSchema": true,
+      "title": "Create Document Item",
+      "description": "Create a document from a URL via POST /v2/boards/{boardId}/documents. Covers MIRO_CREATE_DOCUMENT_ITEM.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "boardId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique identifier of the Miro board."
+          },
+          "board_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Composio alias of boardId."
+          },
+          "data": {
+            "type": "object",
+            "description": "Item data payload forwarded to Miro."
+          },
+          "style": {
+            "type": "object",
+            "description": "Item style payload forwarded to Miro."
+          },
+          "parent": {
+            "type": "object",
+            "description": "Parent frame reference, typically {id}."
+          },
+          "geometry": {
+            "type": "object",
+            "description": "Width, height, and rotation."
+          },
+          "position": {
+            "type": "object",
+            "description": "Board position, typically {x, y, origin}."
+          }
+        },
+        "required": [
+          "boardId",
+          "data"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "item": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "item"
+        ]
+      },
+      "request": {
+        "method": "POST",
+        "path": "/boards/{{boardId}}/documents",
+        "body": {
+          "data": "{{data}}",
+          "style": "{{style}}",
+          "parent": "{{parent}}",
+          "geometry": "{{geometry}}",
+          "position": "{{position}}"
+        },
+        "success": [
+          201
+        ],
+        "result": {
+          "item": "{{response}}"
+        }
+      }
+    },
+    "documents.create_from_file": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "enforceOutputSchema": true,
+      "title": "Create Document Item From File",
+      "description": "Create a document via POST /v2/boards/{boardId}/documents with a resource object. Covers MIRO_CREATE_DOCUMENT_ITEM_USING_FILE_FROM_DEVICE.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "boardId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique identifier of the Miro board."
+          },
+          "board_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Composio alias of boardId."
+          },
+          "data": {
+            "type": "object",
+            "description": "Item data payload forwarded to Miro."
+          },
+          "style": {
+            "type": "object",
+            "description": "Item style payload forwarded to Miro."
+          },
+          "parent": {
+            "type": "object",
+            "description": "Parent frame reference, typically {id}."
+          },
+          "geometry": {
+            "type": "object",
+            "description": "Width, height, and rotation."
+          },
+          "position": {
+            "type": "object",
+            "description": "Board position, typically {x, y, origin}."
+          },
+          "resource": {
+            "type": "object",
+            "description": "Document resource forwarded as JSON."
+          }
+        },
+        "required": [
+          "boardId",
+          "resource"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "item": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "item"
+        ]
+      },
+      "request": {
+        "method": "POST",
+        "path": "/boards/{{boardId}}/documents",
+        "body": {
+          "data": "{{data}}",
+          "style": "{{style}}",
+          "parent": "{{parent}}",
+          "geometry": "{{geometry}}",
+          "position": "{{position}}",
+          "resource": "{{resource}}"
+        },
+        "success": [
+          201
+        ],
+        "result": {
+          "item": "{{response}}"
+        }
+      }
+    },
+    "documents.get": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "enforceOutputSchema": true,
+      "title": "Get Document Item",
+      "description": "Get a document via GET /v2/boards/{boardId}/documents/{itemId}. Covers MIRO_GET_DOCUMENT_ITEM.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "boardId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique identifier of the Miro board."
+          },
+          "board_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Composio alias of boardId."
+          },
+          "itemId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique identifier of the board item."
+          },
+          "item_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Composio alias of itemId."
+          }
+        },
+        "required": [
+          "boardId",
+          "itemId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "item": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "item"
+        ]
+      },
+      "request": {
+        "method": "GET",
+        "path": "/boards/{{boardId}}/documents/{{itemId}}",
+        "success": [
+          200
+        ],
+        "result": {
+          "item": "{{response}}"
+        }
+      }
+    },
+    "documents.update": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "enforceOutputSchema": true,
+      "title": "Update Document Item",
+      "description": "Update a document via PATCH /v2/boards/{boardId}/documents/{itemId}. Covers MIRO_UPDATE_DOCUMENT_ITEM.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "boardId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique identifier of the Miro board."
+          },
+          "board_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Composio alias of boardId."
+          },
+          "itemId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique identifier of the board item."
+          },
+          "item_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Composio alias of itemId."
+          },
+          "data": {
+            "type": "object",
+            "description": "Item data payload forwarded to Miro."
+          },
+          "style": {
+            "type": "object",
+            "description": "Item style payload forwarded to Miro."
+          },
+          "parent": {
+            "type": "object",
+            "description": "Parent frame reference, typically {id}."
+          },
+          "geometry": {
+            "type": "object",
+            "description": "Width, height, and rotation."
+          },
+          "position": {
+            "type": "object",
+            "description": "Board position, typically {x, y, origin}."
+          }
+        },
+        "required": [
+          "boardId",
+          "itemId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "item": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "item"
+        ]
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/boards/{{boardId}}/documents/{{itemId}}",
+        "body": {
+          "data": "{{data}}",
+          "style": "{{style}}",
+          "parent": "{{parent}}",
+          "geometry": "{{geometry}}",
+          "position": "{{position}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "item": "{{response}}"
+        }
+      }
+    },
+    "documents.delete": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "destructive",
+      "enforceOutputSchema": true,
+      "title": "Delete Document Item",
+      "description": "Delete a document via DELETE /v2/boards/{boardId}/documents/{itemId}. Covers MIRO_DELETE_DOCUMENT_ITEM.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "boardId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique identifier of the Miro board."
+          },
+          "board_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Composio alias of boardId."
+          },
+          "itemId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique identifier of the board item."
+          },
+          "item_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Composio alias of itemId."
+          }
+        },
+        "required": [
+          "boardId",
+          "itemId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/boards/{{boardId}}/documents/{{itemId}}",
+        "success": [
+          204
+        ],
+        "result": {
+          "status": "ok"
+        }
+      }
+    },
+    "images.create_from_url": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "enforceOutputSchema": true,
+      "title": "Create Image Item From URL",
+      "description": "Create an image from a public URL via POST /v2/boards/{boardId}/images. Covers MIRO_CREATE_IMAGE_ITEM_FROM_URL.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "boardId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique identifier of the Miro board."
+          },
+          "board_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Composio alias of boardId."
+          },
+          "data": {
+            "type": "object",
+            "description": "Item data payload forwarded to Miro."
+          },
+          "style": {
+            "type": "object",
+            "description": "Item style payload forwarded to Miro."
+          },
+          "parent": {
+            "type": "object",
+            "description": "Parent frame reference, typically {id}."
+          },
+          "geometry": {
+            "type": "object",
+            "description": "Width, height, and rotation."
+          },
+          "position": {
+            "type": "object",
+            "description": "Board position, typically {x, y, origin}."
+          }
+        },
+        "required": [
+          "boardId",
+          "data"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "item": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "item"
+        ]
+      },
+      "request": {
+        "method": "POST",
+        "path": "/boards/{{boardId}}/images",
+        "body": {
+          "data": "{{data}}",
+          "style": "{{style}}",
+          "parent": "{{parent}}",
+          "geometry": "{{geometry}}",
+          "position": "{{position}}"
+        },
+        "success": [
+          201
+        ],
+        "result": {
+          "item": "{{response}}"
+        }
+      }
+    },
+    "images.create_from_file": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "enforceOutputSchema": true,
+      "title": "Create Image Item From File",
+      "description": "Create an image via POST /v2/boards/{boardId}/images with a resource object. Covers MIRO_CREATE_IMAGE_ITEM_USING_LOCAL_FILE.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "boardId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique identifier of the Miro board."
+          },
+          "board_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Composio alias of boardId."
+          },
+          "data": {
+            "type": "object",
+            "description": "Item data payload forwarded to Miro."
+          },
+          "style": {
+            "type": "object",
+            "description": "Item style payload forwarded to Miro."
+          },
+          "parent": {
+            "type": "object",
+            "description": "Parent frame reference, typically {id}."
+          },
+          "geometry": {
+            "type": "object",
+            "description": "Width, height, and rotation."
+          },
+          "position": {
+            "type": "object",
+            "description": "Board position, typically {x, y, origin}."
+          },
+          "resource": {
+            "type": "object",
+            "description": "Image resource forwarded as JSON."
+          }
+        },
+        "required": [
+          "boardId",
+          "resource"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "item": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "item"
+        ]
+      },
+      "request": {
+        "method": "POST",
+        "path": "/boards/{{boardId}}/images",
+        "body": {
+          "data": "{{data}}",
+          "style": "{{style}}",
+          "parent": "{{parent}}",
+          "geometry": "{{geometry}}",
+          "position": "{{position}}",
+          "resource": "{{resource}}"
+        },
+        "success": [
+          201
+        ],
+        "result": {
+          "item": "{{response}}"
+        }
+      }
+    },
+    "images.get": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "enforceOutputSchema": true,
+      "title": "Get Image Item",
+      "description": "Get an image via GET /v2/boards/{boardId}/images/{itemId}. Covers MIRO_GET_IMAGE_ITEM.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "boardId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique identifier of the Miro board."
+          },
+          "board_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Composio alias of boardId."
+          },
+          "itemId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique identifier of the board item."
+          },
+          "item_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Composio alias of itemId."
+          }
+        },
+        "required": [
+          "boardId",
+          "itemId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "item": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "item"
+        ]
+      },
+      "request": {
+        "method": "GET",
+        "path": "/boards/{{boardId}}/images/{{itemId}}",
+        "success": [
+          200
+        ],
+        "result": {
+          "item": "{{response}}"
+        }
+      }
+    },
+    "images.update": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "enforceOutputSchema": true,
+      "title": "Update Image Item",
+      "description": "Update an image via PATCH /v2/boards/{boardId}/images/{itemId}. Covers MIRO_UPDATE_IMAGE_ITEM.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "boardId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique identifier of the Miro board."
+          },
+          "board_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Composio alias of boardId."
+          },
+          "itemId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique identifier of the board item."
+          },
+          "item_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Composio alias of itemId."
+          },
+          "data": {
+            "type": "object",
+            "description": "Item data payload forwarded to Miro."
+          },
+          "style": {
+            "type": "object",
+            "description": "Item style payload forwarded to Miro."
+          },
+          "parent": {
+            "type": "object",
+            "description": "Parent frame reference, typically {id}."
+          },
+          "geometry": {
+            "type": "object",
+            "description": "Width, height, and rotation."
+          },
+          "position": {
+            "type": "object",
+            "description": "Board position, typically {x, y, origin}."
+          }
+        },
+        "required": [
+          "boardId",
+          "itemId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "item": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "item"
+        ]
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/boards/{{boardId}}/images/{{itemId}}",
+        "body": {
+          "data": "{{data}}",
+          "style": "{{style}}",
+          "parent": "{{parent}}",
+          "geometry": "{{geometry}}",
+          "position": "{{position}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "item": "{{response}}"
+        }
+      }
+    },
+    "images.delete": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "destructive",
+      "enforceOutputSchema": true,
+      "title": "Delete Image Item",
+      "description": "Delete an image via DELETE /v2/boards/{boardId}/images/{itemId}. Covers MIRO_DELETE_IMAGE_ITEM.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "boardId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique identifier of the Miro board."
+          },
+          "board_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Composio alias of boardId."
+          },
+          "itemId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique identifier of the board item."
+          },
+          "item_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Composio alias of itemId."
+          }
+        },
+        "required": [
+          "boardId",
+          "itemId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/boards/{{boardId}}/images/{{itemId}}",
+        "success": [
+          204
+        ],
+        "result": {
+          "status": "ok"
+        }
+      }
+    },
+    "images.download": {
+      "kind": "action",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "enforceOutputSchema": true,
+      "title": "Download Image Resource",
+      "description": "Get signed URL metadata for an image resource via GET /v2/boards/{boardId}/resources/{resourceId}. Covers MIRO_DOWNLOAD_IMAGE_RESOURCE.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "boardId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique identifier of the Miro board."
+          },
+          "board_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Composio alias of boardId."
+          },
+          "resourceId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Resource ID from an image or document URL, not the item ID."
+          },
+          "resource_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Composio alias of resourceId."
+          },
+          "format": {
+            "type": "string",
+            "description": "Image representation to retrieve.",
+            "enum": [
+              "preview",
+              "original"
+            ]
+          },
+          "redirect": {
+            "type": "boolean",
+            "description": "When true, follow the provider redirect for file bytes."
+          }
+        },
+        "required": [
+          "boardId",
+          "resourceId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {}
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "request": {
+        "method": "GET",
+        "path": "/boards/{{boardId}}/resources/{{resourceId}}",
+        "query": {
+          "format": "{{format}}",
+          "redirect": "{{redirect}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response}}"
+        }
+      }
+    },
+    "connectors.create": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "enforceOutputSchema": true,
+      "title": "Create Connector",
+      "description": "Create a connector via POST /v2/boards/{boardId}/connectors. Covers MIRO_CREATE_CONNECTOR.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "boardId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique identifier of the Miro board."
+          },
+          "board_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Composio alias of boardId."
+          },
+          "startItem": {
+            "type": "object",
+            "description": "Start endpoint. Must include id and snapTo or position."
+          },
+          "endItem": {
+            "type": "object",
+            "description": "End endpoint. Must include id and snapTo or position."
+          },
+          "shape": {
+            "type": "string",
+            "description": "Connector line shape.",
+            "enum": [
+              "straight",
+              "elbowed",
+              "curved"
+            ]
+          },
+          "captions": {
+            "type": "array",
+            "description": "Caption objects along the connector.",
+            "items": {}
+          },
+          "style": {
+            "type": "object",
+            "description": "Connector style."
+          }
+        },
+        "required": [
+          "boardId",
+          "startItem",
+          "endItem",
+          "shape"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "item": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "item"
+        ]
+      },
+      "request": {
+        "method": "POST",
+        "path": "/boards/{{boardId}}/connectors",
+        "body": {
+          "startItem": "{{startItem}}",
+          "endItem": "{{endItem}}",
+          "shape": "{{shape}}",
+          "captions": "{{captions}}",
+          "style": "{{style}}"
+        },
+        "success": [
+          201
+        ],
+        "result": {
+          "item": "{{response}}"
+        }
+      }
+    },
+    "connectors.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "enforceOutputSchema": true,
+      "title": "List Connectors",
+      "description": "List connectors via GET /v2/boards/{boardId}/connectors. Covers MIRO_GET_CONNECTORS.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "boardId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique identifier of the Miro board."
+          },
+          "board_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Composio alias of boardId."
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Page size, 10-50.",
+            "minimum": 10,
+            "maximum": 50
+          },
+          "cursor": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Cursor from a previous page."
+          }
+        },
+        "required": [
+          "boardId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connectors": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "pagination": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "connectors",
+          "pagination"
+        ]
+      },
+      "request": {
+        "method": "GET",
+        "path": "/boards/{{boardId}}/connectors",
+        "query": {
+          "limit": "{{limit}}",
+          "cursor": "{{cursor}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "connectors": "{{response.data}}",
+          "pagination": {
+            "cursor": "{{response.cursor}}"
+          }
+        }
+      }
+    },
+    "connectors.get": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "enforceOutputSchema": true,
+      "title": "Get Connector",
+      "description": "Get a connector via GET /v2/boards/{boardId}/connectors/{connectorId}. Covers MIRO_GET_CONNECTOR.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "boardId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique identifier of the Miro board."
+          },
+          "board_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Composio alias of boardId."
+          },
+          "connectorId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique identifier of the connector."
+          },
+          "connector_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Composio alias of connectorId."
+          }
+        },
+        "required": [
+          "boardId",
+          "connectorId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "item": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "item"
+        ]
+      },
+      "request": {
+        "method": "GET",
+        "path": "/boards/{{boardId}}/connectors/{{connectorId}}",
+        "success": [
+          200
+        ],
+        "result": {
+          "item": "{{response}}"
+        }
+      }
+    },
+    "connectors.update": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "enforceOutputSchema": true,
+      "title": "Update Connector",
+      "description": "Update a connector via PATCH /v2/boards/{boardId}/connectors/{connectorId}. Covers MIRO_UPDATE_CONNECTOR.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "boardId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique identifier of the Miro board."
+          },
+          "board_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Composio alias of boardId."
+          },
+          "connectorId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique identifier of the connector."
+          },
+          "connector_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Composio alias of connectorId."
+          },
+          "startItem": {
+            "type": "object",
+            "description": "Updated start endpoint."
+          },
+          "endItem": {
+            "type": "object",
+            "description": "Updated end endpoint."
+          },
+          "shape": {
+            "type": "string",
+            "description": "Updated connector shape.",
+            "enum": [
+              "straight",
+              "elbowed",
+              "curved"
+            ]
+          },
+          "captions": {
+            "type": "array",
+            "description": "Updated captions.",
+            "items": {}
+          },
+          "style": {
+            "type": "object",
+            "description": "Updated style."
+          }
+        },
+        "required": [
+          "boardId",
+          "connectorId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "item": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "item"
+        ]
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/boards/{{boardId}}/connectors/{{connectorId}}",
+        "body": {
+          "startItem": "{{startItem}}",
+          "endItem": "{{endItem}}",
+          "shape": "{{shape}}",
+          "captions": "{{captions}}",
+          "style": "{{style}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "item": "{{response}}"
+        }
+      }
+    },
+    "connectors.delete": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "destructive",
+      "enforceOutputSchema": true,
+      "title": "Delete Connector",
+      "description": "Delete a connector via DELETE /v2/boards/{boardId}/connectors/{connectorId}. Covers MIRO_DELETE_CONNECTOR.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "boardId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique identifier of the Miro board."
+          },
+          "board_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Composio alias of boardId."
+          },
+          "connectorId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique identifier of the connector."
+          },
+          "connector_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Composio alias of connectorId."
+          }
+        },
+        "required": [
+          "boardId",
+          "connectorId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/boards/{{boardId}}/connectors/{{connectorId}}",
+        "success": [
+          204
+        ],
+        "result": {
+          "status": "ok"
+        }
+      }
+    },
+    "tags.get": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "enforceOutputSchema": true,
+      "title": "Get Tag",
+      "description": "Get a tag via GET /v2/boards/{boardId}/tags/{tagId}. Covers MIRO_GET_TAG.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "boardId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique identifier of the Miro board."
+          },
+          "board_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Composio alias of boardId."
+          },
+          "tagId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique identifier of the tag."
+          },
+          "tag_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Composio alias of tagId."
+          }
+        },
+        "required": [
+          "boardId",
+          "tagId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "tag": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "tag"
+        ]
+      },
+      "request": {
+        "method": "GET",
+        "path": "/boards/{{boardId}}/tags/{{tagId}}",
+        "success": [
+          200
+        ],
+        "result": {
+          "tag": "{{response}}"
+        }
+      }
+    },
+    "tags.update": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "enforceOutputSchema": true,
+      "title": "Update Tag",
+      "description": "Update a tag via PATCH /v2/boards/{boardId}/tags/{tagId}. Covers MIRO_UPDATE_TAG.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "boardId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique identifier of the Miro board."
+          },
+          "board_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Composio alias of boardId."
+          },
+          "tagId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique identifier of the tag."
+          },
+          "tag_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Composio alias of tagId."
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Updated tag text."
+          },
+          "fillColor": {
+            "type": "string",
+            "description": "Updated fill color.",
+            "enum": [
+              "red",
+              "light_green",
+              "cyan",
+              "yellow",
+              "magenta",
+              "green",
+              "blue",
+              "gray",
+              "violet",
+              "dark_green",
+              "dark_blue",
+              "black"
+            ]
+          }
+        },
+        "required": [
+          "boardId",
+          "tagId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "tag": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "tag"
+        ]
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/boards/{{boardId}}/tags/{{tagId}}",
+        "body": {
+          "title": "{{title}}",
+          "fillColor": "{{fillColor}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "tag": "{{response}}"
+        }
+      }
+    },
+    "tags.delete": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "destructive",
+      "enforceOutputSchema": true,
+      "title": "Delete Tag",
+      "description": "Delete a tag via DELETE /v2/boards/{boardId}/tags/{tagId}. Covers MIRO_DELETE_TAG.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "boardId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique identifier of the Miro board."
+          },
+          "board_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Composio alias of boardId."
+          },
+          "tagId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique identifier of the tag."
+          },
+          "tag_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Composio alias of tagId."
+          }
+        },
+        "required": [
+          "boardId",
+          "tagId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/boards/{{boardId}}/tags/{{tagId}}",
+        "success": [
+          204
+        ],
+        "result": {
+          "status": "ok"
+        }
+      }
+    },
+    "tags.attach": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "enforceOutputSchema": true,
+      "title": "Attach Tag To Item",
+      "description": "Attach a tag via POST /v2/boards/{boardId}/items/{itemId}/tags/{tagId}. Covers MIRO_ATTACH_TAG_TO_ITEM.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "boardId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique identifier of the Miro board."
+          },
+          "board_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Composio alias of boardId."
+          },
+          "itemId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique identifier of the board item."
+          },
+          "item_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Composio alias of itemId."
+          },
+          "tagId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique identifier of the tag."
+          },
+          "tag_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Composio alias of tagId."
+          }
+        },
+        "required": [
+          "boardId",
+          "itemId",
+          "tagId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "request": {
+        "method": "POST",
+        "path": "/boards/{{boardId}}/items/{{itemId}}/tags/{{tagId}}",
+        "success": [
+          200,
+          201,
+          204
+        ],
+        "result": {
+          "status": "ok"
+        }
+      }
+    },
+    "tags.detach": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "destructive",
+      "enforceOutputSchema": true,
+      "title": "Remove Tag From Item",
+      "description": "Detach a tag via DELETE /v2/boards/{boardId}/items/{itemId}/tags/{tagId}. Covers MIRO_REMOVE_TAG_FROM_ITEM.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "boardId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique identifier of the Miro board."
+          },
+          "board_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Composio alias of boardId."
+          },
+          "itemId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique identifier of the board item."
+          },
+          "item_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Composio alias of itemId."
+          },
+          "tagId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique identifier of the tag."
+          },
+          "tag_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Composio alias of tagId."
+          }
+        },
+        "required": [
+          "boardId",
+          "itemId",
+          "tagId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/boards/{{boardId}}/items/{{itemId}}/tags/{{tagId}}",
+        "success": [
+          204
+        ],
+        "result": {
+          "status": "ok"
+        }
+      }
+    },
+    "tags.list_on_item": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "enforceOutputSchema": true,
+      "title": "Get Item Tags",
+      "description": "List tags on an item via GET /v2/boards/{boardId}/items/{itemId}/tags. Covers MIRO_GET_ITEM_TAGS.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "boardId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique identifier of the Miro board."
+          },
+          "board_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Composio alias of boardId."
+          },
+          "itemId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique identifier of the board item."
+          },
+          "item_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Composio alias of itemId."
+          }
+        },
+        "required": [
+          "boardId",
+          "itemId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "data": {}
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "request": {
+        "method": "GET",
+        "path": "/boards/{{boardId}}/items/{{itemId}}/tags",
+        "success": [
+          200
+        ],
+        "result": {
+          "tags": "{{response.data}}",
+          "data": "{{response}}"
+        }
+      }
+    },
+    "groups.create": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "enforceOutputSchema": true,
+      "title": "Create Group",
+      "description": "Group items via POST /v2/boards/{boardId}/groups. Covers MIRO_CREATE_GROUP.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "boardId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique identifier of the Miro board."
+          },
+          "board_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Composio alias of boardId."
+          },
+          "data": {
+            "type": "object",
+            "description": "Group data with item IDs, typically {items: [id, id]}."
+          }
+        },
+        "required": [
+          "boardId",
+          "data"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "group": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "group"
+        ]
+      },
+      "request": {
+        "method": "POST",
+        "path": "/boards/{{boardId}}/groups",
+        "body": {
+          "data": "{{data}}"
+        },
+        "success": [
+          201
+        ],
+        "result": {
+          "group": "{{response}}"
+        }
+      }
+    },
+    "groups.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "enforceOutputSchema": true,
+      "title": "List Groups",
+      "description": "List groups via GET /v2/boards/{boardId}/groups. Covers MIRO_GET_ALL_GROUPS.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "boardId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique identifier of the Miro board."
+          },
+          "board_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Composio alias of boardId."
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Page size, 10-50.",
+            "minimum": 10,
+            "maximum": 50
+          },
+          "cursor": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Cursor from a previous page."
+          }
+        },
+        "required": [
+          "boardId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "groups": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "pagination": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "groups",
+          "pagination"
+        ]
+      },
+      "request": {
+        "method": "GET",
+        "path": "/boards/{{boardId}}/groups",
+        "query": {
+          "limit": "{{limit}}",
+          "cursor": "{{cursor}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "groups": "{{response.data}}",
+          "pagination": {
+            "cursor": "{{response.cursor}}"
+          }
+        }
+      }
+    },
+    "groups.get": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "enforceOutputSchema": true,
+      "title": "Get Group",
+      "description": "Get a group via GET /v2/boards/{boardId}/groups/{groupId}. Covers MIRO_GET_GROUP_BY_ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "boardId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique identifier of the Miro board."
+          },
+          "board_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Composio alias of boardId."
+          },
+          "groupId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique identifier of the group."
+          },
+          "group_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Composio alias of groupId."
+          }
+        },
+        "required": [
+          "boardId",
+          "groupId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "group": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "group"
+        ]
+      },
+      "request": {
+        "method": "GET",
+        "path": "/boards/{{boardId}}/groups/{{groupId}}",
+        "success": [
+          200
+        ],
+        "result": {
+          "group": "{{response}}"
+        }
+      }
+    },
+    "groups.update": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "enforceOutputSchema": true,
+      "title": "Update Group",
+      "description": "Replace group membership via PUT /v2/boards/{boardId}/groups/{groupId}. Covers MIRO_UPDATE_GROUP.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "boardId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique identifier of the Miro board."
+          },
+          "board_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Composio alias of boardId."
+          },
+          "groupId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique identifier of the group."
+          },
+          "group_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Composio alias of groupId."
+          },
+          "data": {
+            "type": "object",
+            "description": "Replacement group data with item IDs."
+          }
+        },
+        "required": [
+          "boardId",
+          "groupId",
+          "data"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "group": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "group"
+        ]
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/boards/{{boardId}}/groups/{{groupId}}",
+        "body": {
+          "data": "{{data}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "group": "{{response}}"
+        }
+      }
+    },
+    "groups.delete": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "destructive",
+      "enforceOutputSchema": true,
+      "title": "Delete Group",
+      "description": "Delete a group via DELETE /v2/boards/{boardId}/groups/{groupId}?delete_items=. Covers MIRO_DELETE_GROUP.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "boardId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique identifier of the Miro board."
+          },
+          "board_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Composio alias of boardId."
+          },
+          "groupId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique identifier of the group."
+          },
+          "group_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Composio alias of groupId."
+          },
+          "deleteItems": {
+            "type": "boolean",
+            "description": "When true, also delete items in the group."
+          },
+          "delete_items": {
+            "type": "boolean",
+            "description": "Composio alias of deleteItems."
+          }
+        },
+        "required": [
+          "boardId",
+          "groupId",
+          "deleteItems"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/boards/{{boardId}}/groups/{{groupId}}",
+        "query": {
+          "delete_items": "{{deleteItems}}"
+        },
+        "success": [
+          204
+        ],
+        "result": {
+          "status": "ok"
+        }
+      }
+    },
+    "groups.items.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "enforceOutputSchema": true,
+      "title": "List Group Items",
+      "description": "List items in a group via GET /v2/boards/{boardId}/groups/items?group_item_id=. Covers MIRO_GET_ITEMS_BY_GROUP_ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "boardId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique identifier of the Miro board."
+          },
+          "board_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Composio alias of boardId."
+          },
+          "groupItemId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Group ID whose items should be listed."
+          },
+          "group_item_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Composio alias of groupItemId."
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Page size, 10-50.",
+            "minimum": 10,
+            "maximum": 50
+          },
+          "cursor": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Cursor from a previous page."
+          }
+        },
+        "required": [
+          "boardId",
+          "groupItemId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "pagination": {
+            "type": "object"
+          },
+          "data": {}
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "request": {
+        "method": "GET",
+        "path": "/boards/{{boardId}}/groups/items",
+        "query": {
+          "group_item_id": "{{groupItemId}}",
+          "limit": "{{limit}}",
+          "cursor": "{{cursor}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "items": "{{response.data}}",
+          "pagination": {
+            "cursor": "{{response.cursor}}"
+          },
+          "data": "{{response}}"
+        }
+      }
+    },
+    "mindmapNodes.create": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "enforceOutputSchema": true,
+      "title": "Create Mind Map Node",
+      "description": "Create a mind map node via POST /v2-experimental/boards/{boardId}/mindmap_nodes. Covers MIRO_CREATE_MINDMAP_NODE_EXPERIMENTAL.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "boardId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique identifier of the Miro board."
+          },
+          "board_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Composio alias of boardId."
+          },
+          "data": {
+            "type": "object",
+            "description": "Mind map node data including node view content."
+          },
+          "geometry": {
+            "type": "object",
+            "description": "Optional geometry."
+          },
+          "position": {
+            "type": "object",
+            "description": "Optional position."
+          },
+          "parent": {
+            "type": "object",
+            "description": "Optional parent."
+          }
+        },
+        "required": [
+          "boardId",
+          "data"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "item": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "item"
+        ]
+      },
+      "request": {
+        "method": "POST",
+        "path": "/boards/{{boardId}}/mindmap_nodes",
+        "baseUrl": "https://api.miro.com/v2-experimental",
+        "body": {
+          "data": "{{data}}",
+          "geometry": "{{geometry}}",
+          "position": "{{position}}",
+          "parent": "{{parent}}"
+        },
+        "success": [
+          201
+        ],
+        "result": {
+          "item": "{{response}}"
+        }
+      }
+    },
+    "mindmapNodes.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "enforceOutputSchema": true,
+      "title": "List Mind Map Nodes",
+      "description": "List mind map nodes via GET /v2-experimental/boards/{boardId}/mindmap_nodes. Covers MIRO_GET_MINDMAP_NODES_EXPERIMENTAL.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "boardId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique identifier of the Miro board."
+          },
+          "board_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Composio alias of boardId."
+          },
+          "limit": {
+            "type": "string",
+            "description": "Maximum number of results. Miro documents this query as a string."
+          },
+          "cursor": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Cursor from a previous page."
+          }
+        },
+        "required": [
+          "boardId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "pagination": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "items",
+          "pagination"
+        ]
+      },
+      "request": {
+        "method": "GET",
+        "path": "/boards/{{boardId}}/mindmap_nodes",
+        "baseUrl": "https://api.miro.com/v2-experimental",
+        "query": {
+          "limit": "{{limit}}",
+          "cursor": "{{cursor}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "items": "{{response.data}}",
+          "pagination": {
+            "cursor": "{{response.cursor}}"
+          }
+        }
+      }
+    },
+    "mindmapNodes.get": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "enforceOutputSchema": true,
+      "title": "Get Mind Map Node",
+      "description": "Get a mind map node via GET /v2-experimental/boards/{boardId}/mindmap_nodes/{itemId}. Covers MIRO_GET_MINDMAP_NODE_EXPERIMENTAL.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "boardId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique identifier of the Miro board."
+          },
+          "board_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Composio alias of boardId."
+          },
+          "itemId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique identifier of the board item."
+          },
+          "item_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Composio alias of itemId."
+          }
+        },
+        "required": [
+          "boardId",
+          "itemId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "item": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "item"
+        ]
+      },
+      "request": {
+        "method": "GET",
+        "path": "/boards/{{boardId}}/mindmap_nodes/{{itemId}}",
+        "baseUrl": "https://api.miro.com/v2-experimental",
+        "success": [
+          200
+        ],
+        "result": {
+          "item": "{{response}}"
+        }
+      }
+    },
+    "mindmapNodes.delete": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "destructive",
+      "enforceOutputSchema": true,
+      "title": "Delete Mind Map Node",
+      "description": "Delete a mind map node via DELETE /v2-experimental/boards/{boardId}/mindmap_nodes/{itemId}. Covers MIRO_DELETE_MINDMAP_NODE_EXPERIMENTAL.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "boardId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique identifier of the Miro board."
+          },
+          "board_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Composio alias of boardId."
+          },
+          "itemId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique identifier of the board item."
+          },
+          "item_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Composio alias of itemId."
+          }
+        },
+        "required": [
+          "boardId",
+          "itemId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/boards/{{boardId}}/mindmap_nodes/{{itemId}}",
+        "baseUrl": "https://api.miro.com/v2-experimental",
+        "success": [
+          204
+        ],
+        "result": {
+          "status": "ok"
+        }
+      }
+    },
+    "organizations.context": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "enforceOutputSchema": true,
+      "title": "Get Organization Context",
+      "description": "Read the organization, team, and user bound to the access token via GET /v1/oauth-token. Covers MIRO_LIST_ORGANIZATIONS.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {}
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/oauth-token",
+        "baseUrl": "https://api.miro.com",
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response}}"
+        }
+      }
+    },
+    "oembed.get": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "enforceOutputSchema": true,
+      "title": "Get oEmbed Data",
+      "description": "Retrieve oEmbed JSON for a Miro board URL via GET https://miro.com/api/v1/oembed. Covers MIRO_GET_OEMBED.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Miro board URL to embed."
+          },
+          "format": {
+            "type": "string",
+            "description": "Response format. Only json is supported."
+          },
+          "maxwidth": {
+            "type": "integer",
+            "description": "Maximum embed width in pixels.",
+            "minimum": 1
+          },
+          "maxheight": {
+            "type": "integer",
+            "description": "Maximum embed height in pixels.",
+            "minimum": 1
+          },
+          "referrer": {
+            "type": "string",
+            "description": "URL of the embedding document."
+          }
+        },
+        "required": [
+          "url"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {}
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/oembed",
+        "baseUrl": "https://miro.com",
+        "query": {
+          "url": "{{url}}",
+          "format": "{{format}}",
+          "maxwidth": "{{maxwidth}}",
+          "maxheight": "{{maxheight}}",
+          "referrer": "{{referrer}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response}}"
+        }
+      }
     }
   },
   "models": [
     "board",
     "item",
     "member",
-    "tag"
+    "tag",
+    "connector",
+    "group",
+    "app_card",
+    "card",
+    "document",
+    "embed",
+    "frame",
+    "image",
+    "shape",
+    "sticky_note",
+    "text",
+    "mindmap_node",
+    "organization"
   ]
 }

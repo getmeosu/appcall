@@ -4,26 +4,32 @@ import manifest from "../manifest.json";
 const operations = manifest.operations as Record<string, Record<string, unknown>>;
 
 const expectedKeys = [
-  "bans.create", "bans.delete", "bans.list",
-  "bot.getMe",
-  "channels.create", "channels.delete", "channels.get", "channels.list", "channels.update",
-  "dm.open",
-  "emojis.list",
-  "events.createExternal", "events.createVoice", "events.delete", "events.list", "events.update",
-  "guild.get", "guilds.list",
-  "healthcheck",
-  "invites.list", "invites.revoke",
-  "members.addRole", "members.clearTimeout", "members.get", "members.kick", "members.list", "members.removeRole", "members.search", "members.timeout",
-  "messages.bulkDelete", "messages.create", "messages.delete", "messages.edit", "messages.get", "messages.list", "messages.listPinned", "messages.pin", "messages.reply", "messages.send", "messages.unpin",
-  "normalized.post.create",
-  "reactions.add", "reactions.clear", "reactions.list", "reactions.remove", "reactions.removeUser",
-  "roles.create", "roles.delete", "roles.list", "roles.update",
-  "threads.addMember", "threads.create", "threads.createFromMessage", "threads.join", "threads.leave", "threads.listActive", "threads.listArchived",
-  "users.get",
-  "webhook.channel_create", "webhook.guild_member_add", "webhook.message_create", "webhook.message_reaction_add",
+  "bans.bulkBan", "bans.create", "bans.delete", "bans.get", "bans.list", "bot.getMe",
+  "channels.create", "channels.createInvite", "channels.createWebhook", "channels.delete",
+  "channels.deletePermission", "channels.editPermissions", "channels.follow", "channels.get",
+  "channels.list", "channels.listInvites", "channels.listWebhooks", "channels.triggerTyping",
+  "channels.update", "dm.open", "emojis.list", "events.createExternal", "events.createVoice",
+  "events.delete", "events.get", "events.list", "events.listUsers", "events.update",
+  "guild.beginPrune", "guild.deleteIntegration", "guild.get", "guild.getAuditLog",
+  "guild.getPreview", "guild.getPruneCount", "guild.getVanityUrl", "guild.getWelcomeScreen",
+  "guild.getWidget", "guild.getWidgetSettings", "guild.leave", "guild.listIntegrations",
+  "guild.listVoiceRegions", "guild.listWebhooks", "guild.update", "guild.updateWelcomeScreen",
+  "guild.updateWidget", "guilds.list", "healthcheck", "invites.get", "invites.list",
+  "invites.revoke", "members.addRole", "members.clearTimeout", "members.get", "members.getMe",
+  "members.kick", "members.list", "members.removeRole", "members.search", "members.timeout",
+  "members.update", "members.updateMe", "messages.bulkDelete", "messages.create",
+  "messages.crosspost", "messages.delete", "messages.edit", "messages.get", "messages.list",
+  "messages.listPinned", "messages.pin", "messages.reply", "messages.send", "messages.unpin",
+  "normalized.post.create", "reactions.add", "reactions.clear", "reactions.deleteEmoji",
+  "reactions.list", "reactions.remove", "reactions.removeUser", "roles.create", "roles.delete",
+  "roles.list", "roles.update", "threads.addMember", "threads.create", "threads.createFromMessage",
+  "threads.getMember", "threads.join", "threads.leave", "threads.listActive",
+  "threads.listArchived", "threads.listJoinedPrivateArchived", "threads.listMembers",
+  "threads.listPrivateArchived", "threads.removeMember", "users.get", "webhook.channel_create",
+  "webhook.guild_member_add", "webhook.message_create", "webhook.message_reaction_add"
 ];
 
-const destructive = ["bans.create", "bans.delete", "channels.delete", "events.delete", "invites.revoke", "members.kick", "messages.bulkDelete", "roles.delete"];
+const destructive = ["bans.bulkBan", "bans.create", "bans.delete", "channels.delete", "events.delete", "guild.beginPrune", "guild.deleteIntegration", "guild.leave", "invites.revoke", "members.kick", "messages.bulkDelete", "roles.delete"];
 
 describe("discord manifest", () => {
   it("declares exactly the community-manager operation set", () => {
@@ -62,7 +68,7 @@ describe("discord manifest", () => {
   });
 
   it("bumps the connector version for the trigger expansion", () => {
-    expect(manifest.version).toBe("0.2.0");
+    expect(manifest.version).toBe("0.3.0");
   });
 
   it("keeps every request inside discord.com", () => {
@@ -103,6 +109,33 @@ describe("discord manifest", () => {
       if (operation.kind === "webhook") continue;
       const query = ((operation.request as Record<string, unknown>).query ?? {}) as Record<string, string>;
       expect(Object.values(query).join(" ")).not.toContain("botToken");
+    }
+  });
+
+  it("keeps GET and DELETE body-less and sets JSON Content-Type only when a body is declared", () => {
+    expect(manifest.http.headers?.["Content-Type"]).toBeUndefined();
+    expect(manifest.http.headers?.["content-type"]).toBeUndefined();
+    for (const [key, operation] of Object.entries(operations)) {
+      if (operation.kind === "webhook") continue;
+      const request = operation.request as Record<string, unknown>;
+      const method = String(request.method);
+      const headers = (request.headers ?? {}) as Record<string, string>;
+      const contentType = Object.entries(headers).find(([name]) => name.toLowerCase() === "content-type")?.[1];
+      if (method === "GET" || method === "DELETE") {
+        expect(request.body, key).toBeUndefined();
+        expect(contentType, key).toBeUndefined();
+      } else if (request.body !== undefined) {
+        expect(contentType, key).toBe("application/json");
+      } else {
+        expect(contentType, key).toBeUndefined();
+      }
+    }
+  });
+
+  it("keeps webhook sideEffect read", () => {
+    for (const [key, operation] of Object.entries(operations)) {
+      if (operation.kind !== "webhook") continue;
+      expect(operation.sideEffect, key).toBe("read");
     }
   });
 });

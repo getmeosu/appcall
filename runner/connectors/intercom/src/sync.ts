@@ -9,7 +9,7 @@
  * conversations.list     → GET /conversations
  * conversations.get      → GET /conversations/{id}
  * conversations.search   → POST /conversations/search
- * conversations.reply    → POST /conversations/{id}/reply (create; no EffectPolicy)
+ * conversations.reply    → POST /conversations/{id}/reply (Idempotent → get)
  * conversations.close    → POST /conversations/{id}/parts (Reconcile → get)
  * conversations.assign   → POST /conversations/{id}/parts (Reconcile → get)
  * conversations.tag      → POST /conversations/{id}/tags (Reconcile → get)
@@ -243,7 +243,7 @@ export async function executeConversationsGetSync(
 
 // ---------------------------------------------------------------------------
 // conversations.reply — POST /conversations/{id}/reply
-// A reply creates a conversation part, so no EffectPolicy; returns the raw Conversation.
+// Runtime owns EffectPolicy Idempotent → conversations.get (return raw Conversation with id).
 // ---------------------------------------------------------------------------
 
 export interface ExecuteConversationsReplySyncInput extends IntercomAuthInput {
@@ -260,7 +260,7 @@ export interface ExecuteConversationsReplySyncInput extends IntercomAuthInput {
 }
 
 export interface ExecuteConversationsReplySyncOutput {
-  /** Upstream Conversation JSON (top-level `id`). */
+  /** Upstream Conversation JSON; must include top-level `id` for Idempotent. */
   id?: string | number;
   [key: string]: unknown;
 }
@@ -286,7 +286,7 @@ export async function executeConversationsReplySync(
     fetch: input.fetch,
     operation: "conversations.reply",
   });
-  // POST only; no in-handler GET and no runner observe (reply is a create).
+  // POST only — runner EffectPolicy Idempotent observes via conversations.get.
   return (await client.postJSON(
     `/conversations/${id}/reply`,
     compactBody({

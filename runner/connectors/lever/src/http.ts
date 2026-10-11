@@ -4,11 +4,9 @@
  * Two surfaces:
  * - Public postings (`createClient`) — jobs.list against /v0/postings/{site}
  * - Authenticated Data API (`createAuthClient`) — opportunities/stages/users/
- *   archive_reasons against the region host with HTTP Basic (apiKey as
- *   username, empty password). Matches the manifest http.auth.basic scheme.
- *   Region map: co → https://api.lever.co/v1, eu → https://api.eu.lever.co/v1
- *   (official EU root; tip previously used the nonexistent api.lever.eu).
- *   Exposes getJSON + putJSON + postJSON + deleteJSON for read and write depth.
+ *   archive_reasons against https://api.lever.{region}/v1 with HTTP Basic
+ *   (apiKey as username, empty password). Matches the manifest http.auth.basic
+ *   scheme. Exposes getJSON + putJSON for read and write depth.
  *
  * Both route through the shared outbound stack for allowlist, redirect
  * blocking, response-size bounds, deadlines, and inject-fetch for tests.
@@ -39,15 +37,34 @@ export interface LeverAuthClientConfig {
   operation?: string;
 }
 
+export type LeverHttpMethod = "GET" | "POST" | "PUT" | "DELETE";
+
+export type LeverRawResponse = {
+  status: number;
+  headers: Record<string, string>;
+  body: string;
+};
+
 export type LeverAuthClient = {
-  /** GET `path` relative to the region Data API root and parse JSON. */
+  /** GET `path` relative to https://api.lever.{region}/v1 and parse JSON. */
   getJSON(path: string): Promise<unknown>;
-  /** PUT `path` with a JSON body relative to the region Data API root. */
+  /** PUT `path` with a JSON body relative to https://api.lever.{region}/v1. */
   putJSON(path: string, body?: Record<string, unknown>): Promise<unknown>;
-  /** POST `path` with a JSON body relative to the region Data API root. */
+  /** POST `path` with an optional JSON body. 204/empty → undefined. */
   postJSON(path: string, body?: Record<string, unknown>): Promise<unknown>;
-  /** DELETE `path` relative to the region Data API root (204 → undefined). */
-  deleteJSON(path: string): Promise<unknown>;
+  /** DELETE `path` with an optional JSON body (dropdown option deletes). */
+  deleteJSON(path: string, body?: Record<string, unknown>): Promise<unknown>;
+  /** JSON GET/POST/PUT/DELETE. */
+  requestJSON(method: LeverHttpMethod, path: string, body?: Record<string, unknown>): Promise<unknown>;
+  /**
+   * Raw request for multipart uploads and file downloads. Does not force
+   * Content-Type: application/json; callers set headers as needed.
+   */
+  requestRaw(
+    method: string,
+    path: string,
+    init?: { body?: BodyInit; headers?: Record<string, string> },
+  ): Promise<LeverRawResponse>;
 };
 
 type OperationBounds = { maxResponseBytes: number; timeoutMs: number };
@@ -93,13 +110,6 @@ export function createClient(config: LeverClientConfig): JobBoardClient {
   });
 }
 
-/** Official Lever Data API root for a region code. */
-export function leverDataApiBaseUrl(region: string): string {
-  if (region === "eu") return "https://api.eu.lever.co/v1";
-  if (region === "co") return "https://api.lever.co/v1";
-  throw new Error('region must be "co" or "eu"');
-}
-
 export function createAuthClient(config: LeverAuthClientConfig): LeverAuthClient {
   const region = assertSafePathSegment(config.region, "region");
   if (region !== "co" && region !== "eu") {
@@ -115,67 +125,74 @@ export function createAuthClient(config: LeverAuthClientConfig): LeverAuthClient
     timeoutMs: bounds.timeoutMs,
     fetch: config.fetch,
   });
-  const baseUrl = leverDataApiBaseUrl(region);
-  const headers = {
-    Authorization: basicAuthHeader(config.apiKey),
+  const baseUrl = `https://api.lever.${region}/v1`;
+  const authHeader = basicAuthHeader(config.apiKey);
+  const jsonHeaders = {
+    Authorization: authHeader,
     Accept: "application/json",
     "Content-Type": "application/json",
   };
 
+  async function sendJSON(
+    method: LeverHttpMethod,
+    path: string,
+    body?: Record<string, unknown>,
+  ): Promise<unknown> {
+    const init: RequestInit = {
+      method,
+      headers: body === undefined && method !== "PUT" ? { Authorization: authHeader, Accept: "application/json" } : jsonHeaders,
+    };
+    if (body !== undefined || method === "PUT") {
+      init.headers = jsonHeaders;
+      init.body = JSON.stringify(body ?? {});
+    }
+    const response = await http.fetchText(`${baseUrl}${path}`, init);
+    if (response.status < 200 || response.status >= 300) {
+      throw upstreamErrorFor("Lever", response.status, response.headers, response.body);
+    }
+    if (response.status === 204 || response.body.length === 0) {
+      return undefined;
+    }
+    return parseJSONBody("Lever", response.body);
+  }
+
   return {
     async getJSON(path: string): Promise<unknown> {
-      const response = await http.fetchText(`${baseUrl}${path}`, {
-        method: "GET",
-        headers,
-      });
-      if (response.status < 200 || response.status >= 300) {
-        throw upstreamErrorFor("Lever", response.status, response.headers, response.body);
-      }
-      return parseJSONBody("Lever", response.body);
+      return sendJSON("GET", path);
     },
 
     async putJSON(path: string, body: Record<string, unknown> = {}): Promise<unknown> {
-      const response = await http.fetchText(`${baseUrl}${path}`, {
-        method: "PUT",
-        headers,
-        body: JSON.stringify(body),
-      });
-      if (response.status < 200 || response.status >= 300) {
-        throw upstreamErrorFor("Lever", response.status, response.headers, response.body);
-      }
-      if (response.status === 204 || response.body.length === 0) {
-        return undefined;
-      }
-      return parseJSONBody("Lever", response.body);
+      return sendJSON("PUT", path, body);
     },
 
-    async postJSON(path: string, body: Record<string, unknown> = {}): Promise<unknown> {
-      const response = await http.fetchText(`${baseUrl}${path}`, {
-        method: "POST",
-        headers,
-        body: JSON.stringify(body),
-      });
-      if (response.status < 200 || response.status >= 300) {
-        throw upstreamErrorFor("Lever", response.status, response.headers, response.body);
-      }
-      if (response.status === 204 || response.body.length === 0) {
-        return undefined;
-      }
-      return parseJSONBody("Lever", response.body);
+    async postJSON(path: string, body?: Record<string, unknown>): Promise<unknown> {
+      return sendJSON("POST", path, body);
     },
 
-    async deleteJSON(path: string): Promise<unknown> {
+    async deleteJSON(path: string, body?: Record<string, unknown>): Promise<unknown> {
+      return sendJSON("DELETE", path, body);
+    },
+
+    async requestJSON(method: LeverHttpMethod, path: string, body?: Record<string, unknown>): Promise<unknown> {
+      return sendJSON(method, path, body);
+    },
+
+    async requestRaw(
+      method: string,
+      path: string,
+      init: { body?: BodyInit; headers?: Record<string, string> } = {},
+    ): Promise<LeverRawResponse> {
+      const headers: Record<string, string> = {
+        Authorization: authHeader,
+        Accept: "application/json",
+        ...(init.headers ?? {}),
+      };
       const response = await http.fetchText(`${baseUrl}${path}`, {
-        method: "DELETE",
-        headers: { Authorization: headers.Authorization, Accept: headers.Accept },
+        method,
+        headers,
+        body: init.body,
       });
-      if (response.status < 200 || response.status >= 300) {
-        throw upstreamErrorFor("Lever", response.status, response.headers, response.body);
-      }
-      if (response.status === 204 || response.body.length === 0) {
-        return undefined;
-      }
-      return parseJSONBody("Lever", response.body);
+      return { status: response.status, headers: response.headers, body: response.body };
     },
   };
 }

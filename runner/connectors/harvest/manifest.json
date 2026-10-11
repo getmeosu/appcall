@@ -154,6 +154,11 @@
             "type": "integer",
             "minimum": 1,
             "maximum": 2000
+          },
+          "updatedSince": {
+            "type": "string",
+            "description": "Only return records updated since this ISO 8601 timestamp.",
+            "minLength": 1
           }
         }
       },
@@ -178,7 +183,8 @@
         "query": {
           "is_active": "{{isActive}}",
           "page": "{{page}}",
-          "per_page": "{{perPage}}"
+          "per_page": "{{perPage}}",
+          "updated_since": "{{updatedSince}}"
         },
         "success": [
           200
@@ -215,6 +221,11 @@
             "type": "integer",
             "minimum": 1,
             "maximum": 2000
+          },
+          "updatedSince": {
+            "type": "string",
+            "description": "Only return records updated since this ISO 8601 timestamp.",
+            "minLength": 1
           }
         }
       },
@@ -240,7 +251,8 @@
           "is_active": "{{isActive}}",
           "client_id": "{{clientId}}",
           "page": "{{page}}",
-          "per_page": "{{perPage}}"
+          "per_page": "{{perPage}}",
+          "updated_since": "{{updatedSince}}"
         },
         "success": [
           200
@@ -273,6 +285,15 @@
             "type": "integer",
             "minimum": 1,
             "maximum": 2000
+          },
+          "isDefault": {
+            "type": "boolean",
+            "description": "Pass true to only return default tasks."
+          },
+          "updatedSince": {
+            "type": "string",
+            "description": "Only return records updated since this ISO 8601 timestamp.",
+            "minLength": 1
           }
         }
       },
@@ -297,7 +318,9 @@
         "query": {
           "is_active": "{{isActive}}",
           "page": "{{page}}",
-          "per_page": "{{perPage}}"
+          "per_page": "{{perPage}}",
+          "is_default": "{{isDefault}}",
+          "updated_since": "{{updatedSince}}"
         },
         "success": [
           200
@@ -347,6 +370,28 @@
             "type": "integer",
             "minimum": 1,
             "maximum": 2000
+          },
+          "taskId": {
+            "type": "integer",
+            "description": "Harvest task ID.",
+            "minimum": 1
+          },
+          "isBilled": {
+            "type": "boolean",
+            "description": "Pass true for invoiced entries, false for unbilled."
+          },
+          "isRunning": {
+            "type": "boolean",
+            "description": "Pass true for running timers, false for stopped entries."
+          },
+          "updatedSince": {
+            "type": "string",
+            "description": "Only return records updated since this ISO 8601 timestamp.",
+            "minLength": 1
+          },
+          "externalReferenceId": {
+            "type": "string",
+            "description": "Only return time entries with this external reference ID."
           }
         }
       },
@@ -375,7 +420,12 @@
           "from": "{{from}}",
           "to": "{{to}}",
           "page": "{{page}}",
-          "per_page": "{{perPage}}"
+          "per_page": "{{perPage}}",
+          "task_id": "{{taskId}}",
+          "is_billed": "{{isBilled}}",
+          "is_running": "{{isRunning}}",
+          "updated_since": "{{updatedSince}}",
+          "external_reference_id": "{{externalReferenceId}}"
         },
         "success": [
           200
@@ -388,10 +438,10 @@
     },
     "clients.get": {
       "kind": "action",
-      "sideEffect": "read",
       "timeoutMs": 10000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
+      "sideEffect": "read",
       "title": "Get Client",
       "description": "Retrieve a Harvest client by ID via GET /v2/clients/{clientId}.",
       "inputSchema": {
@@ -399,8 +449,8 @@
         "properties": {
           "clientId": {
             "type": "integer",
-            "minimum": 1,
-            "description": "Harvest client ID."
+            "description": "Harvest client ID.",
+            "minimum": 1
           }
         },
         "additionalProperties": false,
@@ -417,12 +467,14 @@
           "data": {
             "type": [
               "object",
-              "array"
+              "array",
+              "null"
             ]
           }
         },
         "additionalProperties": false
       },
+      "enforceOutputSchema": true,
       "request": {
         "method": "GET",
         "path": "/v2/clients/{{clientId}}",
@@ -430,16 +482,15 @@
           200
         ]
       },
-      "enforceOutputSchema": true,
       "validationMode": "strict-generated",
       "responseFormat": "json"
     },
     "clients.create": {
       "kind": "action",
-      "sideEffect": "write",
       "timeoutMs": 10000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
+      "sideEffect": "write",
       "title": "Create Client",
       "description": "Create a Harvest client via POST /v2/clients.",
       "inputSchema": {
@@ -447,22 +498,19 @@
         "properties": {
           "name": {
             "type": "string",
-            "minLength": 1,
-            "description": "Client name."
-          },
-          "isActive": {
-            "type": "boolean",
-            "description": "Whether the client is active."
+            "description": "The name of the client or company."
           },
           "address": {
             "type": "string",
-            "minLength": 1,
-            "description": "Optional billing address."
+            "description": "The client's physical address. May include new line characters."
           },
           "currency": {
             "type": "string",
-            "minLength": 1,
-            "description": "Optional currency code."
+            "description": "ISO currency code for the client."
+          },
+          "isActive": {
+            "type": "boolean",
+            "description": "Whether the client is active, or archived."
           }
         },
         "additionalProperties": false,
@@ -479,56 +527,64 @@
           "data": {
             "type": [
               "object",
-              "array"
+              "array",
+              "null"
             ]
           }
         },
         "additionalProperties": false
       },
+      "enforceOutputSchema": true,
       "request": {
         "method": "POST",
         "path": "/v2/clients",
+        "success": [
+          201
+        ],
         "body": {
           "name": "{{name}}",
-          "is_active": "{{isActive}}",
           "address": "{{address}}",
-          "currency": "{{currency}}"
+          "currency": "{{currency}}",
+          "is_active": "{{isActive}}"
         },
         "headers": {
           "Content-Type": "application/json"
-        },
-        "success": [
-          201
-        ]
+        }
       },
-      "enforceOutputSchema": true,
       "validationMode": "strict-generated",
       "responseFormat": "json"
     },
     "clients.update": {
       "kind": "action",
-      "sideEffect": "write",
       "timeoutMs": 10000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
+      "sideEffect": "write",
       "title": "Update Client",
-      "description": "Update a Harvest client via PATCH /v2/clients/{clientId}.",
+      "description": "Update a Harvest client via PATCH /v2/clients/{clientId}. Omit fields to leave them unchanged.",
       "inputSchema": {
         "type": "object",
         "properties": {
           "clientId": {
             "type": "integer",
-            "minimum": 1,
-            "description": "Harvest client ID."
+            "description": "Harvest client ID.",
+            "minimum": 1
           },
           "name": {
             "type": "string",
-            "minLength": 1,
-            "description": "Updated client name."
+            "description": "The name of the client or company."
+          },
+          "address": {
+            "type": "string",
+            "description": "The client's physical address. May include new line characters."
+          },
+          "currency": {
+            "type": "string",
+            "description": "ISO currency code for the client."
           },
           "isActive": {
             "type": "boolean",
-            "description": "Whether the client is active."
+            "description": "Whether the client is active, or archived."
           }
         },
         "additionalProperties": false,
@@ -545,36 +601,479 @@
           "data": {
             "type": [
               "object",
-              "array"
+              "array",
+              "null"
             ]
           }
         },
         "additionalProperties": false
       },
+      "enforceOutputSchema": true,
       "request": {
         "method": "PATCH",
         "path": "/v2/clients/{{clientId}}",
+        "success": [
+          200
+        ],
         "body": {
           "name": "{{name}}",
+          "address": "{{address}}",
+          "currency": "{{currency}}",
           "is_active": "{{isActive}}"
         },
         "headers": {
           "Content-Type": "application/json"
+        }
+      },
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "clients.delete": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "destructive",
+      "title": "Delete Client",
+      "description": "Delete a Harvest client via DELETE /v2/clients/{clientId}. The client must have no projects, invoices, or estimates.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "clientId": {
+            "type": "integer",
+            "description": "Harvest client ID.",
+            "minimum": 1
+          }
         },
+        "additionalProperties": false,
+        "required": [
+          "clientId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "ok"
+        ],
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "request": {
+        "method": "DELETE",
+        "path": "/v2/clients/{{clientId}}",
+        "success": [
+          200,
+          204
+        ],
+        "result": {
+          "ok": true
+        }
+      },
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "contacts.list": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "List Client Contacts",
+      "description": "List Harvest client contacts via GET /v2/contacts with optional client and pagination filters.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "clientId": {
+            "type": "integer",
+            "description": "Harvest client ID.",
+            "minimum": 1
+          },
+          "page": {
+            "type": "integer",
+            "description": "Page number for pagination.",
+            "minimum": 1
+          },
+          "perPage": {
+            "type": "integer",
+            "description": "Number of records to return per page (1-2000).",
+            "minimum": 1,
+            "maximum": 2000
+          },
+          "updatedSince": {
+            "type": "string",
+            "description": "Only return records updated since this ISO 8601 timestamp.",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "contacts": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "pagination": {
+            "type": "object"
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "request": {
+        "method": "GET",
+        "path": "/v2/contacts",
+        "success": [
+          200
+        ],
+        "query": {
+          "page": "{{page}}",
+          "per_page": "{{perPage}}",
+          "updated_since": "{{updatedSince}}",
+          "client_id": "{{clientId}}"
+        },
+        "result": {
+          "contacts": "{{response.contacts}}",
+          "pagination": "{{response}}"
+        }
+      },
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "contacts.create": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "write",
+      "title": "Create Client Contact",
+      "description": "Create a Harvest client contact via POST /v2/contacts.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "clientId": {
+            "type": "integer",
+            "description": "Harvest client ID.",
+            "minimum": 1
+          },
+          "firstName": {
+            "type": "string",
+            "description": "First name of the contact."
+          },
+          "lastName": {
+            "type": "string",
+            "description": "Last name of the contact."
+          },
+          "title": {
+            "type": "string",
+            "description": "Title of the contact."
+          },
+          "email": {
+            "type": "string",
+            "description": "Contact email address."
+          },
+          "fax": {
+            "type": "string",
+            "description": "Contact fax number."
+          },
+          "phoneOffice": {
+            "type": "string",
+            "description": "Office phone number."
+          },
+          "phoneMobile": {
+            "type": "string",
+            "description": "Mobile phone number."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "clientId",
+          "firstName"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array",
+              "null"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "request": {
+        "method": "POST",
+        "path": "/v2/contacts",
+        "success": [
+          201
+        ],
+        "body": {
+          "client_id": "{{clientId}}",
+          "first_name": "{{firstName}}",
+          "last_name": "{{lastName}}",
+          "title": "{{title}}",
+          "email": "{{email}}",
+          "fax": "{{fax}}",
+          "phone_office": "{{phoneOffice}}",
+          "phone_mobile": "{{phoneMobile}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "contacts.update": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "write",
+      "title": "Update Client Contact",
+      "description": "Update a Harvest client contact via PATCH /v2/contacts/{contactId}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "contactId": {
+            "type": "integer",
+            "description": "Harvest contact ID.",
+            "minimum": 1
+          },
+          "firstName": {
+            "type": "string",
+            "description": "First name of the contact."
+          },
+          "lastName": {
+            "type": "string",
+            "description": "Last name of the contact."
+          },
+          "title": {
+            "type": "string",
+            "description": "Title of the contact."
+          },
+          "email": {
+            "type": "string",
+            "description": "Contact email address."
+          },
+          "phoneOffice": {
+            "type": "string",
+            "description": "Office phone number."
+          },
+          "phoneMobile": {
+            "type": "string",
+            "description": "Mobile phone number."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "contactId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array",
+              "null"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "request": {
+        "method": "PATCH",
+        "path": "/v2/contacts/{{contactId}}",
+        "success": [
+          200
+        ],
+        "body": {
+          "first_name": "{{firstName}}",
+          "last_name": "{{lastName}}",
+          "title": "{{title}}",
+          "email": "{{email}}",
+          "phone_office": "{{phoneOffice}}",
+          "phone_mobile": "{{phoneMobile}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "contacts.delete": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "destructive",
+      "title": "Delete Client Contact",
+      "description": "Permanently delete a Harvest client contact via DELETE /v2/contacts/{contactId}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "contactId": {
+            "type": "integer",
+            "description": "Harvest contact ID.",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "contactId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "ok"
+        ],
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "request": {
+        "method": "DELETE",
+        "path": "/v2/contacts/{{contactId}}",
+        "success": [
+          200,
+          204
+        ],
+        "result": {
+          "ok": true
+        }
+      },
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "company.get": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "Get Company Info",
+      "description": "Retrieve the authenticated Harvest company via GET /v2/company.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array",
+              "null"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "request": {
+        "method": "GET",
+        "path": "/v2/company",
         "success": [
           200
         ]
       },
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "company.update": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "write",
+      "title": "Update Company Info",
+      "description": "Update company time-tracking settings via PATCH /v2/company. Only wants_timestamp_timers and weekly_capacity are writable.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "wantsTimestampTimers": {
+            "type": "boolean",
+            "description": "True to track start/end times; false to track duration."
+          },
+          "weeklyCapacity": {
+            "type": "integer",
+            "description": "Weekly capacity in seconds, e.g. 144000 for 40 hours.",
+            "minimum": 0
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array",
+              "null"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
       "enforceOutputSchema": true,
+      "request": {
+        "method": "PATCH",
+        "path": "/v2/company",
+        "success": [
+          200
+        ],
+        "body": {
+          "wants_timestamp_timers": "{{wantsTimestampTimers}}",
+          "weekly_capacity": "{{weeklyCapacity}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
       "validationMode": "strict-generated",
       "responseFormat": "json"
     },
     "projects.get": {
       "kind": "action",
-      "sideEffect": "read",
       "timeoutMs": 10000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
+      "sideEffect": "read",
       "title": "Get Project",
       "description": "Retrieve a Harvest project by ID via GET /v2/projects/{projectId}.",
       "inputSchema": {
@@ -582,8 +1081,8 @@
         "properties": {
           "projectId": {
             "type": "integer",
-            "minimum": 1,
-            "description": "Harvest project ID."
+            "description": "Harvest project ID.",
+            "minimum": 1
           }
         },
         "additionalProperties": false,
@@ -600,12 +1099,14 @@
           "data": {
             "type": [
               "object",
-              "array"
+              "array",
+              "null"
             ]
           }
         },
         "additionalProperties": false
       },
+      "enforceOutputSchema": true,
       "request": {
         "method": "GET",
         "path": "/v2/projects/{{projectId}}",
@@ -613,44 +1114,116 @@
           200
         ]
       },
-      "enforceOutputSchema": true,
       "validationMode": "strict-generated",
       "responseFormat": "json"
     },
     "projects.create": {
       "kind": "action",
-      "sideEffect": "write",
       "timeoutMs": 10000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
+      "sideEffect": "write",
       "title": "Create Project",
-      "description": "Create a Harvest project via POST /v2/projects.",
+      "description": "Create a Harvest project via POST /v2/projects. Requires client, name, and billing configuration.",
       "inputSchema": {
         "type": "object",
         "properties": {
           "clientId": {
             "type": "integer",
-            "minimum": 1,
-            "description": "Client that owns the project."
+            "description": "Harvest client ID.",
+            "minimum": 1
           },
           "name": {
             "type": "string",
-            "minLength": 1,
-            "description": "Project name."
+            "description": "Name of the project."
+          },
+          "code": {
+            "type": "string",
+            "description": "Project code."
+          },
+          "isActive": {
+            "type": "boolean",
+            "description": "Whether the project is active."
           },
           "isBillable": {
             "type": "boolean",
             "description": "Whether the project is billable."
           },
+          "isFixedFee": {
+            "type": "boolean",
+            "description": "Whether the project is a fixed-fee project."
+          },
           "billBy": {
             "type": "string",
-            "minLength": 1,
-            "description": "Invoicing method: Project, Tasks, People, or none."
+            "description": "How the project is invoiced.",
+            "enum": [
+              "Project",
+              "Tasks",
+              "People",
+              "none"
+            ]
           },
           "budgetBy": {
             "type": "string",
-            "minLength": 1,
-            "description": "Budget method: project, project_cost, task, task_fees, person, or none."
+            "description": "How the project is budgeted.",
+            "enum": [
+              "project",
+              "project_cost",
+              "task",
+              "task_fees",
+              "person",
+              "none"
+            ]
+          },
+          "budget": {
+            "type": "number",
+            "description": "Monetary or hour budget depending on budget_by."
+          },
+          "budgetIsMonthly": {
+            "type": "boolean",
+            "description": "Whether the budget resets every month."
+          },
+          "notifyWhenOverBudget": {
+            "type": "boolean",
+            "description": "Whether to notify when over budget."
+          },
+          "overBudgetNotificationPercentage": {
+            "type": "number",
+            "description": "Percentage that triggers the over-budget notification."
+          },
+          "showBudgetToAll": {
+            "type": "boolean",
+            "description": "Whether the budget is visible to all project members."
+          },
+          "costBudget": {
+            "type": "number",
+            "description": "Monetary cost budget."
+          },
+          "costBudgetIncludeExpenses": {
+            "type": "boolean",
+            "description": "Whether expenses are included in the cost budget."
+          },
+          "hourlyRate": {
+            "type": "number",
+            "description": "Default hourly rate when billing by project."
+          },
+          "fee": {
+            "type": "number",
+            "description": "Fee when billing by project / fixed fee."
+          },
+          "notes": {
+            "type": "string",
+            "description": "Additional project notes."
+          },
+          "startsOn": {
+            "type": "string",
+            "description": "Date in YYYY-MM-DD format.",
+            "minLength": 1
+          },
+          "endsOn": {
+            "type": "string",
+            "description": "Date in YYYY-MM-DD format.",
+            "minLength": 1
           }
         },
         "additionalProperties": false,
@@ -671,39 +1244,275 @@
           "data": {
             "type": [
               "object",
-              "array"
+              "array",
+              "null"
             ]
           }
         },
         "additionalProperties": false
       },
+      "enforceOutputSchema": true,
       "request": {
         "method": "POST",
         "path": "/v2/projects",
+        "success": [
+          201
+        ],
         "body": {
           "client_id": "{{clientId}}",
           "name": "{{name}}",
+          "code": "{{code}}",
+          "is_active": "{{isActive}}",
           "is_billable": "{{isBillable}}",
+          "is_fixed_fee": "{{isFixedFee}}",
           "bill_by": "{{billBy}}",
-          "budget_by": "{{budgetBy}}"
+          "budget_by": "{{budgetBy}}",
+          "budget": "{{budget}}",
+          "budget_is_monthly": "{{budgetIsMonthly}}",
+          "notify_when_over_budget": "{{notifyWhenOverBudget}}",
+          "over_budget_notification_percentage": "{{overBudgetNotificationPercentage}}",
+          "show_budget_to_all": "{{showBudgetToAll}}",
+          "cost_budget": "{{costBudget}}",
+          "cost_budget_include_expenses": "{{costBudgetIncludeExpenses}}",
+          "hourly_rate": "{{hourlyRate}}",
+          "fee": "{{fee}}",
+          "notes": "{{notes}}",
+          "starts_on": "{{startsOn}}",
+          "ends_on": "{{endsOn}}"
         },
         "headers": {
           "Content-Type": "application/json"
+        }
+      },
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "projects.update": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "write",
+      "title": "Update Project",
+      "description": "Update a Harvest project via PATCH /v2/projects/{projectId}. Omit fields to leave them unchanged.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "projectId": {
+            "type": "integer",
+            "description": "Harvest project ID.",
+            "minimum": 1
+          },
+          "clientId": {
+            "type": "integer",
+            "description": "Harvest client ID.",
+            "minimum": 1
+          },
+          "name": {
+            "type": "string",
+            "description": "Name of the project."
+          },
+          "code": {
+            "type": "string",
+            "description": "Project code."
+          },
+          "isActive": {
+            "type": "boolean",
+            "description": "Whether the project is active."
+          },
+          "isBillable": {
+            "type": "boolean",
+            "description": "Whether the project is billable."
+          },
+          "isFixedFee": {
+            "type": "boolean",
+            "description": "Whether the project is a fixed-fee project."
+          },
+          "billBy": {
+            "type": "string",
+            "description": "How the project is invoiced.",
+            "enum": [
+              "Project",
+              "Tasks",
+              "People",
+              "none"
+            ]
+          },
+          "budgetBy": {
+            "type": "string",
+            "description": "How the project is budgeted.",
+            "enum": [
+              "project",
+              "project_cost",
+              "task",
+              "task_fees",
+              "person",
+              "none"
+            ]
+          },
+          "budget": {
+            "type": "number",
+            "description": "Monetary or hour budget depending on budget_by."
+          },
+          "budgetIsMonthly": {
+            "type": "boolean",
+            "description": "Whether the budget resets every month."
+          },
+          "notifyWhenOverBudget": {
+            "type": "boolean",
+            "description": "Whether to notify when over budget."
+          },
+          "overBudgetNotificationPercentage": {
+            "type": "number",
+            "description": "Percentage that triggers the over-budget notification."
+          },
+          "showBudgetToAll": {
+            "type": "boolean",
+            "description": "Whether the budget is visible to all project members."
+          },
+          "costBudget": {
+            "type": "number",
+            "description": "Monetary cost budget."
+          },
+          "costBudgetIncludeExpenses": {
+            "type": "boolean",
+            "description": "Whether expenses are included in the cost budget."
+          },
+          "hourlyRate": {
+            "type": "number",
+            "description": "Default hourly rate when billing by project."
+          },
+          "fee": {
+            "type": "number",
+            "description": "Fee when billing by project / fixed fee."
+          },
+          "notes": {
+            "type": "string",
+            "description": "Additional project notes."
+          },
+          "startsOn": {
+            "type": "string",
+            "description": "Date in YYYY-MM-DD format.",
+            "minLength": 1
+          },
+          "endsOn": {
+            "type": "string",
+            "description": "Date in YYYY-MM-DD format.",
+            "minLength": 1
+          }
         },
-        "success": [
-          201
+        "additionalProperties": false,
+        "required": [
+          "projectId"
         ]
       },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array",
+              "null"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
       "enforceOutputSchema": true,
+      "request": {
+        "method": "PATCH",
+        "path": "/v2/projects/{{projectId}}",
+        "success": [
+          200
+        ],
+        "body": {
+          "client_id": "{{clientId}}",
+          "name": "{{name}}",
+          "code": "{{code}}",
+          "is_active": "{{isActive}}",
+          "is_billable": "{{isBillable}}",
+          "is_fixed_fee": "{{isFixedFee}}",
+          "bill_by": "{{billBy}}",
+          "budget_by": "{{budgetBy}}",
+          "budget": "{{budget}}",
+          "budget_is_monthly": "{{budgetIsMonthly}}",
+          "notify_when_over_budget": "{{notifyWhenOverBudget}}",
+          "over_budget_notification_percentage": "{{overBudgetNotificationPercentage}}",
+          "show_budget_to_all": "{{showBudgetToAll}}",
+          "cost_budget": "{{costBudget}}",
+          "cost_budget_include_expenses": "{{costBudgetIncludeExpenses}}",
+          "hourly_rate": "{{hourlyRate}}",
+          "fee": "{{fee}}",
+          "notes": "{{notes}}",
+          "starts_on": "{{startsOn}}",
+          "ends_on": "{{endsOn}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "projects.delete": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "destructive",
+      "title": "Delete Project",
+      "description": "Delete a Harvest project via DELETE /v2/projects/{projectId}. Associated time entries and expenses are removed; invoices remain.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "projectId": {
+            "type": "integer",
+            "description": "Harvest project ID.",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "projectId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "ok"
+        ],
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "request": {
+        "method": "DELETE",
+        "path": "/v2/projects/{{projectId}}",
+        "success": [
+          200,
+          204
+        ],
+        "result": {
+          "ok": true
+        }
+      },
       "validationMode": "strict-generated",
       "responseFormat": "json"
     },
     "tasks.get": {
       "kind": "action",
-      "sideEffect": "read",
       "timeoutMs": 10000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
+      "sideEffect": "read",
       "title": "Get Task",
       "description": "Retrieve a Harvest task by ID via GET /v2/tasks/{taskId}.",
       "inputSchema": {
@@ -711,8 +1520,8 @@
         "properties": {
           "taskId": {
             "type": "integer",
-            "minimum": 1,
-            "description": "Harvest task ID."
+            "description": "Harvest task ID.",
+            "minimum": 1
           }
         },
         "additionalProperties": false,
@@ -729,12 +1538,14 @@
           "data": {
             "type": [
               "object",
-              "array"
+              "array",
+              "null"
             ]
           }
         },
         "additionalProperties": false
       },
+      "enforceOutputSchema": true,
       "request": {
         "method": "GET",
         "path": "/v2/tasks/{{taskId}}",
@@ -742,33 +1553,39 @@
           200
         ]
       },
-      "enforceOutputSchema": true,
       "validationMode": "strict-generated",
       "responseFormat": "json"
     },
     "tasks.create": {
       "kind": "action",
-      "sideEffect": "write",
       "timeoutMs": 10000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
+      "sideEffect": "write",
       "title": "Create Task",
-      "description": "Create a Harvest task via POST /v2/tasks.",
+      "description": "Create a Harvest task via POST /v2/tasks. Tasks are reusable activity types assigned to projects.",
       "inputSchema": {
         "type": "object",
         "properties": {
           "name": {
             "type": "string",
-            "minLength": 1,
-            "description": "Task name."
+            "description": "Task name. Must be unique in the account."
+          },
+          "isActive": {
+            "type": "boolean",
+            "description": "Whether the task is active."
+          },
+          "isDefault": {
+            "type": "boolean",
+            "description": "Whether this task is added to future projects by default."
           },
           "billableByDefault": {
             "type": "boolean",
-            "description": "Default billable flag for the task."
+            "description": "Whether the task is billable by default on projects."
           },
           "defaultHourlyRate": {
             "type": "number",
-            "description": "Optional default hourly rate."
+            "description": "Default hourly rate when added to a project."
           }
         },
         "additionalProperties": false,
@@ -785,37 +1602,168 @@
           "data": {
             "type": [
               "object",
-              "array"
+              "array",
+              "null"
             ]
           }
         },
         "additionalProperties": false
       },
+      "enforceOutputSchema": true,
       "request": {
         "method": "POST",
         "path": "/v2/tasks",
+        "success": [
+          201
+        ],
         "body": {
           "name": "{{name}}",
+          "is_active": "{{isActive}}",
+          "is_default": "{{isDefault}}",
           "billable_by_default": "{{billableByDefault}}",
           "default_hourly_rate": "{{defaultHourlyRate}}"
         },
         "headers": {
           "Content-Type": "application/json"
+        }
+      },
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "tasks.update": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "write",
+      "title": "Update Task",
+      "description": "Update a Harvest task via PATCH /v2/tasks/{taskId}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "taskId": {
+            "type": "integer",
+            "description": "Harvest task ID.",
+            "minimum": 1
+          },
+          "name": {
+            "type": "string",
+            "description": "Task name. Must be unique in the account."
+          },
+          "isActive": {
+            "type": "boolean",
+            "description": "Whether the task is active."
+          },
+          "isDefault": {
+            "type": "boolean",
+            "description": "Whether this task is added to future projects by default."
+          },
+          "billableByDefault": {
+            "type": "boolean",
+            "description": "Whether the task is billable by default on projects."
+          },
+          "defaultHourlyRate": {
+            "type": "number",
+            "description": "Default hourly rate when added to a project."
+          }
         },
-        "success": [
-          201
+        "additionalProperties": false,
+        "required": [
+          "taskId"
         ]
       },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array",
+              "null"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
       "enforceOutputSchema": true,
+      "request": {
+        "method": "PATCH",
+        "path": "/v2/tasks/{{taskId}}",
+        "success": [
+          200
+        ],
+        "body": {
+          "name": "{{name}}",
+          "is_active": "{{isActive}}",
+          "is_default": "{{isDefault}}",
+          "billable_by_default": "{{billableByDefault}}",
+          "default_hourly_rate": "{{defaultHourlyRate}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "tasks.delete": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "destructive",
+      "title": "Delete Task",
+      "description": "Delete a Harvest task via DELETE /v2/tasks/{taskId}. The task must have no associated time entries.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "taskId": {
+            "type": "integer",
+            "description": "Harvest task ID.",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "taskId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "ok"
+        ],
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "request": {
+        "method": "DELETE",
+        "path": "/v2/tasks/{{taskId}}",
+        "success": [
+          200,
+          204
+        ],
+        "result": {
+          "ok": true
+        }
+      },
       "validationMode": "strict-generated",
       "responseFormat": "json"
     },
     "timeEntries.get": {
       "kind": "action",
-      "sideEffect": "read",
       "timeoutMs": 10000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
+      "sideEffect": "read",
       "title": "Get Time Entry",
       "description": "Retrieve a Harvest time entry by ID via GET /v2/time_entries/{timeEntryId}.",
       "inputSchema": {
@@ -823,8 +1771,8 @@
         "properties": {
           "timeEntryId": {
             "type": "integer",
-            "minimum": 1,
-            "description": "Harvest time entry ID."
+            "description": "Harvest time entry ID.",
+            "minimum": 1
           }
         },
         "additionalProperties": false,
@@ -841,12 +1789,14 @@
           "data": {
             "type": [
               "object",
-              "array"
+              "array",
+              "null"
             ]
           }
         },
         "additionalProperties": false
       },
+      "enforceOutputSchema": true,
       "request": {
         "method": "GET",
         "path": "/v2/time_entries/{{timeEntryId}}",
@@ -854,52 +1804,87 @@
           200
         ]
       },
-      "enforceOutputSchema": true,
       "validationMode": "strict-generated",
       "responseFormat": "json"
     },
     "timeEntries.create": {
       "kind": "action",
-      "sideEffect": "write",
       "timeoutMs": 10000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
+      "sideEffect": "write",
       "title": "Create Time Entry",
-      "description": "Create a Harvest time entry via POST /v2/time_entries.",
+      "description": "Create a Harvest time entry via POST /v2/time_entries. Supply hours for duration tracking, or started_time/ended_time for timestamps.",
       "inputSchema": {
         "type": "object",
         "properties": {
           "projectId": {
             "type": "integer",
-            "minimum": 1,
-            "description": "Project ID."
+            "description": "Harvest project ID.",
+            "minimum": 1
           },
           "taskId": {
             "type": "integer",
-            "minimum": 1,
-            "description": "Task ID."
+            "description": "Harvest task ID.",
+            "minimum": 1
           },
           "spentDate": {
             "type": "string",
-            "minLength": 1,
-            "description": "Date the time was spent, YYYY-MM-DD."
+            "description": "Date in YYYY-MM-DD format.",
+            "minLength": 1
+          },
+          "userId": {
+            "type": "integer",
+            "description": "Harvest user ID.",
+            "minimum": 1
           },
           "hours": {
-            "type": "number",
-            "description": "Hours to log."
+            "type": [
+              "string",
+              "number"
+            ],
+            "description": "Decimal hours when the account tracks duration."
           },
           "notes": {
             "type": "string",
-            "minLength": 1,
-            "description": "Optional notes."
+            "description": "Notes or description of the work performed."
+          },
+          "startedTime": {
+            "type": "string",
+            "description": "Start time, e.g. 9:00am or 14:30."
+          },
+          "endedTime": {
+            "type": "string",
+            "description": "End time, e.g. 5:00pm or 17:00."
+          },
+          "externalReference": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "description": "External record ID."
+              },
+              "group_id": {
+                "type": "string",
+                "description": "External group ID."
+              },
+              "account_id": {
+                "type": "string",
+                "description": "External account ID."
+              },
+              "permalink": {
+                "type": "string",
+                "description": "Permalink to the external record."
+              }
+            },
+            "additionalProperties": false
           }
         },
         "additionalProperties": false,
         "required": [
           "projectId",
           "taskId",
-          "spentDate",
-          "hours"
+          "spentDate"
         ]
       },
       "outputSchema": {
@@ -911,39 +1896,44 @@
           "data": {
             "type": [
               "object",
-              "array"
+              "array",
+              "null"
             ]
           }
         },
         "additionalProperties": false
       },
+      "enforceOutputSchema": true,
       "request": {
         "method": "POST",
         "path": "/v2/time_entries",
+        "success": [
+          201
+        ],
         "body": {
           "project_id": "{{projectId}}",
           "task_id": "{{taskId}}",
           "spent_date": "{{spentDate}}",
+          "user_id": "{{userId}}",
           "hours": "{{hours}}",
-          "notes": "{{notes}}"
+          "notes": "{{notes}}",
+          "started_time": "{{startedTime}}",
+          "ended_time": "{{endedTime}}",
+          "external_reference": "{{externalReference}}"
         },
         "headers": {
           "Content-Type": "application/json"
-        },
-        "success": [
-          201
-        ]
+        }
       },
-      "enforceOutputSchema": true,
       "validationMode": "strict-generated",
       "responseFormat": "json"
     },
     "timeEntries.update": {
       "kind": "action",
-      "sideEffect": "write",
       "timeoutMs": 10000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
+      "sideEffect": "write",
       "title": "Update Time Entry",
       "description": "Update a Harvest time entry via PATCH /v2/time_entries/{timeEntryId}.",
       "inputSchema": {
@@ -951,22 +1941,64 @@
         "properties": {
           "timeEntryId": {
             "type": "integer",
-            "minimum": 1,
-            "description": "Harvest time entry ID."
+            "description": "Harvest time entry ID.",
+            "minimum": 1
           },
-          "hours": {
-            "type": "number",
-            "description": "Updated hours."
+          "projectId": {
+            "type": "integer",
+            "description": "Harvest project ID.",
+            "minimum": 1
           },
-          "notes": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Updated notes."
+          "taskId": {
+            "type": "integer",
+            "description": "Harvest task ID.",
+            "minimum": 1
           },
           "spentDate": {
             "type": "string",
-            "minLength": 1,
-            "description": "Updated spent date, YYYY-MM-DD."
+            "description": "Date in YYYY-MM-DD format.",
+            "minLength": 1
+          },
+          "hours": {
+            "type": [
+              "string",
+              "number"
+            ],
+            "description": "Decimal hours when the account tracks duration."
+          },
+          "notes": {
+            "type": "string",
+            "description": "Notes or description of the work performed."
+          },
+          "startedTime": {
+            "type": "string",
+            "description": "Start time, e.g. 9:00am or 14:30."
+          },
+          "endedTime": {
+            "type": "string",
+            "description": "End time, e.g. 5:00pm or 17:00."
+          },
+          "externalReference": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "description": "External record ID."
+              },
+              "group_id": {
+                "type": "string",
+                "description": "External group ID."
+              },
+              "account_id": {
+                "type": "string",
+                "description": "External account ID."
+              },
+              "permalink": {
+                "type": "string",
+                "description": "Permalink to the external record."
+              }
+            },
+            "additionalProperties": false
           }
         },
         "additionalProperties": false,
@@ -983,37 +2015,43 @@
           "data": {
             "type": [
               "object",
-              "array"
+              "array",
+              "null"
             ]
           }
         },
         "additionalProperties": false
       },
+      "enforceOutputSchema": true,
       "request": {
         "method": "PATCH",
         "path": "/v2/time_entries/{{timeEntryId}}",
+        "success": [
+          200
+        ],
         "body": {
+          "project_id": "{{projectId}}",
+          "task_id": "{{taskId}}",
+          "spent_date": "{{spentDate}}",
           "hours": "{{hours}}",
           "notes": "{{notes}}",
-          "spent_date": "{{spentDate}}"
+          "started_time": "{{startedTime}}",
+          "ended_time": "{{endedTime}}",
+          "external_reference": "{{externalReference}}"
         },
         "headers": {
           "Content-Type": "application/json"
-        },
-        "success": [
-          200
-        ]
+        }
       },
-      "enforceOutputSchema": true,
       "validationMode": "strict-generated",
       "responseFormat": "json"
     },
     "timeEntries.delete": {
       "kind": "action",
-      "sideEffect": "destructive",
       "timeoutMs": 10000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
+      "sideEffect": "destructive",
       "title": "Delete Time Entry",
       "description": "Delete a Harvest time entry via DELETE /v2/time_entries/{timeEntryId}.",
       "inputSchema": {
@@ -1021,8 +2059,8 @@
         "properties": {
           "timeEntryId": {
             "type": "integer",
-            "minimum": 1,
-            "description": "Harvest time entry ID."
+            "description": "Harvest time entry ID.",
+            "minimum": 1
           }
         },
         "additionalProperties": false,
@@ -1033,49 +2071,93 @@
       "outputSchema": {
         "type": "object",
         "required": [
-          "data"
+          "ok"
         ],
         "properties": {
-          "data": {
-            "type": [
-              "object",
-              "array"
-            ]
+          "ok": {
+            "type": "boolean"
           }
         },
         "additionalProperties": false
       },
+      "enforceOutputSchema": true,
       "request": {
         "method": "DELETE",
         "path": "/v2/time_entries/{{timeEntryId}}",
         "success": [
-          200
-        ]
+          200,
+          204
+        ],
+        "result": {
+          "ok": true
+        }
       },
-      "enforceOutputSchema": true,
       "validationMode": "strict-generated",
       "responseFormat": "json"
     },
-    "timeEntries.stop": {
+    "expenses.create": {
       "kind": "action",
-      "sideEffect": "write",
       "timeoutMs": 10000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
-      "title": "Stop Time Entry",
-      "description": "Stop a running Harvest timer via PATCH /v2/time_entries/{timeEntryId}/stop.",
+      "sideEffect": "write",
+      "title": "Create Expense",
+      "description": "Create a Harvest expense via POST /v2/expenses. Provide units for unit-based categories or total_cost otherwise. Receipt multipart upload is not supported.",
       "inputSchema": {
         "type": "object",
         "properties": {
-          "timeEntryId": {
+          "projectId": {
             "type": "integer",
-            "minimum": 1,
-            "description": "Harvest time entry ID."
+            "description": "Harvest project ID.",
+            "minimum": 1
+          },
+          "expenseCategoryId": {
+            "type": "integer",
+            "description": "Harvest expense category ID.",
+            "minimum": 1
+          },
+          "spentDate": {
+            "type": "string",
+            "description": "Date in YYYY-MM-DD format.",
+            "minLength": 1
+          },
+          "userId": {
+            "type": "integer",
+            "description": "Harvest user ID.",
+            "minimum": 1
+          },
+          "units": {
+            "type": [
+              "string",
+              "number"
+            ],
+            "description": "Quantity of units for unit-based categories."
+          },
+          "totalCost": {
+            "type": [
+              "string",
+              "number"
+            ],
+            "description": "Total amount of the expense."
+          },
+          "notes": {
+            "type": "string",
+            "description": "Textual notes describing the expense."
+          },
+          "billable": {
+            "type": "boolean",
+            "description": "Whether the expense is billable."
+          },
+          "receipt": {
+            "type": "string",
+            "description": "Ignored: Harvest receipt upload requires multipart/form-data, which this tool does not send."
           }
         },
         "additionalProperties": false,
         "required": [
-          "timeEntryId"
+          "projectId",
+          "expenseCategoryId",
+          "spentDate"
         ]
       },
       "outputSchema": {
@@ -1087,96 +2169,319 @@
           "data": {
             "type": [
               "object",
-              "array"
+              "array",
+              "null"
             ]
           }
         },
         "additionalProperties": false
       },
+      "enforceOutputSchema": true,
       "request": {
-        "method": "PATCH",
-        "path": "/v2/time_entries/{{timeEntryId}}/stop",
+        "method": "POST",
+        "path": "/v2/expenses",
         "success": [
-          200
+          201
+        ],
+        "body": {
+          "project_id": "{{projectId}}",
+          "expense_category_id": "{{expenseCategoryId}}",
+          "spent_date": "{{spentDate}}",
+          "user_id": "{{userId}}",
+          "units": "{{units}}",
+          "total_cost": "{{totalCost}}",
+          "notes": "{{notes}}",
+          "billable": "{{billable}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "expenses.update": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "write",
+      "title": "Update Expense",
+      "description": "Update a Harvest expense via PATCH /v2/expenses/{expenseId}. Pass deleteReceipt=true to remove an attached receipt.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "expenseId": {
+            "type": "integer",
+            "description": "Harvest expense ID.",
+            "minimum": 1
+          },
+          "projectId": {
+            "type": "integer",
+            "description": "Harvest project ID.",
+            "minimum": 1
+          },
+          "expenseCategoryId": {
+            "type": "integer",
+            "description": "Harvest expense category ID.",
+            "minimum": 1
+          },
+          "spentDate": {
+            "type": "string",
+            "description": "Date in YYYY-MM-DD format.",
+            "minLength": 1
+          },
+          "userId": {
+            "type": "integer",
+            "description": "Harvest user ID.",
+            "minimum": 1
+          },
+          "units": {
+            "type": [
+              "string",
+              "number"
+            ],
+            "description": "Quantity of units for unit-based categories."
+          },
+          "totalCost": {
+            "type": [
+              "string",
+              "number"
+            ],
+            "description": "Total amount of the expense."
+          },
+          "notes": {
+            "type": "string",
+            "description": "Textual notes describing the expense."
+          },
+          "billable": {
+            "type": "boolean",
+            "description": "Whether the expense is billable."
+          },
+          "deleteReceipt": {
+            "type": "boolean",
+            "description": "Pass true to delete the attached receipt."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "expenseId"
         ]
       },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array",
+              "null"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
       "enforceOutputSchema": true,
+      "request": {
+        "method": "PATCH",
+        "path": "/v2/expenses/{{expenseId}}",
+        "success": [
+          200
+        ],
+        "body": {
+          "project_id": "{{projectId}}",
+          "expense_category_id": "{{expenseCategoryId}}",
+          "spent_date": "{{spentDate}}",
+          "units": "{{units}}",
+          "total_cost": "{{totalCost}}",
+          "notes": "{{notes}}",
+          "billable": "{{billable}}",
+          "delete_receipt": "{{deleteReceipt}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "expenseCategories.list": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "List Expense Categories",
+      "description": "List Harvest expense categories via GET /v2/expense_categories.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "isActive": {
+            "type": "boolean",
+            "description": "Pass true for active records, false for archived."
+          },
+          "page": {
+            "type": "integer",
+            "description": "Page number for pagination.",
+            "minimum": 1
+          },
+          "perPage": {
+            "type": "integer",
+            "description": "Number of records to return per page (1-2000).",
+            "minimum": 1,
+            "maximum": 2000
+          },
+          "updatedSince": {
+            "type": "string",
+            "description": "Only return records updated since this ISO 8601 timestamp.",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "expenseCategories": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "pagination": {
+            "type": "object"
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "request": {
+        "method": "GET",
+        "path": "/v2/expense_categories",
+        "success": [
+          200
+        ],
+        "query": {
+          "page": "{{page}}",
+          "per_page": "{{perPage}}",
+          "updated_since": "{{updatedSince}}",
+          "is_active": "{{isActive}}"
+        },
+        "result": {
+          "expenseCategories": "{{response.expense_categories}}",
+          "pagination": "{{response}}"
+        }
+      },
       "validationMode": "strict-generated",
       "responseFormat": "json"
     },
     "invoices.list": {
       "kind": "action",
-      "sideEffect": "read",
       "timeoutMs": 10000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
+      "sideEffect": "read",
       "title": "List Invoices",
-      "description": "List Harvest invoices via GET /v2/invoices.",
+      "description": "List Harvest invoices via GET /v2/invoices. Filter by client, project, state, or issue-date range.",
       "inputSchema": {
         "type": "object",
         "properties": {
           "clientId": {
             "type": "integer",
-            "minimum": 1,
-            "description": "Filter by client ID."
+            "description": "Harvest client ID.",
+            "minimum": 1
+          },
+          "projectId": {
+            "type": "integer",
+            "description": "Harvest project ID.",
+            "minimum": 1
           },
           "state": {
             "type": "string",
-            "minLength": 1,
-            "description": "Filter by invoice state, e.g. draft, open, paid."
+            "description": "Only return invoices in this state.",
+            "enum": [
+              "draft",
+              "open",
+              "paid",
+              "closed"
+            ]
+          },
+          "from": {
+            "type": "string",
+            "description": "Date in YYYY-MM-DD format.",
+            "minLength": 1
+          },
+          "to": {
+            "type": "string",
+            "description": "Date in YYYY-MM-DD format.",
+            "minLength": 1
           },
           "page": {
             "type": "integer",
-            "minimum": 1,
-            "description": "Page number."
+            "description": "Page number for pagination.",
+            "minimum": 1
           },
           "perPage": {
             "type": "integer",
+            "description": "Number of records to return per page (1-2000).",
             "minimum": 1,
-            "maximum": 2000,
-            "description": "Page size."
+            "maximum": 2000
+          },
+          "updatedSince": {
+            "type": "string",
+            "description": "Only return records updated since this ISO 8601 timestamp.",
+            "minLength": 1
           }
         },
         "additionalProperties": false
       },
       "outputSchema": {
         "type": "object",
-        "required": [
-          "data"
-        ],
         "properties": {
-          "data": {
-            "type": [
-              "object",
-              "array"
-            ]
+          "invoices": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "pagination": {
+            "type": "object"
           }
-        },
-        "additionalProperties": false
+        }
       },
+      "enforceOutputSchema": true,
       "request": {
         "method": "GET",
         "path": "/v2/invoices",
-        "query": {
-          "client_id": "{{clientId}}",
-          "state": "{{state}}",
-          "page": "{{page}}",
-          "per_page": "{{perPage}}"
-        },
         "success": [
           200
-        ]
+        ],
+        "query": {
+          "page": "{{page}}",
+          "per_page": "{{perPage}}",
+          "updated_since": "{{updatedSince}}",
+          "client_id": "{{clientId}}",
+          "project_id": "{{projectId}}",
+          "state": "{{state}}",
+          "from": "{{from}}",
+          "to": "{{to}}"
+        },
+        "result": {
+          "invoices": "{{response.invoices}}",
+          "pagination": "{{response}}"
+        }
       },
-      "enforceOutputSchema": true,
       "validationMode": "strict-generated",
       "responseFormat": "json"
     },
     "invoices.get": {
       "kind": "action",
-      "sideEffect": "read",
       "timeoutMs": 10000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
+      "sideEffect": "read",
       "title": "Get Invoice",
       "description": "Retrieve a Harvest invoice by ID via GET /v2/invoices/{invoiceId}.",
       "inputSchema": {
@@ -1184,8 +2489,8 @@
         "properties": {
           "invoiceId": {
             "type": "integer",
-            "minimum": 1,
-            "description": "Harvest invoice ID."
+            "description": "Harvest invoice ID.",
+            "minimum": 1
           }
         },
         "additionalProperties": false,
@@ -1202,12 +2507,14 @@
           "data": {
             "type": [
               "object",
-              "array"
+              "array",
+              "null"
             ]
           }
         },
         "additionalProperties": false
       },
+      "enforceOutputSchema": true,
       "request": {
         "method": "GET",
         "path": "/v2/invoices/{{invoiceId}}",
@@ -1215,7 +2522,2238 @@
           200
         ]
       },
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "invoices.create": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "write",
+      "title": "Create Invoice",
+      "description": "Create a Harvest invoice via POST /v2/invoices. Requires a client and line items.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "clientId": {
+            "type": "integer",
+            "description": "Harvest client ID.",
+            "minimum": 1
+          },
+          "retainerId": {
+            "type": "integer",
+            "description": "Harvest retainer ID.",
+            "minimum": 1
+          },
+          "estimateId": {
+            "type": "integer",
+            "description": "Harvest estimate ID.",
+            "minimum": 1
+          },
+          "number": {
+            "type": "string",
+            "description": "Custom invoice number."
+          },
+          "purchaseOrder": {
+            "type": "string",
+            "description": "Purchase order number."
+          },
+          "tax": {
+            "type": [
+              "string",
+              "number"
+            ],
+            "description": "First tax rate applied to the invoice (0-100)."
+          },
+          "tax2": {
+            "type": [
+              "string",
+              "number"
+            ],
+            "description": "Second tax rate applied to the invoice (0-100)."
+          },
+          "discount": {
+            "type": [
+              "string",
+              "number"
+            ],
+            "description": "Percentage discount applied to the invoice (0-100)."
+          },
+          "subject": {
+            "type": "string",
+            "description": "Invoice subject."
+          },
+          "notes": {
+            "type": "string",
+            "description": "Additional notes on the invoice."
+          },
+          "currency": {
+            "type": "string",
+            "description": "Currency code, e.g. USD."
+          },
+          "issueDate": {
+            "type": "string",
+            "description": "Date in YYYY-MM-DD format.",
+            "minLength": 1
+          },
+          "dueDate": {
+            "type": "string",
+            "description": "Date in YYYY-MM-DD format.",
+            "minLength": 1
+          },
+          "paymentTerm": {
+            "type": "string",
+            "description": "Payment timeframe.",
+            "enum": [
+              "upon receipt",
+              "net 15",
+              "net 30",
+              "net 45",
+              "net 60",
+              "custom"
+            ]
+          },
+          "paymentOptions": {
+            "type": "array",
+            "description": "Enabled payment options.",
+            "items": {
+              "type": "string",
+              "enum": [
+                "ach",
+                "credit_card",
+                "paypal"
+              ]
+            }
+          },
+          "state": {
+            "type": "string",
+            "description": "Invoice state.",
+            "enum": [
+              "draft",
+              "open",
+              "paid",
+              "closed"
+            ]
+          },
+          "lineItems": {
+            "type": "array",
+            "description": "Invoice line items.",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "integer",
+                  "description": "Harvest line item ID.",
+                  "minimum": 1
+                },
+                "kind": {
+                  "type": "string",
+                  "description": "Invoice/estimate item category name, e.g. Service."
+                },
+                "description": {
+                  "type": "string",
+                  "description": "Line item description."
+                },
+                "unit_price": {
+                  "type": "number",
+                  "description": "Price per unit."
+                },
+                "quantity": {
+                  "type": "number",
+                  "description": "Quantity of units."
+                },
+                "taxed": {
+                  "type": "boolean",
+                  "description": "Whether the first tax applies."
+                },
+                "taxed2": {
+                  "type": "boolean",
+                  "description": "Whether the second tax applies."
+                },
+                "project_id": {
+                  "type": "integer",
+                  "description": "Harvest project ID.",
+                  "minimum": 1
+                }
+              },
+              "additionalProperties": false
+            }
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "clientId",
+          "lineItems"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array",
+              "null"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
       "enforceOutputSchema": true,
+      "request": {
+        "method": "POST",
+        "path": "/v2/invoices",
+        "success": [
+          201
+        ],
+        "body": {
+          "client_id": "{{clientId}}",
+          "retainer_id": "{{retainerId}}",
+          "estimate_id": "{{estimateId}}",
+          "number": "{{number}}",
+          "purchase_order": "{{purchaseOrder}}",
+          "tax": "{{tax}}",
+          "tax2": "{{tax2}}",
+          "discount": "{{discount}}",
+          "subject": "{{subject}}",
+          "notes": "{{notes}}",
+          "currency": "{{currency}}",
+          "issue_date": "{{issueDate}}",
+          "due_date": "{{dueDate}}",
+          "payment_term": "{{paymentTerm}}",
+          "payment_options": "{{paymentOptions}}",
+          "line_items": "{{lineItems}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "invoices.update": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "write",
+      "title": "Update Invoice",
+      "description": "Update a Harvest invoice via PATCH /v2/invoices/{invoiceId}. Omit fields to leave them unchanged.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "invoiceId": {
+            "type": "integer",
+            "description": "Harvest invoice ID.",
+            "minimum": 1
+          },
+          "clientId": {
+            "type": "integer",
+            "description": "Harvest client ID.",
+            "minimum": 1
+          },
+          "retainerId": {
+            "type": "integer",
+            "description": "Harvest retainer ID.",
+            "minimum": 1
+          },
+          "estimateId": {
+            "type": "integer",
+            "description": "Harvest estimate ID.",
+            "minimum": 1
+          },
+          "number": {
+            "type": "string",
+            "description": "Custom invoice number."
+          },
+          "purchaseOrder": {
+            "type": "string",
+            "description": "Purchase order number."
+          },
+          "tax": {
+            "type": [
+              "string",
+              "number"
+            ],
+            "description": "First tax rate applied to the invoice (0-100)."
+          },
+          "tax2": {
+            "type": [
+              "string",
+              "number"
+            ],
+            "description": "Second tax rate applied to the invoice (0-100)."
+          },
+          "discount": {
+            "type": [
+              "string",
+              "number"
+            ],
+            "description": "Percentage discount applied to the invoice (0-100)."
+          },
+          "subject": {
+            "type": "string",
+            "description": "Invoice subject."
+          },
+          "notes": {
+            "type": "string",
+            "description": "Additional notes on the invoice."
+          },
+          "currency": {
+            "type": "string",
+            "description": "Currency code, e.g. USD."
+          },
+          "issueDate": {
+            "type": "string",
+            "description": "Date in YYYY-MM-DD format.",
+            "minLength": 1
+          },
+          "dueDate": {
+            "type": "string",
+            "description": "Date in YYYY-MM-DD format.",
+            "minLength": 1
+          },
+          "paymentTerm": {
+            "type": "string",
+            "description": "Payment timeframe.",
+            "enum": [
+              "upon receipt",
+              "net 15",
+              "net 30",
+              "net 45",
+              "net 60",
+              "custom"
+            ]
+          },
+          "paymentOptions": {
+            "type": "array",
+            "description": "Enabled payment options.",
+            "items": {
+              "type": "string",
+              "enum": [
+                "ach",
+                "credit_card",
+                "paypal"
+              ]
+            }
+          },
+          "state": {
+            "type": "string",
+            "description": "Invoice state.",
+            "enum": [
+              "draft",
+              "open",
+              "paid",
+              "closed"
+            ]
+          },
+          "lineItems": {
+            "type": "array",
+            "description": "Invoice line items.",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "integer",
+                  "description": "Harvest line item ID.",
+                  "minimum": 1
+                },
+                "kind": {
+                  "type": "string",
+                  "description": "Invoice/estimate item category name, e.g. Service."
+                },
+                "description": {
+                  "type": "string",
+                  "description": "Line item description."
+                },
+                "unit_price": {
+                  "type": "number",
+                  "description": "Price per unit."
+                },
+                "quantity": {
+                  "type": "number",
+                  "description": "Quantity of units."
+                },
+                "taxed": {
+                  "type": "boolean",
+                  "description": "Whether the first tax applies."
+                },
+                "taxed2": {
+                  "type": "boolean",
+                  "description": "Whether the second tax applies."
+                },
+                "project_id": {
+                  "type": "integer",
+                  "description": "Harvest project ID.",
+                  "minimum": 1
+                }
+              },
+              "additionalProperties": false
+            }
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "invoiceId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array",
+              "null"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "request": {
+        "method": "PATCH",
+        "path": "/v2/invoices/{{invoiceId}}",
+        "success": [
+          200
+        ],
+        "body": {
+          "client_id": "{{clientId}}",
+          "retainer_id": "{{retainerId}}",
+          "estimate_id": "{{estimateId}}",
+          "number": "{{number}}",
+          "purchase_order": "{{purchaseOrder}}",
+          "tax": "{{tax}}",
+          "tax2": "{{tax2}}",
+          "discount": "{{discount}}",
+          "subject": "{{subject}}",
+          "notes": "{{notes}}",
+          "currency": "{{currency}}",
+          "issue_date": "{{issueDate}}",
+          "due_date": "{{dueDate}}",
+          "payment_term": "{{paymentTerm}}",
+          "payment_options": "{{paymentOptions}}",
+          "line_items": "{{lineItems}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "invoices.delete": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "destructive",
+      "title": "Delete Invoice",
+      "description": "Delete a Harvest invoice via DELETE /v2/invoices/{invoiceId}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "invoiceId": {
+            "type": "integer",
+            "description": "Harvest invoice ID.",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "invoiceId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "ok"
+        ],
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "request": {
+        "method": "DELETE",
+        "path": "/v2/invoices/{{invoiceId}}",
+        "success": [
+          200,
+          204
+        ],
+        "result": {
+          "ok": true
+        }
+      },
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "invoiceItemCategories.list": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "List Invoice Item Categories",
+      "description": "List Harvest invoice item categories via GET /v2/invoice_item_categories.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer",
+            "description": "Page number for pagination.",
+            "minimum": 1
+          },
+          "perPage": {
+            "type": "integer",
+            "description": "Number of records to return per page (1-2000).",
+            "minimum": 1,
+            "maximum": 2000
+          },
+          "updatedSince": {
+            "type": "string",
+            "description": "Only return records updated since this ISO 8601 timestamp.",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "invoiceItemCategories": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "pagination": {
+            "type": "object"
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "request": {
+        "method": "GET",
+        "path": "/v2/invoice_item_categories",
+        "success": [
+          200
+        ],
+        "query": {
+          "page": "{{page}}",
+          "per_page": "{{perPage}}",
+          "updated_since": "{{updatedSince}}"
+        },
+        "result": {
+          "invoiceItemCategories": "{{response.invoice_item_categories}}",
+          "pagination": "{{response}}"
+        }
+      },
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "invoiceItemCategories.create": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "write",
+      "title": "Create Invoice Item Category",
+      "description": "Create a Harvest invoice item category via POST /v2/invoice_item_categories.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Name of the invoice item category."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array",
+              "null"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "request": {
+        "method": "POST",
+        "path": "/v2/invoice_item_categories",
+        "success": [
+          201
+        ],
+        "body": {
+          "name": "{{name}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "invoiceItemCategories.delete": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "destructive",
+      "title": "Delete Invoice Item Category",
+      "description": "Delete a Harvest invoice item category via DELETE /v2/invoice_item_categories/{invoiceItemCategoryId}. Both use_as_service and use_as_expense must be false.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "invoiceItemCategoryId": {
+            "type": "integer",
+            "description": "Harvest invoice item category ID.",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "invoiceItemCategoryId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "ok"
+        ],
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "request": {
+        "method": "DELETE",
+        "path": "/v2/invoice_item_categories/{{invoiceItemCategoryId}}",
+        "success": [
+          200,
+          204
+        ],
+        "result": {
+          "ok": true
+        }
+      },
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "invoiceMessages.list": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "List Invoice Messages",
+      "description": "List messages for a Harvest invoice via GET /v2/invoices/{invoiceId}/messages.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "invoiceId": {
+            "type": "integer",
+            "description": "Harvest invoice ID.",
+            "minimum": 1
+          },
+          "page": {
+            "type": "integer",
+            "description": "Page number for pagination.",
+            "minimum": 1
+          },
+          "perPage": {
+            "type": "integer",
+            "description": "Number of records to return per page (1-2000).",
+            "minimum": 1,
+            "maximum": 2000
+          },
+          "updatedSince": {
+            "type": "string",
+            "description": "Only return records updated since this ISO 8601 timestamp.",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "invoiceId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "invoiceMessages": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "pagination": {
+            "type": "object"
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "request": {
+        "method": "GET",
+        "path": "/v2/invoices/{{invoiceId}}/messages",
+        "success": [
+          200
+        ],
+        "query": {
+          "page": "{{page}}",
+          "per_page": "{{perPage}}",
+          "updated_since": "{{updatedSince}}"
+        },
+        "result": {
+          "invoiceMessages": "{{response.invoice_messages}}",
+          "pagination": "{{response}}"
+        }
+      },
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "invoiceMessages.create": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "write",
+      "title": "Create Invoice Message",
+      "description": "Create an invoice message via POST /v2/invoices/{invoiceId}/messages. Use eventType to send, close, reopen, or save a draft.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "invoiceId": {
+            "type": "integer",
+            "description": "Harvest invoice ID.",
+            "minimum": 1
+          },
+          "recipients": {
+            "type": "array",
+            "description": "Message recipients. Required when sending unless sendMeACopy is true.",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "description": "Recipient name."
+                },
+                "email": {
+                  "type": "string",
+                  "description": "Recipient email.",
+                  "minLength": 1
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "subject": {
+            "type": "string",
+            "description": "Message subject."
+          },
+          "body": {
+            "type": "string",
+            "description": "Message body."
+          },
+          "includeLinkToClientInvoice": {
+            "type": "boolean",
+            "description": "Deprecated Harvest flag for payment options."
+          },
+          "attachPdf": {
+            "type": "boolean",
+            "description": "If true, attach a PDF of the invoice."
+          },
+          "sendMeACopy": {
+            "type": "boolean",
+            "description": "If true, email a copy to the current user."
+          },
+          "thankYou": {
+            "type": "boolean",
+            "description": "If true, send a thank-you message."
+          },
+          "eventType": {
+            "type": "string",
+            "description": "Invoice event: send, draft, close, or re-open.",
+            "enum": [
+              "close",
+              "draft",
+              "re-open",
+              "send"
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "invoiceId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array",
+              "null"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "request": {
+        "method": "POST",
+        "path": "/v2/invoices/{{invoiceId}}/messages",
+        "success": [
+          201
+        ],
+        "body": {
+          "recipients": "{{recipients}}",
+          "subject": "{{subject}}",
+          "body": "{{body}}",
+          "include_link_to_client_invoice": "{{includeLinkToClientInvoice}}",
+          "attach_pdf": "{{attachPdf}}",
+          "send_me_a_copy": "{{sendMeACopy}}",
+          "thank_you": "{{thankYou}}",
+          "event_type": "{{eventType}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "invoiceMessages.delete": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "destructive",
+      "title": "Delete Invoice Message",
+      "description": "Delete an invoice message via DELETE /v2/invoices/{invoiceId}/messages/{messageId}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "invoiceId": {
+            "type": "integer",
+            "description": "Harvest invoice ID.",
+            "minimum": 1
+          },
+          "messageId": {
+            "type": "integer",
+            "description": "Harvest message ID.",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "invoiceId",
+          "messageId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "ok"
+        ],
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "request": {
+        "method": "DELETE",
+        "path": "/v2/invoices/{{invoiceId}}/messages/{{messageId}}",
+        "success": [
+          200,
+          204
+        ],
+        "result": {
+          "ok": true
+        }
+      },
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "invoicePayments.list": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "List Invoice Payments",
+      "description": "List payments recorded on a Harvest invoice via GET /v2/invoices/{invoiceId}/payments.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "invoiceId": {
+            "type": "integer",
+            "description": "Harvest invoice ID.",
+            "minimum": 1
+          },
+          "page": {
+            "type": "integer",
+            "description": "Page number for pagination.",
+            "minimum": 1
+          },
+          "perPage": {
+            "type": "integer",
+            "description": "Number of records to return per page (1-2000).",
+            "minimum": 1,
+            "maximum": 2000
+          },
+          "updatedSince": {
+            "type": "string",
+            "description": "Only return records updated since this ISO 8601 timestamp.",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "invoiceId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "invoicePayments": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "pagination": {
+            "type": "object"
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "request": {
+        "method": "GET",
+        "path": "/v2/invoices/{{invoiceId}}/payments",
+        "success": [
+          200
+        ],
+        "query": {
+          "page": "{{page}}",
+          "per_page": "{{perPage}}",
+          "updated_since": "{{updatedSince}}"
+        },
+        "result": {
+          "invoicePayments": "{{response.invoice_payments}}",
+          "pagination": "{{response}}"
+        }
+      },
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "invoicePayments.create": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "write",
+      "title": "Create Invoice Payment",
+      "description": "Record a payment on a Harvest invoice via POST /v2/invoices/{invoiceId}/payments. Provide paidAt or paidDate.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "invoiceId": {
+            "type": "integer",
+            "description": "Harvest invoice ID.",
+            "minimum": 1
+          },
+          "amount": {
+            "type": [
+              "string",
+              "number"
+            ],
+            "description": "Payment amount."
+          },
+          "paidAt": {
+            "type": "string",
+            "description": "ISO 8601 date-time the payment was made."
+          },
+          "paidDate": {
+            "type": "string",
+            "description": "Date in YYYY-MM-DD format.",
+            "minLength": 1
+          },
+          "notes": {
+            "type": "string",
+            "description": "Notes associated with the payment."
+          },
+          "sendThankYou": {
+            "type": "boolean",
+            "description": "Whether to send a thank-you email when the invoice becomes fully paid."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "invoiceId",
+          "amount"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array",
+              "null"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "request": {
+        "method": "POST",
+        "path": "/v2/invoices/{{invoiceId}}/payments",
+        "success": [
+          201
+        ],
+        "body": {
+          "amount": "{{amount}}",
+          "paid_at": "{{paidAt}}",
+          "paid_date": "{{paidDate}}",
+          "notes": "{{notes}}",
+          "send_thank_you": "{{sendThankYou}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "invoicePayments.delete": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "destructive",
+      "title": "Delete Invoice Payment",
+      "description": "Delete an invoice payment via DELETE /v2/invoices/{invoiceId}/payments/{paymentId}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "invoiceId": {
+            "type": "integer",
+            "description": "Harvest invoice ID.",
+            "minimum": 1
+          },
+          "paymentId": {
+            "type": "integer",
+            "description": "Harvest payment ID.",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "invoiceId",
+          "paymentId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "ok"
+        ],
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "request": {
+        "method": "DELETE",
+        "path": "/v2/invoices/{{invoiceId}}/payments/{{paymentId}}",
+        "success": [
+          200,
+          204
+        ],
+        "result": {
+          "ok": true
+        }
+      },
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "estimates.get": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "Get Estimate",
+      "description": "Retrieve a Harvest estimate by ID via GET /v2/estimates/{estimateId}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "estimateId": {
+            "type": "integer",
+            "description": "Harvest estimate ID.",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "estimateId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array",
+              "null"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "request": {
+        "method": "GET",
+        "path": "/v2/estimates/{{estimateId}}",
+        "success": [
+          200
+        ]
+      },
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "estimates.create": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "write",
+      "title": "Create Estimate",
+      "description": "Create a Harvest estimate via POST /v2/estimates.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "clientId": {
+            "type": "integer",
+            "description": "Harvest client ID.",
+            "minimum": 1
+          },
+          "number": {
+            "type": "string",
+            "description": "If omitted, Harvest auto-generates the estimate number."
+          },
+          "purchaseOrder": {
+            "type": "string",
+            "description": "Purchase order number."
+          },
+          "tax": {
+            "type": "number",
+            "description": "First tax percentage applied to subtotal."
+          },
+          "tax2": {
+            "type": "number",
+            "description": "Second tax percentage applied to subtotal."
+          },
+          "discount": {
+            "type": "number",
+            "description": "Discount percentage subtracted from subtotal."
+          },
+          "subject": {
+            "type": "string",
+            "description": "Estimate subject."
+          },
+          "notes": {
+            "type": "string",
+            "description": "Additional notes to include on the estimate."
+          },
+          "currency": {
+            "type": "string",
+            "description": "Currency code; defaults to the client's currency."
+          },
+          "issueDate": {
+            "type": "string",
+            "description": "Date in YYYY-MM-DD format.",
+            "minLength": 1
+          },
+          "lineItems": {
+            "type": "array",
+            "description": "Estimate line items.",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "integer",
+                  "description": "Harvest line item ID.",
+                  "minimum": 1
+                },
+                "kind": {
+                  "type": "string",
+                  "description": "Invoice/estimate item category name, e.g. Service."
+                },
+                "description": {
+                  "type": "string",
+                  "description": "Line item description."
+                },
+                "unit_price": {
+                  "type": "number",
+                  "description": "Price per unit."
+                },
+                "quantity": {
+                  "type": "number",
+                  "description": "Quantity of units."
+                },
+                "taxed": {
+                  "type": "boolean",
+                  "description": "Whether the first tax applies."
+                },
+                "taxed2": {
+                  "type": "boolean",
+                  "description": "Whether the second tax applies."
+                },
+                "project_id": {
+                  "type": "integer",
+                  "description": "Harvest project ID.",
+                  "minimum": 1
+                }
+              },
+              "additionalProperties": false
+            }
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "clientId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array",
+              "null"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "request": {
+        "method": "POST",
+        "path": "/v2/estimates",
+        "success": [
+          201
+        ],
+        "body": {
+          "client_id": "{{clientId}}",
+          "number": "{{number}}",
+          "purchase_order": "{{purchaseOrder}}",
+          "tax": "{{tax}}",
+          "tax2": "{{tax2}}",
+          "discount": "{{discount}}",
+          "subject": "{{subject}}",
+          "notes": "{{notes}}",
+          "currency": "{{currency}}",
+          "issue_date": "{{issueDate}}",
+          "line_items": "{{lineItems}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "estimates.update": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "write",
+      "title": "Update Estimate",
+      "description": "Update a Harvest estimate via PATCH /v2/estimates/{estimateId}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "estimateId": {
+            "type": "integer",
+            "description": "Harvest estimate ID.",
+            "minimum": 1
+          },
+          "clientId": {
+            "type": "integer",
+            "description": "Harvest client ID.",
+            "minimum": 1
+          },
+          "number": {
+            "type": "string",
+            "description": "If omitted, Harvest auto-generates the estimate number."
+          },
+          "purchaseOrder": {
+            "type": "string",
+            "description": "Purchase order number."
+          },
+          "tax": {
+            "type": "number",
+            "description": "First tax percentage applied to subtotal."
+          },
+          "tax2": {
+            "type": "number",
+            "description": "Second tax percentage applied to subtotal."
+          },
+          "discount": {
+            "type": "number",
+            "description": "Discount percentage subtracted from subtotal."
+          },
+          "subject": {
+            "type": "string",
+            "description": "Estimate subject."
+          },
+          "notes": {
+            "type": "string",
+            "description": "Additional notes to include on the estimate."
+          },
+          "currency": {
+            "type": "string",
+            "description": "Currency code; defaults to the client's currency."
+          },
+          "issueDate": {
+            "type": "string",
+            "description": "Date in YYYY-MM-DD format.",
+            "minLength": 1
+          },
+          "lineItems": {
+            "type": "array",
+            "description": "Estimate line items.",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "integer",
+                  "description": "Harvest line item ID.",
+                  "minimum": 1
+                },
+                "kind": {
+                  "type": "string",
+                  "description": "Invoice/estimate item category name, e.g. Service."
+                },
+                "description": {
+                  "type": "string",
+                  "description": "Line item description."
+                },
+                "unit_price": {
+                  "type": "number",
+                  "description": "Price per unit."
+                },
+                "quantity": {
+                  "type": "number",
+                  "description": "Quantity of units."
+                },
+                "taxed": {
+                  "type": "boolean",
+                  "description": "Whether the first tax applies."
+                },
+                "taxed2": {
+                  "type": "boolean",
+                  "description": "Whether the second tax applies."
+                },
+                "project_id": {
+                  "type": "integer",
+                  "description": "Harvest project ID.",
+                  "minimum": 1
+                }
+              },
+              "additionalProperties": false
+            }
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "estimateId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array",
+              "null"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "request": {
+        "method": "PATCH",
+        "path": "/v2/estimates/{{estimateId}}",
+        "success": [
+          200
+        ],
+        "body": {
+          "client_id": "{{clientId}}",
+          "number": "{{number}}",
+          "purchase_order": "{{purchaseOrder}}",
+          "tax": "{{tax}}",
+          "tax2": "{{tax2}}",
+          "discount": "{{discount}}",
+          "subject": "{{subject}}",
+          "notes": "{{notes}}",
+          "currency": "{{currency}}",
+          "issue_date": "{{issueDate}}",
+          "line_items": "{{lineItems}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "estimates.delete": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "destructive",
+      "title": "Delete Estimate",
+      "description": "Delete a Harvest estimate via DELETE /v2/estimates/{estimateId}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "estimateId": {
+            "type": "integer",
+            "description": "Harvest estimate ID.",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "estimateId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "ok"
+        ],
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "request": {
+        "method": "DELETE",
+        "path": "/v2/estimates/{{estimateId}}",
+        "success": [
+          200,
+          204
+        ],
+        "result": {
+          "ok": true
+        }
+      },
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "estimateItemCategories.create": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "write",
+      "title": "Create Estimate Item Category",
+      "description": "Create a Harvest estimate item category via POST /v2/estimate_item_categories.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Name of the estimate item category."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array",
+              "null"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "request": {
+        "method": "POST",
+        "path": "/v2/estimate_item_categories",
+        "success": [
+          201
+        ],
+        "body": {
+          "name": "{{name}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "estimateItemCategories.update": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "write",
+      "title": "Update Estimate Item Category",
+      "description": "Update a Harvest estimate item category via PATCH /v2/estimate_item_categories/{estimateItemCategoryId}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "estimateItemCategoryId": {
+            "type": "integer",
+            "description": "Harvest estimate item category ID.",
+            "minimum": 1
+          },
+          "name": {
+            "type": "string",
+            "description": "New category name."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "estimateItemCategoryId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array",
+              "null"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "request": {
+        "method": "PATCH",
+        "path": "/v2/estimate_item_categories/{{estimateItemCategoryId}}",
+        "success": [
+          200
+        ],
+        "body": {
+          "name": "{{name}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "estimateMessages.list": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "List Estimate Messages",
+      "description": "List messages for a Harvest estimate via GET /v2/estimates/{estimateId}/messages.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "estimateId": {
+            "type": "integer",
+            "description": "Harvest estimate ID.",
+            "minimum": 1
+          },
+          "page": {
+            "type": "integer",
+            "description": "Page number for pagination.",
+            "minimum": 1
+          },
+          "perPage": {
+            "type": "integer",
+            "description": "Number of records to return per page (1-2000).",
+            "minimum": 1,
+            "maximum": 2000
+          },
+          "updatedSince": {
+            "type": "string",
+            "description": "Only return records updated since this ISO 8601 timestamp.",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "estimateId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "estimateMessages": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "pagination": {
+            "type": "object"
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "request": {
+        "method": "GET",
+        "path": "/v2/estimates/{{estimateId}}/messages",
+        "success": [
+          200
+        ],
+        "query": {
+          "page": "{{page}}",
+          "per_page": "{{perPage}}",
+          "updated_since": "{{updatedSince}}"
+        },
+        "result": {
+          "estimateMessages": "{{response.estimate_messages}}",
+          "pagination": "{{response}}"
+        }
+      },
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "estimateMessages.create": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "write",
+      "title": "Create Estimate Message",
+      "description": "Create an estimate message via POST /v2/estimates/{estimateId}/messages. Use eventType to send, accept, decline, or re-open.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "estimateId": {
+            "type": "integer",
+            "description": "Harvest estimate ID.",
+            "minimum": 1
+          },
+          "recipients": {
+            "type": "array",
+            "description": "Message recipients. Required unless this is an event-only call.",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "description": "Recipient name."
+                },
+                "email": {
+                  "type": "string",
+                  "description": "Recipient email.",
+                  "minLength": 1
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "subject": {
+            "type": "string",
+            "description": "Message subject."
+          },
+          "body": {
+            "type": "string",
+            "description": "Message body."
+          },
+          "sendMeACopy": {
+            "type": "boolean",
+            "description": "If true, email a copy to the current user."
+          },
+          "eventType": {
+            "type": "string",
+            "description": "Estimate event: send, accept, decline, or re-open.",
+            "enum": [
+              "accept",
+              "decline",
+              "re-open",
+              "send"
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "estimateId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array",
+              "null"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "request": {
+        "method": "POST",
+        "path": "/v2/estimates/{{estimateId}}/messages",
+        "success": [
+          201
+        ],
+        "body": {
+          "recipients": "{{recipients}}",
+          "subject": "{{subject}}",
+          "body": "{{body}}",
+          "send_me_a_copy": "{{sendMeACopy}}",
+          "event_type": "{{eventType}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "estimateMessages.delete": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "destructive",
+      "title": "Delete Estimate Message",
+      "description": "Delete an estimate message via DELETE /v2/estimates/{estimateId}/messages/{messageId}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "estimateId": {
+            "type": "integer",
+            "description": "Harvest estimate ID.",
+            "minimum": 1
+          },
+          "messageId": {
+            "type": "integer",
+            "description": "Harvest message ID.",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "estimateId",
+          "messageId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "ok"
+        ],
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "request": {
+        "method": "DELETE",
+        "path": "/v2/estimates/{{estimateId}}/messages/{{messageId}}",
+        "success": [
+          200,
+          204
+        ],
+        "result": {
+          "ok": true
+        }
+      },
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "users.list": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "List Users",
+      "description": "List Harvest users via GET /v2/users.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "isActive": {
+            "type": "boolean",
+            "description": "Pass true for active records, false for archived."
+          },
+          "page": {
+            "type": "integer",
+            "description": "Page number for pagination.",
+            "minimum": 1
+          },
+          "perPage": {
+            "type": "integer",
+            "description": "Number of records to return per page (1-2000).",
+            "minimum": 1,
+            "maximum": 2000
+          },
+          "updatedSince": {
+            "type": "string",
+            "description": "Only return records updated since this ISO 8601 timestamp.",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "users": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "pagination": {
+            "type": "object"
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "request": {
+        "method": "GET",
+        "path": "/v2/users",
+        "success": [
+          200
+        ],
+        "query": {
+          "page": "{{page}}",
+          "per_page": "{{perPage}}",
+          "updated_since": "{{updatedSince}}",
+          "is_active": "{{isActive}}"
+        },
+        "result": {
+          "users": "{{response.users}}",
+          "pagination": "{{response}}"
+        }
+      },
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "users.get": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "Get User",
+      "description": "Retrieve a Harvest user by ID via GET /v2/users/{userId}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "integer",
+            "description": "Harvest user ID.",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "userId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array",
+              "null"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "request": {
+        "method": "GET",
+        "path": "/v2/users/{{userId}}",
+        "success": [
+          200
+        ]
+      },
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "users.create": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "write",
+      "title": "Create User",
+      "description": "Invite a Harvest user via POST /v2/users. Harvest emails the address to activate the account.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "firstName": {
+            "type": "string",
+            "description": "First name."
+          },
+          "lastName": {
+            "type": "string",
+            "description": "Last name."
+          },
+          "email": {
+            "type": "string",
+            "description": "Email address."
+          },
+          "timezone": {
+            "type": "string",
+            "description": "Rails timezone name, e.g. Eastern Time (US & Canada)."
+          },
+          "isContractor": {
+            "type": "boolean",
+            "description": "Whether the user is a contractor."
+          },
+          "isActive": {
+            "type": "boolean",
+            "description": "Whether the user is active."
+          },
+          "hasAccessToAllFutureProjects": {
+            "type": "boolean",
+            "description": "Automatically add the user to future projects."
+          },
+          "weeklyCapacity": {
+            "type": "integer",
+            "description": "Weekly capacity in seconds.",
+            "minimum": 0
+          },
+          "defaultHourlyRate": {
+            "type": "number",
+            "description": "Default billable rate when added to a project."
+          },
+          "costRate": {
+            "type": "number",
+            "description": "Cost rate used when calculating project costs."
+          },
+          "roles": {
+            "type": "array",
+            "description": "Business-role names used for reporting filters.",
+            "items": {
+              "type": "string"
+            }
+          },
+          "accessRoles": {
+            "type": "array",
+            "description": "Harvest access roles that grant permissions.",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "firstName",
+          "lastName",
+          "email"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array",
+              "null"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "request": {
+        "method": "POST",
+        "path": "/v2/users",
+        "success": [
+          201
+        ],
+        "body": {
+          "first_name": "{{firstName}}",
+          "last_name": "{{lastName}}",
+          "email": "{{email}}",
+          "timezone": "{{timezone}}",
+          "is_contractor": "{{isContractor}}",
+          "is_active": "{{isActive}}",
+          "has_access_to_all_future_projects": "{{hasAccessToAllFutureProjects}}",
+          "weekly_capacity": "{{weeklyCapacity}}",
+          "default_hourly_rate": "{{defaultHourlyRate}}",
+          "cost_rate": "{{costRate}}",
+          "roles": "{{roles}}",
+          "access_roles": "{{accessRoles}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "users.update": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "write",
+      "title": "Update User",
+      "description": "Update a Harvest user via PATCH /v2/users/{userId}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "integer",
+            "description": "Harvest user ID.",
+            "minimum": 1
+          },
+          "firstName": {
+            "type": "string",
+            "description": "First name."
+          },
+          "lastName": {
+            "type": "string",
+            "description": "Last name."
+          },
+          "email": {
+            "type": "string",
+            "description": "Email address."
+          },
+          "timezone": {
+            "type": "string",
+            "description": "Rails timezone name, e.g. Eastern Time (US & Canada)."
+          },
+          "isContractor": {
+            "type": "boolean",
+            "description": "Whether the user is a contractor."
+          },
+          "isActive": {
+            "type": "boolean",
+            "description": "Whether the user is active."
+          },
+          "hasAccessToAllFutureProjects": {
+            "type": "boolean",
+            "description": "Automatically add the user to future projects."
+          },
+          "weeklyCapacity": {
+            "type": "integer",
+            "description": "Weekly capacity in seconds.",
+            "minimum": 0
+          },
+          "defaultHourlyRate": {
+            "type": "number",
+            "description": "Default billable rate when added to a project."
+          },
+          "costRate": {
+            "type": "number",
+            "description": "Cost rate used when calculating project costs."
+          },
+          "roles": {
+            "type": "array",
+            "description": "Business-role names used for reporting filters.",
+            "items": {
+              "type": "string"
+            }
+          },
+          "accessRoles": {
+            "type": "array",
+            "description": "Harvest access roles that grant permissions.",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "userId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array",
+              "null"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "request": {
+        "method": "PATCH",
+        "path": "/v2/users/{{userId}}",
+        "success": [
+          200
+        ],
+        "body": {
+          "first_name": "{{firstName}}",
+          "last_name": "{{lastName}}",
+          "email": "{{email}}",
+          "timezone": "{{timezone}}",
+          "is_contractor": "{{isContractor}}",
+          "is_active": "{{isActive}}",
+          "has_access_to_all_future_projects": "{{hasAccessToAllFutureProjects}}",
+          "weekly_capacity": "{{weeklyCapacity}}",
+          "roles": "{{roles}}",
+          "access_roles": "{{accessRoles}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "users.delete": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "destructive",
+      "title": "Delete User",
+      "description": "Delete a Harvest user via DELETE /v2/users/{userId}. The user must have no time entries or expenses.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "integer",
+            "description": "Harvest user ID.",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "userId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "ok"
+        ],
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "request": {
+        "method": "DELETE",
+        "path": "/v2/users/{{userId}}",
+        "success": [
+          200,
+          204
+        ],
+        "result": {
+          "ok": true
+        }
+      },
       "validationMode": "strict-generated",
       "responseFormat": "json"
     }
@@ -1223,10 +4761,20 @@
   "models": [
     "user",
     "client",
+    "contact",
+    "company",
     "project",
     "task",
     "timeEntry",
-    "invoice"
+    "expense",
+    "expenseCategory",
+    "invoice",
+    "invoiceItemCategory",
+    "invoiceMessage",
+    "invoicePayment",
+    "estimate",
+    "estimateItemCategory",
+    "estimateMessage"
   ],
   "provenance": {
     "source": {
@@ -1241,5 +4789,6 @@
     "live": {
       "status": "unverified"
     }
-  }
+  },
+  "description": "Time tracking, invoicing, estimates, expenses, and project management for Harvest."
 }

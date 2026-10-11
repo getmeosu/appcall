@@ -1,17 +1,7 @@
 {
-  "key": "lodgify",
-  "name": "Lodgify",
-  "version": "0.2.0",
-  "runtime": "bun",
-  "visibility": "public",
-  "categories": [
-    "scheduling"
-  ],
   "auth": {
-    "type": "api_key",
     "scopes": [],
     "setup": {
-      "mode": "api_key",
       "fields": [
         {
           "key": "apiKey",
@@ -19,278 +9,154 @@
           "required": true,
           "secret": true
         }
-      ]
+      ],
+      "mode": "api_key"
+    },
+    "type": "api_key"
+  },
+  "categories": [
+    "scheduling"
+  ],
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
     }
   },
-  "network": {
-    "allowedHosts": [
-      "api.lodgify.com"
-    ]
-  },
-  "models": [
-    "property",
-    "room",
-    "booking",
-    "availability",
-    "rate",
-    "webhook"
-  ],
   "http": {
-    "baseUrl": "https://api.lodgify.com",
     "auth": {
       "field": "apiKey",
       "in": "header",
       "name": "X-ApiKey",
       "value": "{{apiKey}}"
     },
-    "headers": {
-      "Accept": "application/json"
-    },
+    "baseUrl": "https://api.lodgify.com",
     "errors": {
-      "rateLimitStatuses": [
-        429
-      ],
-      "retryAfterHeader": "retry-after",
       "defaultRetryAfterSeconds": 30,
       "messagePaths": [
         "message",
         "error",
         "title",
         "detail"
-      ]
+      ],
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after"
+    },
+    "headers": {
+      "Accept": "application/json"
     }
   },
+  "key": "lodgify",
+  "models": [
+    "property",
+    "room",
+    "booking",
+    "enquiry",
+    "reservation",
+    "country",
+    "currency",
+    "availability",
+    "webhook",
+    "messaging_thread",
+    "external_booking"
+  ],
+  "name": "Lodgify",
+  "network": {
+    "allowedHosts": [
+      "api.lodgify.com"
+    ]
+  },
   "operations": {
-    "healthcheck": {
-      "timeoutMs": 5000,
-      "maxInputBytes": 4096,
-      "maxResponseBytes": 65536,
-      "kind": "action",
-      "sideEffect": "read",
-      "title": "Healthcheck",
-      "description": "Validate the Lodgify API key with GET /v2/properties?page=1&size=1.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {},
-        "additionalProperties": false
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
+    "bookings.get": {
+      "description": "Get one Lodgify booking by identifier.",
       "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json",
-      "request": {
-        "method": "GET",
-        "path": "/v2/properties",
-        "query": {
-          "page": 1,
-          "size": 1,
-          "includeCount": true
-        },
-        "success": [
-          200
-        ]
-      }
-    },
-    "properties.list": {
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "kind": "action",
-      "sideEffect": "read",
-      "title": "List properties",
-      "description": "List Lodgify properties with optional pagination and total count.",
       "inputSchema": {
-        "type": "object",
+        "additionalProperties": false,
         "properties": {
-          "page": {
-            "type": "integer",
-            "minimum": 1
-          },
-          "size": {
-            "type": "integer",
+          "bookingId": {
             "minimum": 1,
-            "maximum": 50
-          },
-          "includeCount": {
-            "type": "boolean"
+            "type": "integer"
           }
         },
-        "additionalProperties": false
-      },
-      "outputSchema": {
-        "type": "object",
         "required": [
-          "data"
+          "bookingId"
         ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "additionalProperties": false
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json",
-      "request": {
-        "method": "GET",
-        "path": "/v2/properties",
-        "query": {
-          "page": "{{page}}",
-          "size": "{{size}}",
-          "includeCount": "{{includeCount}}"
-        },
-        "success": [
-          200
-        ]
-      }
-    },
-    "properties.get": {
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "kind": "action",
-      "sideEffect": "read",
-      "title": "Get property",
-      "description": "Get one Lodgify property by identifier.",
-      "inputSchema": {
-        "type": "object",
-        "required": [
-          "propertyId"
-        ],
-        "properties": {
-          "propertyId": {
-            "type": "integer",
-            "minimum": 1
-          }
-        },
-        "additionalProperties": false
-      },
-      "outputSchema": {
-        "type": "object",
         "required": [
           "data"
         ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
+        "type": "object"
       },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json",
       "request": {
         "method": "GET",
-        "path": "/v2/properties/{{propertyId}}",
+        "path": "/v2/reservations/bookings/{{bookingId}}",
         "success": [
           200
         ]
-      }
-    },
-    "rooms.list": {
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "kind": "action",
+      },
+      "responseFormat": "json",
       "sideEffect": "read",
-      "title": "List property rooms",
-      "description": "List room types configured for a Lodgify property.",
-      "inputSchema": {
-        "type": "object",
-        "required": [
-          "propertyId"
-        ],
-        "properties": {
-          "propertyId": {
-            "type": "integer",
-            "minimum": 1
-          }
-        },
-        "additionalProperties": false
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "array"
-          }
-        },
-        "additionalProperties": false
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json",
-      "request": {
-        "method": "GET",
-        "path": "/v2/properties/{{propertyId}}/rooms",
-        "success": [
-          200
-        ]
-      }
+      "timeoutMs": 15000,
+      "title": "Get booking",
+      "validationMode": "strict-generated"
     },
     "bookings.list": {
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "kind": "action",
-      "sideEffect": "read",
-      "title": "List bookings",
       "description": "List Lodgify bookings with optional pagination and stay filter.",
+      "enforceOutputSchema": true,
       "inputSchema": {
-        "type": "object",
+        "additionalProperties": false,
         "properties": {
           "page": {
-            "type": "integer",
-            "minimum": 1
+            "minimum": 1,
+            "type": "integer"
           },
           "size": {
-            "type": "integer",
+            "maximum": 50,
             "minimum": 1,
-            "maximum": 50
+            "type": "integer"
           },
           "stayFilter": {
-            "type": "string",
             "enum": [
               "Upcoming",
               "Current",
               "Historic",
               "All"
-            ]
+            ],
+            "type": "string"
           }
         },
-        "additionalProperties": false
+        "type": "object"
       },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
       "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
+        "additionalProperties": false,
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "additionalProperties": false
+        "required": [
+          "data"
+        ],
+        "type": "object"
       },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json",
       "request": {
         "method": "GET",
         "path": "/v2/reservations/bookings",
@@ -302,66 +168,831 @@
         "success": [
           200
         ]
-      }
-    },
-    "bookings.get": {
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "kind": "action",
-      "sideEffect": "read",
-      "title": "Get booking",
-      "description": "Get one Lodgify booking by identifier.",
-      "inputSchema": {
-        "type": "object",
-        "required": [
-          "bookingId"
-        ],
-        "properties": {
-          "bookingId": {
-            "type": "integer",
-            "minimum": 1
-          }
-        },
-        "additionalProperties": false
       },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List bookings",
+      "validationMode": "strict-generated"
+    },
+    "healthcheck": {
+      "description": "Validate the Lodgify API key with GET /v2/properties?page=1&size=1.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {},
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
       "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
+        "additionalProperties": false,
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "additionalProperties": false
+        "required": [
+          "data"
+        ],
+        "type": "object"
       },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json",
       "request": {
         "method": "GET",
-        "path": "/v2/reservations/bookings/{{bookingId}}",
+        "path": "/v2/properties",
+        "query": {
+          "includeCount": true,
+          "page": 1,
+          "size": 1
+        },
         "success": [
           200
         ]
-      }
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 5000,
+      "title": "Healthcheck",
+      "validationMode": "strict-generated"
     },
-    "properties.deleted.list": {
+    "properties.get": {
+      "description": "Get one Lodgify property by identifier.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "propertyId": {
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "propertyId"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/properties/{{propertyId}}",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get property",
+      "validationMode": "strict-generated"
+    },
+    "properties.list": {
+      "description": "List Lodgify properties with optional pagination and total count.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "includeCount": {
+            "type": "boolean"
+          },
+          "page": {
+            "minimum": 1,
+            "type": "integer"
+          },
+          "size": {
+            "maximum": 50,
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/properties",
+        "query": {
+          "includeCount": "{{includeCount}}",
+          "page": "{{page}}",
+          "size": "{{size}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List properties",
+      "validationMode": "strict-generated"
+    },
+    "rooms.list": {
+      "description": "List room types configured for a Lodgify property.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "propertyId": {
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "propertyId"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "array"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/properties/{{propertyId}}/rooms",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List property rooms",
+      "validationMode": "strict-generated"
+    },
+    "enquiries.callmeback.create": {
+      "kind": "action",
+      "sideEffect": "write",
       "timeoutMs": 15000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
+      "title": "Create call-me-back request",
+      "description": "Create a Call Me Back enquiry via POST /v1/reservation/callmeback. Returns the created enquiry id.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "guest_breakdown": {
+            "type": "object",
+            "description": "Breakdown of guests for the booking or enquiry (adults, children, infants, pets).",
+            "additionalProperties": true,
+            "properties": {
+              "adults": {
+                "type": "integer",
+                "description": "Number of adults.",
+                "minimum": 0
+              },
+              "children": {
+                "type": "integer",
+                "description": "Number of children.",
+                "minimum": 0
+              },
+              "infants": {
+                "type": "integer",
+                "description": "Number of infants.",
+                "minimum": 0
+              },
+              "pets": {
+                "type": "integer",
+                "description": "Number of pets.",
+                "minimum": 0
+              }
+            }
+          },
+          "guest": {
+            "type": "object",
+            "description": "Guest making the enquiry (name, email, phone, address).",
+            "additionalProperties": true
+          },
+          "property_id": {
+            "type": "integer",
+            "description": "Property identifier.",
+            "minimum": 1
+          },
+          "room_type_id": {
+            "type": "integer",
+            "description": "Room type identifier.",
+            "minimum": 1
+          },
+          "arrival": {
+            "type": "string",
+            "description": "Arrival date in yyyy-MM-dd format."
+          },
+          "departure": {
+            "type": "string",
+            "description": "Departure date in yyyy-MM-dd format."
+          },
+          "people": {
+            "type": "integer",
+            "description": "Deprecated guest count. Use guest_breakdown.adults.",
+            "minimum": 0
+          },
+          "status": {
+            "type": "string",
+            "description": "Enquiry status. Defaults to Open."
+          },
+          "origin": {
+            "type": "string",
+            "description": "Origin of the enquiry."
+          },
+          "messages": {
+            "type": "array",
+            "description": "Messages attached to the enquiry.",
+            "items": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          },
+          "thread_id": {
+            "type": "string",
+            "description": "Messaging thread UUID to link this enquiry."
+          },
+          "ip_created": {
+            "type": "string",
+            "description": "IP address where the enquiry was created."
+          },
+          "source_text": {
+            "type": "string",
+            "description": "Textual description of the enquiry source."
+          },
+          "source_address": {
+            "type": "string",
+            "description": "Sender email if the enquiry originated from email."
+          },
+          "has_privacy_consent": {
+            "type": "boolean",
+            "description": "Whether the guest has given privacy consent."
+          },
+          "date": {
+            "type": "string",
+            "description": "Scheduled call-back date in yyyy-MM-dd format."
+          },
+          "time": {
+            "type": "integer",
+            "description": "Hour of the appointment (0-23).",
+            "minimum": 0,
+            "maximum": 23
+          },
+          "duration": {
+            "type": "number",
+            "description": "Duration of the appointment in hours. Default is 2.",
+            "minimum": 0
+          },
+          "notes": {
+            "type": "string",
+            "description": "Additional notes for the call-back request."
+          },
+          "time_zone_info_id": {
+            "type": "string",
+            "description": "IANA time zone identifier for the appointment time."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "guest_breakdown"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/reservation/callmeback",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "guest_breakdown": "{{guest_breakdown}}",
+          "guest": "{{guest}}",
+          "property_id": "{{property_id}}",
+          "room_type_id": "{{room_type_id}}",
+          "arrival": "{{arrival}}",
+          "departure": "{{departure}}",
+          "people": "{{people}}",
+          "status": "{{status}}",
+          "origin": "{{origin}}",
+          "messages": "{{messages}}",
+          "thread_id": "{{thread_id}}",
+          "ip_created": "{{ip_created}}",
+          "source_text": "{{source_text}}",
+          "source_address": "{{source_address}}",
+          "has_privacy_consent": "{{has_privacy_consent}}",
+          "date": "{{date}}",
+          "time": "{{time}}",
+          "duration": "{{duration}}",
+          "notes": "{{notes}}",
+          "time_zone_info_id": "{{time_zone_info_id}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "enquiries.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create enquiry",
+      "description": "Create a general enquiry via POST /v1/reservation/enquiry. Returns the created enquiry id.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "guest_breakdown": {
+            "type": "object",
+            "description": "Breakdown of guests for the booking or enquiry (adults, children, infants, pets).",
+            "additionalProperties": true,
+            "properties": {
+              "adults": {
+                "type": "integer",
+                "description": "Number of adults.",
+                "minimum": 0
+              },
+              "children": {
+                "type": "integer",
+                "description": "Number of children.",
+                "minimum": 0
+              },
+              "infants": {
+                "type": "integer",
+                "description": "Number of infants.",
+                "minimum": 0
+              },
+              "pets": {
+                "type": "integer",
+                "description": "Number of pets.",
+                "minimum": 0
+              }
+            }
+          },
+          "guest": {
+            "type": "object",
+            "description": "Guest making the enquiry (name, email, phone, address).",
+            "additionalProperties": true
+          },
+          "property_id": {
+            "type": "integer",
+            "description": "Property identifier.",
+            "minimum": 1
+          },
+          "room_type_id": {
+            "type": "integer",
+            "description": "Room type identifier.",
+            "minimum": 1
+          },
+          "arrival": {
+            "type": "string",
+            "description": "Arrival date in yyyy-MM-dd format."
+          },
+          "departure": {
+            "type": "string",
+            "description": "Departure date in yyyy-MM-dd format."
+          },
+          "people": {
+            "type": "integer",
+            "description": "Deprecated guest count. Use guest_breakdown.adults.",
+            "minimum": 0
+          },
+          "status": {
+            "type": "string",
+            "description": "Enquiry status. Defaults to Open."
+          },
+          "origin": {
+            "type": "string",
+            "description": "Origin of the enquiry."
+          },
+          "messages": {
+            "type": "array",
+            "description": "Messages attached to the enquiry.",
+            "items": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          },
+          "thread_id": {
+            "type": "string",
+            "description": "Messaging thread UUID to link this enquiry."
+          },
+          "ip_created": {
+            "type": "string",
+            "description": "IP address where the enquiry was created."
+          },
+          "source_text": {
+            "type": "string",
+            "description": "Textual description of the enquiry source."
+          },
+          "source_address": {
+            "type": "string",
+            "description": "Sender email if the enquiry originated from email."
+          },
+          "has_privacy_consent": {
+            "type": "boolean",
+            "description": "Whether the guest has given privacy consent."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "guest_breakdown"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/reservation/enquiry",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "guest_breakdown": "{{guest_breakdown}}",
+          "guest": "{{guest}}",
+          "property_id": "{{property_id}}",
+          "room_type_id": "{{room_type_id}}",
+          "arrival": "{{arrival}}",
+          "departure": "{{departure}}",
+          "people": "{{people}}",
+          "status": "{{status}}",
+          "origin": "{{origin}}",
+          "messages": "{{messages}}",
+          "thread_id": "{{thread_id}}",
+          "ip_created": "{{ip_created}}",
+          "source_text": "{{source_text}}",
+          "source_address": "{{source_address}}",
+          "has_privacy_consent": "{{has_privacy_consent}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "enquiries.decline": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Decline enquiry",
+      "description": "Decline an enquiry via PUT /v1/reservation/enquiry/{id}/decline.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "description": "Enquiry identifier.",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "success"
+        ],
+        "properties": {
+          "success": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/v1/reservation/enquiry/{{id}}/decline",
+        "success": [
+          200,
+          204
+        ],
+        "result": {
+          "success": true
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "enquiries.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Delete enquiry",
+      "description": "Move an enquiry to the trash via DELETE /v1/reservation/enquiry/{id}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "description": "Enquiry identifier.",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "success"
+        ],
+        "properties": {
+          "success": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/v1/reservation/enquiry/{{id}}",
+        "success": [
+          200,
+          204
+        ],
+        "result": {
+          "success": true
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "reservations.delete": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Delete reservations",
+      "description": "Batch-move bookings and enquiries to the trash via POST /v1/reservation/delete. Body is a JSON array of {id, type}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "reservations": {
+            "type": "array",
+            "description": "Reservation references to delete.",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "id": {
+                  "type": "integer",
+                  "description": "Booking or enquiry identifier.",
+                  "minimum": 1
+                },
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "Booking",
+                    "Enquiry"
+                  ],
+                  "description": "Entity type."
+                }
+              },
+              "required": [
+                "id"
+              ]
+            },
+            "minItems": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "reservations"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "success"
+        ],
+        "properties": {
+          "success": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/reservation/delete",
+        "success": [
+          200,
+          204
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{{reservations}}",
+        "result": {
+          "success": true
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "countries.list": {
       "kind": "action",
       "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List countries",
+      "description": "List available country codes via GET /v1/countries.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/countries",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "countries.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get country",
+      "description": "Get one country by ISO 3166-1 alpha-2 code via GET /v1/countries/{code}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "minLength": 1,
+            "description": "ISO 3166-1 alpha-2 country code (e.g. US, GB, FR)."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "code"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/countries/{{code}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "currencies.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get currency",
+      "description": "Get one currency by ISO 4217 code via GET /v1/currencies/{code}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "minLength": 1,
+            "description": "ISO 4217 currency code (e.g. USD, EUR, GBP)."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "code"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/currencies/{{code}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "properties.deleted.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
       "title": "List deleted properties",
-      "description": "List Lodgify properties deleted since an optional date.",
+      "description": "List deleted property IDs via GET /v2/deletedproperties, optionally filtered by deletedSince.",
       "inputSchema": {
         "type": "object",
         "properties": {
           "deletedSince": {
             "type": "string",
-            "description": "Include properties deleted since this datetime."
+            "description": "ISO 8601 datetime; only properties deleted since this instant."
           }
         },
         "additionalProperties": false
@@ -372,9 +1003,7 @@
           "data"
         ],
         "properties": {
-          "data": {
-            "type": "array"
-          }
+          "data": {}
         },
         "additionalProperties": false
       },
@@ -392,327 +1021,119 @@
       "validationMode": "strict-generated",
       "responseFormat": "json"
     },
-    "bookings.delete": {
+    "bookings.external.list": {
+      "kind": "action",
+      "sideEffect": "read",
       "timeoutMs": 15000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
-      "kind": "action",
-      "sideEffect": "destructive",
-      "title": "Delete booking",
-      "description": "Move a Lodgify booking to the trash.",
+      "title": "List external bookings",
+      "description": "List external bookings for a Lodgify booking via GET /v2/reservations/bookings/{id}/externalBookings.",
       "inputSchema": {
         "type": "object",
         "properties": {
-          "bookingId": {
+          "id": {
             "type": "integer",
-            "description": "Booking ID.",
+            "description": "Booking identifier.",
             "minimum": 1
           }
         },
         "additionalProperties": false,
         "required": [
-          "bookingId"
+          "id"
         ]
       },
       "outputSchema": {
         "type": "object",
         "required": [
-          "deleted",
-          "bookingId"
+          "data"
         ],
         "properties": {
-          "deleted": {
-            "type": "boolean"
-          },
-          "bookingId": {
-            "type": "integer"
-          }
+          "data": {}
         },
         "additionalProperties": false
       },
       "request": {
-        "method": "DELETE",
-        "path": "/v1/reservation/booking/{{bookingId}}",
+        "method": "GET",
+        "path": "/v2/reservations/bookings/{{id}}/externalBookings",
         "success": [
-          200,
-          204
-        ],
-        "result": {
-          "deleted": true,
-          "bookingId": "{{input.bookingId}}"
-        }
+          200
+        ]
       },
       "enforceOutputSchema": true,
       "validationMode": "strict-generated",
       "responseFormat": "json"
     },
-    "bookings.checkin": {
+    "messaging.threads.get": {
+      "kind": "action",
+      "sideEffect": "read",
       "timeoutMs": 15000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
-      "kind": "action",
-      "sideEffect": "write",
-      "title": "Check in booking",
-      "description": "Set the check-in time for a Lodgify booking.",
+      "title": "Get messaging thread",
+      "description": "Get a messaging thread via GET /v2/messaging/{threadGuid}.",
       "inputSchema": {
         "type": "object",
         "properties": {
-          "bookingId": {
-            "type": "integer",
-            "description": "Booking ID.",
-            "minimum": 1
-          },
-          "time": {
+          "threadGuid": {
             "type": "string",
-            "description": "Check-in time in HH:mm:ss in the property timezone.",
-            "minLength": 1
+            "minLength": 1,
+            "description": "Thread UUID from reservation thread_uid or guest_message_received webhooks."
           }
         },
         "additionalProperties": false,
         "required": [
-          "bookingId",
-          "time"
+          "threadGuid"
         ]
       },
       "outputSchema": {
         "type": "object",
         "required": [
-          "ok",
-          "bookingId"
+          "data"
         ],
         "properties": {
-          "ok": {
-            "type": "boolean"
-          },
-          "bookingId": {
-            "type": "integer"
-          }
+          "data": {}
         },
         "additionalProperties": false
       },
       "request": {
-        "method": "PUT",
-        "path": "/v2/reservations/bookings/{{bookingId}}/checkin",
+        "method": "GET",
+        "path": "/v2/messaging/{{threadGuid}}",
         "success": [
-          200,
-          204
-        ],
-        "body": {
-          "time": "{{time}}"
-        },
-        "headers": {
-          "Content-Type": "application/json"
-        },
-        "result": {
-          "ok": true,
-          "bookingId": "{{input.bookingId}}"
-        }
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "bookings.checkout": {
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "kind": "action",
-      "sideEffect": "write",
-      "title": "Check out booking",
-      "description": "Set the check-out time for a Lodgify booking.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "bookingId": {
-            "type": "integer",
-            "description": "Booking ID.",
-            "minimum": 1
-          },
-          "time": {
-            "type": "string",
-            "description": "Check-out time in HH:mm:ss in the property timezone.",
-            "minLength": 1
-          }
-        },
-        "additionalProperties": false,
-        "required": [
-          "bookingId",
-          "time"
+          200
         ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "ok",
-          "bookingId"
-        ],
-        "properties": {
-          "ok": {
-            "type": "boolean"
-          },
-          "bookingId": {
-            "type": "integer"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "PUT",
-        "path": "/v2/reservations/bookings/{{bookingId}}/checkout",
-        "success": [
-          200,
-          204
-        ],
-        "body": {
-          "time": "{{time}}"
-        },
-        "headers": {
-          "Content-Type": "application/json"
-        },
-        "result": {
-          "ok": true,
-          "bookingId": "{{input.bookingId}}"
-        }
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "bookings.book": {
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "kind": "action",
-      "sideEffect": "write",
-      "title": "Mark booking booked",
-      "description": "Change a Lodgify booking status to Booked and update availability.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "bookingId": {
-            "type": "integer",
-            "description": "Booking ID.",
-            "minimum": 1
-          }
-        },
-        "additionalProperties": false,
-        "required": [
-          "bookingId"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "ok",
-          "bookingId"
-        ],
-        "properties": {
-          "ok": {
-            "type": "boolean"
-          },
-          "bookingId": {
-            "type": "integer"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "PUT",
-        "path": "/v1/reservation/booking/{{bookingId}}/book",
-        "success": [
-          200,
-          204
-        ],
-        "result": {
-          "ok": true,
-          "bookingId": "{{input.bookingId}}"
-        }
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "bookings.decline": {
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "kind": "action",
-      "sideEffect": "write",
-      "title": "Decline booking",
-      "description": "Change a Lodgify booking status to Declined.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "bookingId": {
-            "type": "integer",
-            "description": "Booking ID.",
-            "minimum": 1
-          }
-        },
-        "additionalProperties": false,
-        "required": [
-          "bookingId"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "ok",
-          "bookingId"
-        ],
-        "properties": {
-          "ok": {
-            "type": "boolean"
-          },
-          "bookingId": {
-            "type": "integer"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "PUT",
-        "path": "/v1/reservation/booking/{{bookingId}}/decline",
-        "success": [
-          200,
-          204
-        ],
-        "result": {
-          "ok": true,
-          "bookingId": "{{input.bookingId}}"
-        }
       },
       "enforceOutputSchema": true,
       "validationMode": "strict-generated",
       "responseFormat": "json"
     },
     "availability.property.get": {
+      "kind": "action",
+      "sideEffect": "read",
       "timeoutMs": 15000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
-      "kind": "action",
-      "sideEffect": "read",
       "title": "Get property availability",
-      "description": "Get Lodgify availability calendar data for a property over a date range.",
+      "description": "Get v2 availability for a property via GET /v2/availability/{propertyId}. Composio periodStart/periodEnd map to official start/end.",
       "inputSchema": {
         "type": "object",
         "properties": {
           "propertyId": {
             "type": "integer",
-            "description": "Property ID.",
+            "description": "Property identifier.",
             "minimum": 1
           },
-          "start": {
+          "periodStart": {
             "type": "string",
-            "description": "Calendar start datetime."
+            "description": "Start of the calendar period (maps to official query start)."
           },
-          "end": {
+          "periodEnd": {
             "type": "string",
-            "description": "Calendar end datetime."
+            "description": "End of the calendar period (maps to official query end)."
           },
           "includeDetails": {
             "type": "boolean",
-            "description": "Include detailed booking status."
+            "description": "Include detailed booking status information."
           }
         },
         "additionalProperties": false,
@@ -726,9 +1147,7 @@
           "data"
         ],
         "properties": {
-          "data": {
-            "type": "array"
-          }
+          "data": {}
         },
         "additionalProperties": false
       },
@@ -739,8 +1158,8 @@
           200
         ],
         "query": {
-          "start": "{{start}}",
-          "end": "{{end}}",
+          "start": "{{periodStart}}",
+          "end": "{{periodEnd}}",
           "includeDetails": "{{includeDetails}}"
         }
       },
@@ -748,34 +1167,38 @@
       "validationMode": "strict-generated",
       "responseFormat": "json"
     },
-    "availability.room.get": {
+    "availability.room-type.get": {
+      "kind": "action",
+      "sideEffect": "read",
       "timeoutMs": 15000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
-      "kind": "action",
-      "sideEffect": "read",
-      "title": "Get room availability",
-      "description": "Get Lodgify availability calendar data for a room type over a date range.",
+      "title": "Get room type availability",
+      "description": "Get v2 availability for a room type via GET /v2/availability/{propertyId}/{roomTypeId}.",
       "inputSchema": {
         "type": "object",
         "properties": {
           "propertyId": {
             "type": "integer",
-            "description": "Property ID.",
+            "description": "Property identifier.",
             "minimum": 1
           },
           "roomTypeId": {
             "type": "integer",
-            "description": "Room type ID.",
+            "description": "Room type identifier.",
             "minimum": 1
           },
           "start": {
             "type": "string",
-            "description": "Calendar start datetime."
+            "description": "Start of the calendar period (YYYY-MM-DD)."
           },
           "end": {
             "type": "string",
-            "description": "Calendar end datetime."
+            "description": "End of the calendar period (YYYY-MM-DD)."
+          },
+          "includeDetails": {
+            "type": "boolean",
+            "description": "Include detailed booking status information."
           }
         },
         "additionalProperties": false,
@@ -790,12 +1213,7 @@
           "data"
         ],
         "properties": {
-          "data": {
-            "type": [
-              "array",
-              "object"
-            ]
-          }
+          "data": {}
         },
         "additionalProperties": false
       },
@@ -807,187 +1225,22 @@
         ],
         "query": {
           "start": "{{start}}",
-          "end": "{{end}}"
+          "end": "{{end}}",
+          "includeDetails": "{{includeDetails}}"
         }
       },
       "enforceOutputSchema": true,
       "validationMode": "strict-generated",
       "responseFormat": "json"
     },
-    "availability.list": {
+    "reservations.unread.get": {
+      "kind": "action",
+      "sideEffect": "read",
       "timeoutMs": 15000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
-      "kind": "action",
-      "sideEffect": "read",
-      "title": "List availability",
-      "description": "Get Lodgify availability calendar data for all properties over a date range.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "start": {
-            "type": "string",
-            "description": "Calendar start datetime."
-          },
-          "end": {
-            "type": "string",
-            "description": "Calendar end datetime."
-          }
-        },
-        "additionalProperties": false
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "array"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "GET",
-        "path": "/v2/availability",
-        "success": [
-          200
-        ],
-        "query": {
-          "start": "{{start}}",
-          "end": "{{end}}"
-        }
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "rates.calendar.get": {
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "kind": "action",
-      "sideEffect": "read",
-      "title": "Get rates calendar",
-      "description": "Get Lodgify nightly rates for a property room type over a date range.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "houseId": {
-            "type": "integer",
-            "description": "Property/house ID.",
-            "minimum": 1
-          },
-          "roomTypeId": {
-            "type": "integer",
-            "description": "Room type ID.",
-            "minimum": 1
-          },
-          "startDate": {
-            "type": "string",
-            "description": "Inclusive start date (yyyy-MM-dd).",
-            "minLength": 1
-          },
-          "endDate": {
-            "type": "string",
-            "description": "Inclusive end date (yyyy-MM-dd).",
-            "minLength": 1
-          }
-        },
-        "additionalProperties": false,
-        "required": [
-          "houseId",
-          "roomTypeId",
-          "startDate",
-          "endDate"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "GET",
-        "path": "/v2/rates/calendar",
-        "success": [
-          200
-        ],
-        "query": {
-          "houseId": "{{houseId}}",
-          "roomTypeId": "{{roomTypeId}}",
-          "startDate": "{{startDate}}",
-          "endDate": "{{endDate}}"
-        }
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "rates.settings.get": {
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "kind": "action",
-      "sideEffect": "read",
-      "title": "Get rate settings",
-      "description": "Get Lodgify rate settings for a property.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "houseId": {
-            "type": "integer",
-            "description": "Property/house ID.",
-            "minimum": 1
-          }
-        },
-        "additionalProperties": false,
-        "required": [
-          "houseId"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "GET",
-        "path": "/v2/rates/settings",
-        "success": [
-          200
-        ],
-        "query": {
-          "houseId": "{{houseId}}"
-        }
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "webhooks.list": {
-      "timeoutMs": 15000,
-      "maxInputBytes": 4096,
-      "maxResponseBytes": 5242880,
-      "kind": "action",
-      "sideEffect": "read",
-      "title": "List webhooks",
-      "description": "List Lodgify webhook subscriptions.",
+      "title": "Get unread count",
+      "description": "Get the unread booking and enquiry count via GET /v1/reservation/not_read. Returns an integer.",
       "inputSchema": {
         "type": "object",
         "properties": {},
@@ -999,9 +1252,227 @@
           "data"
         ],
         "properties": {
-          "data": {
-            "type": "array"
+          "data": {}
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/reservation/not_read",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "availability.v1.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List v1 availability",
+      "description": "Get v1 availability across properties via GET /v1/availability.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "periodStart": {
+            "type": "string",
+            "description": "Start of the availability period (YYYY-MM-DD)."
+          },
+          "periodEnd": {
+            "type": "string",
+            "description": "End of the availability period (YYYY-MM-DD)."
+          },
+          "BookingsOnly": {
+            "type": "boolean",
+            "description": "Return only booking information (room-type queries)."
+          },
+          "ModifiedSince": {
+            "type": "string",
+            "description": "Include only sub-periods modified after this date."
+          },
+          "CombineRoomTypes": {
+            "type": "boolean",
+            "description": "Combine room types into a single house total."
+          },
+          "IncludeBookingIds": {
+            "type": "boolean",
+            "description": "Include booking identifiers (room-type queries)."
           }
+        },
+        "additionalProperties": false,
+        "required": [
+          "periodStart",
+          "periodEnd"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/availability",
+        "success": [
+          200
+        ],
+        "query": {
+          "periodStart": "{{periodStart}}",
+          "periodEnd": "{{periodEnd}}",
+          "CombineRoomTypes": "{{CombineRoomTypes}}",
+          "BookingsOnly": "{{BookingsOnly}}",
+          "IncludeBookingIds": "{{IncludeBookingIds}}",
+          "ModifiedSince": "{{ModifiedSince}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "currencies.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List currencies",
+      "description": "List available currency codes via GET /v1/currencies.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/currencies",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "reservations.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List reservations",
+      "description": "List bookings and enquiries from the v1 inbox via GET /v1/reservation. Distinct from v2 bookings.list.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "offset": {
+            "type": "integer",
+            "description": "Number of items to skip.",
+            "minimum": 0
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Page size. Official maximum is 50.",
+            "minimum": 1,
+            "maximum": 50
+          },
+          "status": {
+            "type": "string",
+            "description": "Filter by status (e.g. Booked, Open)."
+          },
+          "trash": {
+            "type": "boolean",
+            "description": "Include items in the trash."
+          },
+          "propertyId": {
+            "type": "integer",
+            "description": "Filter by property identifier.",
+            "minimum": 1
+          },
+          "periodStart": {
+            "type": "string",
+            "description": "Return items starting from this date."
+          },
+          "periodEnd": {
+            "type": "string",
+            "description": "Return items ending before this date."
+          },
+          "modifiedSince": {
+            "type": "string",
+            "description": "Return items modified after this datetime."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/reservation",
+        "success": [
+          200
+        ],
+        "query": {
+          "offset": "{{offset}}",
+          "limit": "{{limit}}",
+          "status": "{{status}}",
+          "trash": "{{trash}}",
+          "propertyId": "{{propertyId}}",
+          "periodStart": "{{periodStart}}",
+          "periodEnd": "{{periodEnd}}",
+          "modifiedSince": "{{modifiedSince}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "webhooks.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List webhooks",
+      "description": "List webhook subscriptions via GET /webhooks/v1/list.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
         },
         "additionalProperties": false
       },
@@ -1016,25 +1487,348 @@
       "validationMode": "strict-generated",
       "responseFormat": "json"
     },
-    "webhooks.subscribe": {
+    "reservations.mark-not-replied": {
+      "kind": "action",
+      "sideEffect": "write",
       "timeoutMs": 15000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
-      "kind": "action",
-      "sideEffect": "write",
-      "title": "Subscribe webhook",
-      "description": "Subscribe a unique target URL to a Lodgify webhook event.",
+      "title": "Mark reservations not replied",
+      "description": "Batch-mark bookings and enquiries as not replied via POST /v1/reservation/not-replied. Body is a JSON array of {id, type}.",
       "inputSchema": {
         "type": "object",
         "properties": {
-          "target_url": {
-            "type": "string",
-            "description": "Callback URL. Must be unique.",
-            "minLength": 1
+          "items": {
+            "type": "array",
+            "description": "Bookings and/or enquiries to update.",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "id": {
+                  "type": "integer",
+                  "description": "Booking or enquiry identifier.",
+                  "minimum": 1
+                },
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "Booking",
+                    "Enquiry"
+                  ],
+                  "description": "Entity type."
+                }
+              },
+              "required": [
+                "id"
+              ]
+            },
+            "minItems": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "items"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "success"
+        ],
+        "properties": {
+          "success": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/reservation/not-replied",
+        "success": [
+          200,
+          204
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{{items}}",
+        "result": {
+          "success": true
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "reservations.mark-replied": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Mark reservations replied",
+      "description": "Batch-mark bookings and enquiries as replied via POST /v1/reservation/replied. Body is a JSON array of {id, type}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "description": "Bookings and/or enquiries to update.",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "id": {
+                  "type": "integer",
+                  "description": "Booking or enquiry identifier.",
+                  "minimum": 1
+                },
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "Booking",
+                    "Enquiry"
+                  ],
+                  "description": "Entity type."
+                }
+              },
+              "required": [
+                "id"
+              ]
+            },
+            "minItems": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "items"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "success"
+        ],
+        "properties": {
+          "success": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/reservation/replied",
+        "success": [
+          200,
+          204
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{{items}}",
+        "result": {
+          "success": true
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "enquiries.recover": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Recover enquiry",
+      "description": "Restore a trashed enquiry via PUT /v1/reservation/enquiry/{id}/recover.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "description": "Enquiry identifier.",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "success"
+        ],
+        "properties": {
+          "success": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/v1/reservation/enquiry/{{id}}/recover",
+        "success": [
+          200,
+          204
+        ],
+        "result": {
+          "success": true
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "enquiries.reopen": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Reopen enquiry",
+      "description": "Reopen an enquiry via PUT /v1/reservation/enquiry/{id}/reopen.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "description": "Enquiry identifier.",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "success"
+        ],
+        "properties": {
+          "success": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/v1/reservation/enquiry/{{id}}/reopen",
+        "success": [
+          200,
+          204
+        ],
+        "result": {
+          "success": true
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "availability.set": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Set availability",
+      "description": "Set available units for a room type via POST /v1/availability/{propertyId}/{roomTypeId}/set.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "property_id": {
+            "type": "integer",
+            "description": "Property identifier.",
+            "minimum": 1
           },
+          "room_type_id": {
+            "type": "integer",
+            "description": "Room type identifier.",
+            "minimum": 1
+          },
+          "period_start": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Start of the period to update (ISO 8601)."
+          },
+          "period_end": {
+            "type": "string",
+            "minLength": 1,
+            "description": "End of the period to update (ISO 8601)."
+          },
+          "available": {
+            "type": "integer",
+            "description": "Number of units to set as available.",
+            "minimum": 0
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "property_id",
+          "room_type_id",
+          "period_start",
+          "period_end",
+          "available"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "success"
+        ],
+        "properties": {
+          "success": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/availability/{{property_id}}/{{room_type_id}}/set",
+        "success": [
+          200,
+          204
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "period_start": "{{period_start}}",
+          "period_end": "{{period_end}}",
+          "available": "{{available}}"
+        },
+        "result": {
+          "success": true
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "webhooks.subscribe": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Subscribe webhook",
+      "description": "Subscribe a callback URL to a Lodgify event via POST /webhooks/v1/subscribe. Returns id and secret.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
           "event": {
             "type": "string",
-            "description": "Webhook event type.",
             "enum": [
               "rate_change",
               "availability_change",
@@ -1046,13 +1840,19 @@
               "booking_status_change_open",
               "booking_status_change_declined",
               "guest_message_received"
-            ]
+            ],
+            "description": "Event type to subscribe to."
+          },
+          "target_url": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique callback URL Lodgify will POST when the event fires."
           }
         },
         "additionalProperties": false,
         "required": [
-          "target_url",
-          "event"
+          "event",
+          "target_url"
         ]
       },
       "outputSchema": {
@@ -1061,9 +1861,7 @@
           "data"
         ],
         "properties": {
-          "data": {
-            "type": "object"
-          }
+          "data": {}
         },
         "additionalProperties": false
       },
@@ -1074,58 +1872,68 @@
           200,
           201
         ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
         "body": {
           "target_url": "{{target_url}}",
           "event": "{{event}}"
-        },
-        "headers": {
-          "Content-Type": "application/json"
         }
       },
       "enforceOutputSchema": true,
       "validationMode": "strict-generated",
       "responseFormat": "json"
     },
-    "messaging.thread.get": {
+    "webhooks.unsubscribe": {
+      "kind": "action",
+      "sideEffect": "destructive",
       "timeoutMs": 15000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
-      "kind": "action",
-      "sideEffect": "read",
-      "title": "Get message thread",
-      "description": "Get a Lodgify guest messaging thread by GUID.",
+      "title": "Unsubscribe webhook",
+      "description": "Remove a webhook subscription via DELETE /webhooks/v1/unsubscribe with JSON body {id}.",
       "inputSchema": {
         "type": "object",
         "properties": {
-          "threadGuid": {
+          "id": {
             "type": "string",
-            "description": "Thread UUID.",
-            "minLength": 1
+            "minLength": 1,
+            "description": "Webhook id returned by webhooks.subscribe."
           }
         },
         "additionalProperties": false,
         "required": [
-          "threadGuid"
+          "id"
         ]
       },
       "outputSchema": {
         "type": "object",
         "required": [
-          "data"
+          "success"
         ],
         "properties": {
-          "data": {
-            "type": "object"
+          "success": {
+            "type": "boolean"
           }
         },
         "additionalProperties": false
       },
       "request": {
-        "method": "GET",
-        "path": "/v2/messaging/{{threadGuid}}",
+        "method": "DELETE",
+        "path": "/webhooks/v1/unsubscribe",
         "success": [
-          200
-        ]
+          200,
+          204
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "id": "{{id}}"
+        },
+        "result": {
+          "success": true
+        }
       },
       "enforceOutputSchema": true,
       "validationMode": "strict-generated",
@@ -1134,16 +1942,11 @@
   },
   "provenance": {
     "source": {
-      "url": "https://github.com/oomol-lab/open-connector",
-      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
+      "url": "https://github.com/oomol-lab/open-connector"
     }
   },
-  "evidence": {
-    "fixture": {
-      "status": "supplied"
-    },
-    "live": {
-      "status": "unverified"
-    }
-  }
+  "runtime": "bun",
+  "version": "0.2.0",
+  "visibility": "public"
 }

@@ -22,10 +22,24 @@ function text(value: unknown): string {
 export function withLiveMessageSync(connector: string, normalize: Normalizer): Normalizer {
   return (input: unknown) => {
     if (!record(input)) throw failure("INVALID_SYNC_INPUT", "Sync input must be an object.");
-    const credential = connector === "telegram" ? input.botToken : input.accessToken;
-    if (typeof credential !== "string" || !credential) return normalize(input);
-    return fetchPage(connector, input, credential, normalize);
+    const normalizedInput = connector === "slack" ? withSlackChannelAlias(input) : input;
+    const credential = connector === "telegram" ? normalizedInput.botToken : normalizedInput.accessToken;
+    if (typeof credential !== "string" || !credential) return normalize(normalizedInput);
+    return fetchPage(connector, normalizedInput, credential, normalize);
   };
+}
+
+// Existing sync callers send channelId. Composio's conversations.history tool
+// sends channel. Either name selects the same conversation.
+function withSlackChannelAlias(input: RecordValue): RecordValue {
+  if (typeof input.channelId === "string" && input.channelId.trim()) {
+    const channelId = input.channelId.trim();
+    return channelId === input.channelId ? input : { ...input, channelId };
+  }
+  if (typeof input.channel === "string" && input.channel.trim()) {
+    return { ...input, channelId: input.channel.trim() };
+  }
+  return input;
 }
 
 async function fetchPage(connector: string, input: RecordValue, credential: string, normalize: Normalizer): Promise<unknown> {

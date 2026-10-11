@@ -1,6 +1,6 @@
 # Raisely
 
-Read-only international **Raisely REST API v3** recipe. Raisely is an Australian nonprofit fundraising platform.
+International **Raisely REST API v3** recipe covering the Composio RAISELY toolkit plus the origin healthcheck.
 
 ## Setup
 
@@ -8,17 +8,9 @@ Create a campaign secret key in Raisely admin under Settings → API & Webhooks.
 
 ## Operations
 
-- `healthcheck`: `GET /campaigns?limit=1` with empty input (cheap authenticated list probe). The pinned validator uses `GET /authenticate`, which is not an upstream action ID.
-- `campaigns.list`: `GET /campaigns` with optional `private`, `query` (wire name `q`), `limit`, `offset`, `sort`, and `order`.
-- `campaigns.get`: `GET /campaigns/{campaign}`; `campaign` is UUID, path, or domain.
-- `profiles.list`: `GET /profiles` with required `campaign` and optional `private`, `query` (wire name `q`), `limit`, and `offset`.
-- `profiles.get`: `GET /profiles/{profilePath}` with required `profilePath` and optional `campaign` and `private`.
+Recipe operations equal runner operations. Reads, writes, and deletes map 1:1 onto official Raisely REST routes (campaigns, profiles, donations, users, posts, webhooks, exercise logs, interactions, subscriptions, orders, promo codes, tags, segments, media). `healthcheck` remains `GET /campaigns?limit=1`. `events.available` reads `GET /api-docs` because Raisely has no dedicated webhook-event catalog route. `campaigns.media.upload` is a handwritten multipart handler.
 
-Successful responses are raw provider JSON under AppCall `data`. Writes, webhooks, donations, and rank filters are omitted.
-
-## Adaptations
-
-Pinned source and official OpenAPI agree on `https://api.raisely.com/v3` and Bearer auth. Native category is `payments` (source Finance is not in native CATEGORIES). Healthcheck uses the campaign list probe rather than a billable search.
+Successful responses are raw provider JSON under AppCall `data`.
 
 ## License and evidence
 

@@ -70,6 +70,56 @@
         "path": "src/providers/listennotes/executors.ts",
         "startLine": 28,
         "endLine": 30
+      },
+      "action-search": {
+        "path": "src/providers/listennotes/actions.ts",
+        "startLine": 302,
+        "endLine": 307
+      },
+      "action-typeahead": {
+        "path": "src/providers/listennotes/actions.ts",
+        "startLine": 308,
+        "endLine": 313
+      },
+      "action-get-episode": {
+        "path": "src/providers/listennotes/actions.ts",
+        "startLine": 320,
+        "endLine": 325
+      },
+      "action-get-best-podcasts": {
+        "path": "src/providers/listennotes/actions.ts",
+        "startLine": 326,
+        "endLine": 331
+      },
+      "action-get-related-podcasts": {
+        "path": "src/providers/listennotes/actions.ts",
+        "startLine": 350,
+        "endLine": 355
+      },
+      "handler-search": {
+        "path": "src/providers/listennotes/executors.ts",
+        "startLine": 35,
+        "endLine": 65
+      },
+      "handler-typeahead": {
+        "path": "src/providers/listennotes/executors.ts",
+        "startLine": 66,
+        "endLine": 85
+      },
+      "handler-get-episode": {
+        "path": "src/providers/listennotes/executors.ts",
+        "startLine": 105,
+        "endLine": 117
+      },
+      "handler-get-best-podcasts": {
+        "path": "src/providers/listennotes/executors.ts",
+        "startLine": 118,
+        "endLine": 147
+      },
+      "handler-get-related-podcasts": {
+        "path": "src/providers/listennotes/executors.ts",
+        "startLine": 189,
+        "endLine": 204
       }
     }
   },
@@ -99,8 +149,13 @@
       "playlists.get",
       "trending_searches.list",
       "search_episode_titles",
-      "webhook.podcast_submitted",
-      "webhook.podcast_deleted"
+      "podcasts.audience",
+      "podcasts.by_domain",
+      "related_searches.list",
+      "podcasts.refresh_rss",
+      "podcasts.delete",
+      "spellcheck",
+      "podcasts.submit"
     ],
     "upstreamSha": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
     "marketFocus": "international",
@@ -214,7 +269,7 @@
       ],
       "responseContract": "appcall-provider-json-v1",
       "adaptations": [
-        "Maps to documented GET /genres. Official top_level_only 0/1 query is omitted so native does not encode a boolean as true/false instead of 0/1."
+        "Maps to documented GET /genres. Optional topLevelOnly is the official 0/1 top_level_only query and is omitted when unset so origin callers that send {} still hit GET /genres."
       ]
     },
     "regions.list": {
@@ -248,8 +303,10 @@
       ]
     },
     "search": {
-      "upstreamActionId": "get_podcast",
+      "upstreamActionId": "search",
       "sourceRefs": [
+        "action-search",
+        "handler-search",
         "request-headers",
         "api-base"
       ],
@@ -259,12 +316,14 @@
       ],
       "responseContract": "appcall-provider-json-v1",
       "adaptations": [
-        "Maps to documented Listen Notes Podcast API v2 GET /search. Raw JSON is returned under data."
+        "Maps to documented GET /search. Optional Composio filters use official query names and are omitted when unset. Returns raw Listen Notes JSON under data."
       ]
     },
     "typeahead": {
-      "upstreamActionId": "get_podcast",
+      "upstreamActionId": "typeahead",
       "sourceRefs": [
+        "action-typeahead",
+        "handler-typeahead",
         "request-headers",
         "api-base"
       ],
@@ -274,12 +333,14 @@
       ],
       "responseContract": "appcall-provider-json-v1",
       "adaptations": [
-        "Maps to documented Listen Notes Podcast API v2 GET /typeahead. Raw JSON is returned under data."
+        "Maps to documented GET /typeahead. Optional show_podcasts, show_genres, and safe_mode 0/1 flags are omitted when unset."
       ]
     },
     "best_podcasts.list": {
-      "upstreamActionId": "get_podcast",
+      "upstreamActionId": "get_best_podcasts",
       "sourceRefs": [
+        "action-get-best-podcasts",
+        "handler-get-best-podcasts",
         "request-headers",
         "api-base"
       ],
@@ -289,12 +350,14 @@
       ],
       "responseContract": "appcall-provider-json-v1",
       "adaptations": [
-        "Maps to documented Listen Notes Podcast API v2 GET /best_podcasts. Raw JSON is returned under data."
+        "Maps to documented GET /best_podcasts. genreId maps to genre_id; optional language, safe_mode, and publisher_region match the official query names."
       ]
     },
     "episodes.get": {
-      "upstreamActionId": "get_languages",
+      "upstreamActionId": "get_episode",
       "sourceRefs": [
+        "action-get-episode",
+        "handler-get-episode",
         "request-headers",
         "api-base"
       ],
@@ -304,12 +367,13 @@
       ],
       "responseContract": "appcall-provider-json-v1",
       "adaptations": [
-        "Maps to documented Listen Notes Podcast API v2 GET /episodes/{{id}}. Raw JSON is returned under data."
+        "Maps to documented GET /episodes/{id}. Optional showTranscript is the official 0/1 show_transcript query."
       ]
     },
     "podcasts.batch": {
       "upstreamActionId": "get_podcast",
       "sourceRefs": [
+        "action-get-podcast",
         "request-headers",
         "api-base"
       ],
@@ -319,12 +383,13 @@
       ],
       "responseContract": "appcall-provider-json-v1",
       "adaptations": [
-        "Maps to documented Listen Notes Podcast API v2 POST /podcasts. Raw JSON is returned under data."
+        "Maps to documented POST /podcasts as application/x-www-form-urlencoded. Optional rsses, itunes_ids, spotify_ids, show_latest_episodes, and next_episode_pub_date are omitted when unset."
       ]
     },
     "episodes.batch": {
-      "upstreamActionId": "get_languages",
+      "upstreamActionId": "get_episode",
       "sourceRefs": [
+        "action-get-episode",
         "request-headers",
         "api-base"
       ],
@@ -334,12 +399,13 @@
       ],
       "responseContract": "appcall-provider-json-v1",
       "adaptations": [
-        "Maps to documented Listen Notes Podcast API v2 POST /episodes. Raw JSON is returned under data."
+        "Maps to documented POST /episodes as application/x-www-form-urlencoded with required ids."
       ]
     },
     "just_listen": {
-      "upstreamActionId": "get_podcast",
+      "upstreamActionId": "get_episode",
       "sourceRefs": [
+        "action-get-episode",
         "request-headers",
         "api-base"
       ],
@@ -349,12 +415,14 @@
       ],
       "responseContract": "appcall-provider-json-v1",
       "adaptations": [
-        "Maps to documented Listen Notes Podcast API v2 GET /just_listen. Raw JSON is returned under data."
+        "Maps to documented GET /just_listen. Returns a random episode object under data."
       ]
     },
     "podcasts.recommendations": {
-      "upstreamActionId": "get_podcast",
+      "upstreamActionId": "get_related_podcasts",
       "sourceRefs": [
+        "action-get-related-podcasts",
+        "handler-get-related-podcasts",
         "request-headers",
         "api-base"
       ],
@@ -364,12 +432,13 @@
       ],
       "responseContract": "appcall-provider-json-v1",
       "adaptations": [
-        "Maps to documented Listen Notes Podcast API v2 GET /podcasts/{{id}}/recommendations. Raw JSON is returned under data."
+        "Maps to documented GET /podcasts/{id}/recommendations. Optional safeMode is official 0/1 safe_mode."
       ]
     },
     "episodes.recommendations": {
-      "upstreamActionId": "get_languages",
+      "upstreamActionId": "get_episode",
       "sourceRefs": [
+        "action-get-episode",
         "request-headers",
         "api-base"
       ],
@@ -379,12 +448,13 @@
       ],
       "responseContract": "appcall-provider-json-v1",
       "adaptations": [
-        "Maps to documented Listen Notes Podcast API v2 GET /episodes/{{id}}/recommendations. Raw JSON is returned under data."
+        "Maps to documented GET /episodes/{id}/recommendations. Optional safeMode is official 0/1 safe_mode."
       ]
     },
     "curated_podcasts.list": {
       "upstreamActionId": "get_podcast",
       "sourceRefs": [
+        "action-get-podcast",
         "request-headers",
         "api-base"
       ],
@@ -394,12 +464,13 @@
       ],
       "responseContract": "appcall-provider-json-v1",
       "adaptations": [
-        "Maps to documented Listen Notes Podcast API v2 GET /curated_podcasts. Raw JSON is returned under data."
+        "Maps to documented GET /curated_podcasts with optional page."
       ]
     },
     "curated_podcasts.get": {
       "upstreamActionId": "get_podcast",
       "sourceRefs": [
+        "action-get-podcast",
         "request-headers",
         "api-base"
       ],
@@ -409,12 +480,13 @@
       ],
       "responseContract": "appcall-provider-json-v1",
       "adaptations": [
-        "Maps to documented Listen Notes Podcast API v2 GET /curated_podcasts/{{id}}. Raw JSON is returned under data."
+        "Maps to documented GET /curated_podcasts/{id}."
       ]
     },
     "playlists.list": {
       "upstreamActionId": "get_languages",
       "sourceRefs": [
+        "action-get-languages",
         "request-headers",
         "api-base"
       ],
@@ -424,12 +496,13 @@
       ],
       "responseContract": "appcall-provider-json-v1",
       "adaptations": [
-        "Maps to documented Listen Notes Podcast API v2 GET /playlists. Raw JSON is returned under data."
+        "Maps to documented GET /playlists with optional page and sort."
       ]
     },
     "playlists.get": {
       "upstreamActionId": "get_languages",
       "sourceRefs": [
+        "action-get-languages",
         "request-headers",
         "api-base"
       ],
@@ -439,12 +512,13 @@
       ],
       "responseContract": "appcall-provider-json-v1",
       "adaptations": [
-        "Maps to documented Listen Notes Podcast API v2 GET /playlists/{{id}}. Raw JSON is returned under data."
+        "Maps to documented GET /playlists/{id}. Optional sort, type, and last_timestamp_ms match the official query names."
       ]
     },
     "trending_searches.list": {
-      "upstreamActionId": "get_podcast",
+      "upstreamActionId": "search",
       "sourceRefs": [
+        "action-search",
         "request-headers",
         "api-base"
       ],
@@ -454,12 +528,13 @@
       ],
       "responseContract": "appcall-provider-json-v1",
       "adaptations": [
-        "Maps to documented Listen Notes Podcast API v2 GET /trending_searches. Raw JSON is returned under data."
+        "Maps to documented GET /trending_searches."
       ]
     },
     "search_episode_titles": {
-      "upstreamActionId": "get_podcast",
+      "upstreamActionId": "search",
       "sourceRefs": [
+        "action-search",
         "request-headers",
         "api-base"
       ],
@@ -469,12 +544,13 @@
       ],
       "responseContract": "appcall-provider-json-v1",
       "adaptations": [
-        "Maps to documented Listen Notes Podcast API v2 GET /search_episode_titles. Raw JSON is returned under data."
+        "Maps to documented GET /search_episode_titles. podcastId maps to podcast_id and podcastIdType to podcast_id_type."
       ]
     },
-    "webhook.podcast_submitted": {
+    "podcasts.audience": {
       "upstreamActionId": "get_podcast",
       "sourceRefs": [
+        "action-get-podcast",
         "request-headers",
         "api-base"
       ],
@@ -484,12 +560,13 @@
       ],
       "responseContract": "appcall-provider-json-v1",
       "adaptations": [
-        "EventOnly webhook webhook.podcast_submitted mapped from Listen Notes dashboard WEBHOOKS. No outbound HTTP."
+        "Maps to documented GET /podcasts/{id}/audience (Insights API)."
       ]
     },
-    "webhook.podcast_deleted": {
+    "podcasts.by_domain": {
       "upstreamActionId": "get_podcast",
       "sourceRefs": [
+        "action-get-podcast",
         "request-headers",
         "api-base"
       ],
@@ -499,7 +576,87 @@
       ],
       "responseContract": "appcall-provider-json-v1",
       "adaptations": [
-        "EventOnly webhook webhook.podcast_deleted mapped from Listen Notes dashboard WEBHOOKS. No outbound HTTP."
+        "Maps to documented GET /podcasts/domains/{domain_name}. domainName is the path segment; optional page is omitted when unset."
+      ]
+    },
+    "related_searches.list": {
+      "upstreamActionId": "search",
+      "sourceRefs": [
+        "action-search",
+        "request-headers",
+        "api-base"
+      ],
+      "documentationUrls": [
+        "https://www.listennotes.com/api/docs/openapi.md",
+        "https://www.listennotes.com/api/docs/"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Maps to documented GET /related_searches?q= (PRO/ENTERPRISE)."
+      ]
+    },
+    "podcasts.refresh_rss": {
+      "upstreamActionId": "get_podcast",
+      "sourceRefs": [
+        "action-get-podcast",
+        "request-headers",
+        "api-base"
+      ],
+      "documentationUrls": [
+        "https://www.listennotes.com/api/docs/openapi.md",
+        "https://www.listennotes.com/api/docs/"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Maps to documented POST /podcasts/{id}/rss. No request body."
+      ]
+    },
+    "podcasts.delete": {
+      "upstreamActionId": "get_podcast",
+      "sourceRefs": [
+        "action-get-podcast",
+        "request-headers",
+        "api-base"
+      ],
+      "documentationUrls": [
+        "https://www.listennotes.com/api/docs/openapi.md",
+        "https://www.listennotes.com/api/docs/"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Maps to documented DELETE /podcasts/{id}. Optional reason query; official docs treat reason=testing as a dry run."
+      ]
+    },
+    "spellcheck": {
+      "upstreamActionId": "search",
+      "sourceRefs": [
+        "action-search",
+        "request-headers",
+        "api-base"
+      ],
+      "documentationUrls": [
+        "https://www.listennotes.com/api/docs/openapi.md",
+        "https://www.listennotes.com/api/docs/"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Maps to documented GET /spellcheck?q= (PRO/ENTERPRISE)."
+      ]
+    },
+    "podcasts.submit": {
+      "upstreamActionId": "get_podcast",
+      "sourceRefs": [
+        "action-get-podcast",
+        "request-headers",
+        "api-base"
+      ],
+      "documentationUrls": [
+        "https://www.listennotes.com/api/docs/openapi.md",
+        "https://www.listennotes.com/api/docs/"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Maps to documented POST /podcasts/submit as application/x-www-form-urlencoded with required rss and optional email."
       ]
     }
   },
@@ -539,7 +696,8 @@
       "podcast",
       "episode",
       "playlist",
-      "curated-list"
+      "curated_podcast",
+      "search"
     ],
     "http": {
       "baseUrl": "https://listen-api.listennotes.com/api/v2",
@@ -569,29 +727,27 @@
     },
     "operations": {
       "healthcheck": {
-        "timeoutMs": 5000,
+        "description": "Validate the Listen Notes API key by listing supported languages.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {},
+          "type": "object"
+        },
+        "kind": "action",
         "maxInputBytes": 4096,
         "maxResponseBytes": 65536,
-        "kind": "action",
-        "sideEffect": "read",
-        "title": "Healthcheck",
-        "description": "Validate the Listen Notes API key by listing supported languages.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {},
-          "additionalProperties": false
-        },
         "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
+          "additionalProperties": false,
           "properties": {
             "data": {
               "type": "object"
             }
           },
-          "additionalProperties": false
+          "required": [
+            "data"
+          ],
+          "type": "object"
         },
         "request": {
           "method": "GET",
@@ -600,34 +756,34 @@
             200
           ]
         },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
+        "responseFormat": "json",
+        "sideEffect": "read",
+        "timeoutMs": 5000,
+        "title": "Healthcheck",
+        "validationMode": "strict-generated"
       },
       "languages.list": {
-        "timeoutMs": 15000,
+        "description": "List supported Listen Notes podcast languages.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {},
+          "type": "object"
+        },
+        "kind": "action",
         "maxInputBytes": 65536,
         "maxResponseBytes": 5242880,
-        "kind": "action",
-        "sideEffect": "read",
-        "title": "List languages",
-        "description": "List supported Listen Notes podcast languages.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {},
-          "additionalProperties": false
-        },
         "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
+          "additionalProperties": false,
           "properties": {
             "data": {
               "type": "object"
             }
           },
-          "additionalProperties": false
+          "required": [
+            "data"
+          ],
+          "type": "object"
         },
         "request": {
           "method": "GET",
@@ -636,70 +792,82 @@
             200
           ]
         },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
+        "responseFormat": "json",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "title": "List languages",
+        "validationMode": "strict-generated"
       },
       "genres.list": {
-        "timeoutMs": 15000,
+        "description": "List supported Listen Notes podcast genres.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "topLevelOnly": {
+              "type": "integer",
+              "description": "If 1, return only top-level genres. If 0, return all genres.",
+              "enum": [
+                0,
+                1
+              ]
+            }
+          },
+          "type": "object"
+        },
+        "kind": "action",
         "maxInputBytes": 65536,
         "maxResponseBytes": 5242880,
-        "kind": "action",
-        "sideEffect": "read",
-        "title": "List genres",
-        "description": "List supported Listen Notes podcast genres.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {},
-          "additionalProperties": false
-        },
         "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
+          "additionalProperties": false,
           "properties": {
             "data": {
               "type": "object"
             }
           },
-          "additionalProperties": false
+          "required": [
+            "data"
+          ],
+          "type": "object"
         },
         "request": {
           "method": "GET",
           "path": "/genres",
           "success": [
             200
-          ]
+          ],
+          "query": {
+            "top_level_only": "{{topLevelOnly}}"
+          }
         },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
+        "responseFormat": "json",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "title": "List genres",
+        "validationMode": "strict-generated"
       },
       "regions.list": {
-        "timeoutMs": 15000,
+        "description": "List supported Listen Notes regions used by best podcasts.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {},
+          "type": "object"
+        },
+        "kind": "action",
         "maxInputBytes": 65536,
         "maxResponseBytes": 5242880,
-        "kind": "action",
-        "sideEffect": "read",
-        "title": "List regions",
-        "description": "List supported Listen Notes regions used by best podcasts.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {},
-          "additionalProperties": false
-        },
         "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
+          "additionalProperties": false,
           "properties": {
             "data": {
               "type": "object"
             }
           },
-          "additionalProperties": false
+          "required": [
+            "data"
+          ],
+          "type": "object"
         },
         "request": {
           "method": "GET",
@@ -708,68 +876,70 @@
             200
           ]
         },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
+        "responseFormat": "json",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "title": "List regions",
+        "validationMode": "strict-generated"
       },
       "podcasts.get": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
-        "sideEffect": "read",
-        "title": "Get podcast",
         "description": "Get Listen Notes podcast details and one page of episodes by podcast ID.",
+        "enforceOutputSchema": true,
         "inputSchema": {
-          "type": "object",
-          "required": [
-            "id"
-          ],
+          "additionalProperties": false,
           "properties": {
             "id": {
-              "type": "string",
-              "minLength": 1
+              "minLength": 1,
+              "type": "string"
+            },
+            "nextEpisodePubDate": {
+              "minimum": 1,
+              "type": "integer"
             },
             "sort": {
-              "type": "string",
               "enum": [
                 "oldest_first",
                 "recent_first"
-              ]
-            },
-            "nextEpisodePubDate": {
-              "type": "integer",
-              "minimum": 1
+              ],
+              "type": "string"
             }
           },
-          "additionalProperties": false
-        },
-        "outputSchema": {
-          "type": "object",
           "required": [
-            "data"
+            "id"
           ],
+          "type": "object"
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "additionalProperties": false,
           "properties": {
             "data": {
               "type": "object"
             }
           },
-          "additionalProperties": false
+          "required": [
+            "data"
+          ],
+          "type": "object"
         },
         "request": {
           "method": "GET",
           "path": "/podcasts/{{id}}",
           "query": {
-            "sort": "{{sort}}",
-            "next_episode_pub_date": "{{nextEpisodePubDate}}"
+            "next_episode_pub_date": "{{nextEpisodePubDate}}",
+            "sort": "{{sort}}"
           },
           "success": [
             200
           ]
         },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
+        "responseFormat": "json",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "title": "Get podcast",
+        "validationMode": "strict-generated"
       },
       "search": {
         "timeoutMs": 15000,
@@ -778,33 +948,142 @@
         "kind": "action",
         "sideEffect": "read",
         "title": "Search podcasts and episodes",
-        "description": "Full-text search Listen Notes podcasts, episodes, or curated lists.",
+        "description": "Full-text search Listen Notes episodes, podcasts, or curated lists.",
         "inputSchema": {
           "type": "object",
           "properties": {
             "q": {
               "type": "string",
-              "minLength": 1,
-              "description": "Search term, e.g. person, place, or topic."
+              "description": "Search term, e.g. person, place, or topic.",
+              "minLength": 1
+            },
+            "ncid": {
+              "type": "string",
+              "description": "Comma-delimited podcast ids to exclude (episode search).",
+              "minLength": 1
+            },
+            "ocid": {
+              "type": "string",
+              "description": "Comma-delimited podcast ids to include (episode search).",
+              "minLength": 1
             },
             "type": {
               "type": "string",
+              "description": "Content type to search.",
               "enum": [
+                "curated",
                 "episode",
-                "podcast",
-                "curated"
-              ],
-              "description": "Content type to search."
+                "podcast"
+              ]
             },
             "offset": {
               "type": "integer",
-              "description": "Pagination offset.",
+              "description": "Pagination offset from next_offset.",
               "minimum": 0
             },
             "region": {
               "type": "string",
-              "minLength": 1,
-              "description": "ISO country code to limit results."
+              "description": "Region code from GET /regions.",
+              "minLength": 1
+            },
+            "lenMax": {
+              "type": "integer",
+              "description": "Maximum audio length in minutes.",
+              "minimum": 0
+            },
+            "lenMin": {
+              "type": "integer",
+              "description": "Minimum audio length in minutes.",
+              "minimum": 0
+            },
+            "onlyIn": {
+              "type": "string",
+              "description": "Comma-delimited fields: title, description, author, audio.",
+              "minLength": 1
+            },
+            "language": {
+              "type": "string",
+              "description": "Language label from GET /languages.",
+              "minLength": 1
+            },
+            "genreIds": {
+              "type": "string",
+              "description": "Comma-delimited genre ids from GET /genres.",
+              "minLength": 1
+            },
+            "pageSize": {
+              "type": "integer",
+              "description": "Results per page, 1-10.",
+              "minimum": 1,
+              "maximum": 10
+            },
+            "safeMode": {
+              "type": "integer",
+              "description": "0 is no, 1 is yes.",
+              "enum": [
+                0,
+                1
+              ]
+            },
+            "sortByDate": {
+              "type": "integer",
+              "description": "0 is no, 1 is yes.",
+              "enum": [
+                0,
+                1
+              ]
+            },
+            "sponsoredOnly": {
+              "type": "integer",
+              "description": "0 is no, 1 is yes.",
+              "enum": [
+                0,
+                1
+              ]
+            },
+            "interviewsOnly": {
+              "type": "integer",
+              "description": "0 is no, 1 is yes.",
+              "enum": [
+                0,
+                1
+              ]
+            },
+            "publishedAfter": {
+              "type": "integer",
+              "description": "Only results published after this unix ms timestamp."
+            },
+            "uniquePodcasts": {
+              "type": "integer",
+              "description": "0 is no, 1 is yes.",
+              "enum": [
+                0,
+                1
+              ]
+            },
+            "updateFreqMax": {
+              "type": "integer",
+              "description": "Maximum podcast update frequency in hours.",
+              "minimum": 0
+            },
+            "updateFreqMin": {
+              "type": "integer",
+              "description": "Minimum podcast update frequency in hours.",
+              "minimum": 0
+            },
+            "publishedBefore": {
+              "type": "integer",
+              "description": "Only results published before this unix ms timestamp."
+            },
+            "episodeCountMax": {
+              "type": "integer",
+              "description": "Maximum episode count (podcast search).",
+              "minimum": 0
+            },
+            "episodeCountMin": {
+              "type": "integer",
+              "description": "Minimum episode count (podcast search).",
+              "minimum": 0
             }
           },
           "additionalProperties": false,
@@ -832,9 +1111,28 @@
           ],
           "query": {
             "q": "{{q}}",
+            "ncid": "{{ncid}}",
+            "ocid": "{{ocid}}",
             "type": "{{type}}",
             "offset": "{{offset}}",
-            "region": "{{region}}"
+            "region": "{{region}}",
+            "len_max": "{{lenMax}}",
+            "len_min": "{{lenMin}}",
+            "only_in": "{{onlyIn}}",
+            "language": "{{language}}",
+            "genre_ids": "{{genreIds}}",
+            "page_size": "{{pageSize}}",
+            "safe_mode": "{{safeMode}}",
+            "sort_by_date": "{{sortByDate}}",
+            "sponsored_only": "{{sponsoredOnly}}",
+            "interviews_only": "{{interviewsOnly}}",
+            "published_after": "{{publishedAfter}}",
+            "unique_podcasts": "{{uniquePodcasts}}",
+            "update_freq_max": "{{updateFreqMax}}",
+            "update_freq_min": "{{updateFreqMin}}",
+            "published_before": "{{publishedBefore}}",
+            "episode_count_max": "{{episodeCountMax}}",
+            "episode_count_min": "{{episodeCountMin}}"
           }
         },
         "enforceOutputSchema": true,
@@ -848,14 +1146,38 @@
         "kind": "action",
         "sideEffect": "read",
         "title": "Typeahead suggestions",
-        "description": "Suggest search terms, genres, and podcasts for a partial query.",
+        "description": "Suggest Listen Notes search terms, genres, and podcasts.",
         "inputSchema": {
           "type": "object",
           "properties": {
             "q": {
               "type": "string",
-              "minLength": 1,
-              "description": "Partial search term."
+              "description": "Partial search term.",
+              "minLength": 1
+            },
+            "safeMode": {
+              "type": "integer",
+              "description": "0 is no, 1 is yes.",
+              "enum": [
+                0,
+                1
+              ]
+            },
+            "showGenres": {
+              "type": "integer",
+              "description": "0 is no, 1 is yes.",
+              "enum": [
+                0,
+                1
+              ]
+            },
+            "showPodcasts": {
+              "type": "integer",
+              "description": "0 is no, 1 is yes.",
+              "enum": [
+                0,
+                1
+              ]
             }
           },
           "additionalProperties": false,
@@ -882,7 +1204,10 @@
             200
           ],
           "query": {
-            "q": "{{q}}"
+            "q": "{{q}}",
+            "safe_mode": "{{safeMode}}",
+            "show_genres": "{{showGenres}}",
+            "show_podcasts": "{{showPodcasts}}"
           }
         },
         "enforceOutputSchema": true,
@@ -896,35 +1221,53 @@
         "kind": "action",
         "sideEffect": "read",
         "title": "List best podcasts",
-        "description": "Fetch Listen Notes curated best podcasts, optionally filtered by genre and region.",
+        "description": "Fetch ranked best podcasts by genre, region, language, and publisher region.",
         "inputSchema": {
           "type": "object",
           "properties": {
-            "genreId": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Genre id from GET /genres."
-            },
             "page": {
               "type": "integer",
-              "description": "Page number.",
+              "description": "Page number of podcasts in this genre.",
               "minimum": 1
-            },
-            "region": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Country/region code from GET /regions."
             },
             "sort": {
               "type": "string",
+              "description": "How to sort these podcasts.",
               "enum": [
                 "listen_score",
-                "recent_added_first",
                 "oldest_added_first",
-                "recent_published_first",
-                "oldest_published_first"
-              ],
-              "description": "Sort order."
+                "oldest_published_first",
+                "recent_added_first",
+                "recent_published_first"
+              ]
+            },
+            "region": {
+              "type": "string",
+              "description": "Country/region code from GET /regions.",
+              "minLength": 1
+            },
+            "genreId": {
+              "type": "string",
+              "description": "Genre id from GET /genres.",
+              "minLength": 1
+            },
+            "language": {
+              "type": "string",
+              "description": "Language label from GET /languages.",
+              "minLength": 1
+            },
+            "safeMode": {
+              "type": "integer",
+              "description": "0 is no, 1 is yes.",
+              "enum": [
+                0,
+                1
+              ]
+            },
+            "publisherRegion": {
+              "type": "string",
+              "description": "Publisher country/region code from GET /regions.",
+              "minLength": 1
             }
           },
           "additionalProperties": false
@@ -948,10 +1291,13 @@
             200
           ],
           "query": {
-            "genre_id": "{{genreId}}",
             "page": "{{page}}",
+            "sort": "{{sort}}",
             "region": "{{region}}",
-            "sort": "{{sort}}"
+            "genre_id": "{{genreId}}",
+            "language": "{{language}}",
+            "safe_mode": "{{safeMode}}",
+            "publisher_region": "{{publisherRegion}}"
           }
         },
         "enforceOutputSchema": true,
@@ -965,20 +1311,22 @@
         "kind": "action",
         "sideEffect": "read",
         "title": "Get episode",
-        "description": "Get Listen Notes episode metadata by episode ID.",
+        "description": "Fetch detailed Listen Notes metadata for one episode by id.",
         "inputSchema": {
           "type": "object",
           "properties": {
             "id": {
               "type": "string",
-              "minLength": 1,
-              "description": "Listen Notes episode id."
+              "description": "Listen Notes episode id.",
+              "minLength": 1
             },
             "showTranscript": {
               "type": "integer",
-              "description": "Set 1 to include transcript when available.",
-              "minimum": 0,
-              "maximum": 1
+              "description": "0 is no, 1 is yes.",
+              "enum": [
+                0,
+                1
+              ]
             }
           },
           "additionalProperties": false,
@@ -1019,20 +1367,44 @@
         "kind": "action",
         "sideEffect": "read",
         "title": "Batch get podcasts",
-        "description": "Fetch metadata for multiple podcasts by Listen Notes ids via POST /podcasts.",
+        "description": "Fetch basic metadata for multiple podcasts by Listen Notes ids, RSS URLs, Apple ids, or Spotify ids.",
         "inputSchema": {
           "type": "object",
           "properties": {
             "ids": {
               "type": "string",
-              "minLength": 1,
-              "description": "Comma-separated Listen Notes podcast ids."
+              "description": "Comma-separated Listen Notes podcast ids.",
+              "minLength": 1
+            },
+            "rsses": {
+              "type": "string",
+              "description": "Comma-separated podcast RSS URLs.",
+              "minLength": 1
+            },
+            "itunesIds": {
+              "type": "string",
+              "description": "Comma-separated Apple Podcasts (iTunes) ids.",
+              "minLength": 1
+            },
+            "spotifyIds": {
+              "type": "string",
+              "description": "Comma-separated Spotify show ids.",
+              "minLength": 1
+            },
+            "showLatestEpisodes": {
+              "type": "integer",
+              "description": "0 is no, 1 is yes.",
+              "enum": [
+                0,
+                1
+              ]
+            },
+            "nextEpisodePubDate": {
+              "type": "integer",
+              "description": "Latest-episode pagination cursor in unix milliseconds."
             }
           },
-          "additionalProperties": false,
-          "required": [
-            "ids"
-          ]
+          "additionalProperties": false
         },
         "outputSchema": {
           "type": "object",
@@ -1056,7 +1428,12 @@
             "Content-Type": "application/x-www-form-urlencoded"
           },
           "body": {
-            "ids": "{{ids}}"
+            "ids": "{{ids}}",
+            "rsses": "{{rsses}}",
+            "itunes_ids": "{{itunesIds}}",
+            "spotify_ids": "{{spotifyIds}}",
+            "show_latest_episodes": "{{showLatestEpisodes}}",
+            "next_episode_pub_date": "{{nextEpisodePubDate}}"
           },
           "bodyEncoding": "form"
         },
@@ -1071,14 +1448,14 @@
         "kind": "action",
         "sideEffect": "read",
         "title": "Batch get episodes",
-        "description": "Fetch metadata for multiple episodes by Listen Notes ids via POST /episodes.",
+        "description": "Fetch basic metadata for multiple episodes by Listen Notes episode ids.",
         "inputSchema": {
           "type": "object",
           "properties": {
             "ids": {
               "type": "string",
-              "minLength": 1,
-              "description": "Comma-separated Listen Notes episode ids."
+              "description": "Comma-separated Listen Notes episode ids.",
+              "minLength": 1
             }
           },
           "additionalProperties": false,
@@ -1123,7 +1500,7 @@
         "kind": "action",
         "sideEffect": "read",
         "title": "Just listen",
-        "description": "Fetch a random Listen Notes podcast episode via GET /just_listen.",
+        "description": "Fetch a random Listen Notes podcast episode to play now.",
         "inputSchema": {
           "type": "object",
           "properties": {},
@@ -1159,20 +1536,22 @@
         "kind": "action",
         "sideEffect": "read",
         "title": "Recommend podcasts",
-        "description": "Fetch podcast recommendations similar to a Listen Notes podcast ID.",
+        "description": "Fetch podcast recommendations related to a Listen Notes podcast id.",
         "inputSchema": {
           "type": "object",
           "properties": {
             "id": {
               "type": "string",
-              "minLength": 1,
-              "description": "Listen Notes podcast id."
+              "description": "Listen Notes podcast id.",
+              "minLength": 1
             },
             "safeMode": {
               "type": "integer",
-              "description": "Exclude explicit podcasts when 1.",
-              "minimum": 0,
-              "maximum": 1
+              "description": "0 is no, 1 is yes.",
+              "enum": [
+                0,
+                1
+              ]
             }
           },
           "additionalProperties": false,
@@ -1213,20 +1592,22 @@
         "kind": "action",
         "sideEffect": "read",
         "title": "Recommend episodes",
-        "description": "Fetch episode recommendations similar to a Listen Notes episode ID.",
+        "description": "Fetch episode recommendations related to a Listen Notes episode id.",
         "inputSchema": {
           "type": "object",
           "properties": {
             "id": {
               "type": "string",
-              "minLength": 1,
-              "description": "Listen Notes episode id."
+              "description": "Listen Notes episode id.",
+              "minLength": 1
             },
             "safeMode": {
               "type": "integer",
-              "description": "Exclude explicit episodes when 1.",
-              "minimum": 0,
-              "maximum": 1
+              "description": "0 is no, 1 is yes.",
+              "enum": [
+                0,
+                1
+              ]
             }
           },
           "additionalProperties": false,
@@ -1267,7 +1648,7 @@
         "kind": "action",
         "sideEffect": "read",
         "title": "List curated podcasts",
-        "description": "List Listen Notes curated podcast collections.",
+        "description": "Fetch curated lists of podcasts from Listen Notes.",
         "inputSchema": {
           "type": "object",
           "properties": {
@@ -1312,14 +1693,14 @@
         "kind": "action",
         "sideEffect": "read",
         "title": "Get curated podcast list",
-        "description": "Get a Listen Notes curated podcast collection by id.",
+        "description": "Fetch one curated list of podcasts by id.",
         "inputSchema": {
           "type": "object",
           "properties": {
             "id": {
               "type": "string",
-              "minLength": 1,
-              "description": "Curated list id."
+              "description": "Curated list id.",
+              "minLength": 1
             }
           },
           "additionalProperties": false,
@@ -1357,7 +1738,7 @@
         "kind": "action",
         "sideEffect": "read",
         "title": "List playlists",
-        "description": "List Listen Notes playlists for the authenticated API account.",
+        "description": "Fetch Listen Later playlists for the authenticated Listen Notes account.",
         "inputSchema": {
           "type": "object",
           "properties": {
@@ -1368,13 +1749,13 @@
             },
             "sort": {
               "type": "string",
+              "description": "How to sort playlists.",
               "enum": [
-                "recent_added_first",
-                "oldest_added_first",
                 "name_a_to_z",
-                "name_z_to_a"
-              ],
-              "description": "Playlist sort order."
+                "name_z_to_a",
+                "oldest_added_first",
+                "recent_added_first"
+              ]
             }
           },
           "additionalProperties": false
@@ -1413,14 +1794,36 @@
         "kind": "action",
         "sideEffect": "read",
         "title": "Get playlist",
-        "description": "Get a Listen Notes playlist and its items by playlist ID.",
+        "description": "Fetch one Listen Later playlist and its items by id.",
         "inputSchema": {
           "type": "object",
           "properties": {
             "id": {
               "type": "string",
-              "minLength": 1,
-              "description": "Playlist id."
+              "description": "Playlist id (11 characters).",
+              "minLength": 1
+            },
+            "sort": {
+              "type": "string",
+              "description": "How to sort playlist items.",
+              "enum": [
+                "oldest_added_first",
+                "oldest_published_first",
+                "recent_added_first",
+                "recent_published_first"
+              ]
+            },
+            "type": {
+              "type": "string",
+              "description": "Playlist type.",
+              "enum": [
+                "episode_list",
+                "podcast_list"
+              ]
+            },
+            "lastTimestampMs": {
+              "type": "integer",
+              "description": "Item pagination cursor from last_timestamp_ms."
             }
           },
           "additionalProperties": false,
@@ -1445,7 +1848,12 @@
           "path": "/playlists/{{id}}",
           "success": [
             200
-          ]
+          ],
+          "query": {
+            "sort": "{{sort}}",
+            "type": "{{type}}",
+            "last_timestamp_ms": "{{lastTimestampMs}}"
+          }
         },
         "enforceOutputSchema": true,
         "validationMode": "strict-generated",
@@ -1458,7 +1866,7 @@
         "kind": "action",
         "sideEffect": "read",
         "title": "List trending searches",
-        "description": "Fetch currently trending Listen Notes search terms.",
+        "description": "Fetch recent trending search terms on Listen Notes.",
         "inputSchema": {
           "type": "object",
           "properties": {},
@@ -1494,29 +1902,29 @@
         "kind": "action",
         "sideEffect": "read",
         "title": "Search episode titles",
-        "description": "Search individual episode titles, optionally scoped to a podcast id.",
+        "description": "Find individual episodes by title, optionally scoped to a podcast id.",
         "inputSchema": {
           "type": "object",
           "properties": {
             "q": {
               "type": "string",
-              "minLength": 1,
-              "description": "Episode title search term."
+              "description": "Episode title search term.",
+              "minLength": 1
             },
             "podcastId": {
               "type": "string",
-              "minLength": 1,
-              "description": "Optional podcast id to scope the title search."
+              "description": "Podcast id whose type is podcastIdType.",
+              "minLength": 1
             },
             "podcastIdType": {
               "type": "string",
+              "description": "Type of podcastId.",
               "enum": [
-                "listennotes_id",
                 "itunes_id",
-                "spotify_id",
-                "rss"
-              ],
-              "description": "Type of podcastId."
+                "listennotes_id",
+                "rss",
+                "spotify_id"
+              ]
             }
           },
           "additionalProperties": false,
@@ -1547,6 +1955,356 @@
             "podcast_id": "{{podcastId}}",
             "podcast_id_type": "{{podcastIdType}}"
           }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "podcasts.audience": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "read",
+        "title": "Get podcast audience",
+        "description": "Fetch audience-region demographics for a Listen Notes podcast.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "description": "Listen Notes podcast id.",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/podcasts/{{id}}/audience",
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "podcasts.by_domain": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "read",
+        "title": "List podcasts by domain",
+        "description": "Fetch podcasts published under a publisher domain name.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "domainName": {
+              "type": "string",
+              "description": "Publisher domain, e.g. nytimes.com.",
+              "minLength": 1
+            },
+            "page": {
+              "type": "integer",
+              "description": "Page number of podcasts from this domain.",
+              "minimum": 1
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "domainName"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/podcasts/domains/{{domainName}}",
+          "success": [
+            200
+          ],
+          "query": {
+            "page": "{{page}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "related_searches.list": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "read",
+        "title": "List related searches",
+        "description": "Fetch related search terms for a query (PRO/ENTERPRISE).",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "q": {
+              "type": "string",
+              "description": "Search term, e.g. person, place, or topic.",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "q"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/related_searches",
+          "success": [
+            200
+          ],
+          "query": {
+            "q": "{{q}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "podcasts.refresh_rss": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "write",
+        "title": "Refresh podcast RSS",
+        "description": "Request Listen Notes to refresh a podcast RSS feed by podcast id.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "description": "Listen Notes podcast id.",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "POST",
+          "path": "/podcasts/{{id}}/rss",
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "podcasts.delete": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "write",
+        "title": "Request podcast deletion",
+        "description": "Request deletion of a podcast from the Listen Notes database.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "description": "Listen Notes podcast id.",
+              "minLength": 1
+            },
+            "reason": {
+              "type": "string",
+              "description": "Why this podcast should be deleted. Use testing to dry-run.",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "DELETE",
+          "path": "/podcasts/{{id}}",
+          "success": [
+            200
+          ],
+          "query": {
+            "reason": "{{reason}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "spellcheck": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "read",
+        "title": "Spellcheck a search term",
+        "description": "Suggest spelling corrections for a Listen Notes search term (PRO/ENTERPRISE).",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "q": {
+              "type": "string",
+              "description": "Search term to spellcheck.",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "q"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/spellcheck",
+          "success": [
+            200
+          ],
+          "query": {
+            "q": "{{q}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "podcasts.submit": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "write",
+        "title": "Submit a podcast",
+        "description": "Submit a podcast RSS feed to the Listen Notes database.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "rss": {
+              "type": "string",
+              "description": "A valid podcast RSS URL.",
+              "minLength": 1
+            },
+            "email": {
+              "type": "string",
+              "description": "Email to notify once the podcast is accepted.",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "rss"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "POST",
+          "path": "/podcasts/submit",
+          "success": [
+            200
+          ],
+          "headers": {
+            "Content-Type": "application/x-www-form-urlencoded"
+          },
+          "body": {
+            "rss": "{{rss}}",
+            "email": "{{email}}"
+          },
+          "bodyEncoding": "form"
         },
         "enforceOutputSchema": true,
         "validationMode": "strict-generated",

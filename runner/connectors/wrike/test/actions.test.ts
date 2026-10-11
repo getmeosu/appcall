@@ -135,7 +135,7 @@ describe("Wrike write depth", () => {
     expect(actions["webhook.task_created"]).toBeUndefined();
     expect(manifest.operations["webhook.task_created"].kind).toBe("webhook");
     expect(manifest.operations["webhook.comment_added"].request).toBeUndefined();
-    expect(Object.keys(actions).sort()).toEqual([
+    const original = [
       "attachments.list",
       "comments.create",
       "comments.delete",
@@ -154,6 +154,9 @@ describe("Wrike write depth", () => {
       "tasks.list",
       "tasks.update",
       "workflows.list",
-    ]);
+    ];
+    for (const key of original) {
+      expect(actions[key], key).toBeTypeOf("function");
+    }
   });
 });

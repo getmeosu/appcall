@@ -11,6 +11,8 @@ Create an API key in the Omnisend application, then supply it as the recipe cred
 - `healthcheck`: read-only `GET /contacts?limit=1`, accepts `{}`.
 - `contacts.list`: read-only `GET /contacts`, with `limit` from 1 through 250 and optional opaque `after` cursor.
 
+Composio-parity operations add product-category writes, product replace, event metadata listing, batches on `/api`, and v3 carts/orders at `https://api.omnisend.com/v3` (`X-API-KEY`). Cart and order GET/DELETE have no 2026-03-15 replacement. Category and product-category Composio tools share `/api/product-categories`.
+
 Omnisend uses cursor pagination. Pass `paging.cursors.after` unchanged in the next request and stop when `paging.hasMore` is false or the cursor is null. The recipe never follows provider supplied URLs automatically.
 
 The selected edition is the international Omnisend API and the pinned upstream source is `33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a`. Responses preserve the provider JSON under the AppCall provider data wrapper.
