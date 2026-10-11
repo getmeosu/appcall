@@ -74,7 +74,7 @@ describe("search sync handlers", () => {
       fetch: mockFetch(elements, (call) => { accountUrl = call.url; }),
     });
     expect(new URL(accountUrl).pathname).toBe("/rest/adAccounts");
-    expect(accountUrl).toContain("test:(values:List(false))");
+    expect(accountUrl).toContain("search=(test:false)");
 
     let creativeUrl = "";
     await executeCreativeAssetsListSync({
@@ -227,7 +227,7 @@ describe("core action aliases", () => {
     expect(url).toContain("pivots=List(CAMPAIGN)");
     expect(url).toContain("dateRange=(start:(year:2024,month:1,day:1),end:(year:2024,month:1,day:31))");
     expect(url).toContain("accounts=List(urn%3Ali%3AsponsoredAccount%3A525410360)");
-    expect(url).toContain("fields=impressions,clicks");
+    expect(url).toContain("fields=dateRange,pivotValues,impressions,clicks");
   });
 });
 
@@ -243,7 +243,8 @@ describe("healthcheck", () => {
     expect(live).toEqual({ connector: "linkedin-ads", status: "ok", source: "provider" });
     expect(new URL(url).pathname).toBe("/rest/adAccounts");
     const headerMap = headers as Record<string, string>;
-    expect(headerMap["LinkedIn-Version"]).toBe("202608");
+    expect(headerMap["LinkedIn-Version"]).toBe("202609");
+    expect(url).toContain("pageSize=1");
     expect(headerMap["Content-Type"]).toBeUndefined();
   });
 });

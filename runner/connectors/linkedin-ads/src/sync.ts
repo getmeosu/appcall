@@ -5,7 +5,7 @@ import { parseCampaignsResponse } from "./objects";
 import type { NormalizedCampaign } from "./objects";
 import { parseCreativeAssetsResponse } from "./objects";
 import type { NormalizedCreativeAsset } from "./objects";
-import { asId, assertRestli, assertToken, pageSize, qs, resourceId, restliList, stringList } from "./restli";
+import { asId, assertToken, enc, restliExpression, pageSize, pageTokenValue, qs, resourceId, restliList, stringList } from "./restli";
 
 type Live = { accessToken?: unknown; fetch?: unknown; response?: unknown };
 
@@ -75,18 +75,20 @@ function searchValues(value: unknown, field: string): string[] | undefined {
 }
 
 function searchExpression(clauses: string[], raw: unknown): string | undefined {
-  if (typeof raw === "string" && raw !== "") return assertRestli(raw, "search");
+  if (typeof raw === "string" && raw !== "") return restliExpression(raw, "search");
   if (clauses.length === 0) return undefined;
   return `(${clauses.join(",")})`;
 }
 
+// Each search value is a Rest.li leaf: encoded once (URN ids become urn%3Ali%3A...),
+// while the (field:(values:List(...))) structure stays raw.
 function clause(field: string, values: string[] | undefined): string | undefined {
   if (!values) return undefined;
-  return `${field}:(values:List(${values.join(",")}))`;
+  return `${field}:(values:List(${values.map(enc).join(",")}))`;
 }
 
-async function fetchJSON(input: Live & { accessToken: string }, operation: string, path: string): Promise<unknown> {
-  const response = await client(input, operation).fetchJSON(path, { method: "GET", headers: { "X-RestLi-Method": "FINDER" } });
+async function fetchJSON(input: Live & { accessToken: string }, operation: string, path: string, method: "FINDER" | "BATCH_GET" = "FINDER"): Promise<unknown> {
+  const response = await client(input, operation).fetchJSON(path, { method: "GET", headers: { "X-RestLi-Method": method } });
   if (response.status < 200 || response.status >= 300) upstream(response.status);
   return response.body;
 }
@@ -107,10 +109,11 @@ export function executeCampaignsListSync(input: CampaignsListSyncInput): Campaig
       if (search) pairs.push(["search", search]);
       const size = pageSize(input.pageSize);
       if (size) pairs.push(["pageSize", size]);
-      if (typeof input.pageToken === "string" && input.pageToken !== "") pairs.push(["pageToken", assertRestli(input.pageToken, "pageToken")]);
+      const token = pageTokenValue(input.pageToken);
+      if (token) pairs.push(["pageToken", token]);
       if (typeof input.sortOrder === "string" && input.sortOrder !== "") pairs.push(["sortOrder", assertToken(input.sortOrder, "sortOrder")]);
     }
-    return fetchJSON(input, "campaigns.list", `/rest/adAccounts/${accountId}/adCampaigns?${qs(pairs)}`).then((body) => {
+    return fetchJSON(input, "campaigns.list", `/rest/adAccounts/${accountId}/adCampaigns?${qs(pairs)}`, ids ? "BATCH_GET" : "FINDER").then((body) => {
       const parsed = parseCampaignsResponse(body);
       return { provider: "linkedin-ads", operation: "campaigns.list", items: parsed.campaigns, nextStart: parsed.nextStart };
     });
@@ -128,14 +131,15 @@ export function executeAdAccountsListSync(input: AdAccountsListSyncInput): AdAcc
       clause("id", searchValues(input.id, "id")),
       clause("reference", searchValues(input.reference, "reference")),
     ].filter((item): item is string => !!item);
-    if (typeof input.test === "boolean") clauses.push(`test:(values:List(${input.test}))`);
+    // adAccounts search: test is a scalar boolean (test:true), not a values list (ACC Search Parameters).
+    if (typeof input.test === "boolean") clauses.push(`test:${input.test}`);
     const search = searchExpression(clauses, input.search);
     const pairs: Array<[string, string]> = [["q", "search"]];
     if (search) pairs.push(["search", search]);
     const size = pageSize(input.pageSize ?? input.page_size, "page_size");
     if (size) pairs.push(["pageSize", size]);
-    const token = input.pageToken ?? input.page_token;
-    if (typeof token === "string" && token !== "") pairs.push(["pageToken", assertRestli(token, "pageToken")]);
+    const token = pageTokenValue(input.pageToken ?? input.page_token);
+    if (token) pairs.push(["pageToken", token]);
     const sort = input.sortOrder ?? input.sort_order;
     if (typeof sort === "string" && sort !== "") pairs.push(["sortOrder", assertToken(sort, "sortOrder")]);
     return fetchJSON(input, "ad_accounts.list", `/rest/adAccounts?${qs(pairs)}`).then((body) => {
@@ -155,7 +159,8 @@ export function executeCreativeAssetsListSync(input: CreativeAssetsListSyncInput
     const statuses = searchValues(input.intendedStatuses, "intendedStatuses");
     const pairs: Array<[string, string]> = [["q", "criteria"]];
     if (statuses) pairs.push(["intendedStatuses", restliList(statuses)]);
-    const size = pageSize(input.pageSize ?? input.page_size, "pageSize");
+    // creatives search caps pageSize at 100 (CRE cursor pagination).
+    const size = pageSize(input.pageSize ?? input.page_size, "pageSize", 100);
     if (size) pairs.push(["pageSize", size]);
     return fetchJSON(input, "creative_assets.list", `/rest/adAccounts/${accountId}/creatives?${qs(pairs)}`).then((body) => {
       const parsed = parseCreativeAssetsResponse(body);

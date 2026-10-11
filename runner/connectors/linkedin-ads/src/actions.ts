@@ -12,6 +12,7 @@ import {
   parseCreativesResponse,
   parseAnalyticsResponse,
 } from "./objects";
+import { enc, pageSize as pageSizeParam, pageTokenValue, qs, rejectIndexStart } from "./restli";
 
 type ActionResult = Record<string, unknown> | Promise<Record<string, unknown>>;
 
@@ -85,7 +86,7 @@ function toSponsoredCampaignUrn(id: string): string {
 }
 
 function encodeRestliList(urns: string[]): string {
-  return `List(${urns.map((u) => encodeURIComponent(u)).join(",")})`;
+  return `List(${urns.map(enc).join(",")})`;
 }
 
 function formatDateRange(start: { year: number; month: number; day: number }, end?: { year: number; month: number; day: number }): string {
@@ -186,24 +187,30 @@ export type CampaignGroupsListInput = {
   accountId: string;
   start?: number;
   count?: number;
+  pageSize?: number;
+  pageToken?: string;
   status?: string;
 };
 
+const CAMPAIGN_GROUP_STATUSES = new Set(["ACTIVE", "ARCHIVED", "CANCELED", "DRAFT", "PAUSED", "PENDING_DELETION", "REMOVED"]);
+
+/**
+ * GET /rest/adAccounts/{id}/adCampaignGroups?q=search (GRP Search for Campaign Groups).
+ * Rest.li 2.0 search=(status:(values:List(...))) and cursor paging pageSize/pageToken
+ * (index start/count was replaced in 202401). count is kept as a pageSize alias.
+ */
 export function listCampaignGroups(input: unknown): ActionResult {
   const validated = validateCampaignGroupsListInput(input);
   if (hasLiveAuth(input)) {
     const accountId = sanitizeResourceId(validated.accountId, ["urn:li:sponsoredAccount:"]);
-    const start = validated.start ?? 0;
-    const count = validated.count ?? 10;
-    const params = new URLSearchParams();
-    params.set("q", "search");
-    params.set("start", String(start));
-    params.set("count", String(count));
-    if (validated.status) {
-      params.set("search.status.values[0]", validated.status);
-    }
+    const pairs: Array<[string, string]> = [["q", "search"]];
+    if (validated.status) pairs.push(["search", `(status:(values:List(${enc(validated.status)})))`]);
+    const size = pageSizeParam(validated.pageSize ?? validated.count, validated.pageSize !== undefined ? "pageSize" : "count");
+    if (size) pairs.push(["pageSize", size]);
+    const token = pageTokenValue(validated.pageToken);
+    if (token) pairs.push(["pageToken", token]);
     return createLinkedInAdsClient(clientOpts(input, "campaign_groups.list"))
-      .fetchJSON(`/rest/adAccounts/${accountId}/adCampaignGroups?${params.toString()}`, { method: "GET" })
+      .fetchJSON(`/rest/adAccounts/${accountId}/adCampaignGroups?${qs(pairs)}`, { method: "GET", headers: { "X-RestLi-Method": "FINDER" } })
       .then((result) => {
         if (result.status === 200) {
           const parsed = parseCampaignGroupsResponse(result.body);
@@ -224,11 +231,16 @@ export function listCampaignGroups(input: unknown): ActionResult {
 
 function validateCampaignGroupsListInput(input: unknown): CampaignGroupsListInput {
   if (!isRecord(input)) throw new Error("campaign_groups.list input must be an object");
+  rejectIndexStart(input.start);
+  const status = optionalString(input.status)?.toUpperCase();
+  if (status !== undefined && !CAMPAIGN_GROUP_STATUSES.has(status)) throw new Error("status is not a supported campaign group status");
   return {
     accountId: requireString(firstValue(input, ["accountId", "ad_account_id", "adAccountId"]), "accountId"),
     start: optionalNumber(input.start),
     count: optionalNumber(input.count),
-    status: optionalString(input.status),
+    pageSize: optionalNumber(input.pageSize),
+    pageToken: optionalString(input.pageToken),
+    status,
   };
 }
 
@@ -256,7 +268,7 @@ export type CreativesListInput = {
 function criteriaList(values: string[] | undefined, prefix?: string): string | undefined {
   if (!values?.length) return undefined;
   const urns = values.map((value) => prefix ? `${prefix}${sanitizeResourceId(value, [prefix])}` : value);
-  return `List(${urns.map((urn) => encodeURIComponent(urn)).join(",")})`;
+  return `List(${urns.map(enc).join(",")})`;
 }
 
 export function listCreatives(input: unknown): ActionResult {
@@ -277,10 +289,9 @@ export function listCreatives(input: unknown): ActionResult {
       if (validated.sortOrder !== "ASCENDING" && validated.sortOrder !== "DESCENDING") throw new Error("sortOrder is not supported");
       add("sortOrder", validated.sortOrder);
     }
-    if (validated.pageToken) add("pageToken", encodeURIComponent(validated.pageToken));
-    if (validated.count !== undefined || validated.pageSize !== undefined) {
-      add("pageSize", String(validated.pageSize ?? validated.count));
-    }
+    add("pageToken", pageTokenValue(validated.pageToken));
+    // creatives q=criteria is cursor paged with pageSize capped at 100 (CRE Search for Creatives).
+    add("pageSize", pageSizeParam(validated.pageSize ?? validated.count, validated.pageSize !== undefined ? "pageSize" : "count", 100));
     return createLinkedInAdsClient(clientOpts(input, "creatives.list"))
       .fetchJSON(`/rest/adAccounts/${accountId}/creatives?${pairs.join("&")}`, { method: "GET", headers: { "X-RestLi-Method": "FINDER" } })
       .then((result) => {
@@ -303,6 +314,7 @@ export function listCreatives(input: unknown): ActionResult {
 
 function validateCreativesListInput(input: unknown): CreativesListInput {
   if (!isRecord(input)) throw new Error("creatives.list input must be an object");
+  rejectIndexStart(input.start);
   const stringArray = (value: unknown): string[] | undefined => {
     if (value == null) return undefined;
     if (!Array.isArray(value) || !value.every((item) => typeof item === "string" && item.length > 0)) {
@@ -392,10 +404,7 @@ export function getAnalyticsReport(input: unknown): ActionResult {
       const simple = sanitizeResourceId(id, ["urn:li:sponsoredCreative:", "urn:li:creatives:"]);
       return `urn:li:sponsoredCreative:${simple}`;
     }));
-    if (validated.fields?.length) {
-      if (validated.fields.some((field) => !/^[A-Za-z0-9_]{1,64}$/.test(field))) throw new Error("fields contains an unsupported value");
-      pairs.push(`fields=${validated.fields.join(",")}`);
-    }
+    pairs.push(`fields=${analyticsFields(validated.fields).join(",")}`);
 
     return createLinkedInAdsClient(clientOpts(input, "analytics.report.get"))
       .fetchJSON(`/rest/adAnalytics?${pairs.join("&")}`, { method: "GET", headers: { "X-RestLi-Method": "FINDER" } })
@@ -416,6 +425,36 @@ export function getAnalyticsReport(input: unknown): ActionResult {
       });
   }
   return { connector: "linkedin-ads", action: "analytics.report.get", source: "connector", validated };
+}
+
+/**
+ * Without fields LinkedIn returns only impressions and clicks, so cost would
+ * normalize to 0 (REP: "Otherwise, only impressions and clicks are returned by
+ * default. Request up to 20 metrics."). Default projection covers every metric the
+ * normalizer reads; caller fields always gain dateRange and pivotValues.
+ * Every default is valid for professional-demographic (MEMBER_*) pivots too.
+ */
+export const DEFAULT_ANALYTICS_FIELDS = [
+  "dateRange",
+  "pivotValues",
+  "impressions",
+  "clicks",
+  "costInLocalCurrency",
+  "costInUsd",
+  "landingPageClicks",
+  "externalWebsiteConversions",
+  "totalEngagements",
+  "oneClickLeads",
+  "videoViews",
+] as const;
+const ANALYTICS_STRUCTURAL_FIELDS = new Set(["dateRange", "pivotValues"]);
+
+export function analyticsFields(fields: string[] | undefined): string[] {
+  if (!fields?.length) return [...DEFAULT_ANALYTICS_FIELDS];
+  if (fields.some((field) => !/^[A-Za-z0-9_]{1,64}$/.test(field))) throw new Error("fields contains an unsupported value");
+  const out = [...new Set(["dateRange", "pivotValues", ...fields])];
+  if (out.filter((field) => !ANALYTICS_STRUCTURAL_FIELDS.has(field)).length > 20) throw new Error("fields may request at most 20 metrics");
+  return out;
 }
 
 function requireStringArray(value: unknown, field: string): string[] | undefined {
