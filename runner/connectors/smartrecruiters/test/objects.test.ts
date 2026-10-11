@@ -106,9 +106,47 @@ describe("SmartRecruiters parseJobsResponse", () => {
 
   it("normalizes each job", () => {
     const result = parseJobsResponse(jobsFixture);
-    expect(result.jobs[0].id).toBe("sr-job:sr-001");
-    expect(result.jobs[1].id).toBe("sr-job:sr-002");
-    expect(result.jobs[2].id).toBe("sr-job:sr-003");
+    expect(result.jobs[0].id).toBe("sr-job:744000153583401");
+    expect(result.jobs[1].id).toBe("sr-job:744000153583402");
+    expect(result.jobs[2].id).toBe("sr-job:744000153583403");
+  });
+
+  // SR-0: live Posting API PostingItem shape (v1listpostings). The title lives in
+  // `name` and the publish time in `releasedDate`; before SR-0 the normalizer read
+  // `title` / `createdOn`, so every listed posting had title "" and createdAt null.
+  it("reads live PostingItem fields (name, releasedDate, typeOfEmployment, location)", () => {
+    const result = parseJobsResponse(jobsFixture);
+    for (const job of result.jobs) {
+      expect(job.title).not.toBe("");
+      expect(job.createdAt).not.toBeNull();
+      expect(job.refNumber).not.toBeNull();
+    }
+    const [first, second, minimal] = result.jobs;
+    expect(first).toMatchObject({
+      title: "Frontend Developer",
+      createdAt: "2025-09-15T10:00:00.000Z",
+      location: "Toronto, ON, ca",
+      department: "Engineering",
+      type: "Full-time",
+      refNumber: "REF1001A",
+    });
+    for (const field of ["title", "createdAt", "location", "department", "type", "refNumber"] as const) {
+      expect(first[field]).not.toBeNull();
+      expect(second[field]).not.toBeNull();
+    }
+    expect(second.title).toBe("Sales Representative");
+    expect(second.createdAt).toBe("2025-10-01T14:30:00.000Z");
+    // Sparse live item: empty department object and remote-only location.
+    expect(minimal.title).toBe("Unknown Role");
+    expect(minimal.createdAt).toBe("2025-10-02T08:00:00.000Z");
+    expect(minimal.department).toBeNull();
+    expect(minimal.location).toBeNull();
+  });
+
+  it("keeps JobDetails title/createdOn precedence over posting fields", () => {
+    const job = normalizeJob({ id: "x", title: "Details", name: "Posting", createdOn: "a", releasedDate: "b" });
+    expect(job.title).toBe("Details");
+    expect(job.createdAt).toBe("a");
   });
 
   it("handles empty content array", () => {
@@ -189,21 +227,36 @@ describe("SmartRecruiters parseCandidateDetailsResponse", () => {
 });
 
 describe("SmartRecruiters normalizeUser", () => {
-  it("normalizes a full user from fixture", () => {
+  it("normalizes a v201804 user (systemRole) from fixture", () => {
     const user = normalizeUser(usersFixture.content[0] as never);
-    expect(user.id).toBe("sr-user:user-001");
+    expect(user.id).toBe("sr-user:5f0c7e2ab1cd2e0001d63a9a");
     expect(user.provider).toBe("smartrecruiters");
     expect(user.name).toBe("Recruiter One");
     expect(user.email).toBe("recruiter.one@example.com");
     expect(user.role).toBe("ADMINISTRATOR");
     expect(user.active).toBe(true);
     expect(user.language).toBe("en");
+    expect(user.updatedAt).toBe("2024-05-01T10:00:00.000Z");
   });
 
-  it("marks inactive users", () => {
+  it("marks inactive users and maps systemRole.id", () => {
     const user = normalizeUser(usersFixture.content[1] as never);
     expect(user.active).toBe(false);
     expect(user.role).toBe("STANDARD");
+    expect(user.language).toBe("de");
+  });
+
+  it("returns non-null role for every live-shape user", () => {
+    for (const raw of usersFixture.content) {
+      expect(normalizeUser(raw as never).role).not.toBeNull();
+    }
+  });
+
+  it("still reads the deprecated flat role string", () => {
+    expect(normalizeUser({ id: "u1", role: "EXTENDED" }).role).toBe("EXTENDED");
+    expect(normalizeUser({ id: "u1", role: "EXTENDED", systemRole: { id: "ADMINISTRATOR" } }).role).toBe(
+      "ADMINISTRATOR",
+    );
   });
 
   it("handles sparse user", () => {
@@ -211,15 +264,22 @@ describe("SmartRecruiters normalizeUser", () => {
     expect(user.id).toBe("sr-user:u1");
     expect(user.name).toBe("");
     expect(user.active).toBe(true);
+    expect(user.role).toBeNull();
   });
 });
 
 describe("SmartRecruiters parseUsersResponse", () => {
-  it("parses fixture response", () => {
+  it("parses v201804 fixture response (nextPageId, no totalFound)", () => {
     const result = parseUsersResponse(usersFixture);
     expect(result.users).toHaveLength(2);
-    expect(result.total).toBe(2);
-    expect(result.users[1].id).toBe("sr-user:user-002");
+    expect(result.total).toBeNull();
+    expect(result.nextPageId).toBe("MTAwOjVmMGM3ZTJhYjFjZDJlMDAwMWQ2M2E5Yg==");
+    expect(result.users[1].id).toBe("sr-user:5f0c7e2ab1cd2e0001d63a9b");
+  });
+
+  it("returns null nextPageId on the last page and keeps legacy totalFound", () => {
+    expect(parseUsersResponse({ content: [] }).nextPageId).toBeNull();
+    expect(parseUsersResponse({ totalFound: 3, content: [] }).total).toBe(3);
   });
 
   it("handles missing content", () => {
@@ -254,8 +314,26 @@ describe("SmartRecruiters parsePostingsResponse", () => {
     const result = parsePostingsResponse(postingsFixture);
     expect(result.postings).toHaveLength(2);
     expect(result.total).toBe(2);
-    expect(result.postings[0].id).toBe("sr-job:post-001");
+    expect(result.postings[0].id).toBe("sr-job:744000153583411");
     expect(result.postings[1].title).toBe("Product Designer");
+  });
+
+  it("returns non-null title/createdAt/type for live-shape postings", () => {
+    const result = parsePostingsResponse(postingsFixture);
+    expect(result.postings[0]).toMatchObject({
+      title: "Backend Engineer",
+      createdAt: "2025-08-01T09:00:00.000Z",
+      location: "Berlin, Berlin, de",
+      department: "Engineering",
+      type: "Full-time",
+      refNumber: "REF2001A",
+    });
+    for (const posting of result.postings) {
+      for (const field of ["createdAt", "location", "department", "type", "refNumber"] as const) {
+        expect(posting[field]).not.toBeNull();
+      }
+      expect(posting.title.length).toBeGreaterThan(0);
+    }
   });
 
   it("handles missing content", () => {
