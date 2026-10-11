@@ -75,7 +75,7 @@ async function invoke(key: string, input: Record<string, unknown>, respond: (req
 
 describe("linkedin depth manifest", () => {
   test("compiles the origin tree plus every Composio HTTP tool", () => {
-    expect(manifest.version).toBe("0.2.0");
+    expect(manifest.version).toBe("0.2.1");
     expect(manifest.http.baseUrl).toBe("https://api.linkedin.com");
     expect(manifest.http.auth).toMatchObject({ field: "accessToken", name: "Authorization", value: "Bearer {{accessToken}}" });
     expect(manifest.http.headers["Content-Type"]).toBeUndefined();

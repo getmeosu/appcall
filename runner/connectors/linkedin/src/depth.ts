@@ -6,9 +6,9 @@
 
 import { ConnectorHttpError, createConnectorHttpClient } from "../../../bun/src/http";
 import manifest from "../manifest.json";
-import { parseLinkedInRateLimit } from "./http";
+import { parseLinkedInRateLimit, withRestliHeaders } from "./http";
+import { REST_POSTS_PATH, restPostBody, restliId } from "./rest-posts";
 
-const LINKEDIN_VERSION = "202609";
 const API = "https://api.linkedin.com";
 const DEFAULT_IMAGE_RECIPE = "urn:li:digitalmediaRecipe:feedshare-image";
 const VIDEO_STATUS_READS = 3;
@@ -43,7 +43,6 @@ export function batchGetImages(input: unknown): Json | Promise<Json> {
       method: "GET",
       url: `${API}/rest/images?ids=${restliList(ids)}`,
       success: [200],
-      versioned: true,
       extraHeaders: { "X-RestLi-Method": "BATCH_GET" },
     });
     return { data: response.body };
@@ -62,7 +61,6 @@ export function getOrganizationPageStats(input: unknown): Json | Promise<Json> {
       method: "GET",
       url: `${API}/rest/organizationPageStatistics?${params.toString()}`,
       success: [200],
-      versioned: true,
       extraHeaders: { "X-RestLi-Method": "FINDER" },
     });
     return { data: response.body };
@@ -81,8 +79,7 @@ export function getVideos(input: unknown): Json | Promise<Json> {
         method: "GET",
         url: `${API}/rest/videos/${encodeURIComponent(single)}`,
         success: [200],
-        versioned: true,
-      });
+        });
       return { data: response.body };
     }
     const ids = stringList(many, "video_ids");
@@ -91,7 +88,6 @@ export function getVideos(input: unknown): Json | Promise<Json> {
       method: "GET",
       url: `${API}/rest/videos?ids=${restliList(ids)}`,
       success: [200],
-      versioned: true,
       extraHeaders: { "X-RestLi-Method": "BATCH_GET" },
     });
     return { data: response.body };
@@ -184,17 +180,13 @@ function run(action: string, input: unknown, fields: Field[], execute: (raw: Jso
 }
 
 async function publishPostCall(raw: Json, validated: Json): Promise<Json> {
-  const body: Json = {
+  const body: Json = restPostBody({
     author: validated.author,
     commentary: validated.commentary,
-    visibility: validated.visibility ?? "PUBLIC",
-    distribution: validated.distribution ?? {
-      feedDistribution: "MAIN_FEED",
-      targetEntities: [],
-      thirdPartyDistributionChannels: [],
-    },
-    lifecycleState: validated.lifecycleState ?? "PUBLISHED",
-  };
+    visibility: validated.visibility,
+    distribution: validated.distribution,
+    lifecycleState: validated.lifecycleState,
+  });
   const content = postContent(validated.content, validated.images);
   if (content !== undefined) body.content = content;
   for (const key of ["container", "reshareContext", "contentLandingPage", "contentCallToActionLabel"] as const) {
@@ -204,12 +196,11 @@ async function publishPostCall(raw: Json, validated: Json): Promise<Json> {
   const response = await call(raw, {
     operation: "posts.publish",
     method: "POST",
-    url: `${API}/rest/posts`,
+    url: `${API}${REST_POSTS_PATH}`,
     success: [200, 201],
-    versioned: true,
     json: body,
   });
-  const id = response.headers["x-restli-id"];
+  const id = restliId(response.headers);
   return id ? { data: response.body, id } : { data: response.body };
 }
 
@@ -227,7 +218,6 @@ async function uploadVideoCall(raw: Json, validated: Json): Promise<Json> {
     method: "POST",
     url: `${API}/rest/videos?action=initializeUpload`,
     success: [200, 201],
-    versioned: true,
     json: {
       initializeUploadRequest: {
         owner,
@@ -266,7 +256,6 @@ async function uploadVideoCall(raw: Json, validated: Json): Promise<Json> {
     method: "POST",
     url: `${API}/rest/videos?action=finalizeUpload`,
     success: [200, 201],
-    versioned: true,
     json: { finalizeUploadRequest: { video, uploadToken, uploadedPartIds } },
   });
   let status: unknown = null;
@@ -276,7 +265,6 @@ async function uploadVideoCall(raw: Json, validated: Json): Promise<Json> {
       method: "GET",
       url: `${API}/rest/videos/${encodeURIComponent(video)}`,
       success: [200],
-      versioned: true,
     });
     status = read.body;
     const state = isRecord(status) && typeof status.status === "string" ? status.status : "";
@@ -290,7 +278,6 @@ type Call = {
   method: string;
   url: string;
   success: number[];
-  versioned?: boolean;
   extraHeaders?: Record<string, string>;
   json?: unknown;
   raw?: Uint8Array;
@@ -300,12 +287,10 @@ type Call = {
 async function call(raw: Json, spec: Call): Promise<{ status: number; headers: Record<string, string>; body: unknown }> {
   const token = String(raw.accessToken);
   const budget = operations[spec.operation] ?? {};
-  const headers: Record<string, string> = { Accept: "application/json", ...(spec.extraHeaders ?? {}) };
-  if (!spec.signedUpload) {
-    headers.Authorization = `Bearer ${token}`;
-    headers["X-Restli-Protocol-Version"] = "2.0.0";
-    if (spec.versioned) headers["Linkedin-Version"] = LINKEDIN_VERSION;
-  }
+  let headers: Record<string, string> = { Accept: "application/json", ...(spec.extraHeaders ?? {}) };
+  // Signed upload URLs get no LinkedIn auth or Rest.li headers; every api.linkedin.com call
+  // gets X-Restli-Protocol-Version, plus Linkedin-Version on /rest/ paths only (http.ts).
+  if (!spec.signedUpload) headers = withRestliHeaders(spec.url, { ...headers, Authorization: `Bearer ${token}` });
   let body: string | Uint8Array | undefined;
   if (spec.json !== undefined) {
     headers["Content-Type"] = "application/json";
