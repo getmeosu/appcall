@@ -8,7 +8,7 @@
  *   username, empty password). Matches the manifest http.auth.basic scheme.
  *   Region map: co → https://api.lever.co/v1, eu → https://api.eu.lever.co/v1
  *   (official EU root; tip previously used the nonexistent api.lever.eu).
- *   Exposes getJSON + putJSON + postJSON for read and write depth.
+ *   Exposes getJSON + putJSON + postJSON + deleteJSON for read and write depth.
  *
  * Both route through the shared outbound stack for allowlist, redirect
  * blocking, response-size bounds, deadlines, and inject-fetch for tests.
@@ -46,6 +46,8 @@ export type LeverAuthClient = {
   putJSON(path: string, body?: Record<string, unknown>): Promise<unknown>;
   /** POST `path` with a JSON body relative to the region Data API root. */
   postJSON(path: string, body?: Record<string, unknown>): Promise<unknown>;
+  /** DELETE `path` relative to the region Data API root (204 → undefined). */
+  deleteJSON(path: string): Promise<unknown>;
 };
 
 type OperationBounds = { maxResponseBytes: number; timeoutMs: number };
@@ -152,6 +154,20 @@ export function createAuthClient(config: LeverAuthClientConfig): LeverAuthClient
         method: "POST",
         headers,
         body: JSON.stringify(body),
+      });
+      if (response.status < 200 || response.status >= 300) {
+        throw upstreamErrorFor("Lever", response.status, response.headers, response.body);
+      }
+      if (response.status === 204 || response.body.length === 0) {
+        return undefined;
+      }
+      return parseJSONBody("Lever", response.body);
+    },
+
+    async deleteJSON(path: string): Promise<unknown> {
+      const response = await http.fetchText(`${baseUrl}${path}`, {
+        method: "DELETE",
+        headers: { Authorization: headers.Authorization, Accept: headers.Accept },
       });
       if (response.status < 200 || response.status >= 300) {
         throw upstreamErrorFor("Lever", response.status, response.headers, response.body);
