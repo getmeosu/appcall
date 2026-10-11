@@ -89,7 +89,9 @@ fi
 
 case "$args" in
   "config --format json")
-    printf '{"services":{"api":{"image":"%s-api"},"worker":{"image":"%s-worker"},"runner":{"image":"%s-runner"},"db":{"image":"postgres:16"}}}\n' "$project" "$project" "$project"
+    # Compose omits image when the service only has build. Smoke must
+    # fall back to project-service, which is what this fixture returns.
+    printf '{"services":{"api":{"build":{}},"worker":{"build":{}},"runner":{"build":{}},"db":{"image":"postgres:16"}}}\n'
     ;;
   "port api 5080")
     printf '127.0.0.1:51890\n'

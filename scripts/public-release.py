@@ -13,6 +13,7 @@ import re
 import stat
 import subprocess
 import sys
+import threading
 import tomllib
 
 MANIFEST = 'PUBLIC-RELEASE-MANIFEST.json'
@@ -150,8 +151,19 @@ def filesystem_files(source, exporting):
     return files, errors
 
 
+def read_exact(stream, size):
+    buf = bytearray()
+    while len(buf) < size:
+        chunk = stream.read(size - len(buf))
+        if not chunk:
+            raise subprocess.CalledProcessError(128, ['git', 'cat-file', '--batch'])
+        buf += chunk
+    return bytes(buf)
+
+
 def index_files(source):
     files, errors = {}, []
+    wanted = []
     listing = subprocess.run(['git', '-C', str(source), 'ls-files', '--stage', '-z'], check=True, capture_output=True).stdout
     for record in listing.split(b'\0'):
         if not record:
@@ -166,7 +178,37 @@ def index_files(source):
         elif not allowed(path):
             errors.append(issue(path, 'path-not-allowed'))
         else:
-            files[path] = subprocess.run(['git', '-C', str(source), 'cat-file', 'blob', oid], check=True, capture_output=True).stdout
+            wanted.append((oid, path))
+    if not wanted:
+        return files, errors
+    # One cat-file process. A subprocess per blob spends minutes on this tree.
+    proc = subprocess.Popen(
+        ['git', '-C', str(source), 'cat-file', '--batch'],
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+    )
+
+    def feed():
+        try:
+            for oid, _path in wanted:
+                proc.stdin.write(oid.encode() + b'\n')
+            proc.stdin.close()
+        except BrokenPipeError:
+            pass
+
+    threading.Thread(target=feed, daemon=True).start()
+    for _oid, path in wanted:
+        header = proc.stdout.readline()
+        if not header or header.endswith(b' missing\n'):
+            proc.kill()
+            raise subprocess.CalledProcessError(128, ['git', 'cat-file', '--batch'])
+        size = int(header.split()[2])
+        files[path] = read_exact(proc.stdout, size)
+        if proc.stdout.read(1) != b'\n':
+            proc.kill()
+            raise subprocess.CalledProcessError(128, ['git', 'cat-file', '--batch'])
+    if proc.wait() != 0:
+        raise subprocess.CalledProcessError(proc.returncode, ['git', 'cat-file', '--batch'])
     return files, errors
 
 

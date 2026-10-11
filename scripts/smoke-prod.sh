@@ -217,20 +217,22 @@ if [ -n "${APPCALL_SMOKE_API_IMAGE:-}${APPCALL_SMOKE_RUNNER_IMAGE:-}" ]; then
   config_json=$(compose config --format json)
   APPCALL_SMOKE_API_IMAGE="$APPCALL_SMOKE_API_IMAGE" \
     APPCALL_SMOKE_RUNNER_IMAGE="$APPCALL_SMOKE_RUNNER_IMAGE" \
+    APPCALL_SMOKE_PROJECT="$PROJECT" \
     python3 -c '
 import json, os, subprocess, sys
 services = json.load(sys.stdin)["services"]
 api = os.environ["APPCALL_SMOKE_API_IMAGE"]
 runner = os.environ["APPCALL_SMOKE_RUNNER_IMAGE"]
-tags = (
-    (api, services["api"]["image"]),
-    (api, services["worker"]["image"]),
-    (runner, services["runner"]["image"]),
-)
-for src, dest in tags:
-    if not dest:
+project = os.environ["APPCALL_SMOKE_PROJECT"]
+
+def dest(name):
+    # `docker compose config` leaves image empty when the service only has build.
+    return services[name].get("image") or f"{project}-{name}"
+
+for src, target in ((api, dest("api")), (api, dest("worker")), (runner, dest("runner"))):
+    if not target:
         raise SystemExit("compose service is missing an image name")
-    subprocess.check_call(["docker", "tag", src, dest])
+    subprocess.check_call(["docker", "tag", src, target])
 ' <<<"$config_json"
   SKIP_BUILD=1
 fi
