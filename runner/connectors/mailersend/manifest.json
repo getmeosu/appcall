@@ -29,12 +29,20 @@
   },
   "models": [
     "domain",
-    "message",
-    "template",
+    "smtp_user",
+    "token",
     "webhook",
-    "recipient",
+    "quota",
     "identity",
-    "token"
+    "message",
+    "recipient",
+    "sms_activity",
+    "sms_inbound",
+    "sms_message",
+    "sms_number",
+    "sms_recipient",
+    "template",
+    "user"
   ],
   "http": {
     "baseUrl": "https://api.mailersend.com",
@@ -103,8 +111,8 @@
       "maxResponseBytes": 5242880,
       "kind": "action",
       "sideEffect": "read",
-      "title": "List domains",
-      "description": "Read-only List domains.",
+      "title": "Get sending domains",
+      "description": "Retrieve a paginated list of sending domains, optionally filtered by verification status.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -116,6 +124,10 @@
           "page": {
             "type": "integer",
             "minimum": 1
+          },
+          "verified": {
+            "type": "boolean",
+            "description": "Filter by verification status (true verified, false unverified, omit for all)."
           }
         },
         "additionalProperties": false
@@ -140,7 +152,8 @@
         ],
         "query": {
           "limit": "{{limit}}",
-          "page": "{{page}}"
+          "page": "{{page}}",
+          "verified": "{{verified}}"
         }
       },
       "enforceOutputSchema": true,
@@ -148,25 +161,25 @@
       "responseFormat": "json"
     },
     "domains.get": {
+      "kind": "action",
+      "sideEffect": "read",
       "timeoutMs": 15000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
-      "kind": "action",
-      "sideEffect": "read",
       "title": "Get domain",
-      "description": "Get a MailerSend sending domain by id, including verification and tracking settings.",
+      "description": "Retrieve one sending domain, including verification (DKIM, SPF, MX, tracking) and settings.",
       "inputSchema": {
         "type": "object",
         "properties": {
-          "domainId": {
+          "domain_id": {
             "type": "string",
             "minLength": 1,
-            "description": "Sending domain id."
+            "description": "Unique identifier of the sending domain."
           }
         },
         "additionalProperties": false,
         "required": [
-          "domainId"
+          "domain_id"
         ]
       },
       "outputSchema": {
@@ -183,7 +196,7 @@
       },
       "request": {
         "method": "GET",
-        "path": "/v1/domains/{{domainId}}",
+        "path": "/v1/domains/{{domain_id}}",
         "success": [
           200
         ]
@@ -193,30 +206,32 @@
       "responseFormat": "json"
     },
     "domains.create": {
+      "kind": "action",
+      "sideEffect": "write",
       "timeoutMs": 15000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
-      "kind": "action",
-      "sideEffect": "write",
-      "title": "Create domain",
-      "description": "Add a sending domain to the MailerSend account.",
+      "title": "Create sending domain",
+      "description": "Add a sending domain. The name must be unique, lowercase, available, and resolvable.",
       "inputSchema": {
         "type": "object",
         "properties": {
           "name": {
             "type": "string",
             "minLength": 1,
-            "description": "Fully qualified domain name to add."
+            "description": "Fully qualified domain name to add for sending emails."
           },
-          "returnPathSubdomain": {
+          "return_path_subdomain": {
             "type": "string",
-            "minLength": 1,
-            "description": "Return-path subdomain, e.g. rp."
+            "description": "Alphanumeric subdomain for return path, e.g. rp."
           },
-          "customTrackingSubdomain": {
+          "custom_tracking_subdomain": {
             "type": "string",
-            "minLength": 1,
-            "description": "Custom tracking subdomain, e.g. track."
+            "description": "Alphanumeric subdomain for click/open tracking, e.g. track."
+          },
+          "inbound_routing_subdomain": {
+            "type": "string",
+            "description": "Alphanumeric subdomain for inbound routing, e.g. inbound."
           }
         },
         "additionalProperties": false,
@@ -240,16 +255,17 @@
         "method": "POST",
         "path": "/v1/domains",
         "success": [
-          201,
-          200
+          200,
+          201
         ],
         "headers": {
           "Content-Type": "application/json"
         },
         "body": {
           "name": "{{name}}",
-          "return_path_subdomain": "{{returnPathSubdomain}}",
-          "custom_tracking_subdomain": "{{customTrackingSubdomain}}"
+          "return_path_subdomain": "{{return_path_subdomain}}",
+          "custom_tracking_subdomain": "{{custom_tracking_subdomain}}",
+          "inbound_routing_subdomain": "{{inbound_routing_subdomain}}"
         }
       },
       "enforceOutputSchema": true,
@@ -257,36 +273,36 @@
       "responseFormat": "json"
     },
     "domains.recipients.list": {
+      "kind": "action",
+      "sideEffect": "read",
       "timeoutMs": 15000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
-      "kind": "action",
-      "sideEffect": "read",
       "title": "List domain recipients",
-      "description": "List recipients associated with a MailerSend sending domain.",
+      "description": "List recipients recorded for a sending domain with optional pagination.",
       "inputSchema": {
         "type": "object",
         "properties": {
-          "domainId": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Sending domain id."
-          },
           "page": {
             "type": "integer",
-            "description": "Page number, starting from 1.",
+            "description": "1-based page number.",
             "minimum": 1
           },
           "limit": {
             "type": "integer",
-            "description": "Page size.",
+            "description": "Results per page (default 25).",
             "minimum": 10,
             "maximum": 100
+          },
+          "domain_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "ID of the domain whose recipients to list."
           }
         },
         "additionalProperties": false,
         "required": [
-          "domainId"
+          "domain_id"
         ]
       },
       "outputSchema": {
@@ -303,7 +319,7 @@
       },
       "request": {
         "method": "GET",
-        "path": "/v1/domains/{{domainId}}/recipients",
+        "path": "/v1/domains/{{domain_id}}/recipients",
         "success": [
           200
         ],
@@ -316,35 +332,38 @@
       "validationMode": "strict-generated",
       "responseFormat": "json"
     },
-    "templates.list": {
+    "smtp_users.list": {
+      "kind": "action",
+      "sideEffect": "read",
       "timeoutMs": 15000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
-      "kind": "action",
-      "sideEffect": "read",
-      "title": "List templates",
-      "description": "List MailerSend email templates, optionally filtered by domain.",
+      "title": "Get SMTP users",
+      "description": "List SMTP users for a sending domain with optional pagination.",
       "inputSchema": {
         "type": "object",
         "properties": {
-          "domainId": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Filter templates by domain id."
-          },
           "page": {
             "type": "integer",
-            "description": "Page number, starting from 1.",
+            "description": "1-based page number.",
             "minimum": 1
           },
           "limit": {
             "type": "integer",
-            "description": "Page size.",
+            "description": "Results per page (default 25).",
             "minimum": 10,
             "maximum": 100
+          },
+          "domain_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Domain ID that scopes the SMTP users."
           }
         },
-        "additionalProperties": false
+        "additionalProperties": false,
+        "required": [
+          "domain_id"
+        ]
       },
       "outputSchema": {
         "type": "object",
@@ -360,12 +379,11 @@
       },
       "request": {
         "method": "GET",
-        "path": "/v1/templates",
+        "path": "/v1/domains/{{domain_id}}/smtp-users",
         "success": [
           200
         ],
         "query": {
-          "domain_id": "{{domainId}}",
           "page": "{{page}}",
           "limit": "{{limit}}"
         }
@@ -374,372 +392,36 @@
       "validationMode": "strict-generated",
       "responseFormat": "json"
     },
-    "templates.get": {
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "kind": "action",
-      "sideEffect": "read",
-      "title": "Get template",
-      "description": "Get a MailerSend email template by id.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "templateId": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Template id."
-          }
-        },
-        "additionalProperties": false,
-        "required": [
-          "templateId"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "GET",
-        "path": "/v1/templates/{{templateId}}",
-        "success": [
-          200
-        ]
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "messages.list": {
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "kind": "action",
-      "sideEffect": "read",
-      "title": "List messages",
-      "description": "List MailerSend messages created from Email API requests.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "domainId": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Filter messages by domain id."
-          },
-          "page": {
-            "type": "integer",
-            "description": "Page number, starting from 1.",
-            "minimum": 1
-          },
-          "limit": {
-            "type": "integer",
-            "description": "Page size.",
-            "minimum": 10,
-            "maximum": 100
-          }
-        },
-        "additionalProperties": false
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "GET",
-        "path": "/v1/messages",
-        "success": [
-          200
-        ],
-        "query": {
-          "domain_id": "{{domainId}}",
-          "page": "{{page}}",
-          "limit": "{{limit}}"
-        }
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "messages.get": {
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "kind": "action",
-      "sideEffect": "read",
-      "title": "Get message",
-      "description": "Get a single MailerSend message, including related emails and domain.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "messageId": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Message id."
-          }
-        },
-        "additionalProperties": false,
-        "required": [
-          "messageId"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "GET",
-        "path": "/v1/messages/{{messageId}}",
-        "success": [
-          200
-        ]
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "activity.list": {
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "kind": "action",
-      "sideEffect": "read",
-      "title": "List activity",
-      "description": "List email activity events for a MailerSend sending domain.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "domainId": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Sending domain id."
-          },
-          "page": {
-            "type": "integer",
-            "description": "Page number.",
-            "minimum": 1
-          },
-          "limit": {
-            "type": "integer",
-            "description": "Page size.",
-            "minimum": 10,
-            "maximum": 100
-          },
-          "dateFrom": {
-            "type": "integer",
-            "description": "Unix timestamp lower bound."
-          },
-          "dateTo": {
-            "type": "integer",
-            "description": "Unix timestamp upper bound."
-          }
-        },
-        "additionalProperties": false,
-        "required": [
-          "domainId"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "GET",
-        "path": "/v1/activity/{{domainId}}",
-        "success": [
-          200
-        ],
-        "query": {
-          "page": "{{page}}",
-          "limit": "{{limit}}",
-          "date_from": "{{dateFrom}}",
-          "date_to": "{{dateTo}}"
-        }
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "webhooks.list": {
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "kind": "action",
-      "sideEffect": "read",
-      "title": "List webhooks",
-      "description": "List MailerSend webhooks for a sending domain.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "domainId": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Sending domain id."
-          },
-          "page": {
-            "type": "integer",
-            "description": "Page number, starting from 1.",
-            "minimum": 1
-          },
-          "limit": {
-            "type": "integer",
-            "description": "Page size.",
-            "minimum": 10,
-            "maximum": 100
-          }
-        },
-        "additionalProperties": false,
-        "required": [
-          "domainId"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "GET",
-        "path": "/v1/webhooks",
-        "success": [
-          200
-        ],
-        "query": {
-          "domain_id": "{{domainId}}",
-          "page": "{{page}}",
-          "limit": "{{limit}}"
-        }
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "webhooks.get": {
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "kind": "action",
-      "sideEffect": "read",
-      "title": "Get webhook",
-      "description": "Get a MailerSend webhook by id.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "webhookId": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Webhook id."
-          }
-        },
-        "additionalProperties": false,
-        "required": [
-          "webhookId"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "GET",
-        "path": "/v1/webhooks/{{webhookId}}",
-        "success": [
-          200
-        ]
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "webhooks.create": {
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
+    "smtp_users.create": {
       "kind": "action",
       "sideEffect": "write",
-      "title": "Create webhook",
-      "description": "Create a MailerSend webhook that receives activity events for a domain.",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create SMTP user",
+      "description": "Create an SMTP user on a domain. The plaintext password is returned only once.",
       "inputSchema": {
         "type": "object",
         "properties": {
-          "url": {
+          "domain_id": {
             "type": "string",
             "minLength": 1,
-            "description": "Callback URL that receives POST events."
+            "description": "ID of the domain to associate with this SMTP user."
           },
           "name": {
             "type": "string",
             "minLength": 1,
-            "description": "Webhook name."
+            "description": "Display name for the SMTP user (max 50 characters)."
           },
-          "domainId": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Sending domain id."
-          },
-          "events": {
-            "type": "array",
-            "minItems": 1,
-            "description": "Activity event names, e.g. activity.sent.",
-            "items": {
-              "type": "string",
-              "minLength": 1
-            }
+          "enabled": {
+            "type": "boolean",
+            "description": "Whether the SMTP user should be enabled. Defaults to true."
           }
         },
         "additionalProperties": false,
         "required": [
-          "url",
-          "name",
-          "domainId",
-          "events"
+          "domain_id",
+          "name"
         ]
       },
       "outputSchema": {
@@ -756,123 +438,17 @@
       },
       "request": {
         "method": "POST",
-        "path": "/v1/webhooks",
+        "path": "/v1/domains/{{domain_id}}/smtp-users",
         "success": [
-          201,
-          200
+          200,
+          201
         ],
         "headers": {
           "Content-Type": "application/json"
         },
         "body": {
-          "url": "{{url}}",
           "name": "{{name}}",
-          "domain_id": "{{domainId}}",
-          "events": "{{events}}"
-        }
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "recipients.list": {
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "kind": "action",
-      "sideEffect": "read",
-      "title": "List recipients",
-      "description": "List MailerSend email recipients.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "page": {
-            "type": "integer",
-            "description": "Page number, starting from 1.",
-            "minimum": 1
-          },
-          "limit": {
-            "type": "integer",
-            "description": "Page size.",
-            "minimum": 10,
-            "maximum": 100
-          }
-        },
-        "additionalProperties": false
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "GET",
-        "path": "/v1/recipients",
-        "success": [
-          200
-        ],
-        "query": {
-          "page": "{{page}}",
-          "limit": "{{limit}}"
-        }
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "identities.list": {
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "kind": "action",
-      "sideEffect": "read",
-      "title": "List sender identities",
-      "description": "List MailerSend sender identities authorized to send email.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "page": {
-            "type": "integer",
-            "description": "Page number, starting from 1.",
-            "minimum": 1
-          },
-          "limit": {
-            "type": "integer",
-            "description": "Page size.",
-            "minimum": 10,
-            "maximum": 100
-          }
-        },
-        "additionalProperties": false
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "GET",
-        "path": "/v1/identities",
-        "success": [
-          200
-        ],
-        "query": {
-          "page": "{{page}}",
-          "limit": "{{limit}}"
+          "enabled": "{{enabled}}"
         }
       },
       "enforceOutputSchema": true,
@@ -880,24 +456,24 @@
       "responseFormat": "json"
     },
     "tokens.list": {
+      "kind": "action",
+      "sideEffect": "read",
       "timeoutMs": 15000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
-      "kind": "action",
-      "sideEffect": "read",
-      "title": "List API tokens",
-      "description": "List MailerSend API tokens. Requires the tokens_full scope.",
+      "title": "Get API tokens",
+      "description": "List API tokens (id, name, status, scopes). Requires the tokens_full scope. Token values are never returned.",
       "inputSchema": {
         "type": "object",
         "properties": {
           "page": {
             "type": "integer",
-            "description": "Page number, starting from 1.",
+            "description": "1-based page number.",
             "minimum": 1
           },
           "limit": {
             "type": "integer",
-            "description": "Page size.",
+            "description": "Results per page (default 25).",
             "minimum": 10,
             "maximum": 100
           }
@@ -931,35 +507,42 @@
       "validationMode": "strict-generated",
       "responseFormat": "json"
     },
-    "analytics.date": {
+    "tokens.create": {
+      "kind": "action",
+      "sideEffect": "write",
       "timeoutMs": 15000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
-      "kind": "action",
-      "sideEffect": "read",
-      "title": "Analytics by date",
-      "description": "Get MailerSend email analytics grouped by date for a time window.",
+      "title": "Create API token",
+      "description": "Create an API token for a domain. The token value is returned only once and cannot be retrieved later.",
       "inputSchema": {
         "type": "object",
         "properties": {
-          "dateFrom": {
-            "type": "integer",
-            "description": "Unix timestamp start of the window."
-          },
-          "dateTo": {
-            "type": "integer",
-            "description": "Unix timestamp end of the window."
-          },
-          "domainId": {
+          "name": {
             "type": "string",
             "minLength": 1,
-            "description": "Filter analytics by domain id."
+            "description": "Descriptive name for the token (max 50 characters)."
+          },
+          "domain_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Domain ID to associate with this token."
+          },
+          "scopes": {
+            "type": "array",
+            "description": "Permission scopes to grant. Official scopes include: email_full, domains_read, domains_full, activity_read, activity_full, analytics_read, analytics_full, tokens_full, webhooks_full, templates_full, suppressions_read, suppressions_full, sms_full, sms_read, email_verification_read, email_verification_full, inbounds_full, recipients_read, recipients_full, sender_identity_read, sender_identity_full, users_read, users_full, smtp_users_read, smtp_users_full, dmarc_monitoring_read, dmarc_monitoring_full, blocklist_monitoring_read, blocklist_monitoring_full, whatsapp_full.",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "minItems": 1
           }
         },
         "additionalProperties": false,
         "required": [
-          "dateFrom",
-          "dateTo"
+          "name",
+          "domain_id",
+          "scopes"
         ]
       },
       "outputSchema": {
@@ -975,52 +558,56 @@
         "additionalProperties": false
       },
       "request": {
-        "method": "GET",
-        "path": "/v1/analytics/date",
+        "method": "POST",
+        "path": "/v1/token",
         "success": [
-          200
+          200,
+          201
         ],
-        "query": {
-          "date_from": "{{dateFrom}}",
-          "date_to": "{{dateTo}}",
-          "domain_id": "{{domainId}}"
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "name": "{{name}}",
+          "domain_id": "{{domain_id}}",
+          "scopes": "{{scopes}}"
         }
       },
       "enforceOutputSchema": true,
       "validationMode": "strict-generated",
       "responseFormat": "json"
     },
-    "smtp_users.list": {
+    "webhooks.list": {
+      "kind": "action",
+      "sideEffect": "read",
       "timeoutMs": 15000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
-      "kind": "action",
-      "sideEffect": "read",
-      "title": "List SMTP users",
-      "description": "List SMTP users for a MailerSend sending domain.",
+      "title": "List webhooks",
+      "description": "List webhooks for a domain. Official API requires domain_id.",
       "inputSchema": {
         "type": "object",
         "properties": {
-          "domainId": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Sending domain id."
-          },
           "page": {
             "type": "integer",
-            "description": "Page number, starting from 1.",
+            "description": "1-based page number.",
             "minimum": 1
           },
           "limit": {
             "type": "integer",
-            "description": "Page size.",
+            "description": "Results per page (default 25).",
             "minimum": 10,
             "maximum": 100
+          },
+          "domain_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Domain ID whose webhooks to list."
           }
         },
         "additionalProperties": false,
         "required": [
-          "domainId"
+          "domain_id"
         ]
       },
       "outputSchema": {
@@ -1037,7 +624,615 @@
       },
       "request": {
         "method": "GET",
-        "path": "/v1/smtp-user/{{domainId}}",
+        "path": "/v1/webhooks",
+        "success": [
+          200
+        ],
+        "query": {
+          "page": "{{page}}",
+          "limit": "{{limit}}",
+          "domain_id": "{{domain_id}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "webhooks.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create webhook",
+      "description": "Create a domain webhook. MailerSend pings the URL and requires a 2xx before saving. Official name max is 50 characters; url max is 191.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Callback URL that receives POST events (max 191 characters)."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Webhook name (official max 50 characters)."
+          },
+          "events": {
+            "type": "array",
+            "description": "Events to subscribe to. Valid events include: activity.sent, activity.delivered, activity.soft_bounced, activity.hard_bounced, activity.deferred, activity.opened, activity.opened_unique, activity.clicked, activity.clicked_unique, activity.unsubscribed, activity.spam_complaint, activity.suppressed, activity.survey_opened, activity.survey_submitted, sender_identity.verified, maintenance.start, maintenance.end, inbound_forward.failed, inbound_message.rejected, email_single.verified, email_list.created, email_list.verified, bulk_email.completed, recipient.on_hold_added, recipient.on_hold_removed.",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "minItems": 1
+          },
+          "enabled": {
+            "type": "boolean",
+            "description": "Whether the webhook is enabled immediately. Defaults to true."
+          },
+          "version": {
+            "type": "integer",
+            "description": "Webhook payload version: 1 legacy, 2 recommended.",
+            "minimum": 1,
+            "maximum": 2
+          },
+          "domain_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Domain ID to attach the webhook to."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "url",
+          "name",
+          "events",
+          "domain_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/webhooks",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "url": "{{url}}",
+          "name": "{{name}}",
+          "events": "{{events}}",
+          "enabled": "{{enabled}}",
+          "version": "{{version}}",
+          "domain_id": "{{domain_id}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "webhooks.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 10000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 65536,
+      "title": "Delete webhook",
+      "description": "Delete a webhook. Successful deletion returns HTTP 204 with an empty body.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "webhook_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique identifier of the webhook to delete."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "webhook_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "success"
+        ],
+        "properties": {
+          "success": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/v1/webhooks/{{webhook_id}}",
+        "success": [
+          204
+        ],
+        "result": {
+          "success": true
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "quota.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "title": "Get API quota",
+      "description": "Retrieve remaining daily API quota and reset time. This endpoint does not count toward the quota.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/api-quota",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "resources.general": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 5242880,
+      "title": "Get general API resources",
+      "description": "List sending domains as the account's primary API resources. MailerSend has no catalog-of-endpoints API; this is the documented authenticated resource overview (GET /v1/domains?limit=10).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/domains",
+        "success": [
+          200
+        ],
+        "query": {
+          "limit": "10"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "identities.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List sender identities",
+      "description": "List sender identities with optional domain or email filters and pagination.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer",
+            "description": "1-based page number.",
+            "minimum": 1
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Results per page (default 25).",
+            "minimum": 10,
+            "maximum": 100
+          },
+          "domain_id": {
+            "type": "string",
+            "description": "Filter identities belonging to this domain ID."
+          },
+          "query": {
+            "type": "string",
+            "description": "Filter by sender email address."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/identities",
+        "success": [
+          200
+        ],
+        "query": {
+          "page": "{{page}}",
+          "limit": "{{limit}}",
+          "domain_id": "{{domain_id}}",
+          "query": "{{query}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "messages.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get sent messages",
+      "description": "List message resources created from Email API requests. Official filters are page, limit, and domain_id; date_from/date_to are forwarded as Composio ISO-8601 query params.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer",
+            "description": "1-based page number.",
+            "minimum": 1
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Results per page (default 25).",
+            "minimum": 10,
+            "maximum": 100
+          },
+          "domain_id": {
+            "type": "string",
+            "description": "Filter messages belonging to this domain ID."
+          },
+          "date_from": {
+            "type": "string",
+            "description": "Filter messages on or after this datetime (ISO 8601)."
+          },
+          "date_to": {
+            "type": "string",
+            "description": "Filter messages on or before this datetime (ISO 8601)."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/messages",
+        "success": [
+          200
+        ],
+        "query": {
+          "page": "{{page}}",
+          "limit": "{{limit}}",
+          "domain_id": "{{domain_id}}",
+          "date_from": "{{date_from}}",
+          "date_to": "{{date_to}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "recipients.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get email recipients",
+      "description": "List email recipients. Official filters are domain_id, page, and limit; search and list_id are forwarded as Composio query params.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer",
+            "description": "1-based page number.",
+            "minimum": 1
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Results per page (default 25).",
+            "minimum": 10,
+            "maximum": 100
+          },
+          "domain_id": {
+            "type": "string",
+            "description": "Filter recipients belonging to this domain ID."
+          },
+          "search": {
+            "type": "string",
+            "description": "Search term for recipient email or name."
+          },
+          "list_id": {
+            "type": "string",
+            "description": "Filter recipients by mailing list ID when the account uses lists."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/recipients",
+        "success": [
+          200
+        ],
+        "query": {
+          "page": "{{page}}",
+          "limit": "{{limit}}",
+          "domain_id": "{{domain_id}}",
+          "search": "{{search}}",
+          "list_id": "{{list_id}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "sms.activity.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get SMS activity",
+      "description": "List SMS activity logs. Status filters are sent as repeated status[] query parameters.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer",
+            "description": "1-based page number.",
+            "minimum": 1
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Results per page (default 25).",
+            "minimum": 10,
+            "maximum": 100
+          },
+          "sms_number_id": {
+            "type": "string",
+            "description": "Filter by SMS phone number ID."
+          },
+          "date_from": {
+            "type": "integer",
+            "description": "Unix timestamp (UTC) lower bound. Must be lower than date_to.",
+            "minimum": 0
+          },
+          "date_to": {
+            "type": "integer",
+            "description": "Unix timestamp (UTC) upper bound. Must be higher than date_from.",
+            "minimum": 0
+          },
+          "status": {
+            "type": "array",
+            "description": "Filter by message status. Repeatable. Official values: processed, queued, sent, delivered, failed.",
+            "items": {
+              "type": "string",
+              "enum": [
+                "processed",
+                "queued",
+                "sent",
+                "delivered",
+                "failed"
+              ],
+              "description": "SMS activity status."
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/sms-activity",
+        "success": [
+          200
+        ],
+        "query": {
+          "page": "{{page}}",
+          "limit": "{{limit}}",
+          "sms_number_id": "{{sms_number_id}}",
+          "date_from": "{{date_from}}",
+          "date_to": "{{date_to}}",
+          "status[]": "{{status}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "sms.inbounds.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get SMS inbounds",
+      "description": "List SMS inbound routes, optionally filtered by SMS number or enabled status.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer",
+            "description": "1-based page number.",
+            "minimum": 1
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Results per page (default 25).",
+            "minimum": 10,
+            "maximum": 100
+          },
+          "sms_number_id": {
+            "type": "string",
+            "description": "Filter inbound routes by SMS number ID."
+          },
+          "enabled": {
+            "type": "boolean",
+            "description": "Filter by enabled status."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/sms-inbounds",
+        "success": [
+          200
+        ],
+        "query": {
+          "page": "{{page}}",
+          "limit": "{{limit}}",
+          "sms_number_id": "{{sms_number_id}}",
+          "enabled": "{{enabled}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "sms.messages.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List SMS messages",
+      "description": "List SMS messages sent through the MailerSend SMS API.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer",
+            "description": "1-based page number.",
+            "minimum": 1
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Results per page (default 25).",
+            "minimum": 10,
+            "maximum": 100
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/sms-messages",
         "success": [
           200
         ],
@@ -1050,27 +1245,34 @@
       "validationMode": "strict-generated",
       "responseFormat": "json"
     },
-    "bulk_email.get": {
+    "sms.numbers.list": {
+      "kind": "action",
+      "sideEffect": "read",
       "timeoutMs": 15000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
-      "kind": "action",
-      "sideEffect": "read",
-      "title": "Get bulk email status",
-      "description": "Get MailerSend bulk-email job status, including validation errors and state.",
+      "title": "Get SMS numbers",
+      "description": "List SMS phone numbers, optionally filtered by paused status.",
       "inputSchema": {
         "type": "object",
         "properties": {
-          "bulkEmailId": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Bulk email id returned by POST /v1/bulk-email."
+          "page": {
+            "type": "integer",
+            "description": "1-based page number.",
+            "minimum": 1
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Results per page (default 25).",
+            "minimum": 10,
+            "maximum": 100
+          },
+          "paused": {
+            "type": "boolean",
+            "description": "Filter paused (true) or active (false) numbers; omit for all."
           }
         },
-        "additionalProperties": false,
-        "required": [
-          "bulkEmailId"
-        ]
+        "additionalProperties": false
       },
       "outputSchema": {
         "type": "object",
@@ -1086,10 +1288,190 @@
       },
       "request": {
         "method": "GET",
-        "path": "/v1/bulk-email/{{bulkEmailId}}",
+        "path": "/v1/sms-numbers",
         "success": [
           200
-        ]
+        ],
+        "query": {
+          "page": "{{page}}",
+          "limit": "{{limit}}",
+          "paused": "{{paused}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "sms.recipients.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get SMS recipients",
+      "description": "List SMS recipients, optionally filtered by SMS number ID and status.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer",
+            "description": "1-based page number.",
+            "minimum": 1
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Results per page (default 25).",
+            "minimum": 10,
+            "maximum": 100
+          },
+          "sms_number_id": {
+            "type": "string",
+            "description": "Filter recipients by SMS number ID."
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "opt_out"
+            ],
+            "description": "Filter by recipient status."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/sms-recipients",
+        "success": [
+          200
+        ],
+        "query": {
+          "page": "{{page}}",
+          "limit": "{{limit}}",
+          "sms_number_id": "{{sms_number_id}}",
+          "status": "{{status}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "templates.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get email templates",
+      "description": "List email templates, optionally filtered by domain ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer",
+            "description": "1-based page number.",
+            "minimum": 1
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Results per page (default 25).",
+            "minimum": 10,
+            "maximum": 100
+          },
+          "domain_id": {
+            "type": "string",
+            "description": "Filter templates belonging to this domain ID."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/templates",
+        "success": [
+          200
+        ],
+        "query": {
+          "page": "{{page}}",
+          "limit": "{{limit}}",
+          "domain_id": "{{domain_id}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "users.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get users",
+      "description": "List users associated with the MailerSend account.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer",
+            "description": "1-based page number.",
+            "minimum": 1
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Results per page (default 25).",
+            "minimum": 10,
+            "maximum": 100
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/users",
+        "success": [
+          200
+        ],
+        "query": {
+          "page": "{{page}}",
+          "limit": "{{limit}}"
+        }
       },
       "enforceOutputSchema": true,
       "validationMode": "strict-generated",

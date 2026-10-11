@@ -24,22 +24,26 @@
   },
   "network": {
     "allowedHosts": [
-      "emailoctopus.com"
+      "api.emailoctopus.com"
     ]
   },
   "models": [
-    "list",
-    "contact",
     "campaign",
-    "automation"
+    "contact",
+    "field",
+    "list",
+    "tag"
   ],
   "http": {
-    "baseUrl": "https://emailoctopus.com/api/1.6",
+    "baseUrl": "https://api.emailoctopus.com",
     "auth": {
       "field": "apiKey",
-      "in": "query",
-      "name": "api_key",
-      "value": "{{apiKey}}"
+      "in": "header",
+      "name": "Authorization",
+      "value": "Bearer {{apiKey}}"
+    },
+    "headers": {
+      "Accept": "application/json"
     },
     "errors": {
       "rateLimitStatuses": [
@@ -48,9 +52,10 @@
       "retryAfterHeader": "retry-after",
       "defaultRetryAfterSeconds": 30,
       "messagePaths": [
+        "detail",
+        "title",
         "message",
-        "error",
-        "detail"
+        "error"
       ]
     }
   },
@@ -62,7 +67,7 @@
       "kind": "action",
       "sideEffect": "read",
       "title": "Healthcheck",
-      "description": "Validate an EmailOctopus API key by reading the first page of lists.",
+      "description": "Validate an EmailOctopus API key by reading the first page of lists on API v2.",
       "inputSchema": {
         "type": "object",
         "properties": {},
@@ -87,8 +92,7 @@
           200
         ],
         "query": {
-          "limit": "1",
-          "page": "1"
+          "limit": "1"
         }
       },
       "enforceOutputSchema": true,
@@ -101,8 +105,8 @@
       "maxResponseBytes": 5242880,
       "kind": "action",
       "sideEffect": "read",
-      "title": "List lists",
-      "description": "Read-only List lists.",
+      "title": "Get all lists",
+      "description": "Retrieve every mailing list in the EmailOctopus account with cursor pagination.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -111,9 +115,9 @@
             "minimum": 1,
             "maximum": 100
           },
-          "page": {
-            "type": "integer",
-            "minimum": 1
+          "starting_after": {
+            "type": "string",
+            "minLength": 1
           }
         },
         "additionalProperties": false
@@ -138,7 +142,7 @@
         ],
         "query": {
           "limit": "{{limit}}",
-          "page": "{{page}}"
+          "starting_after": "{{starting_after}}"
         }
       },
       "enforceOutputSchema": true,
@@ -152,19 +156,18 @@
       "kind": "action",
       "sideEffect": "read",
       "title": "Get list",
-      "description": "Get one EmailOctopus list by id.",
+      "description": "Retrieve one mailing list by ID, including fields, tags, counts, and opt-in settings.",
       "inputSchema": {
         "type": "object",
         "properties": {
-          "listId": {
+          "list_id": {
             "type": "string",
-            "description": "List id.",
             "minLength": 1
           }
         },
         "additionalProperties": false,
         "required": [
-          "listId"
+          "list_id"
         ]
       },
       "outputSchema": {
@@ -181,7 +184,7 @@
       },
       "request": {
         "method": "GET",
-        "path": "/lists/{{listId}}",
+        "path": "/lists/{{list_id}}",
         "success": [
           200
         ]
@@ -197,14 +200,13 @@
       "kind": "action",
       "sideEffect": "write",
       "title": "Create list",
-      "description": "Create an EmailOctopus list.",
+      "description": "Create a mailing list with the default Email, First name, and Last name fields.",
       "inputSchema": {
         "type": "object",
         "properties": {
           "name": {
             "type": "string",
-            "description": "List name.",
-            "minLength": 1
+            "minLength": 2
           }
         },
         "additionalProperties": false,
@@ -228,14 +230,13 @@
         "method": "POST",
         "path": "/lists",
         "success": [
-          200,
           201
         ],
-        "headers": {
-          "Content-Type": "application/json"
-        },
         "body": {
           "name": "{{name}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
         }
       },
       "enforceOutputSchema": true,
@@ -249,24 +250,22 @@
       "kind": "action",
       "sideEffect": "write",
       "title": "Update list",
-      "description": "Rename an EmailOctopus list.",
+      "description": "Rename an existing EmailOctopus mailing list.",
       "inputSchema": {
         "type": "object",
         "properties": {
-          "listId": {
+          "list_id": {
             "type": "string",
-            "description": "List id.",
             "minLength": 1
           },
           "name": {
             "type": "string",
-            "description": "New list name.",
-            "minLength": 1
+            "minLength": 2
           }
         },
         "additionalProperties": false,
         "required": [
-          "listId",
+          "list_id",
           "name"
         ]
       },
@@ -284,15 +283,15 @@
       },
       "request": {
         "method": "PUT",
-        "path": "/lists/{{listId}}",
+        "path": "/lists/{{list_id}}",
         "success": [
           200
         ],
-        "headers": {
-          "Content-Type": "application/json"
-        },
         "body": {
           "name": "{{name}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
         }
       },
       "enforceOutputSchema": true,
@@ -306,19 +305,18 @@
       "kind": "action",
       "sideEffect": "destructive",
       "title": "Delete list",
-      "description": "Delete an EmailOctopus list.",
+      "description": "Permanently delete a mailing list and its contacts. Lists emailed in the last 7 days cannot be deleted.",
       "inputSchema": {
         "type": "object",
         "properties": {
-          "listId": {
+          "list_id": {
             "type": "string",
-            "description": "List id to delete.",
             "minLength": 1
           }
         },
         "additionalProperties": false,
         "required": [
-          "listId"
+          "list_id"
         ]
       },
       "outputSchema": {
@@ -326,44 +324,94 @@
         "required": [
           "data"
         ],
+        "additionalProperties": false,
         "properties": {
           "data": {
-            "type": "object"
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "deleted"
+            ],
+            "properties": {
+              "deleted": {
+                "type": "boolean"
+              }
+            }
           }
-        },
-        "additionalProperties": false
+        }
       },
       "request": {
         "method": "DELETE",
-        "path": "/lists/{{listId}}",
+        "path": "/lists/{{list_id}}",
         "success": [
-          200
-        ]
+          204
+        ],
+        "result": {
+          "data": {
+            "deleted": true
+          }
+        }
       },
       "enforceOutputSchema": true,
       "validationMode": "strict-generated",
       "responseFormat": "json"
     },
-    "lists.tags.list": {
+    "contacts.list": {
       "timeoutMs": 15000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
       "kind": "action",
       "sideEffect": "read",
-      "title": "List tags",
-      "description": "List tags on an EmailOctopus list.",
+      "title": "List contacts",
+      "description": "Retrieve paginated contacts from a list, optionally filtered by tag, status, and date range.",
       "inputSchema": {
         "type": "object",
         "properties": {
-          "listId": {
+          "list_id": {
             "type": "string",
-            "description": "List id.",
+            "minLength": 1
+          },
+          "tag": {
+            "type": "string",
+            "minLength": 1
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "subscribed",
+              "unsubscribed"
+            ]
+          },
+          "created_at_gte": {
+            "type": "string",
+            "minLength": 1
+          },
+          "created_at_lte": {
+            "type": "string",
+            "minLength": 1
+          },
+          "starting_after": {
+            "type": "string",
+            "minLength": 1
+          },
+          "last_updated_at_gte": {
+            "type": "string",
+            "minLength": 1
+          },
+          "last_updated_at_lte": {
+            "type": "string",
             "minLength": 1
           }
         },
         "additionalProperties": false,
         "required": [
-          "listId"
+          "list_id"
         ]
       },
       "outputSchema": {
@@ -380,7 +428,66 @@
       },
       "request": {
         "method": "GET",
-        "path": "/lists/{{listId}}/tags",
+        "path": "/lists/{{list_id}}/contacts",
+        "success": [
+          200
+        ],
+        "query": {
+          "limit": "{{limit}}",
+          "starting_after": "{{starting_after}}",
+          "tag": "{{tag}}",
+          "status": "{{status}}",
+          "created_at.gte": "{{created_at_gte}}",
+          "created_at.lte": "{{created_at_lte}}",
+          "last_updated_at.gte": "{{last_updated_at_gte}}",
+          "last_updated_at.lte": "{{last_updated_at_lte}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "contacts.get": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Get contact",
+      "description": "Retrieve one contact by UUID or MD5 of the lowercase email address.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "list_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "contact_id": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "list_id",
+          "contact_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/lists/{{list_id}}/contacts/{{contact_id}}",
         "success": [
           200
         ]
@@ -389,49 +496,404 @@
       "validationMode": "strict-generated",
       "responseFormat": "json"
     },
-    "lists.fields.create": {
+    "contacts.create": {
       "timeoutMs": 15000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
       "kind": "action",
       "sideEffect": "write",
-      "title": "Create list field",
-      "description": "Create a custom field on an EmailOctopus list.",
+      "title": "Create contact",
+      "description": "Create a contact on a mailing list with email, optional fields, tags, and status.",
       "inputSchema": {
         "type": "object",
         "properties": {
-          "listId": {
+          "list_id": {
             "type": "string",
-            "description": "List id.",
             "minLength": 1
           },
-          "label": {
+          "email_address": {
             "type": "string",
-            "description": "Human-readable field label.",
             "minLength": 1
           },
-          "tag": {
-            "type": "string",
-            "description": "Alphanumeric field tag.",
-            "minLength": 1
+          "fields": {
+            "type": "object"
           },
-          "type": {
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "status": {
             "type": "string",
-            "description": "Field type.",
             "enum": [
-              "NUMBER",
-              "TEXT",
-              "DATE"
+              "pending",
+              "subscribed",
+              "unsubscribed"
             ]
-          },
-          "fallback": {
-            "type": "string",
-            "description": "Default value when empty."
           }
         },
         "additionalProperties": false,
         "required": [
-          "listId",
+          "list_id",
+          "email_address"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/lists/{{list_id}}/contacts",
+        "success": [
+          201
+        ],
+        "body": {
+          "email_address": "{{email_address}}",
+          "fields": "{{fields}}",
+          "tags": "{{tags}}",
+          "status": "{{status}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "contacts.upsert": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Create or update contact",
+      "description": "Create a contact if missing, otherwise update email, fields, tags, or status.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "list_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "email_address": {
+            "type": "string",
+            "minLength": 1
+          },
+          "fields": {
+            "type": "object"
+          },
+          "tags": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "boolean"
+            }
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "subscribed",
+              "unsubscribed"
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "list_id",
+          "email_address"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/lists/{{list_id}}/contacts",
+        "success": [
+          200,
+          201
+        ],
+        "body": {
+          "email_address": "{{email_address}}",
+          "fields": "{{fields}}",
+          "tags": "{{tags}}",
+          "status": "{{status}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "contacts.unsubscribe": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Unsubscribe contact",
+      "description": "Set a contact's status to unsubscribed while keeping the contact record.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "list_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "contact_id": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "list_id",
+          "contact_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/lists/{{list_id}}/contacts/{{contact_id}}",
+        "success": [
+          200
+        ],
+        "body": {
+          "status": "unsubscribed"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "contacts.delete": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "destructive",
+      "title": "Delete contact",
+      "description": "Permanently delete a contact from a list by UUID or MD5 of the lowercase email.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "list_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "contact_id": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "list_id",
+          "contact_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "deleted"
+            ],
+            "properties": {
+              "deleted": {
+                "type": "boolean"
+              }
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/lists/{{list_id}}/contacts/{{contact_id}}",
+        "success": [
+          204
+        ],
+        "result": {
+          "data": {
+            "deleted": true
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "contacts.batch": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Batch update contacts",
+      "description": "Update many contacts on a list in one request. Each contact must include an id.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "list_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "contacts": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "id"
+              ],
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "email_address": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "fields": {
+                  "type": "object"
+                },
+                "tags": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "boolean"
+                  }
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "pending",
+                    "subscribed",
+                    "unsubscribed"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "list_id",
+          "contacts"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/lists/{{list_id}}/contacts/batch",
+        "success": [
+          200
+        ],
+        "body": {
+          "contacts": "{{contacts}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "fields.create": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Create field",
+      "description": "Create a custom text, number, or date field on a mailing list.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "list_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "label": {
+            "type": "string",
+            "minLength": 1
+          },
+          "tag": {
+            "type": "string",
+            "minLength": 1
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "text",
+              "number",
+              "date"
+            ]
+          },
+          "fallback": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "list_id",
           "label",
           "tag",
           "type"
@@ -451,363 +913,71 @@
       },
       "request": {
         "method": "POST",
-        "path": "/lists/{{listId}}/fields",
+        "path": "/lists/{{list_id}}/fields",
         "success": [
-          200,
           201
         ],
-        "headers": {
-          "Content-Type": "application/json"
-        },
         "body": {
           "label": "{{label}}",
           "tag": "{{tag}}",
           "type": "{{type}}",
           "fallback": "{{fallback}}"
-        }
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "contacts.list": {
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "kind": "action",
-      "sideEffect": "read",
-      "title": "List contacts",
-      "description": "List contacts on an EmailOctopus list.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "listId": {
-            "type": "string",
-            "description": "List id.",
-            "minLength": 1
-          },
-          "limit": {
-            "type": "integer",
-            "description": "Page size, max 100.",
-            "minimum": 1,
-            "maximum": 100
-          },
-          "page": {
-            "type": "integer",
-            "description": "1-based page number.",
-            "minimum": 1
-          }
         },
-        "additionalProperties": false,
-        "required": [
-          "listId"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "GET",
-        "path": "/lists/{{listId}}/contacts",
-        "query": {
-          "limit": "{{limit}}",
-          "page": "{{page}}"
-        },
-        "success": [
-          200
-        ]
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "contacts.get": {
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "kind": "action",
-      "sideEffect": "read",
-      "title": "Get contact",
-      "description": "Get one contact on an EmailOctopus list.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "listId": {
-            "type": "string",
-            "description": "List id.",
-            "minLength": 1
-          },
-          "contactId": {
-            "type": "string",
-            "description": "Contact id.",
-            "minLength": 1
-          }
-        },
-        "additionalProperties": false,
-        "required": [
-          "listId",
-          "contactId"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "GET",
-        "path": "/lists/{{listId}}/contacts/{{contactId}}",
-        "success": [
-          200
-        ]
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "contacts.subscribed": {
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "kind": "action",
-      "sideEffect": "read",
-      "title": "List subscribed contacts",
-      "description": "List subscribed contacts on an EmailOctopus list.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "listId": {
-            "type": "string",
-            "description": "List id.",
-            "minLength": 1
-          },
-          "limit": {
-            "type": "integer",
-            "description": "Page size, max 100.",
-            "minimum": 1,
-            "maximum": 100
-          },
-          "page": {
-            "type": "integer",
-            "description": "1-based page number.",
-            "minimum": 1
-          }
-        },
-        "additionalProperties": false,
-        "required": [
-          "listId"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "GET",
-        "path": "/lists/{{listId}}/contacts/subscribed",
-        "query": {
-          "limit": "{{limit}}",
-          "page": "{{page}}"
-        },
-        "success": [
-          200
-        ]
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "contacts.unsubscribed": {
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "kind": "action",
-      "sideEffect": "read",
-      "title": "List unsubscribed contacts",
-      "description": "List unsubscribed contacts on an EmailOctopus list.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "listId": {
-            "type": "string",
-            "description": "List id.",
-            "minLength": 1
-          },
-          "limit": {
-            "type": "integer",
-            "description": "Page size, max 100.",
-            "minimum": 1,
-            "maximum": 100
-          },
-          "page": {
-            "type": "integer",
-            "description": "1-based page number.",
-            "minimum": 1
-          }
-        },
-        "additionalProperties": false,
-        "required": [
-          "listId"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "GET",
-        "path": "/lists/{{listId}}/contacts/unsubscribed",
-        "query": {
-          "limit": "{{limit}}",
-          "page": "{{page}}"
-        },
-        "success": [
-          200
-        ]
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "contacts.create": {
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "kind": "action",
-      "sideEffect": "write",
-      "title": "Create contact",
-      "description": "Create a contact on an EmailOctopus list.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "listId": {
-            "type": "string",
-            "description": "List id.",
-            "minLength": 1
-          },
-          "emailAddress": {
-            "type": "string",
-            "description": "Contact email address.",
-            "minLength": 1
-          },
-          "status": {
-            "type": "string",
-            "description": "Initial status.",
-            "enum": [
-              "SUBSCRIBED",
-              "UNSUBSCRIBED",
-              "PENDING"
-            ]
-          }
-        },
-        "additionalProperties": false,
-        "required": [
-          "listId",
-          "emailAddress"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "POST",
-        "path": "/lists/{{listId}}/contacts",
-        "success": [
-          200,
-          201
-        ],
         "headers": {
           "Content-Type": "application/json"
-        },
-        "body": {
-          "email_address": "{{emailAddress}}",
-          "status": "{{status}}"
         }
       },
       "enforceOutputSchema": true,
       "validationMode": "strict-generated",
       "responseFormat": "json"
     },
-    "contacts.update": {
+    "fields.update": {
       "timeoutMs": 15000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
       "kind": "action",
       "sideEffect": "write",
-      "title": "Update contact",
-      "description": "Update a contact on an EmailOctopus list.",
+      "title": "Update field",
+      "description": "Update a custom field's label, tag, type, or fallback. Path uses current_tag.",
       "inputSchema": {
         "type": "object",
         "properties": {
-          "listId": {
+          "list_id": {
             "type": "string",
-            "description": "List id.",
             "minLength": 1
           },
-          "contactId": {
+          "current_tag": {
             "type": "string",
-            "description": "Contact id.",
             "minLength": 1
           },
-          "emailAddress": {
+          "label": {
             "type": "string",
-            "description": "Updated email address."
+            "minLength": 1
           },
-          "status": {
+          "tag": {
             "type": "string",
-            "description": "Updated status.",
+            "minLength": 1
+          },
+          "type": {
+            "type": "string",
             "enum": [
-              "SUBSCRIBED",
-              "UNSUBSCRIBED",
-              "PENDING"
+              "text",
+              "number",
+              "date"
             ]
+          },
+          "fallback": {
+            "type": "string",
+            "minLength": 1
           }
         },
         "additionalProperties": false,
         "required": [
-          "listId",
-          "contactId"
+          "list_id",
+          "current_tag",
+          "label",
+          "tag",
+          "type"
         ]
       },
       "outputSchema": {
@@ -824,48 +994,115 @@
       },
       "request": {
         "method": "PUT",
-        "path": "/lists/{{listId}}/contacts/{{contactId}}",
+        "path": "/lists/{{list_id}}/fields/{{current_tag}}",
         "success": [
           200
         ],
+        "body": {
+          "label": "{{label}}",
+          "tag": "{{tag}}",
+          "type": "{{type}}",
+          "fallback": "{{fallback}}"
+        },
         "headers": {
           "Content-Type": "application/json"
-        },
-        "body": {
-          "email_address": "{{emailAddress}}",
-          "status": "{{status}}"
         }
       },
       "enforceOutputSchema": true,
       "validationMode": "strict-generated",
       "responseFormat": "json"
     },
-    "contacts.delete": {
+    "fields.delete": {
       "timeoutMs": 15000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
       "kind": "action",
       "sideEffect": "destructive",
-      "title": "Delete contact",
-      "description": "Delete a contact from an EmailOctopus list.",
+      "title": "Delete field",
+      "description": "Permanently delete a custom field from a mailing list by field tag.",
       "inputSchema": {
         "type": "object",
         "properties": {
-          "listId": {
+          "list_id": {
             "type": "string",
-            "description": "List id.",
             "minLength": 1
           },
-          "contactId": {
+          "tag": {
             "type": "string",
-            "description": "Contact id to delete.",
             "minLength": 1
           }
         },
         "additionalProperties": false,
         "required": [
-          "listId",
-          "contactId"
+          "list_id",
+          "tag"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "deleted"
+            ],
+            "properties": {
+              "deleted": {
+                "type": "boolean"
+              }
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/lists/{{list_id}}/fields/{{tag}}",
+        "success": [
+          204
+        ],
+        "result": {
+          "data": {
+            "deleted": true
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "tags.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List tags",
+      "description": "Retrieve paginated tags defined on a mailing list.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "list_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "starting_after": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "list_id"
         ]
       },
       "outputSchema": {
@@ -881,11 +1118,193 @@
         "additionalProperties": false
       },
       "request": {
-        "method": "DELETE",
-        "path": "/lists/{{listId}}/contacts/{{contactId}}",
+        "method": "GET",
+        "path": "/lists/{{list_id}}/tags",
         "success": [
           200
+        ],
+        "query": {
+          "limit": "{{limit}}",
+          "starting_after": "{{starting_after}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "tags.create": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Create tag",
+      "description": "Create a tag on a mailing list for contact segmentation.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "list_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "tag": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "list_id",
+          "tag"
         ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/lists/{{list_id}}/tags",
+        "success": [
+          201
+        ],
+        "body": {
+          "tag": "{{tag}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "tags.update": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Update tag",
+      "description": "Rename an existing tag. new_tag is sent as the official tag body field.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "list_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "tag": {
+            "type": "string",
+            "minLength": 1
+          },
+          "new_tag": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "list_id",
+          "tag",
+          "new_tag"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/lists/{{list_id}}/tags/{{tag}}",
+        "success": [
+          200
+        ],
+        "body": {
+          "tag": "{{new_tag}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "tags.delete": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "destructive",
+      "title": "Delete tag",
+      "description": "Delete a tag from a mailing list.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "list_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "tag": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "list_id",
+          "tag"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "deleted"
+            ],
+            "properties": {
+              "deleted": {
+                "type": "boolean"
+              }
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/lists/{{list_id}}/tags/{{tag}}",
+        "success": [
+          204
+        ],
+        "result": {
+          "data": {
+            "deleted": true
+          }
+        }
       },
       "enforceOutputSchema": true,
       "validationMode": "strict-generated",
@@ -897,21 +1316,19 @@
       "maxResponseBytes": 5242880,
       "kind": "action",
       "sideEffect": "read",
-      "title": "List campaigns",
-      "description": "List EmailOctopus campaigns.",
+      "title": "Get recent campaigns",
+      "description": "Retrieve a paginated list of recent EmailOctopus campaigns.",
       "inputSchema": {
         "type": "object",
         "properties": {
           "limit": {
             "type": "integer",
-            "description": "Page size, max 100.",
             "minimum": 1,
             "maximum": 100
           },
-          "page": {
-            "type": "integer",
-            "description": "1-based page number.",
-            "minimum": 1
+          "starting_after": {
+            "type": "string",
+            "minLength": 1
           }
         },
         "additionalProperties": false
@@ -931,219 +1348,12 @@
       "request": {
         "method": "GET",
         "path": "/campaigns",
+        "success": [
+          200
+        ],
         "query": {
           "limit": "{{limit}}",
-          "page": "{{page}}"
-        },
-        "success": [
-          200
-        ]
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "campaigns.get": {
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "kind": "action",
-      "sideEffect": "read",
-      "title": "Get campaign",
-      "description": "Get one EmailOctopus campaign.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "campaignId": {
-            "type": "string",
-            "description": "Campaign id.",
-            "minLength": 1
-          }
-        },
-        "additionalProperties": false,
-        "required": [
-          "campaignId"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "GET",
-        "path": "/campaigns/{{campaignId}}",
-        "success": [
-          200
-        ]
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "campaigns.report.summary": {
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "kind": "action",
-      "sideEffect": "read",
-      "title": "Get campaign summary report",
-      "description": "Get send, bounce, open, and click totals for a sent campaign.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "campaignId": {
-            "type": "string",
-            "description": "Campaign id.",
-            "minLength": 1
-          }
-        },
-        "additionalProperties": false,
-        "required": [
-          "campaignId"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "GET",
-        "path": "/campaigns/{{campaignId}}/reports/summary",
-        "success": [
-          200
-        ]
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "campaigns.report.opened": {
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "kind": "action",
-      "sideEffect": "read",
-      "title": "Get campaign opened report",
-      "description": "List contacts who opened a sent EmailOctopus campaign.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "campaignId": {
-            "type": "string",
-            "description": "Campaign id.",
-            "minLength": 1
-          },
-          "limit": {
-            "type": "integer",
-            "description": "Page size, max 100.",
-            "minimum": 1,
-            "maximum": 100
-          },
-          "page": {
-            "type": "integer",
-            "description": "1-based page number.",
-            "minimum": 1
-          }
-        },
-        "additionalProperties": false,
-        "required": [
-          "campaignId"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "GET",
-        "path": "/campaigns/{{campaignId}}/reports/opened",
-        "query": {
-          "limit": "{{limit}}",
-          "page": "{{page}}"
-        },
-        "success": [
-          200
-        ]
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "automations.queue": {
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "kind": "action",
-      "sideEffect": "write",
-      "title": "Start automation",
-      "description": "Queue an EmailOctopus automation for one list contact. The automation must use the Started via API trigger.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "automationId": {
-            "type": "string",
-            "description": "Automation id.",
-            "minLength": 1
-          },
-          "listMemberId": {
-            "type": "string",
-            "description": "List contact id.",
-            "minLength": 1
-          }
-        },
-        "additionalProperties": false,
-        "required": [
-          "automationId",
-          "listMemberId"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "POST",
-        "path": "/automations/{{automationId}}/queue",
-        "success": [
-          200
-        ],
-        "headers": {
-          "Content-Type": "application/json"
-        },
-        "body": {
-          "list_member_id": "{{listMemberId}}"
+          "starting_after": "{{starting_after}}"
         }
       },
       "enforceOutputSchema": true,

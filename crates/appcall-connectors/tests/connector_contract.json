@@ -354218,88 +354218,10 @@
   },
   {
     "key": "emailoctopus",
-    "digest": "a410cbdc639dcd8c36dd6a4bc370dfe96a7be644b1362999a8dbcd3f3974d021",
+    "digest": "eaffb1638774a242bb3b31eedff7e40923054cafecd8c235f13dd8b3ca21d514",
     "public": true,
     "egress": true,
     "operations": [
-      {
-        "key": "automations.queue",
-        "kind": "action",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "read": false,
-        "destructive": false,
-        "tool": true,
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "automationId": {
-              "type": "string",
-              "description": "Automation id.",
-              "minLength": 1
-            },
-            "listMemberId": {
-              "type": "string",
-              "description": "List contact id.",
-              "minLength": 1
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "automationId",
-            "listMemberId"
-          ]
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        }
-      },
-      {
-        "key": "campaigns.get",
-        "kind": "action",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "read": true,
-        "destructive": false,
-        "tool": true,
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "campaignId": {
-              "type": "string",
-              "description": "Campaign id.",
-              "minLength": 1
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "campaignId"
-          ]
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        }
-      },
       {
         "key": "campaigns.list",
         "kind": "action",
@@ -354314,14 +354236,12 @@
           "properties": {
             "limit": {
               "type": "integer",
-              "description": "Page size, max 100.",
               "minimum": 1,
               "maximum": 100
             },
-            "page": {
-              "type": "integer",
-              "description": "1-based page number.",
-              "minimum": 1
+            "starting_after": {
+              "type": "string",
+              "minLength": 1
             }
           },
           "additionalProperties": false
@@ -354340,73 +354260,64 @@
         }
       },
       {
-        "key": "campaigns.report.opened",
+        "key": "contacts.batch",
         "kind": "action",
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
         "maxResponseBytes": 5242880,
-        "read": true,
+        "read": false,
         "destructive": false,
         "tool": true,
         "inputSchema": {
           "type": "object",
           "properties": {
-            "campaignId": {
+            "list_id": {
               "type": "string",
-              "description": "Campaign id.",
               "minLength": 1
             },
-            "limit": {
-              "type": "integer",
-              "description": "Page size, max 100.",
-              "minimum": 1,
-              "maximum": 100
-            },
-            "page": {
-              "type": "integer",
-              "description": "1-based page number.",
-              "minimum": 1
+            "contacts": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "id"
+                ],
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "email_address": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "fields": {
+                    "type": "object"
+                  },
+                  "tags": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "type": "boolean"
+                    }
+                  },
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "pending",
+                      "subscribed",
+                      "unsubscribed"
+                    ]
+                  }
+                }
+              }
             }
           },
           "additionalProperties": false,
           "required": [
-            "campaignId"
-          ]
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        }
-      },
-      {
-        "key": "campaigns.report.summary",
-        "kind": "action",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "read": true,
-        "destructive": false,
-        "tool": true,
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "campaignId": {
-              "type": "string",
-              "description": "Campaign id.",
-              "minLength": 1
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "campaignId"
+            "list_id",
+            "contacts"
           ]
         },
         "outputSchema": {
@@ -354434,30 +354345,37 @@
         "inputSchema": {
           "type": "object",
           "properties": {
-            "listId": {
+            "list_id": {
               "type": "string",
-              "description": "List id.",
               "minLength": 1
             },
-            "emailAddress": {
+            "email_address": {
               "type": "string",
-              "description": "Contact email address.",
               "minLength": 1
+            },
+            "fields": {
+              "type": "object"
+            },
+            "tags": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
             },
             "status": {
               "type": "string",
-              "description": "Initial status.",
               "enum": [
-                "SUBSCRIBED",
-                "UNSUBSCRIBED",
-                "PENDING"
+                "pending",
+                "subscribed",
+                "unsubscribed"
               ]
             }
           },
           "additionalProperties": false,
           "required": [
-            "listId",
-            "emailAddress"
+            "list_id",
+            "email_address"
           ]
         },
         "outputSchema": {
@@ -354485,21 +354403,19 @@
         "inputSchema": {
           "type": "object",
           "properties": {
-            "listId": {
+            "list_id": {
               "type": "string",
-              "description": "List id.",
               "minLength": 1
             },
-            "contactId": {
+            "contact_id": {
               "type": "string",
-              "description": "Contact id to delete.",
               "minLength": 1
             }
           },
           "additionalProperties": false,
           "required": [
-            "listId",
-            "contactId"
+            "list_id",
+            "contact_id"
           ]
         },
         "outputSchema": {
@@ -354507,12 +354423,21 @@
           "required": [
             "data"
           ],
+          "additionalProperties": false,
           "properties": {
             "data": {
-              "type": "object"
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "deleted"
+              ],
+              "properties": {
+                "deleted": {
+                  "type": "boolean"
+                }
+              }
             }
-          },
-          "additionalProperties": false
+          }
         }
       },
       {
@@ -354527,21 +354452,19 @@
         "inputSchema": {
           "type": "object",
           "properties": {
-            "listId": {
+            "list_id": {
               "type": "string",
-              "description": "List id.",
               "minLength": 1
             },
-            "contactId": {
+            "contact_id": {
               "type": "string",
-              "description": "Contact id.",
               "minLength": 1
             }
           },
           "additionalProperties": false,
           "required": [
-            "listId",
-            "contactId"
+            "list_id",
+            "contact_id"
           ]
         },
         "outputSchema": {
@@ -354569,26 +354492,51 @@
         "inputSchema": {
           "type": "object",
           "properties": {
-            "listId": {
+            "list_id": {
               "type": "string",
-              "description": "List id.",
+              "minLength": 1
+            },
+            "tag": {
+              "type": "string",
               "minLength": 1
             },
             "limit": {
               "type": "integer",
-              "description": "Page size, max 100.",
               "minimum": 1,
               "maximum": 100
             },
-            "page": {
-              "type": "integer",
-              "description": "1-based page number.",
-              "minimum": 1
+            "status": {
+              "type": "string",
+              "enum": [
+                "pending",
+                "subscribed",
+                "unsubscribed"
+              ]
+            },
+            "created_at_gte": {
+              "type": "string",
+              "minLength": 1
+            },
+            "created_at_lte": {
+              "type": "string",
+              "minLength": 1
+            },
+            "starting_after": {
+              "type": "string",
+              "minLength": 1
+            },
+            "last_updated_at_gte": {
+              "type": "string",
+              "minLength": 1
+            },
+            "last_updated_at_lte": {
+              "type": "string",
+              "minLength": 1
             }
           },
           "additionalProperties": false,
           "required": [
-            "listId"
+            "list_id"
           ]
         },
         "outputSchema": {
@@ -354605,101 +354553,7 @@
         }
       },
       {
-        "key": "contacts.subscribed",
-        "kind": "action",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "read": true,
-        "destructive": false,
-        "tool": true,
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "listId": {
-              "type": "string",
-              "description": "List id.",
-              "minLength": 1
-            },
-            "limit": {
-              "type": "integer",
-              "description": "Page size, max 100.",
-              "minimum": 1,
-              "maximum": 100
-            },
-            "page": {
-              "type": "integer",
-              "description": "1-based page number.",
-              "minimum": 1
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "listId"
-          ]
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        }
-      },
-      {
-        "key": "contacts.unsubscribed",
-        "kind": "action",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "read": true,
-        "destructive": false,
-        "tool": true,
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "listId": {
-              "type": "string",
-              "description": "List id.",
-              "minLength": 1
-            },
-            "limit": {
-              "type": "integer",
-              "description": "Page size, max 100.",
-              "minimum": 1,
-              "maximum": 100
-            },
-            "page": {
-              "type": "integer",
-              "description": "1-based page number.",
-              "minimum": 1
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "listId"
-          ]
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        }
-      },
-      {
-        "key": "contacts.update",
+        "key": "contacts.unsubscribe",
         "kind": "action",
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
@@ -354710,34 +354564,246 @@
         "inputSchema": {
           "type": "object",
           "properties": {
-            "listId": {
+            "list_id": {
               "type": "string",
-              "description": "List id.",
               "minLength": 1
             },
-            "contactId": {
+            "contact_id": {
               "type": "string",
-              "description": "Contact id.",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "list_id",
+            "contact_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "contacts.upsert",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "list_id": {
+              "type": "string",
               "minLength": 1
             },
-            "emailAddress": {
+            "email_address": {
               "type": "string",
-              "description": "Updated email address."
+              "minLength": 1
+            },
+            "fields": {
+              "type": "object"
+            },
+            "tags": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "boolean"
+              }
             },
             "status": {
               "type": "string",
-              "description": "Updated status.",
               "enum": [
-                "SUBSCRIBED",
-                "UNSUBSCRIBED",
-                "PENDING"
+                "pending",
+                "subscribed",
+                "unsubscribed"
               ]
             }
           },
           "additionalProperties": false,
           "required": [
-            "listId",
-            "contactId"
+            "list_id",
+            "email_address"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "fields.create",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "list_id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "label": {
+              "type": "string",
+              "minLength": 1
+            },
+            "tag": {
+              "type": "string",
+              "minLength": 1
+            },
+            "type": {
+              "type": "string",
+              "enum": [
+                "text",
+                "number",
+                "date"
+              ]
+            },
+            "fallback": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "list_id",
+            "label",
+            "tag",
+            "type"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "fields.delete",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": true,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "list_id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "tag": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "list_id",
+            "tag"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "deleted"
+              ],
+              "properties": {
+                "deleted": {
+                  "type": "boolean"
+                }
+              }
+            }
+          }
+        }
+      },
+      {
+        "key": "fields.update",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "list_id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "current_tag": {
+              "type": "string",
+              "minLength": 1
+            },
+            "label": {
+              "type": "string",
+              "minLength": 1
+            },
+            "tag": {
+              "type": "string",
+              "minLength": 1
+            },
+            "type": {
+              "type": "string",
+              "enum": [
+                "text",
+                "number",
+                "date"
+              ]
+            },
+            "fallback": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "list_id",
+            "current_tag",
+            "label",
+            "tag",
+            "type"
           ]
         },
         "outputSchema": {
@@ -354794,8 +354860,7 @@
           "properties": {
             "name": {
               "type": "string",
-              "description": "List name.",
-              "minLength": 1
+              "minLength": 2
             }
           },
           "additionalProperties": false,
@@ -354828,15 +354893,14 @@
         "inputSchema": {
           "type": "object",
           "properties": {
-            "listId": {
+            "list_id": {
               "type": "string",
-              "description": "List id to delete.",
               "minLength": 1
             }
           },
           "additionalProperties": false,
           "required": [
-            "listId"
+            "list_id"
           ]
         },
         "outputSchema": {
@@ -354844,74 +354908,21 @@
           "required": [
             "data"
           ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        }
-      },
-      {
-        "key": "lists.fields.create",
-        "kind": "action",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "read": false,
-        "destructive": false,
-        "tool": true,
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "listId": {
-              "type": "string",
-              "description": "List id.",
-              "minLength": 1
-            },
-            "label": {
-              "type": "string",
-              "description": "Human-readable field label.",
-              "minLength": 1
-            },
-            "tag": {
-              "type": "string",
-              "description": "Alphanumeric field tag.",
-              "minLength": 1
-            },
-            "type": {
-              "type": "string",
-              "description": "Field type.",
-              "enum": [
-                "NUMBER",
-                "TEXT",
-                "DATE"
-              ]
-            },
-            "fallback": {
-              "type": "string",
-              "description": "Default value when empty."
-            }
-          },
           "additionalProperties": false,
-          "required": [
-            "listId",
-            "label",
-            "tag",
-            "type"
-          ]
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
           "properties": {
             "data": {
-              "type": "object"
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "deleted"
+              ],
+              "properties": {
+                "deleted": {
+                  "type": "boolean"
+                }
+              }
             }
-          },
-          "additionalProperties": false
+          }
         }
       },
       {
@@ -354926,15 +354937,14 @@
         "inputSchema": {
           "type": "object",
           "properties": {
-            "listId": {
+            "list_id": {
               "type": "string",
-              "description": "List id.",
               "minLength": 1
             }
           },
           "additionalProperties": false,
           "required": [
-            "listId"
+            "list_id"
           ]
         },
         "outputSchema": {
@@ -354967,48 +354977,12 @@
               "minimum": 1,
               "maximum": 100
             },
-            "page": {
-              "type": "integer",
-              "minimum": 1
-            }
-          },
-          "additionalProperties": false
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        }
-      },
-      {
-        "key": "lists.tags.list",
-        "kind": "action",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "read": true,
-        "destructive": false,
-        "tool": true,
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "listId": {
+            "starting_after": {
               "type": "string",
-              "description": "List id.",
               "minLength": 1
             }
           },
-          "additionalProperties": false,
-          "required": [
-            "listId"
-          ]
+          "additionalProperties": false
         },
         "outputSchema": {
           "type": "object",
@@ -355035,21 +355009,197 @@
         "inputSchema": {
           "type": "object",
           "properties": {
-            "listId": {
+            "list_id": {
               "type": "string",
-              "description": "List id.",
               "minLength": 1
             },
             "name": {
               "type": "string",
-              "description": "New list name.",
+              "minLength": 2
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "list_id",
+            "name"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "tags.create",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "list_id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "tag": {
+              "type": "string",
               "minLength": 1
             }
           },
           "additionalProperties": false,
           "required": [
-            "listId",
-            "name"
+            "list_id",
+            "tag"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "tags.delete",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": true,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "list_id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "tag": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "list_id",
+            "tag"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "deleted"
+              ],
+              "properties": {
+                "deleted": {
+                  "type": "boolean"
+                }
+              }
+            }
+          }
+        }
+      },
+      {
+        "key": "tags.list",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "list_id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            },
+            "starting_after": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "list_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "tags.update",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "list_id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "tag": {
+              "type": "string",
+              "minLength": 1
+            },
+            "new_tag": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "list_id",
+            "tag",
+            "new_tag"
           ]
         },
         "outputSchema": {
@@ -604767,146 +604917,10 @@
   },
   {
     "key": "mailersend",
-    "digest": "147c7cfe8d7910df553975fe9abf5fe9fb22f3555e2def9a6b8df8c225af8cd2",
+    "digest": "cc5a0bbf7c457dc9799adcb245c574c41a47c416a6ae88936fba978785955367",
     "public": true,
     "egress": true,
     "operations": [
-      {
-        "key": "activity.list",
-        "kind": "action",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "read": true,
-        "destructive": false,
-        "tool": true,
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "domainId": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Sending domain id."
-            },
-            "page": {
-              "type": "integer",
-              "description": "Page number.",
-              "minimum": 1
-            },
-            "limit": {
-              "type": "integer",
-              "description": "Page size.",
-              "minimum": 10,
-              "maximum": 100
-            },
-            "dateFrom": {
-              "type": "integer",
-              "description": "Unix timestamp lower bound."
-            },
-            "dateTo": {
-              "type": "integer",
-              "description": "Unix timestamp upper bound."
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "domainId"
-          ]
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        }
-      },
-      {
-        "key": "analytics.date",
-        "kind": "action",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "read": true,
-        "destructive": false,
-        "tool": true,
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "dateFrom": {
-              "type": "integer",
-              "description": "Unix timestamp start of the window."
-            },
-            "dateTo": {
-              "type": "integer",
-              "description": "Unix timestamp end of the window."
-            },
-            "domainId": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Filter analytics by domain id."
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "dateFrom",
-            "dateTo"
-          ]
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        }
-      },
-      {
-        "key": "bulk_email.get",
-        "kind": "action",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "read": true,
-        "destructive": false,
-        "tool": true,
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "bulkEmailId": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Bulk email id returned by POST /v1/bulk-email."
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "bulkEmailId"
-          ]
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        }
-      },
       {
         "key": "domains.create",
         "kind": "action",
@@ -604922,17 +604936,19 @@
             "name": {
               "type": "string",
               "minLength": 1,
-              "description": "Fully qualified domain name to add."
+              "description": "Fully qualified domain name to add for sending emails."
             },
-            "returnPathSubdomain": {
+            "return_path_subdomain": {
               "type": "string",
-              "minLength": 1,
-              "description": "Return-path subdomain, e.g. rp."
+              "description": "Alphanumeric subdomain for return path, e.g. rp."
             },
-            "customTrackingSubdomain": {
+            "custom_tracking_subdomain": {
               "type": "string",
-              "minLength": 1,
-              "description": "Custom tracking subdomain, e.g. track."
+              "description": "Alphanumeric subdomain for click/open tracking, e.g. track."
+            },
+            "inbound_routing_subdomain": {
+              "type": "string",
+              "description": "Alphanumeric subdomain for inbound routing, e.g. inbound."
             }
           },
           "additionalProperties": false,
@@ -604965,15 +604981,15 @@
         "inputSchema": {
           "type": "object",
           "properties": {
-            "domainId": {
+            "domain_id": {
               "type": "string",
               "minLength": 1,
-              "description": "Sending domain id."
+              "description": "Unique identifier of the sending domain."
             }
           },
           "additionalProperties": false,
           "required": [
-            "domainId"
+            "domain_id"
           ]
         },
         "outputSchema": {
@@ -605009,6 +605025,10 @@
             "page": {
               "type": "integer",
               "minimum": 1
+            },
+            "verified": {
+              "type": "boolean",
+              "description": "Filter by verification status (true verified, false unverified, omit for all)."
             }
           },
           "additionalProperties": false
@@ -605038,26 +605058,26 @@
         "inputSchema": {
           "type": "object",
           "properties": {
-            "domainId": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Sending domain id."
-            },
             "page": {
               "type": "integer",
-              "description": "Page number, starting from 1.",
+              "description": "1-based page number.",
               "minimum": 1
             },
             "limit": {
               "type": "integer",
-              "description": "Page size.",
+              "description": "Results per page (default 25).",
               "minimum": 10,
               "maximum": 100
+            },
+            "domain_id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "ID of the domain whose recipients to list."
             }
           },
           "additionalProperties": false,
           "required": [
-            "domainId"
+            "domain_id"
           ]
         },
         "outputSchema": {
@@ -605114,53 +605134,25 @@
           "properties": {
             "page": {
               "type": "integer",
-              "description": "Page number, starting from 1.",
+              "description": "1-based page number.",
               "minimum": 1
             },
             "limit": {
               "type": "integer",
-              "description": "Page size.",
+              "description": "Results per page (default 25).",
               "minimum": 10,
               "maximum": 100
-            }
-          },
-          "additionalProperties": false
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        }
-      },
-      {
-        "key": "messages.get",
-        "kind": "action",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "read": true,
-        "destructive": false,
-        "tool": true,
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "messageId": {
+            },
+            "domain_id": {
               "type": "string",
-              "minLength": 1,
-              "description": "Message id."
+              "description": "Filter identities belonging to this domain ID."
+            },
+            "query": {
+              "type": "string",
+              "description": "Filter by sender email address."
             }
           },
-          "additionalProperties": false,
-          "required": [
-            "messageId"
-          ]
+          "additionalProperties": false
         },
         "outputSchema": {
           "type": "object",
@@ -605187,23 +605179,57 @@
         "inputSchema": {
           "type": "object",
           "properties": {
-            "domainId": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Filter messages by domain id."
-            },
             "page": {
               "type": "integer",
-              "description": "Page number, starting from 1.",
+              "description": "1-based page number.",
               "minimum": 1
             },
             "limit": {
               "type": "integer",
-              "description": "Page size.",
+              "description": "Results per page (default 25).",
               "minimum": 10,
               "maximum": 100
+            },
+            "domain_id": {
+              "type": "string",
+              "description": "Filter messages belonging to this domain ID."
+            },
+            "date_from": {
+              "type": "string",
+              "description": "Filter messages on or after this datetime (ISO 8601)."
+            },
+            "date_to": {
+              "type": "string",
+              "description": "Filter messages on or before this datetime (ISO 8601)."
             }
           },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "quota.get",
+        "kind": "action",
+        "timeoutMs": 10000,
+        "maxInputBytes": 4096,
+        "maxResponseBytes": 65536,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {},
           "additionalProperties": false
         },
         "outputSchema": {
@@ -605233,17 +605259,350 @@
           "properties": {
             "page": {
               "type": "integer",
-              "description": "Page number, starting from 1.",
+              "description": "1-based page number.",
               "minimum": 1
             },
             "limit": {
               "type": "integer",
-              "description": "Page size.",
+              "description": "Results per page (default 25).",
+              "minimum": 10,
+              "maximum": 100
+            },
+            "domain_id": {
+              "type": "string",
+              "description": "Filter recipients belonging to this domain ID."
+            },
+            "search": {
+              "type": "string",
+              "description": "Search term for recipient email or name."
+            },
+            "list_id": {
+              "type": "string",
+              "description": "Filter recipients by mailing list ID when the account uses lists."
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "resources.general",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 4096,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "sms.activity.list",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "page": {
+              "type": "integer",
+              "description": "1-based page number.",
+              "minimum": 1
+            },
+            "limit": {
+              "type": "integer",
+              "description": "Results per page (default 25).",
+              "minimum": 10,
+              "maximum": 100
+            },
+            "sms_number_id": {
+              "type": "string",
+              "description": "Filter by SMS phone number ID."
+            },
+            "date_from": {
+              "type": "integer",
+              "description": "Unix timestamp (UTC) lower bound. Must be lower than date_to.",
+              "minimum": 0
+            },
+            "date_to": {
+              "type": "integer",
+              "description": "Unix timestamp (UTC) upper bound. Must be higher than date_from.",
+              "minimum": 0
+            },
+            "status": {
+              "type": "array",
+              "description": "Filter by message status. Repeatable. Official values: processed, queued, sent, delivered, failed.",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "processed",
+                  "queued",
+                  "sent",
+                  "delivered",
+                  "failed"
+                ],
+                "description": "SMS activity status."
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "sms.inbounds.list",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "page": {
+              "type": "integer",
+              "description": "1-based page number.",
+              "minimum": 1
+            },
+            "limit": {
+              "type": "integer",
+              "description": "Results per page (default 25).",
+              "minimum": 10,
+              "maximum": 100
+            },
+            "sms_number_id": {
+              "type": "string",
+              "description": "Filter inbound routes by SMS number ID."
+            },
+            "enabled": {
+              "type": "boolean",
+              "description": "Filter by enabled status."
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "sms.messages.list",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "page": {
+              "type": "integer",
+              "description": "1-based page number.",
+              "minimum": 1
+            },
+            "limit": {
+              "type": "integer",
+              "description": "Results per page (default 25).",
               "minimum": 10,
               "maximum": 100
             }
           },
           "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "sms.numbers.list",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "page": {
+              "type": "integer",
+              "description": "1-based page number.",
+              "minimum": 1
+            },
+            "limit": {
+              "type": "integer",
+              "description": "Results per page (default 25).",
+              "minimum": 10,
+              "maximum": 100
+            },
+            "paused": {
+              "type": "boolean",
+              "description": "Filter paused (true) or active (false) numbers; omit for all."
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "sms.recipients.list",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "page": {
+              "type": "integer",
+              "description": "1-based page number.",
+              "minimum": 1
+            },
+            "limit": {
+              "type": "integer",
+              "description": "Results per page (default 25).",
+              "minimum": 10,
+              "maximum": 100
+            },
+            "sms_number_id": {
+              "type": "string",
+              "description": "Filter recipients by SMS number ID."
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "active",
+                "opt_out"
+              ],
+              "description": "Filter by recipient status."
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "smtp_users.create",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "domain_id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "ID of the domain to associate with this SMTP user."
+            },
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Display name for the SMTP user (max 50 characters)."
+            },
+            "enabled": {
+              "type": "boolean",
+              "description": "Whether the SMTP user should be enabled. Defaults to true."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "domain_id",
+            "name"
+          ]
         },
         "outputSchema": {
           "type": "object",
@@ -605270,62 +605629,26 @@
         "inputSchema": {
           "type": "object",
           "properties": {
-            "domainId": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Sending domain id."
-            },
             "page": {
               "type": "integer",
-              "description": "Page number, starting from 1.",
+              "description": "1-based page number.",
               "minimum": 1
             },
             "limit": {
               "type": "integer",
-              "description": "Page size.",
+              "description": "Results per page (default 25).",
               "minimum": 10,
               "maximum": 100
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "domainId"
-          ]
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        }
-      },
-      {
-        "key": "templates.get",
-        "kind": "action",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "read": true,
-        "destructive": false,
-        "tool": true,
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "templateId": {
+            },
+            "domain_id": {
               "type": "string",
               "minLength": 1,
-              "description": "Template id."
+              "description": "Domain ID that scopes the SMTP users."
             }
           },
           "additionalProperties": false,
           "required": [
-            "templateId"
+            "domain_id"
           ]
         },
         "outputSchema": {
@@ -605353,24 +605676,75 @@
         "inputSchema": {
           "type": "object",
           "properties": {
-            "domainId": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Filter templates by domain id."
-            },
             "page": {
               "type": "integer",
-              "description": "Page number, starting from 1.",
+              "description": "1-based page number.",
               "minimum": 1
             },
             "limit": {
               "type": "integer",
-              "description": "Page size.",
+              "description": "Results per page (default 25).",
               "minimum": 10,
               "maximum": 100
+            },
+            "domain_id": {
+              "type": "string",
+              "description": "Filter templates belonging to this domain ID."
             }
           },
           "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "tokens.create",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Descriptive name for the token (max 50 characters)."
+            },
+            "domain_id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Domain ID to associate with this token."
+            },
+            "scopes": {
+              "type": "array",
+              "description": "Permission scopes to grant. Official scopes include: email_full, domains_read, domains_full, activity_read, activity_full, analytics_read, analytics_full, tokens_full, webhooks_full, templates_full, suppressions_read, suppressions_full, sms_full, sms_read, email_verification_read, email_verification_full, inbounds_full, recipients_read, recipients_full, sender_identity_read, sender_identity_full, users_read, users_full, smtp_users_read, smtp_users_full, dmarc_monitoring_read, dmarc_monitoring_full, blocklist_monitoring_read, blocklist_monitoring_full, whatsapp_full.",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "minItems": 1
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "name",
+            "domain_id",
+            "scopes"
+          ]
         },
         "outputSchema": {
           "type": "object",
@@ -605399,12 +605773,51 @@
           "properties": {
             "page": {
               "type": "integer",
-              "description": "Page number, starting from 1.",
+              "description": "1-based page number.",
               "minimum": 1
             },
             "limit": {
               "type": "integer",
-              "description": "Page size.",
+              "description": "Results per page (default 25).",
+              "minimum": 10,
+              "maximum": 100
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "users.list",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "page": {
+              "type": "integer",
+              "description": "1-based page number.",
+              "minimum": 1
+            },
+            "limit": {
+              "type": "integer",
+              "description": "Results per page (default 25).",
               "minimum": 10,
               "maximum": 100
             }
@@ -605439,34 +605852,44 @@
             "url": {
               "type": "string",
               "minLength": 1,
-              "description": "Callback URL that receives POST events."
+              "description": "Callback URL that receives POST events (max 191 characters)."
             },
             "name": {
               "type": "string",
               "minLength": 1,
-              "description": "Webhook name."
-            },
-            "domainId": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Sending domain id."
+              "description": "Webhook name (official max 50 characters)."
             },
             "events": {
               "type": "array",
-              "minItems": 1,
-              "description": "Activity event names, e.g. activity.sent.",
+              "description": "Events to subscribe to. Valid events include: activity.sent, activity.delivered, activity.soft_bounced, activity.hard_bounced, activity.deferred, activity.opened, activity.opened_unique, activity.clicked, activity.clicked_unique, activity.unsubscribed, activity.spam_complaint, activity.suppressed, activity.survey_opened, activity.survey_submitted, sender_identity.verified, maintenance.start, maintenance.end, inbound_forward.failed, inbound_message.rejected, email_single.verified, email_list.created, email_list.verified, bulk_email.completed, recipient.on_hold_added, recipient.on_hold_removed.",
               "items": {
                 "type": "string",
                 "minLength": 1
-              }
+              },
+              "minItems": 1
+            },
+            "enabled": {
+              "type": "boolean",
+              "description": "Whether the webhook is enabled immediately. Defaults to true."
+            },
+            "version": {
+              "type": "integer",
+              "description": "Webhook payload version: 1 legacy, 2 recommended.",
+              "minimum": 1,
+              "maximum": 2
+            },
+            "domain_id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Domain ID to attach the webhook to."
             }
           },
           "additionalProperties": false,
           "required": [
             "url",
             "name",
-            "domainId",
-            "events"
+            "events",
+            "domain_id"
           ]
         },
         "outputSchema": {
@@ -605483,36 +605906,36 @@
         }
       },
       {
-        "key": "webhooks.get",
+        "key": "webhooks.delete",
         "kind": "action",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "read": true,
-        "destructive": false,
+        "timeoutMs": 10000,
+        "maxInputBytes": 16384,
+        "maxResponseBytes": 65536,
+        "read": false,
+        "destructive": true,
         "tool": true,
         "inputSchema": {
           "type": "object",
           "properties": {
-            "webhookId": {
+            "webhook_id": {
               "type": "string",
               "minLength": 1,
-              "description": "Webhook id."
+              "description": "Unique identifier of the webhook to delete."
             }
           },
           "additionalProperties": false,
           "required": [
-            "webhookId"
+            "webhook_id"
           ]
         },
         "outputSchema": {
           "type": "object",
           "required": [
-            "data"
+            "success"
           ],
           "properties": {
-            "data": {
-              "type": "object"
+            "success": {
+              "type": "boolean"
             }
           },
           "additionalProperties": false
@@ -605530,26 +605953,26 @@
         "inputSchema": {
           "type": "object",
           "properties": {
-            "domainId": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Sending domain id."
-            },
             "page": {
               "type": "integer",
-              "description": "Page number, starting from 1.",
+              "description": "1-based page number.",
               "minimum": 1
             },
             "limit": {
               "type": "integer",
-              "description": "Page size.",
+              "description": "Results per page (default 25).",
               "minimum": 10,
               "maximum": 100
+            },
+            "domain_id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Domain ID whose webhooks to list."
             }
           },
           "additionalProperties": false,
           "required": [
-            "domainId"
+            "domain_id"
           ]
         },
         "outputSchema": {
