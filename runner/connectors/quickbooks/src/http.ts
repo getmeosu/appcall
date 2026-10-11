@@ -37,14 +37,18 @@ export function createQuickBooksClient(options: QuickBooksClientOptions) {
     get baseUrl() { return baseUrl; },
 
     async fetchJSON(path: string, init: RequestInit = {}): Promise<{ status: number; headers: Record<string, string>; body: unknown }> {
+      const headers: Record<string, string> = {
+        Authorization: `Bearer ${options.accessToken}`,
+        Accept: "application/json",
+        ...((init.headers as Record<string, string> | undefined) ?? {}),
+      };
+      if (init.body !== undefined && init.body !== null && String(init.body).length > 0) {
+        const hasContentType = Object.keys(headers).some((key) => key.toLowerCase() === "content-type");
+        if (!hasContentType) headers["Content-Type"] = "application/json";
+      }
       const response = await httpClient.fetchText(`${baseUrl}${path}`, {
         ...init,
-        headers: {
-          Authorization: `Bearer ${options.accessToken}`,
-          "Content-Type": "application/json",
-          Accept: "application/json",
-          ...(init.headers as Record<string, string>),
-        },
+        headers,
       });
       let body: unknown;
       try {

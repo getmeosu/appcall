@@ -1,20 +1,23 @@
 # Attio
 
-Read-only international **Attio REST API** recipe. Generate a workspace access token (API key) from the Attio developer settings and store it as `accessToken`. Requests send `Authorization: Bearer` and `Accept: application/json` to `https://api.attio.com`. OAuth is documented by Attio but is not used in this recipe.
+International **Attio REST API** recipe covering Composio ATTIO tools. Generate a workspace access token (API key) from the Attio developer settings and store it as `accessToken`. Requests send `Authorization: Bearer` and `Accept: application/json` to `https://api.attio.com`. OAuth is documented by Attio but is not used in this recipe.
 
 ## Operations
 
-- `healthcheck`: `GET /v2/self` (cheap authenticated identify; same path as the pinned credential validator).
-- `objects.list`: `GET /v2/objects`.
-- `objects.get`: `GET /v2/objects/{object}`.
-- `records.list`: `POST /v2/objects/{object}/records/query` with optional `filter`, `filterViewId` (`filter_view_id`), `sorts`, `limit`, and `offset`.
-- `records.get`: `GET /v2/objects/{object}/records/{recordId}`.
+Recipe operations equal the prepared runner (109). Origin reads:
 
-Successful responses are raw provider JSON under AppCall `data`. Record create/upsert/update/delete and attribute listing are omitted.
+- `healthcheck`: `GET /v2/self`
+- `objects.list` / `objects.get`
+- `records.list`: `POST /v2/objects/{object}/records/query`
+- `records.get`: `GET /v2/objects/{object}/records/{recordId}`
+
+Twelve dedicated ops split from shared routes: `records.find`, `records.query`, `records.postQuery`, `records.post`, `records.getById`, `records.patch`, `records.searchV2`, `lists.entries.list`, `entries.query`, `lists.entries.create`, `entries.patch`, `workspace_members.listV2`. `records.find` POSTs Composio attributes as the Attio query filter. `records.searchV2` wraps `requestAs` as `{type}`.
+
+Webhook create/list/get/update/delete are HTTP actions against `/v2/webhooks`, not inbound `kind: webhook` contracts.
 
 ## Adaptations
 
-Pinned source and official docs agree that workspace API keys and OAuth access tokens are both valid Bearer credentials. This recipe uses the access-token/api-key native shape (not OAuth-only). Native category is `crm` (source Productivity/Data; Data is not in the Rust CATEGORIES allowlist). Returns raw Attio JSON under `data` (`appcall-provider-json-v1`) rather than the original curated `preserve-existing` result mapping. Pinned user-agent is omitted.
+Pinned source and official docs agree that workspace API keys and OAuth access tokens are both valid Bearer credentials. This recipe uses the access-token/api-key native shape. Native category is `crm`. Returns raw Attio JSON under `data`.
 
 ## License and evidence
 
