@@ -1,19 +1,25 @@
 # Tomba
 
-Read-only international **Tomba Email Intelligence API** recipe. Tomba is the email finder and enrichment product at [tomba.io](https://tomba.io/). Generate an API key and secret at [app.tomba.io/api](https://app.tomba.io/api) and store them as `apiKey` and `apiSecret`. Requests send `X-Tomba-Key`, `X-Tomba-Secret`, and `Accept: application/json` to `https://api.tomba.io/v1`.
+International **Tomba Email Intelligence API** recipe covering origin healthcheck plus every Composio `TOMBA_*` HTTP tool (25 tools, 26 operations including `healthcheck`).
+
+Generate an API key and secret at [app.tomba.io/api](https://app.tomba.io/api) and store them as `apiKey` and `apiSecret`. Requests send `X-Tomba-Key`, `X-Tomba-Secret`, and `Accept: application/json` to `https://api.tomba.io/v1`.
 
 ## Operations
 
-- `healthcheck`: `GET /me` with empty input (cheap authenticated account probe; not a billed search).
-- `emails.count`: `GET /email-count` with required `domain` (official zero-credit preview).
-- `domain.search`: `GET /domain-search` with required `domain` and optional `page` (≥ 1). This consumes search credits.
-- `email.finder`: `GET /email-finder` with required `domain`, `firstName`, and `lastName` (wired as `first_name` / `last_name`). This consumes finder credits.
+- `healthcheck`: `GET /me` (origin credential probe; not a Composio tool).
+- Finder: `domain.search`, `email.finder`, `author.finder`, `linkedin.finder`, `emails.count`, `email.format`, `employees.locations`.
+- Verifier: `email.verifier`, `emails.verify_bulk` (`POST /bulk/verifier` with `launch: true`).
+- Enrichment: `person.enrich`, `company.enrich`, `combined.enrich`.
+- Phone: `phone.finder`, `phone.validate`.
+- Domain / email helpers: `domain.status`, `email.sources`.
+- Leads: `leads.create`, `leads.list`, `lists.list`, `lists.update`, `lists.delete`, `attributes.list`.
+- Account: `usage.get`, `keys.list`, `keys.delete`.
 
-Successful responses are raw Tomba JSON under AppCall `data`. Verifier, enrich, LinkedIn, technology, and Reveal POST search are omitted.
+Origin `email.finder` still requires `domain`, `firstName`, and `lastName` (wired as `first_name` / `last_name`). Origin `domain.search` still requires `domain`. Optional Composio fields (`company`, `full_name`, `enrich_mobile`, `limit`, `department`, `country`) are omitted when unset.
 
-## Adaptations
+`leads.create` maps Composio `website` → official `website_url` and `phone` → `phone_number`. `emails.verify_bulk` creates and launches a bulk verifier job; it does not poll, download, or delete the job locally. `timeout_seconds` is accepted for Composio input compatibility and is not sent.
 
-Pinned source and official docs agree on `https://api.tomba.io/v1` and dual `X-Tomba-Key` / `X-Tomba-Secret` headers. Dual-header auth uses `http.auth` for the key and `http.headers` for `X-Tomba-Secret={{apiSecret}}`. Native requires `domain` on domain search (official also accepts `company`). Official `limit` enum `10|20|50` is omitted because the pinned source used unbounded `positiveInteger`. Native category is `crm` (source Marketing/Data are not in the Rust CATEGORIES allowlist). Native returns raw JSON under `data` instead of the pinned camelCase account wrapper. The upstream user-agent is not sent.
+Successful responses are raw Tomba JSON under AppCall `data`. No inbound webhook ops (Composio triggers = 0). Similar-domain and Reveal search are omitted because they are not Composio tools.
 
 ## License and evidence
 
