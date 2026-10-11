@@ -1,4 +1,5 @@
 import { createGitHubClient, parseGitHubRateLimit, type GitHubClient } from "./http";
+import { requireSingleSegment as segment } from "./path_segment";
 
 // G12: classic Projects + Classroom + team discussions (40 Composio-gap REST ops).
 // All omit effectPolicy/reconcile/effect. GET/DELETE are body-less. JSON Content-Type only when a body is set.
@@ -1035,14 +1036,6 @@ function requireNonEmpty(value: unknown, field: string): string {
 
 function requireString(value: unknown, field: string): string {
   if (typeof value !== "string") throw new Error(`${field} must be a string`);
-  return value;
-}
-
-function segment(value: unknown, field: string): string {
-  if (typeof value !== "string" || value.length === 0) throw new Error(`${field} is required`);
-  if (value.includes("/") || value.includes("?") || value.includes("#")) {
-    throw new Error(`${field} must be a single path segment`);
-  }
   return value;
 }
 

@@ -1,5 +1,6 @@
 import { createGitHubClient, parseGitHubRateLimit, type GitHubClient } from "./http";
 import { normalizeGitHubOrg, type GitHubOrg } from "./orgs";
+import { requireSingleSegment } from "./path_segment";
 
 type OrgUser = { org: string; username: string };
 type OrgUserRole = OrgUser & { roleId: number };
@@ -339,14 +340,6 @@ function mapRateOrUpstream(response: { status: number; headers: Record<string, s
     };
   }
   return upstream(message);
-}
-
-function requireSingleSegment(value: unknown, field: string): string {
-  if (typeof value !== "string" || value.length === 0) throw new Error(`${field} is required`);
-  if (value.includes("/") || value.includes("?") || value.includes("#")) {
-    throw new Error(`${field} must be a single path segment`);
-  }
-  return value;
 }
 
 function requireId(value: unknown, field: string): number {

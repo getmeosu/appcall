@@ -2,6 +2,7 @@ import { createGitHubClient, parseGitHubRateLimit, type GitHubClient } from "./h
 import { normalizeGitHubEmail, normalizeGitHubUser, type GitHubEmail, type GitHubUser } from "./users";
 import { normalizeGitHubInvitation, type GitHubInvitation } from "./governance";
 import { normalizeOrgInteractionLimits } from "./orgs_reads";
+import { requireSingleSegment as segment } from "./path_segment";
 
 // G1: users, account, and meta reads (12 read ops) plus user.interaction_limits.set (1 write op).
 // Every op omits effectPolicy, reconcile, and effect.
@@ -451,14 +452,6 @@ function optionalCursor(value: unknown, field: string): string | undefined {
 function requireId(value: unknown, field: string): number {
   if (typeof value !== "number" || !Number.isInteger(value) || value < 1) {
     throw new Error(`${field} must be a positive integer`);
-  }
-  return value;
-}
-
-function segment(value: unknown, field: string): string {
-  if (typeof value !== "string" || value.length === 0) throw new Error(`${field} is required`);
-  if (value.includes("/") || value.includes("?") || value.includes("#")) {
-    throw new Error(`${field} must be a single path segment`);
   }
   return value;
 }

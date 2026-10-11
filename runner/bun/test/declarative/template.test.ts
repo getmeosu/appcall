@@ -88,6 +88,17 @@ describe("renderPath", () => {
     expect(() => renderPath("/parent/%2e%2e/child", {})).toThrow(/dot path segment/);
   });
 
+  it("rejects all-dot, %2e, blank and backslash substitutions (FIX-SEGMENT amend)", () => {
+    for (const value of ["...", "%2e%2e", "%2E.", "a/../b", "a/%2e%2e/b"]) {
+      expect(() => renderPath("/records/{{recordId}}", { recordId: value })).toThrow(/dot path segment/);
+    }
+    for (const value of [" ", " \t"]) {
+      expect(() => renderPath("/records/{{recordId}}", { recordId: value })).toThrow(/blank path segment/);
+    }
+    expect(() => renderPath("/records/{{recordId}}", { recordId: "a\\b" })).toThrow(/backslash/);
+    expect(renderPath("/records/{{recordId}}", { recordId: "a..b" })).toBe("/records/a..b");
+  });
+
   it("allows dot characters inside a non-segment value", () => {
     expect(renderPath("/records/{{recordId}}", { recordId: "v1.2" })).toBe("/records/v1.2");
   });

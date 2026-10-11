@@ -1,4 +1,5 @@
 import { createGitHubClient, parseGitHubRateLimit, type GitHubClient } from "./http";
+import { requireSingleSegment } from "./path_segment";
 
 type RepoScope = { owner: string; repo: string };
 type AutolinkGet = RepoScope & { autolinkId: number };
@@ -607,14 +608,6 @@ function mapRateOrUpstream(response: { status: number; headers: Record<string, s
     };
   }
   return upstream(message);
-}
-
-function requireSingleSegment(value: unknown, field: string): string {
-  const text = requireString(value, field);
-  if (text.includes("/") || text.includes("?") || text.includes("#")) {
-    throw new Error(`${field} must be a single path segment`);
-  }
-  return text;
 }
 
 function requirePath(value: unknown, field: string): string {

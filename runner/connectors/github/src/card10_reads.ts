@@ -1,5 +1,6 @@
 import { createGitHubClient, parseGitHubRateLimit, type GitHubClient } from "./http";
 import { normalizeGitHubHook, type GitHubHook } from "./governance";
+import { requireSingleSegment } from "./path_segment";
 
 const REACTION_CONTENTS = ["+1", "-1", "laugh", "confused", "heart", "hooray", "rocket", "eyes"] as const;
 const RELEASE_REACTION_CONTENTS = ["+1", "laugh", "heart", "hooray", "rocket", "eyes"] as const;
@@ -308,14 +309,6 @@ function mapRateOrUpstream(response: { status: number; headers: Record<string, s
     };
   }
   return upstream(message);
-}
-
-function requireSingleSegment(value: unknown, field: string): string {
-  const text = requireString(value, field);
-  if (text.includes("/") || text.includes("?") || text.includes("#")) {
-    throw new Error(`${field} must be a single path segment`);
-  }
-  return text;
 }
 
 function requireId(value: unknown, field: string): number {

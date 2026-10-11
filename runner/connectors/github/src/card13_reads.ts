@@ -1,4 +1,5 @@
 import { createGitHubClient, parseGitHubRateLimit, type GitHubClient } from "./http";
+import { requireSingleSegment } from "./path_segment";
 
 type Page = { perPage?: number; page?: number };
 
@@ -515,14 +516,6 @@ function mapRateOrUpstream(response: { status: number; headers: Record<string, s
 function requireWorkflowId(value: unknown): string {
   if (typeof value === "number" && Number.isSafeInteger(value) && value >= 1) return String(value);
   return requireSingleSegment(value, "workflowId");
-}
-
-function requireSingleSegment(value: unknown, field: string): string {
-  const text = requireString(value, field);
-  if (text.includes("/") || text.includes("?") || text.includes("#")) {
-    throw new Error(`${field} must be a single path segment`);
-  }
-  return text;
 }
 
 function requireId(value: unknown, field: string): number {

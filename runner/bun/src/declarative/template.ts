@@ -70,9 +70,14 @@ export function assertSafePathSegment(path: string, offset: number, matchLength:
   }
 }
 
-/** Reject both static and composed dot segments after all substitutions finish. */
+/**
+ * Reject both static and composed unsafe segments after all substitutions finish:
+ * dot segments ("." / ".." / all dots, raw or %2e-encoded, also as a "/"-component of a
+ * decoded segment), whitespace-only segments and backslashes (FIX-SEGMENT amend).
+ */
 export function assertSafePathSegments(path: string): void {
-  if (path.split("/").some((segment) => {
+  const dotOnly = /^(?:\.|%2e)+$/i;
+  for (const segment of path.split("/")) {
     let decoded = segment;
     try {
       decoded = decodeURIComponent(segment);
@@ -80,9 +85,15 @@ export function assertSafePathSegments(path: string): void {
       // Leave malformed static escapes to the URL boundary; they are not a
       // dot segment after decoding and cannot be normalized as one.
     }
-    return decoded === "." || decoded === "..";
-  })) {
-    throw new Error("dot path segment is not allowed");
+    if (dotOnly.test(segment) || dotOnly.test(decoded) || decoded.split("/").some((part) => dotOnly.test(part))) {
+      throw new Error("dot path segment is not allowed");
+    }
+    if (segment.length > 0 && decoded.trim().length === 0) {
+      throw new Error("blank path segment is not allowed");
+    }
+    if (segment.includes("\\") || decoded.includes("\\")) {
+      throw new Error("backslash in a path segment is not allowed");
+    }
   }
 }
 

@@ -1,4 +1,5 @@
 import { createGitHubClient, parseGitHubRateLimit, type GitHubClient } from "./http";
+import { requireRefComponents } from "./path_segment";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -310,8 +311,8 @@ export function createReposClient(options: { accessToken: string; fetch?: typeof
       if (payload.perPage) params.set("per_page", String(payload.perPage));
       if (payload.page) params.set("page", String(payload.page));
       const qs = params.toString() ? `?${params.toString()}` : "";
-      const base = encodeURIComponent(payload.base);
-      const head = encodeURIComponent(payload.head);
+      const base = encodeURIComponent(requireRefComponents(payload.base, "base"));
+      const head = encodeURIComponent(requireRefComponents(payload.head, "head"));
       const response = await client.fetchJSON(`/repos/${payload.owner}/${payload.repo}/compare/${base}...${head}${qs}`);
       if (response.status === 200) {
         const body = (response.body && typeof response.body === "object") ? response.body as Record<string, unknown> : {};
@@ -564,7 +565,7 @@ export function createReposClient(options: { accessToken: string; fetch?: typeof
       const params = new URLSearchParams();
       if (payload.name) params.set("name", payload.name);
       const qs = params.toString() ? `?${params.toString()}` : "";
-      const basehead = `${encodeURIComponent(payload.base)}...${encodeURIComponent(payload.head)}`;
+      const basehead = `${encodeURIComponent(requireRefComponents(payload.base, "base"))}...${encodeURIComponent(requireRefComponents(payload.head, "head"))}`;
       const response = await client.fetchJSON(
         `/repos/${payload.owner}/${payload.repo}/dependency-graph/compare/${basehead}${qs}`,
       );

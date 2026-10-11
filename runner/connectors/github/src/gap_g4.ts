@@ -1,4 +1,5 @@
 import { createGitHubClient, parseGitHubRateLimit, type GitHubClient } from "./http";
+import { requireSingleSegment as segment } from "./path_segment";
 
 // G4: repo Actions secrets + org secret writes + 3 leftovers (11 ops).
 // All omit effectPolicy/reconcile/effect. Secret PUTs are upserts; secret GETs are not observes.
@@ -469,14 +470,6 @@ function requireIdList(value: unknown, field: string): number[] {
     }
     return entry;
   });
-}
-
-function segment(value: unknown, field: string): string {
-  if (typeof value !== "string" || value.length === 0) throw new Error(`${field} is required`);
-  if (value.includes("/") || value.includes("?") || value.includes("#")) {
-    throw new Error(`${field} must be a single path segment`);
-  }
-  return value;
 }
 
 function enc(value: string): string {

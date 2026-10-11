@@ -1,4 +1,5 @@
 import { createGitHubClient, parseGitHubRateLimit, type GitHubClient } from "./http";
+import { requireSingleSegment, rejectDotComponents } from "./path_segment";
 
 type Page = { perPage?: number; page?: number };
 type PackageList = { packageType: string } & Page;
@@ -303,13 +304,7 @@ function pageOf(input: Record<string, unknown>): Page {
 function requirePackageName(value: unknown): string {
   if (typeof value !== "string" || value.length === 0) throw new Error("package_name is required");
   if (value.includes("?") || value.includes("#")) throw new Error("package_name must not include a query or fragment");
-  return value;
-}
-
-function requireSingleSegment(value: unknown, field: string): string {
-  if (typeof value !== "string" || value.length === 0) throw new Error(`${field} is required`);
-  if (value.includes("/") || value.includes("?") || value.includes("#")) throw new Error(`${field} must be a single path segment`);
-  return value;
+  return rejectDotComponents(value, "package_name");
 }
 
 function requireId(value: unknown, field: string): number {

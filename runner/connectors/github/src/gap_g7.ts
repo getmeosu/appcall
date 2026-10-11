@@ -1,4 +1,5 @@
 import { createGitHubClient, parseGitHubRateLimit, type GitHubClient } from "./http";
+import { requireSingleSegment as segment } from "./path_segment";
 
 // G7: OIDC sub claims, org variable/secret repo selection, custom properties, env rule apps.
 // 12 ops (OIDC org get moved to G3). Reconcile: org+repo OIDC set → exact observes.
@@ -716,14 +717,6 @@ function stringListAllowEmpty(value: unknown, field: string): string[] {
 
 function requirePathText(value: unknown, field: string): string {
   if (typeof value !== "string" || value.length === 0) throw new Error(`${field} is required`);
-  return value;
-}
-
-function segment(value: unknown, field: string): string {
-  if (typeof value !== "string" || value.length === 0) throw new Error(`${field} is required`);
-  if (value.includes("/") || value.includes("?") || value.includes("#")) {
-    throw new Error(`${field} must be a single path segment`);
-  }
   return value;
 }
 
