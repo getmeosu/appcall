@@ -38,6 +38,8 @@ export interface GreenhouseAuthClientConfig {
   operation?: string;
 }
 
+export type GreenhouseHttpMethod = "GET" | "POST" | "PATCH" | "PUT" | "DELETE";
+
 export type GreenhouseAuthClient = {
   /** GET `path` relative to the Harvest v3 base URL and parse JSON. */
   getJSON(path: string): Promise<unknown>;
@@ -49,16 +51,33 @@ export type GreenhouseAuthClient = {
    * POST `path` with a JSON body. Accepts 2xx including 204 No Content
    * (returns `undefined` when the body is empty).
    */
-  postJSON(path: string, body?: Record<string, unknown>): Promise<unknown>;
+  postJSON(path: string, body?: Record<string, unknown>, extraHeaders?: Record<string, string>): Promise<unknown>;
   /**
    * PATCH `path` with a JSON body. Accepts 2xx including 204 No Content
    * (returns `undefined` when the body is empty).
    */
-  patchJSON(path: string, body?: Record<string, unknown>): Promise<unknown>;
+  patchJSON(path: string, body?: Record<string, unknown>, extraHeaders?: Record<string, string>): Promise<unknown>;
   /**
-   * DELETE `path`. Accepts 2xx including 204 No Content.
+   * PUT `path` with a JSON body. Accepts 2xx including 204 No Content.
    */
-  deleteJSON(path: string): Promise<unknown>;
+  putJSON(path: string, body?: Record<string, unknown>, extraHeaders?: Record<string, string>): Promise<unknown>;
+  /**
+   * DELETE `path`. Optional JSON body for bulk-delete endpoints.
+   * Accepts 2xx including 204 No Content.
+   */
+  deleteJSON(path: string, body?: Record<string, unknown>, extraHeaders?: Record<string, string>): Promise<unknown>;
+  /**
+   * Generic Harvest JSON call (GET/POST/PATCH/PUT/DELETE).
+   */
+  requestJSON(
+    method: GreenhouseHttpMethod,
+    path: string,
+    init?: { body?: Record<string, unknown>; extraHeaders?: Record<string, string> },
+  ): Promise<unknown>;
+  /** Minted (or cached) Harvest access token. */
+  getAccessToken(): Promise<string>;
+  /** RFC 7662 introspect of the current access token at auth.greenhouse.io. */
+  introspectToken(): Promise<Record<string, unknown>>;
 };
 
 type OperationBounds = { maxResponseBytes: number; timeoutMs: number };
@@ -66,6 +85,7 @@ type OperationBounds = { maxResponseBytes: number; timeoutMs: number };
 type CachedToken = { accessToken: string; expiresAtMs: number };
 
 const AUTH_TOKEN_URL = "https://auth.greenhouse.io/token";
+const AUTH_INTROSPECT_URL = "https://auth.greenhouse.io/introspect";
 const HARVEST_BASE = "https://harvest.greenhouse.io/v3";
 /** Refresh a little early so we do not race the expiry boundary. */
 const EXPIRY_SKEW_MS = 60_000;
@@ -236,9 +256,9 @@ export function createAuthClient(config: GreenhouseAuthClientConfig): Greenhouse
   }
 
   async function harvestRequest(
-    method: "GET" | "POST" | "PATCH" | "DELETE",
+    method: GreenhouseHttpMethod,
     path: string,
-    init: { body?: string; contentType?: string } = {},
+    init: { body?: string; contentType?: string; extraHeaders?: Record<string, string> } = {},
     retried = false,
   ): Promise<{ status: number; headers: Record<string, string>; body: string }> {
     const accessToken = await getAccessToken(retried);
@@ -247,6 +267,7 @@ export function createAuthClient(config: GreenhouseAuthClientConfig): Greenhouse
     const headers: Record<string, string> = {
       Authorization: `Bearer ${accessToken}`,
       Accept: "application/json",
+      ...(init.extraHeaders ?? {}),
     };
     if (init.body != null) {
       headers["Content-Type"] = init.contentType ?? "application/json";
@@ -306,19 +327,107 @@ export function createAuthClient(config: GreenhouseAuthClientConfig): Greenhouse
       };
     },
 
-    async postJSON(path: string, body: Record<string, unknown> = {}): Promise<unknown> {
-      const response = await harvestRequest("POST", path, { body: JSON.stringify(body) });
+    async postJSON(
+      path: string,
+      body: Record<string, unknown> = {},
+      extraHeaders?: Record<string, string>,
+    ): Promise<unknown> {
+      const response = await harvestRequest("POST", path, {
+        body: JSON.stringify(body),
+        extraHeaders,
+      });
       return parseJsonOrEmpty(response);
     },
 
-    async patchJSON(path: string, body: Record<string, unknown> = {}): Promise<unknown> {
-      const response = await harvestRequest("PATCH", path, { body: JSON.stringify(body) });
+    async patchJSON(
+      path: string,
+      body: Record<string, unknown> = {},
+      extraHeaders?: Record<string, string>,
+    ): Promise<unknown> {
+      const response = await harvestRequest("PATCH", path, {
+        body: JSON.stringify(body),
+        extraHeaders,
+      });
       return parseJsonOrEmpty(response);
     },
 
-    async deleteJSON(path: string): Promise<unknown> {
-      const response = await harvestRequest("DELETE", path);
+    async putJSON(
+      path: string,
+      body: Record<string, unknown> = {},
+      extraHeaders?: Record<string, string>,
+    ): Promise<unknown> {
+      const response = await harvestRequest("PUT", path, {
+        body: JSON.stringify(body),
+        extraHeaders,
+      });
       return parseJsonOrEmpty(response);
+    },
+
+    async deleteJSON(
+      path: string,
+      body?: Record<string, unknown>,
+      extraHeaders?: Record<string, string>,
+    ): Promise<unknown> {
+      const response = await harvestRequest("DELETE", path, {
+        body: body != null ? JSON.stringify(body) : undefined,
+        extraHeaders,
+      });
+      return parseJsonOrEmpty(response);
+    },
+
+    async requestJSON(
+      method: GreenhouseHttpMethod,
+      path: string,
+      init: { body?: Record<string, unknown>; extraHeaders?: Record<string, string> } = {},
+    ): Promise<unknown> {
+      const response = await harvestRequest(method, path, {
+        body: init.body != null ? JSON.stringify(init.body) : undefined,
+        extraHeaders: init.extraHeaders,
+      });
+      return parseJsonOrEmpty(response);
+    },
+
+    getAccessToken(): Promise<string> {
+      return getAccessToken(false);
+    },
+
+    async introspectToken(): Promise<Record<string, unknown>> {
+      const accessToken = await getAccessToken(false);
+      if (!secrets.includes(accessToken)) secrets.push(accessToken);
+      const form = new URLSearchParams();
+      form.set("token", accessToken);
+      form.set("token_type_hint", "access_token");
+      const response = await http.fetchText(AUTH_INTROSPECT_URL, {
+        method: "POST",
+        headers: {
+          Authorization: clientCredentialsBasicHeader(config.clientId, config.clientSecret),
+          Accept: "application/json",
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: form.toString(),
+      });
+      if (response.status < 200 || response.status >= 300) {
+        throwUpstream(response.status, response.headers, response.body);
+      }
+      if (response.body.length === 0) return {};
+      try {
+        const parsed = JSON.parse(response.body) as unknown;
+        if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+          throw {
+            ok: false,
+            code: "CONNECTOR_UPSTREAM_ERROR",
+            message: "Greenhouse introspect returned an unexpected payload.",
+          } satisfies ConnectorUpstreamError;
+        }
+        return parsed as Record<string, unknown>;
+      } catch (err) {
+        if (err && typeof err === "object" && "code" in err) throw err;
+        throw {
+          ok: false,
+          code: "CONNECTOR_UPSTREAM_ERROR",
+          message: "Greenhouse introspect returned a non-JSON body.",
+        } satisfies ConnectorUpstreamError;
+      }
     },
   };
 }
