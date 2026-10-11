@@ -115,6 +115,8 @@ export function createJobBoardClient(options: JobBoardClientOptions): JobBoardCl
  * name, site or company. Without this, a value containing "/" or "@" moves the
  * request to a different host entirely — the allowlist catches the common cases,
  * but validating at the source is what makes the URL mean what it looks like.
+ * Segments made only of dots ("." / "..") are rejected too, since URL
+ * normalization would turn them into path traversal.
  */
 export function assertSafePathSegment(value: string, field: string): string {
   const trimmed = value.trim();
@@ -123,6 +125,13 @@ export function assertSafePathSegment(value: string, field: string): string {
   }
   if (!/^[A-Za-z0-9._-]+$/.test(trimmed)) {
     throw new Error(`${field} may only contain letters, digits, dots, underscores and hyphens`);
+  }
+  // "." and ".." are dot segments (RFC 3986 section 5.2.4): interpolated as a whole
+  // path segment they collapse the path (DELETE /jobs/J1/users/.. -> /jobs/J1/).
+  // Reject any segment made only of dots. Percent-encoded forms (%2e%2e, %2f) never
+  // reach this point decoded and are already rejected above because "%" is not allowed.
+  if (/^\.+$/.test(trimmed)) {
+    throw new Error(`${field} must not be a dot segment`);
   }
   return trimmed;
 }
