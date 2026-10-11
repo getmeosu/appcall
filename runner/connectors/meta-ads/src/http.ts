@@ -38,11 +38,23 @@ export type MetaAdSetObject = {
   [key: string]: unknown;
 };
 
+// Ad Creative `object_type` (Graph v26.0 reference): APPLICATION, DOMAIN, EVENT, OFFER,
+// PAGE, PHOTO, SHARE, STATUS, STORE_ITEM, VIDEO, INVALID, PRIVACY_CHECK_FAIL, POST_DELETED.
+// Ad Creative has no `type` field; it is read only as a legacy fallback.
 export type MetaCreativeObject = {
+  id?: string | null;
   name?: string | null;
+  object_type?: string | null;
+  /** Legacy, not in the Graph v26.0 Ad Creative reference. Fallback only. */
   type?: string | null;
   [key: string]: unknown;
 };
+
+// Graph returns only `id` for edges unless `fields=` is set. Callers fetching
+// GET /act_{id}/ads (or /{adset_id}/ads) for ads.list should request these fields so the
+// mapper sees creative.object_type.
+export const META_ADS_LIST_FIELDS =
+  "id,adset_id,name,status,effective_status,created_time,updated_time,creative{id,name,object_type}";
 
 export type MetaAdObject = {
   id: string;

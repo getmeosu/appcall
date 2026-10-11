@@ -70,7 +70,7 @@ describe("ads.list sync", () => {
     expect(result.items).toHaveLength(2);
     expect(result.items[0].id).toBe("meta-ads:ad:23849293847298390");
     expect(result.items[0].name).toBe("Summer Sale - Image Ad");
-    expect(result.items[0].creative.type).toBe("IMAGE");
+    expect(result.items[0].creative.type).toBe("PHOTO");
     expect(result.items[1].creative.type).toBe("VIDEO");
     expect(result.nextCursor).toBe("MTcwMDAwMDA=");
   });

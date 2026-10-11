@@ -180,7 +180,8 @@ export function normalizeAd(a: MetaAdObject): NormalizedAd {
     status: prop(obj, "status"),
     creative: {
       name: prop(creative, "name"),
-      type: prop(creative, "type"),
+      // Graph v26.0 Ad Creative exposes object_type; `type` is a legacy fallback.
+      type: prop(creative, "object_type") || prop(creative, "type"),
     },
     effectiveStatus: prop(obj, "effective_status"),
     createdAt: prop(obj, "created_time"),
@@ -211,18 +212,20 @@ export function parseAdsResponse(
 // Ad Account
 // ---------------------------------------------------------------------------
 
-const AD_ACCOUNT_STATUS_MAP: Record<number, string> = {
+// account_status codes per the Graph v26.0 Ad Account reference:
+// https://developers.facebook.com/docs/marketing-api/reference/ad-account/
+// Any code not listed there normalizes to "UNKNOWN".
+export const AD_ACCOUNT_STATUS_MAP: Record<number, string> = {
   1: "ACTIVE",
   2: "DISABLED",
-  3: "UNSET",
+  3: "UNSETTLED",
   7: "PENDING_RISK_REVIEW",
-  8: "PENDING_CONFIRMATION",
+  8: "PENDING_SETTLEMENT",
   9: "IN_GRACE_PERIOD",
   100: "PENDING_CLOSURE",
   101: "CLOSED",
-  202: "SUSPENDED",
-  403: "ADS_LIMITATION",
-  402: "ADS_LIMITED_MCC",
+  201: "ANY_ACTIVE",
+  202: "ANY_CLOSED",
 };
 
 export function normalizeAdAccount(a: MetaAdAccountObject): NormalizedAdAccount {
