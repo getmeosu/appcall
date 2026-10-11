@@ -42,6 +42,28 @@ describe("Ashby normalizeJob", () => {
     expect(job.department).toBe("Platform");
     expect(job.employmentType).toBe("FULL_TIME");
     expect(job.createdAt).toBe("2025-10-20T09:00:00Z");
+    expect(job.status).toBeNull();
+    expect(job.locationId).toBeNull();
+    expect(job.departmentId).toBeNull();
+    expect(job.defaultInterviewPlanId).toBeNull();
+    expect(job.customRequisitionId).toBeNull();
+  });
+
+  it("maps authenticated job.info observe fields", () => {
+    const job = normalizeJob({
+      id: "job-1",
+      title: "Staff Engineer",
+      status: "Open",
+      locationId: "loc-1",
+      departmentId: "dept-1",
+      defaultInterviewPlanId: "plan-1",
+      customRequisitionId: "REQ-42",
+    });
+    expect(job.status).toBe("Open");
+    expect(job.locationId).toBe("loc-1");
+    expect(job.departmentId).toBe("dept-1");
+    expect(job.defaultInterviewPlanId).toBe("plan-1");
+    expect(job.customRequisitionId).toBe("REQ-42");
   });
 
   it("prefixes id with ash-job:", () => {
@@ -128,6 +150,7 @@ describe("Ashby normalizeCandidate", () => {
     expect(candidate.applicationIds).toEqual(["f9e52a51-a075-4116-a7b8-484deba69004"]);
     expect(candidate.profileUrl).toContain("e9ed20fd-d45f-4aad-8a00-a19bfba0083e");
     expect(candidate.source).toBe("Applied");
+    expect(candidate.tags).toEqual([]);
     expect(candidate.createdAt).toBe("2024-01-15T10:30:00.000Z");
   });
 
@@ -149,6 +172,15 @@ describe("Ashby normalizeCandidate", () => {
     expect(candidate.applicationIds).toEqual([]);
     expect(candidate.profileUrl).toBeNull();
     expect(candidate.source).toBeNull();
+    expect(candidate.tags).toEqual([]);
+  });
+
+  it("extracts tag titles from candidate.info tags", () => {
+    const candidate = normalizeCandidate({
+      id: "c1",
+      tags: [{ id: "t1", title: "Strong candidate", isArchived: false }, "Legacy"],
+    } as never);
+    expect(candidate.tags).toEqual(["Strong candidate", "Legacy"]);
   });
 });
 
@@ -197,6 +229,20 @@ describe("Ashby normalizeApplication", () => {
     expect(app.stageId).toBe("c153b3e9-8b97-4fc0-bad1-6c654122c1f8");
     expect(app.stageTitle).toBe("Application Review");
     expect(app.archivedAt).toBeNull();
+    expect(app.source).toBeNull();
+    expect(app.sourceId).toBeNull();
+    expect(app.creditedToUserId).toBeNull();
+  });
+
+  it("extracts sourceId and creditedToUserId from application.info", () => {
+    const app = normalizeApplication({
+      id: "a1",
+      source: { id: "src-9", title: "Referral" },
+      creditedToUser: { id: "usr-9", firstName: "Ada" },
+    } as never);
+    expect(app.source).toBe("Referral");
+    expect(app.sourceId).toBe("src-9");
+    expect(app.creditedToUserId).toBe("usr-9");
   });
 
   it("handles archived application without stage", () => {

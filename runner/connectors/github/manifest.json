@@ -1,7 +1,7 @@
 {
   "key": "github",
   "name": "GitHub",
-  "version": "0.70.0",
+  "version": "0.78.1",
   "runtime": "bun",
   "categories": [
     "dev-tools"
@@ -26,7 +26,8 @@
     "allowedHosts": [
       "api.github.com",
       "github.com",
-      "uploads.github.com"
+      "uploads.github.com",
+      "objects.githubusercontent.com"
     ]
   },
   "operations": {
@@ -24432,12 +24433,12 @@
     },
     "repos.dependency_graph.sbom.get": {
       "kind": "action",
-      "timeoutMs": 15000,
+      "timeoutMs": 60000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
       "sideEffect": "read",
       "title": "Get a repository dependency graph SBOM",
-      "description": "GET /repos/{owner}/{repo}/dependency-graph/sbom. A 200 is the upstream SPDX JSON body. A 404 is CONNECTOR_UPSTREAM_ERROR. Read only. No effectPolicy and no reconcile.",
+      "description": "GET /repos/{owner}/{repo}/dependency-graph/sbom/generate-report then poll GET /repos/{owner}/{repo}/dependency-graph/sbom/fetch-report/{sbom_uuid} (async SBOM; sync GET \u2026/dependency-graph/sbom removalDate 2026-11-13). Generate returns 201 {sbom_url}; fetch returns 202 while processing and 302 Location when ready; follow Location on objects.githubusercontent.com (allowlisted) and return SPDX JSON under sbom. Poll budget 15\u00d72s under timeoutMs 60000. A 404 is CONNECTOR_UPSTREAM_ERROR. Poll exhaustion is CONNECTOR_UPSTREAM_ERROR. Read only. No effectPolicy and no reconcile.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -36026,6 +36027,4775 @@
                 "type": "boolean"
               }
             }
+          }
+        }
+      }
+    },
+    "actions.secrets.public_key.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Get a repository Actions secrets public key",
+      "description": "GET /repos/{owner}/{repo}/actions/secrets/public-key. Returns key_id and key for sealing repository Actions secrets. A 200 is the public key. A 404 is CONNECTOR_UPSTREAM_ERROR. Read only. No effectPolicy and no reconcile.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "owner",
+          "repo"
+        ],
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner. A single path segment. The name is not case sensitive."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name. A single path segment. The name is not case sensitive."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "publicKey": {
+            "type": "object",
+            "properties": {
+              "keyId": {
+                "type": "string"
+              },
+              "key": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "actions.secrets.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Get a repository Actions secret metadata",
+      "description": "GET /repos/{owner}/{repo}/actions/secrets/{secret_name}. Returns secret metadata only (never a value). A 200 is name/created_at/updated_at. A 404 is CONNECTOR_UPSTREAM_ERROR. Read only. Secret GETs are not observes. No effectPolicy and no reconcile.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "owner",
+          "repo",
+          "secretName"
+        ],
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner. A single path segment. The name is not case sensitive."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name. A single path segment. The name is not case sensitive."
+          },
+          "secretName": {
+            "type": "string",
+            "description": "Secret name. URL-encoded in the path. Never a secret value."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "secret": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "actions.secrets.create_or_update": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 65536,
+      "sideEffect": "write",
+      "title": "Create or update a repository Actions secret",
+      "description": "PUT /repos/{owner}/{repo}/actions/secrets/{secret_name}. kind=action, sideEffect=write. Success is 201 when creating and 204 when updating. Caller-supplied encryptedValue + keyId (sealed-box tip pattern). Secret GETs are not observes. No effectPolicy, no reconcile, and no effect. A 404 is CONNECTOR_UPSTREAM_ERROR. Bearer auth only. The body carries ciphertext, not a plaintext secret.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "owner",
+          "repo",
+          "secretName",
+          "encryptedValue",
+          "keyId"
+        ],
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner. A single path segment. The name is not case sensitive."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name. A single path segment. The name is not case sensitive."
+          },
+          "secretName": {
+            "type": "string",
+            "description": "Secret name. URL-encoded in the path."
+          },
+          "encryptedValue": {
+            "type": "string",
+            "description": "LibSodium-sealed secret ciphertext (Base64). Not plaintext."
+          },
+          "keyId": {
+            "type": "string",
+            "description": "Public key id used to seal encryptedValue. String key_id from the public-key GET."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "upserted": {
+            "type": "boolean",
+            "description": "True when the secret was created or updated."
+          },
+          "created": {
+            "type": "boolean",
+            "description": "True when the response was 201."
+          },
+          "status": {
+            "type": "number",
+            "description": "HTTP status (201 or 204)."
+          },
+          "owner": {
+            "type": "string",
+            "description": "Repository owner."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "secretName": {
+            "type": "string",
+            "description": "Secret name."
+          }
+        }
+      }
+    },
+    "actions.secrets.delete": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 65536,
+      "sideEffect": "write",
+      "title": "Delete a repository Actions secret",
+      "description": "DELETE /repos/{owner}/{repo}/actions/secrets/{secret_name}. kind=action, sideEffect=write. Success is 204. Secret GETs are not observes. No effectPolicy, no reconcile, and no effect. A 404 is CONNECTOR_UPSTREAM_ERROR, not success. Bearer auth only.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "owner",
+          "repo",
+          "secretName"
+        ],
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner. A single path segment. The name is not case sensitive."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name. A single path segment. The name is not case sensitive."
+          },
+          "secretName": {
+            "type": "string",
+            "description": "Secret name. URL-encoded in the path."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "deleted": {
+            "type": "boolean",
+            "description": "True when the secret was deleted."
+          },
+          "owner": {
+            "type": "string",
+            "description": "Repository owner."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "secretName": {
+            "type": "string",
+            "description": "Secret name."
+          }
+        }
+      }
+    },
+    "actions.org_secrets.create_or_update": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 65536,
+      "sideEffect": "write",
+      "title": "Create or update an organization Actions secret",
+      "description": "PUT /orgs/{org}/actions/secrets/{secret_name}. kind=action, sideEffect=write. Success is 201 when creating and 204 when updating. Caller-supplied encryptedValue + keyId. visibility is all, private, or selected. selectedRepositoryIds is required when visibility is selected. Secret GETs are not observes. No effectPolicy, no reconcile, and no effect. A 404 is CONNECTOR_UPSTREAM_ERROR. Bearer auth only.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "org",
+          "secretName",
+          "encryptedValue",
+          "keyId",
+          "visibility"
+        ],
+        "properties": {
+          "org": {
+            "type": "string",
+            "description": "Organization login. A single path segment. The name is not case sensitive."
+          },
+          "secretName": {
+            "type": "string",
+            "description": "Secret name. URL-encoded in the path."
+          },
+          "encryptedValue": {
+            "type": "string",
+            "description": "LibSodium-sealed secret ciphertext (Base64). Not plaintext."
+          },
+          "keyId": {
+            "type": "string",
+            "description": "Public key id used to seal encryptedValue. String key_id from the org public-key GET."
+          },
+          "visibility": {
+            "type": "string",
+            "enum": [
+              "all",
+              "private",
+              "selected"
+            ],
+            "description": "Which repositories can use the secret: all, private, or selected."
+          },
+          "selectedRepositoryIds": {
+            "type": "array",
+            "items": {
+              "type": "integer"
+            },
+            "description": "Repository ids. Required when visibility is selected. Sent as selected_repository_ids."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "upserted": {
+            "type": "boolean",
+            "description": "True when the secret was created or updated."
+          },
+          "created": {
+            "type": "boolean",
+            "description": "True when the response was 201."
+          },
+          "status": {
+            "type": "number",
+            "description": "HTTP status (201 or 204)."
+          },
+          "org": {
+            "type": "string",
+            "description": "Organization login."
+          },
+          "secretName": {
+            "type": "string",
+            "description": "Secret name."
+          },
+          "visibility": {
+            "type": "string",
+            "description": "Visibility that was set."
+          }
+        }
+      }
+    },
+    "actions.org_secrets.delete": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 65536,
+      "sideEffect": "write",
+      "title": "Delete an organization Actions secret",
+      "description": "DELETE /orgs/{org}/actions/secrets/{secret_name}. kind=action, sideEffect=write. Success is 204. Secret GETs are not observes. No effectPolicy, no reconcile, and no effect. A 404 is CONNECTOR_UPSTREAM_ERROR, not success. Bearer auth only.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "org",
+          "secretName"
+        ],
+        "properties": {
+          "org": {
+            "type": "string",
+            "description": "Organization login. A single path segment. The name is not case sensitive."
+          },
+          "secretName": {
+            "type": "string",
+            "description": "Secret name. URL-encoded in the path."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "deleted": {
+            "type": "boolean",
+            "description": "True when the secret was deleted."
+          },
+          "org": {
+            "type": "string",
+            "description": "Organization login."
+          },
+          "secretName": {
+            "type": "string",
+            "description": "Secret name."
+          }
+        }
+      }
+    },
+    "actions.org_secrets.repositories.set": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 65536,
+      "sideEffect": "write",
+      "title": "Set selected repositories for an organization Actions secret",
+      "description": "PUT /orgs/{org}/actions/secrets/{secret_name}/repositories. kind=action, sideEffect=write. Success is 204. Replaces the selected repository list. actions.org_secrets.get and actions.org_secrets.repositories.list are not exact observes on id. No effectPolicy, no reconcile, and no effect. A 404 is CONNECTOR_UPSTREAM_ERROR. Bearer auth only.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "org",
+          "secretName",
+          "selectedRepositoryIds"
+        ],
+        "properties": {
+          "org": {
+            "type": "string",
+            "description": "Organization login. A single path segment. The name is not case sensitive."
+          },
+          "secretName": {
+            "type": "string",
+            "description": "Secret name. URL-encoded in the path."
+          },
+          "selectedRepositoryIds": {
+            "type": "array",
+            "items": {
+              "type": "integer"
+            },
+            "description": "Repository ids that can access the secret. This replaces the selected list."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "set": {
+            "type": "boolean",
+            "description": "True when the selected repositories were replaced."
+          },
+          "org": {
+            "type": "string",
+            "description": "Organization login."
+          },
+          "secretName": {
+            "type": "string",
+            "description": "Secret name."
+          },
+          "selectedRepositoryIds": {
+            "type": "array",
+            "items": {
+              "type": "integer"
+            }
+          }
+        }
+      }
+    },
+    "actions.org_secrets.repositories.add": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 65536,
+      "sideEffect": "write",
+      "title": "Add a selected repository to an organization Actions secret",
+      "description": "PUT /orgs/{org}/actions/secrets/{secret_name}/repositories/{repository_id}. kind=action, sideEffect=write. Success is 204. Secret GETs are not observes. No effectPolicy, no reconcile, and no effect. A 404 is CONNECTOR_UPSTREAM_ERROR. Bearer auth only.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "org",
+          "secretName",
+          "repositoryId"
+        ],
+        "properties": {
+          "org": {
+            "type": "string",
+            "description": "Organization login. A single path segment. The name is not case sensitive."
+          },
+          "secretName": {
+            "type": "string",
+            "description": "Secret name. URL-encoded in the path."
+          },
+          "repositoryId": {
+            "type": "integer",
+            "description": "Repository id to add."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "added": {
+            "type": "boolean",
+            "description": "True when the repository was added."
+          },
+          "org": {
+            "type": "string",
+            "description": "Organization login."
+          },
+          "secretName": {
+            "type": "string",
+            "description": "Secret name."
+          },
+          "repositoryId": {
+            "type": "integer",
+            "description": "Repository id that was added."
+          }
+        }
+      }
+    },
+    "repos.environments.deployment_protection_rules.create": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Enable a custom deployment protection rule for an environment",
+      "description": "POST /repos/{owner}/{repo}/environments/{environment_name}/deployment_protection_rules. kind=action, sideEffect=write. Success is 201 with the enabled rule. Creates a new id, so no effectPolicy, no reconcile, and no effect. A 404 is CONNECTOR_UPSTREAM_ERROR. Sibling repos.environments.deployment_protection_rules.delete. Bearer auth only.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "owner",
+          "repo",
+          "environmentName",
+          "integrationId"
+        ],
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner. A single path segment. The name is not case sensitive."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name. A single path segment. The name is not case sensitive."
+          },
+          "environmentName": {
+            "type": "string",
+            "description": "Environment name. Slashes are URL-encoded."
+          },
+          "integrationId": {
+            "type": "integer",
+            "description": "GitHub App integration id for the custom protection rule."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "rule": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "integer"
+              },
+              "nodeId": {
+                "type": "string"
+              },
+              "enabled": {
+                "type": "boolean"
+              },
+              "appId": {
+                "type": "integer"
+              },
+              "appSlug": {
+                "type": "string"
+              },
+              "appName": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "markdown.render_raw": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Render a Markdown document as raw text/plain",
+      "description": "POST /markdown/raw. kind=action, sideEffect=read. Success is 200 HTML. Request body is text/plain (the Markdown text), not JSON. Persists nothing and is safe to retry. No effectPolicy, no reconcile, and no effect. Sibling markdown.render. Bearer auth only.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "text"
+        ],
+        "properties": {
+          "text": {
+            "type": "string",
+            "description": "Markdown text sent as the raw text/plain request body."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "html": {
+            "type": "string",
+            "description": "Rendered HTML."
+          }
+        }
+      }
+    },
+    "repos.codespaces.secrets.delete": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 65536,
+      "sideEffect": "write",
+      "title": "Delete a repository Codespaces secret",
+      "description": "DELETE /repos/{owner}/{repo}/codespaces/secrets/{secret_name}. kind=action, sideEffect=write. Success is 204. Secret GETs are not observes. No effectPolicy, no reconcile, and no effect. A 404 is CONNECTOR_UPSTREAM_ERROR, not success. Bearer auth only.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "owner",
+          "repo",
+          "secretName"
+        ],
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner. A single path segment. The name is not case sensitive."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name. A single path segment. The name is not case sensitive."
+          },
+          "secretName": {
+            "type": "string",
+            "description": "Secret name. URL-encoded in the path."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "deleted": {
+            "type": "boolean",
+            "description": "True when the secret was deleted."
+          },
+          "owner": {
+            "type": "string",
+            "description": "Repository owner."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "secretName": {
+            "type": "string",
+            "description": "Secret name."
+          }
+        }
+      }
+    },
+    "user.codespaces.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Get a codespace for the authenticated user",
+      "description": "GET /user/codespaces/{codespace_name}. Returns one codespace. A 200 is the codespace. A 404 is CONNECTOR_UPSTREAM_ERROR. Read only. No effectPolicy and no reconcile.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "codespaceName"
+        ],
+        "properties": {
+          "codespaceName": {
+            "type": "string",
+            "description": "Codespace name. A single path segment."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "codespace": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "user.codespaces.update": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Update a codespace for the authenticated user",
+      "description": "PATCH /user/codespaces/{codespace_name}. kind=action, sideEffect=write. Success is 200 with the codespace. At least one of machine, displayName, recentFolders is required. user.codespaces.get is co-carded but is not an exact observe (PATCH machine is a string; GET returns a machine object). No effectPolicy, no reconcile, and no effect. A 404 is CONNECTOR_UPSTREAM_ERROR. Bearer auth only.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "codespaceName"
+        ],
+        "properties": {
+          "codespaceName": {
+            "type": "string",
+            "description": "Codespace name. A single path segment."
+          },
+          "machine": {
+            "type": "string",
+            "description": "Machine name to transition to (for example standardLinux)."
+          },
+          "displayName": {
+            "type": "string",
+            "description": "Display name for the codespace. Sent as display_name."
+          },
+          "recentFolders": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Recently opened folders. Sent as recent_folders."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "codespace": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "user.emails.delete": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 65536,
+      "sideEffect": "write",
+      "title": "Delete email addresses for the authenticated user",
+      "description": "DELETE /user/emails. kind=action, sideEffect=write. Success is 204. Body is {emails}. No effectPolicy, no reconcile, and no effect. A 404 is CONNECTOR_UPSTREAM_ERROR, not success. Bearer auth only.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "emails"
+        ],
+        "properties": {
+          "emails": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Email addresses to delete. At least one."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "deleted": {
+            "type": "boolean",
+            "description": "True when the emails were deleted."
+          },
+          "emails": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Emails that were requested for deletion."
+          }
+        }
+      }
+    },
+    "user.email.visibility.set": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Set primary email visibility for the authenticated user",
+      "description": "PATCH /user/email/visibility. kind=action, sideEffect=write. Success is 200 with the email list. One-shot; no exact observe GET on tip. No effectPolicy, no reconcile, and no effect. A 404 is CONNECTOR_UPSTREAM_ERROR. Bearer auth only.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "visibility"
+        ],
+        "properties": {
+          "visibility": {
+            "type": "string",
+            "enum": [
+              "public",
+              "private"
+            ],
+            "description": "Primary email visibility."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "emails": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "email": {
+                  "type": "string"
+                },
+                "primary": {
+                  "type": "boolean"
+                },
+                "verified": {
+                  "type": "boolean"
+                },
+                "visibility": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "user.memberships.orgs.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "List organization memberships for the authenticated user",
+      "description": "GET /user/memberships/orgs. Lists organization memberships for the authenticated user. Optional state filter active|pending. A 200 is the memberships array. A 404 is CONNECTOR_UPSTREAM_ERROR. Read only. No effectPolicy and no reconcile.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "state": {
+            "type": "string",
+            "enum": [
+              "active",
+              "pending"
+            ],
+            "description": "Filter by membership state."
+          },
+          "perPage": {
+            "type": "number",
+            "description": "Results per page (max 100)."
+          },
+          "page": {
+            "type": "number",
+            "description": "Page number."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "memberships": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "url": {
+                  "type": "string"
+                },
+                "state": {
+                  "type": "string"
+                },
+                "role": {
+                  "type": "string"
+                },
+                "organizationLogin": {
+                  "type": "string"
+                },
+                "organizationId": {
+                  "type": "integer"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "orgs.actions.runners.labels.add": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "effectPolicy": "Reconcile",
+      "reconcile": "orgs.actions.runners.labels.list",
+      "title": "Add labels to an organization self-hosted runner",
+      "description": "POST /orgs/{org}/actions/runners/{runner_id}/labels. Adds custom labels. Reconcile via orgs.actions.runners.labels.list (exact GET on tip). Success is 200 with labels. A 404 is CONNECTOR_UPSTREAM_ERROR.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "org",
+          "runnerId",
+          "labels"
+        ],
+        "properties": {
+          "org": {
+            "type": "string",
+            "description": "Organization login."
+          },
+          "runnerId": {
+            "type": "integer",
+            "description": "Self-hosted runner id."
+          },
+          "labels": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Custom label names to add."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "totalCount": {
+            "type": "number",
+            "description": "Label count."
+          },
+          "labels": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "integer"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "type": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "orgs.actions.runners.labels.set": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "effectPolicy": "Reconcile",
+      "reconcile": "orgs.actions.runners.labels.list",
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "totalCount": {
+            "type": "number",
+            "description": "Label count."
+          },
+          "labels": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "integer"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "type": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      },
+      "title": "Set labels for an organization self-hosted runner",
+      "description": "PUT /orgs/{org}/actions/runners/{runner_id}/labels. Replaces custom labels. Reconcile via orgs.actions.runners.labels.list. Success is 200. A 404 is CONNECTOR_UPSTREAM_ERROR.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "org",
+          "runnerId",
+          "labels"
+        ],
+        "properties": {
+          "org": {
+            "type": "string",
+            "description": "Organization login."
+          },
+          "runnerId": {
+            "type": "integer",
+            "description": "Self-hosted runner id."
+          },
+          "labels": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Custom label names to add."
+          }
+        }
+      }
+    },
+    "orgs.actions.runners.labels.remove_all": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Remove all custom labels from an organization self-hosted runner",
+      "description": "DELETE /orgs/{org}/actions/runners/{runner_id}/labels. Removes every custom label. No effectPolicy. Success is 200 with remaining labels. A 404 is CONNECTOR_UPSTREAM_ERROR.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "org",
+          "runnerId"
+        ],
+        "properties": {
+          "org": {
+            "type": "string",
+            "description": "Organization login."
+          },
+          "runnerId": {
+            "type": "integer",
+            "description": "Self-hosted runner id."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "totalCount": {
+            "type": "number",
+            "description": "Label count."
+          },
+          "labels": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "integer"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "type": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "repos.actions.runners.labels.add": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "effectPolicy": "Reconcile",
+      "reconcile": "repos.actions.runners.labels.list",
+      "title": "Add labels to a repository self-hosted runner",
+      "description": "POST /repos/{owner}/{repo}/actions/runners/{runner_id}/labels. Reconcile via repos.actions.runners.labels.list (exact GET on tip). Success is 200. A 404 is CONNECTOR_UPSTREAM_ERROR.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "owner",
+          "repo",
+          "runnerId",
+          "labels"
+        ],
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "runnerId": {
+            "type": "integer",
+            "description": "Self-hosted runner id."
+          },
+          "labels": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Custom label names to add."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "totalCount": {
+            "type": "number",
+            "description": "Label count."
+          },
+          "labels": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "integer"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "type": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "repos.actions.runners.labels.set": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "effectPolicy": "Reconcile",
+      "reconcile": "repos.actions.runners.labels.list",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "owner",
+          "repo",
+          "runnerId",
+          "labels"
+        ],
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "runnerId": {
+            "type": "integer",
+            "description": "Self-hosted runner id."
+          },
+          "labels": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Custom label names to add."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "totalCount": {
+            "type": "number",
+            "description": "Label count."
+          },
+          "labels": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "integer"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "type": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      },
+      "title": "Set labels for a repository self-hosted runner",
+      "description": "PUT /repos/{owner}/{repo}/actions/runners/{runner_id}/labels. Reconcile via repos.actions.runners.labels.list. Success is 200. A 404 is CONNECTOR_UPSTREAM_ERROR."
+    },
+    "orgs.actions.runners.jitconfig.create": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Create a just-in-time configuration for an organization runner",
+      "description": "POST /orgs/{org}/actions/runners/generate-jitconfig. Creates a new runner registration and returns encoded_jit_config. Create: no effectPolicy. Success is 201. A 404 is CONNECTOR_UPSTREAM_ERROR.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "org",
+          "name",
+          "runnerGroupId",
+          "labels"
+        ],
+        "properties": {
+          "org": {
+            "type": "string",
+            "description": "Organization login."
+          },
+          "name": {
+            "type": "string",
+            "description": "Runner name."
+          },
+          "runnerGroupId": {
+            "type": "integer",
+            "description": "Runner group id."
+          },
+          "labels": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Runner labels."
+          },
+          "workFolder": {
+            "type": "string",
+            "description": "Optional work folder."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "jitConfig": {
+            "type": "object",
+            "properties": {
+              "runnerId": {
+                "type": "integer"
+              },
+              "runnerName": {
+                "type": "string"
+              },
+              "encodedJitConfig": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "repos.actions.runners.jitconfig.create": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Create a just-in-time configuration for a repository runner",
+      "description": "POST /repos/{owner}/{repo}/actions/runners/generate-jitconfig. Create: no effectPolicy. Success is 201. A 404 is CONNECTOR_UPSTREAM_ERROR.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "owner",
+          "repo",
+          "name",
+          "runnerGroupId",
+          "labels"
+        ],
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "name": {
+            "type": "string",
+            "description": "Runner name."
+          },
+          "runnerGroupId": {
+            "type": "integer",
+            "description": "Runner group id."
+          },
+          "labels": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "workFolder": {
+            "type": "string",
+            "description": "Optional work folder."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "jitConfig": {
+            "type": "object",
+            "properties": {
+              "runnerId": {
+                "type": "integer"
+              },
+              "runnerName": {
+                "type": "string"
+              },
+              "encodedJitConfig": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "actions.permissions.access.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Get workflow access to a repository",
+      "description": "GET /repos/{owner}/{repo}/actions/permissions/access. Returns access_level. Read only. No effectPolicy.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "owner",
+          "repo"
+        ],
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "access": {
+            "type": "object",
+            "properties": {
+              "accessLevel": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "actions.permissions.access.set": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 65536,
+      "sideEffect": "write",
+      "effectPolicy": "Reconcile",
+      "reconcile": "actions.permissions.access.get",
+      "title": "Set workflow access to a repository",
+      "description": "PUT /repos/{owner}/{repo}/actions/permissions/access. Sets access_level. Reconcile via actions.permissions.access.get (exact observe; co-carded). Success is 204. A 404 is CONNECTOR_UPSTREAM_ERROR.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "owner",
+          "repo",
+          "accessLevel"
+        ],
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "accessLevel": {
+            "type": "string",
+            "enum": [
+              "none",
+              "user",
+              "organization"
+            ],
+            "description": "Workflow access level. Sent as access_level."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "access": {
+            "type": "object",
+            "properties": {
+              "accessLevel": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "orgs.actions.permissions.repositories.remove": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 65536,
+      "sideEffect": "write",
+      "title": "Disable a repository for GitHub Actions in an organization",
+      "description": "DELETE /orgs/{org}/actions/permissions/repositories/{repository_id}. Detaches from the selected list. No effectPolicy. Success is 204. A 404 is CONNECTOR_UPSTREAM_ERROR.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "org",
+          "repositoryId"
+        ],
+        "properties": {
+          "org": {
+            "type": "string",
+            "description": "Organization login."
+          },
+          "repositoryId": {
+            "type": "integer",
+            "description": "Repository id."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "removed": {
+            "type": "boolean",
+            "description": "True when removed."
+          },
+          "org": {
+            "type": "string",
+            "description": "Organization."
+          },
+          "repositoryId": {
+            "type": "integer",
+            "description": "Repository id."
+          }
+        }
+      }
+    },
+    "orgs.actions.permissions.repositories.set": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 65536,
+      "sideEffect": "write",
+      "title": "Set repositories enabled for GitHub Actions in an organization",
+      "description": "PUT /orgs/{org}/actions/permissions/repositories. Replaces the selected repository list. No effectPolicy (list observe is not exact-on-id). Success is 204. A 404 is CONNECTOR_UPSTREAM_ERROR.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "org",
+          "selectedRepositoryIds"
+        ],
+        "properties": {
+          "org": {
+            "type": "string",
+            "description": "Organization login."
+          },
+          "selectedRepositoryIds": {
+            "type": "array",
+            "items": {
+              "type": "integer"
+            },
+            "description": "Repository ids. Sent as selected_repository_ids."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "set": {
+            "type": "boolean",
+            "description": "True when set."
+          },
+          "org": {
+            "type": "string",
+            "description": "Organization."
+          },
+          "selectedRepositoryIds": {
+            "type": "array",
+            "items": {
+              "type": "integer"
+            }
+          }
+        }
+      }
+    },
+    "orgs.actions.permissions.repositories.add": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 65536,
+      "sideEffect": "write",
+      "title": "Enable a repository for GitHub Actions in an organization",
+      "description": "PUT /orgs/{org}/actions/permissions/repositories/{repository_id}. Adds one repository to the selected list. No effectPolicy. Success is 204. A 404 is CONNECTOR_UPSTREAM_ERROR.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "org",
+          "repositoryId"
+        ],
+        "properties": {
+          "org": {
+            "type": "string",
+            "description": "Organization login."
+          },
+          "repositoryId": {
+            "type": "integer",
+            "description": "Repository id."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "added": {
+            "type": "boolean",
+            "description": "True when added."
+          },
+          "org": {
+            "type": "string",
+            "description": "Organization."
+          },
+          "repositoryId": {
+            "type": "integer",
+            "description": "Repository id."
+          }
+        }
+      }
+    },
+    "actions.runs.deployment_protection_rule.review": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 65536,
+      "sideEffect": "write",
+      "title": "Review a custom deployment protection rule for a workflow run",
+      "description": "POST /repos/{owner}/{repo}/actions/runs/{run_id}/deployment_protection_rule. One-shot approve/reject. No effectPolicy. Success is 204. A 404 is CONNECTOR_UPSTREAM_ERROR.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "owner",
+          "repo",
+          "runId",
+          "environmentName",
+          "state"
+        ],
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "runId": {
+            "type": "integer",
+            "description": "Workflow run id."
+          },
+          "environmentName": {
+            "type": "string",
+            "description": "Environment name. Sent as environment_name."
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "approved",
+              "rejected"
+            ],
+            "description": "Review decision."
+          },
+          "comment": {
+            "type": "string",
+            "description": "Optional review comment."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "reviewed": {
+            "type": "boolean",
+            "description": "True when reviewed."
+          },
+          "owner": {
+            "type": "string",
+            "description": "Owner."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repo."
+          },
+          "runId": {
+            "type": "integer",
+            "description": "Run id."
+          },
+          "environmentName": {
+            "type": "string",
+            "description": "Environment."
+          },
+          "state": {
+            "type": "string",
+            "description": "Decision."
+          }
+        }
+      }
+    },
+    "orgs.actions.oidc.customization.sub.set": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "effectPolicy": "Reconcile",
+      "reconcile": "orgs.actions.oidc.customization.sub.get",
+      "title": "Set organization OIDC subject claim template",
+      "description": "PUT /orgs/{org}/actions/oidc/customization/sub. Sets include_claim_keys and optional use_immutable_subject. Reconcile via orgs.actions.oidc.customization.sub.get (exact observe on tip G3). Success is 201. A 404 is CONNECTOR_UPSTREAM_ERROR.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "org",
+          "includeClaimKeys"
+        ],
+        "properties": {
+          "org": {
+            "type": "string",
+            "description": "Organization login."
+          },
+          "includeClaimKeys": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Claim keys included in the OIDC subject."
+          },
+          "useImmutableSubject": {
+            "type": "boolean",
+            "description": "Opt in to immutable repository-ID-based sub claims."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "subject": {
+            "type": "object",
+            "properties": {
+              "includeClaimKeys": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "useImmutableSubject": {
+                "type": "boolean"
+              }
+            }
+          }
+        }
+      }
+    },
+    "actions.oidc.customization.sub.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Get repository OIDC subject claim template",
+      "description": "GET /repos/{owner}/{repo}/actions/oidc/customization/sub. Returns use_default, include_claim_keys, and use_immutable_subject. Read only. No effectPolicy.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "owner",
+          "repo"
+        ],
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "subject": {
+            "type": "object",
+            "properties": {
+              "useDefault": {
+                "type": "boolean"
+              },
+              "includeClaimKeys": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "useImmutableSubject": {
+                "type": "boolean"
+              }
+            }
+          }
+        }
+      }
+    },
+    "actions.oidc.customization.sub.set": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "effectPolicy": "Reconcile",
+      "reconcile": "actions.oidc.customization.sub.get",
+      "title": "Set repository OIDC subject claim template",
+      "description": "PUT /repos/{owner}/{repo}/actions/oidc/customization/sub. Sets use_default and optional include_claim_keys / use_immutable_subject. Reconcile via actions.oidc.customization.sub.get (exact observe; co-carded). Success is 201. A 404 is CONNECTOR_UPSTREAM_ERROR.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "owner",
+          "repo",
+          "useDefault"
+        ],
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "useDefault": {
+            "type": "boolean",
+            "description": "Whether to use the organization default template."
+          },
+          "includeClaimKeys": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Claim keys when useDefault is false."
+          },
+          "useImmutableSubject": {
+            "type": "boolean",
+            "description": "Opt in to immutable repository-ID-based sub claims."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "subject": {
+            "type": "object",
+            "properties": {
+              "useDefault": {
+                "type": "boolean"
+              },
+              "includeClaimKeys": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "useImmutableSubject": {
+                "type": "boolean"
+              }
+            }
+          }
+        }
+      }
+    },
+    "actions.org_variables.repositories.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "List selected repositories for an organization variable",
+      "description": "GET /orgs/{org}/actions/variables/{name}/repositories. Lists selected repositories. A 200 is total_count and repositories. A 404 is CONNECTOR_UPSTREAM_ERROR. Read only. No effectPolicy.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "org",
+          "name"
+        ],
+        "properties": {
+          "org": {
+            "type": "string",
+            "description": "Organization login."
+          },
+          "name": {
+            "type": "string",
+            "description": "Variable name."
+          },
+          "perPage": {
+            "type": "integer",
+            "description": "Results per page."
+          },
+          "page": {
+            "type": "integer",
+            "description": "Page number."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "totalCount": {
+            "type": "integer"
+          },
+          "repositories": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      }
+    },
+    "actions.org_variables.repositories.set": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Set selected repositories for an organization variable",
+      "description": "PUT /orgs/{org}/actions/variables/{name}/repositories. Replaces the selected repository list. kind=action, sideEffect=write. Success is 204. List observe is not exact on id. No effectPolicy, no reconcile, and no effect. A 404 is CONNECTOR_UPSTREAM_ERROR.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "org",
+          "name",
+          "selectedRepositoryIds"
+        ],
+        "properties": {
+          "org": {
+            "type": "string",
+            "description": "Organization login."
+          },
+          "name": {
+            "type": "string",
+            "description": "Variable name."
+          },
+          "selectedRepositoryIds": {
+            "type": "array",
+            "items": {
+              "type": "integer"
+            },
+            "description": "Repository ids."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "set": {
+            "type": "boolean"
+          },
+          "org": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "selectedRepositoryIds": {
+            "type": "array",
+            "items": {
+              "type": "integer"
+            }
+          }
+        }
+      }
+    },
+    "actions.org_variables.repositories.remove": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Remove a repository from an organization variable",
+      "description": "DELETE /orgs/{org}/actions/variables/{name}/repositories/{repository_id}. kind=action, sideEffect=write. Success is 204. Detach; no effectPolicy. A 404 is CONNECTOR_UPSTREAM_ERROR.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "org",
+          "name",
+          "repositoryId"
+        ],
+        "properties": {
+          "org": {
+            "type": "string",
+            "description": "Organization login."
+          },
+          "name": {
+            "type": "string",
+            "description": "Variable name."
+          },
+          "repositoryId": {
+            "type": "integer",
+            "description": "Repository id."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "removed": {
+            "type": "boolean"
+          },
+          "org": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "repositoryId": {
+            "type": "integer"
+          }
+        }
+      }
+    },
+    "actions.org_secrets.repositories.remove": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Remove a repository from an organization Actions secret",
+      "description": "DELETE /orgs/{org}/actions/secrets/{secret_name}/repositories/{repository_id}. kind=action, sideEffect=write. Success is 204. Detach; secret GETs are not observes. No effectPolicy. A 404 is CONNECTOR_UPSTREAM_ERROR.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "org",
+          "secretName",
+          "repositoryId"
+        ],
+        "properties": {
+          "org": {
+            "type": "string",
+            "description": "Organization login."
+          },
+          "secretName": {
+            "type": "string",
+            "description": "Secret name."
+          },
+          "repositoryId": {
+            "type": "integer",
+            "description": "Repository id."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "removed": {
+            "type": "boolean"
+          },
+          "org": {
+            "type": "string"
+          },
+          "secretName": {
+            "type": "string"
+          },
+          "repositoryId": {
+            "type": "integer"
+          }
+        }
+      }
+    },
+    "orgs.properties.schema.update": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Create or update organization custom property schemas",
+      "description": "PATCH /orgs/{org}/properties/schema. Bulk create-or-update custom property schemas. kind=action, sideEffect=write. Success is 200 with schemas. No effectPolicy (bulk upsert). A 404 is CONNECTOR_UPSTREAM_ERROR.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "org",
+          "properties"
+        ],
+        "properties": {
+          "org": {
+            "type": "string",
+            "description": "Organization login."
+          },
+          "properties": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "propertyName": {
+                  "type": "string"
+                },
+                "valueType": {
+                  "type": "string"
+                },
+                "required": {
+                  "type": "boolean"
+                },
+                "defaultValue": {},
+                "description": {
+                  "type": "string"
+                },
+                "allowedValues": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "valuesEditableBy": {
+                  "type": "string"
+                },
+                "requireExplicitValues": {
+                  "type": "boolean"
+                }
+              }
+            },
+            "description": "Schemas to create or update."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "properties": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      }
+    },
+    "orgs.properties.schema.create_or_update": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Create or update one organization custom property schema",
+      "description": "PUT /orgs/{org}/properties/schema/{custom_property_name}. Upsert keyed by caller-supplied name (can create). kind=action, sideEffect=write. Success is 200. No effectPolicy (not a pure update). A 404 is CONNECTOR_UPSTREAM_ERROR.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "org",
+          "customPropertyName",
+          "valueType"
+        ],
+        "properties": {
+          "org": {
+            "type": "string",
+            "description": "Organization login."
+          },
+          "customPropertyName": {
+            "type": "string",
+            "description": "Custom property name."
+          },
+          "valueType": {
+            "type": "string",
+            "description": "string | single_select | multi_select | true_false | url."
+          },
+          "required": {
+            "type": "boolean",
+            "description": "Whether the property is required."
+          },
+          "defaultValue": {
+            "description": "Default value string, string array, or null."
+          },
+          "description": {
+            "type": "string",
+            "description": "Short description."
+          },
+          "allowedValues": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "valuesEditableBy": {
+            "type": "string",
+            "description": "org_actors or org_and_repo_actors."
+          },
+          "requireExplicitValues": {
+            "type": "boolean",
+            "description": "Whether explicit values are mandatory."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "property": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "orgs.properties.values.update": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Update custom property values across organization repositories",
+      "description": "PATCH /orgs/{org}/properties/values. Applies property values to named repositories. kind=action, sideEffect=write. Success is 204. List observe is not exact on id. No effectPolicy. A 404 is CONNECTOR_UPSTREAM_ERROR.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "org",
+          "repositoryNames",
+          "properties"
+        ],
+        "properties": {
+          "org": {
+            "type": "string",
+            "description": "Organization login."
+          },
+          "repositoryNames": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "properties": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "propertyName": {
+                  "type": "string"
+                },
+                "value": {}
+              }
+            }
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "updated": {
+            "type": "boolean"
+          },
+          "org": {
+            "type": "string"
+          },
+          "repositoryNames": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "properties": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      }
+    },
+    "repos.properties.values.update": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Update custom property values for a repository",
+      "description": "PATCH /repos/{owner}/{repo}/properties/values. kind=action, sideEffect=write. Success is 204. List observe is not exact on id. No effectPolicy. A 404 is CONNECTOR_UPSTREAM_ERROR.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "owner",
+          "repo",
+          "properties"
+        ],
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "properties": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "propertyName": {
+                  "type": "string"
+                },
+                "value": {}
+              }
+            }
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "updated": {
+            "type": "boolean"
+          },
+          "owner": {
+            "type": "string"
+          },
+          "repo": {
+            "type": "string"
+          },
+          "properties": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      }
+    },
+    "repos.environments.deployment_protection_rules.apps.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "List custom deployment protection rule apps for an environment",
+      "description": "GET /repos/{owner}/{repo}/environments/{environment_name}/deployment_protection_rules/apps. Lists available custom deployment protection rule integrations. A 200 is total_count and apps. A 404 is CONNECTOR_UPSTREAM_ERROR. Read only. No effectPolicy.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "owner",
+          "repo",
+          "environmentName"
+        ],
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "environmentName": {
+            "type": "string",
+            "description": "Environment name."
+          },
+          "perPage": {
+            "type": "integer",
+            "description": "Results per page."
+          },
+          "page": {
+            "type": "integer",
+            "description": "Page number."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "totalCount": {
+            "type": "integer"
+          },
+          "apps": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      }
+    },
+    "user.codespaces.delete": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Delete a codespace for the authenticated user",
+      "description": "DELETE /user/codespaces/{codespace_name}. kind=action, sideEffect=write. Success is 202 (async). No effectPolicy. A 404 is CONNECTOR_UPSTREAM_ERROR.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "codespaceName"
+        ],
+        "properties": {
+          "codespaceName": {
+            "type": "string",
+            "description": "Codespace name."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "deleted": {
+            "type": "boolean"
+          },
+          "codespaceName": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "orgs.members.codespaces.delete": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Delete a codespace owned by an organization member",
+      "description": "DELETE /orgs/{org}/members/{username}/codespaces/{codespace_name}. kind=action, sideEffect=write. Success is 202 (async). No effectPolicy. A 404 is CONNECTOR_UPSTREAM_ERROR.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "org",
+          "username",
+          "codespaceName"
+        ],
+        "properties": {
+          "org": {
+            "type": "string",
+            "description": "Organization login."
+          },
+          "username": {
+            "type": "string",
+            "description": "Member login."
+          },
+          "codespaceName": {
+            "type": "string",
+            "description": "Codespace name."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "deleted": {
+            "type": "boolean"
+          },
+          "org": {
+            "type": "string"
+          },
+          "username": {
+            "type": "string"
+          },
+          "codespaceName": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "repos.codespaces.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "List codespaces in a repository",
+      "description": "GET /repos/{owner}/{repo}/codespaces. Lists codespaces. A 200 is total_count and codespaces. A 404 is CONNECTOR_UPSTREAM_ERROR. Read only. No effectPolicy.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "owner",
+          "repo"
+        ],
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "perPage": {
+            "type": "integer",
+            "description": "Results per page."
+          },
+          "page": {
+            "type": "integer",
+            "description": "Page number."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "totalCount": {
+            "type": "integer"
+          },
+          "codespaces": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      }
+    },
+    "repos.codespaces.devcontainers.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "List repository devcontainer configs for the user",
+      "description": "GET /repos/{owner}/{repo}/codespaces/devcontainers. Lists available .devcontainer configs. A 200 is total_count and devcontainers. A 404 is CONNECTOR_UPSTREAM_ERROR. Read only. No effectPolicy.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "owner",
+          "repo"
+        ],
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "perPage": {
+            "type": "integer",
+            "description": "Results per page."
+          },
+          "page": {
+            "type": "integer",
+            "description": "Page number."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "totalCount": {
+            "type": "integer"
+          },
+          "devcontainers": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      }
+    },
+    "repos.codespaces.permissions_check.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Check whether codespace permissions for a devcontainer were accepted",
+      "description": "GET /repos/{owner}/{repo}/codespaces/permissions_check. Returns accepted. Query requires ref and devcontainer_path. A 404 is CONNECTOR_UPSTREAM_ERROR. Read only. No effectPolicy.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "owner",
+          "repo",
+          "ref",
+          "devcontainerPath"
+        ],
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "ref": {
+            "type": "string",
+            "description": "Git ref."
+          },
+          "devcontainerPath": {
+            "type": "string",
+            "description": "Path to the .devcontainer file."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "check": {
+            "type": "object",
+            "properties": {
+              "accepted": {
+                "type": "boolean"
+              }
+            }
+          }
+        }
+      }
+    },
+    "orgs.codespaces.secrets.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Get an organization codespaces secret metadata",
+      "description": "GET /orgs/{org}/codespaces/secrets/{secret_name}. Returns metadata only (never a value). Secret GETs are not observes. A 404 is CONNECTOR_UPSTREAM_ERROR. Read only. No effectPolicy.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "org",
+          "secretName"
+        ],
+        "properties": {
+          "org": {
+            "type": "string",
+            "description": "Organization login."
+          },
+          "secretName": {
+            "type": "string",
+            "description": "Secret name."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "secret": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "orgs.codespaces.secrets.create_or_update": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Create or update an organization codespaces secret",
+      "description": "PUT /orgs/{org}/codespaces/secrets/{secret_name}. Sealed-box upsert with encrypted_value + key_id + visibility. kind=action, sideEffect=write. Success is 201/204. Secret GETs are not observes. No effectPolicy. A 404 is CONNECTOR_UPSTREAM_ERROR.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "org",
+          "secretName",
+          "encryptedValue",
+          "keyId",
+          "visibility"
+        ],
+        "properties": {
+          "org": {
+            "type": "string",
+            "description": "Organization login."
+          },
+          "secretName": {
+            "type": "string",
+            "description": "Secret name."
+          },
+          "encryptedValue": {
+            "type": "string",
+            "description": "Libsodium sealed-box ciphertext."
+          },
+          "keyId": {
+            "type": "string",
+            "description": "Public key id used to encrypt."
+          },
+          "visibility": {
+            "type": "string",
+            "description": "all | private | selected."
+          },
+          "selectedRepositoryIds": {
+            "type": "array",
+            "items": {
+              "type": "integer"
+            },
+            "description": "Required when visibility is selected."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "upserted": {
+            "type": "boolean"
+          },
+          "created": {
+            "type": "boolean"
+          },
+          "status": {
+            "type": "integer"
+          },
+          "org": {
+            "type": "string"
+          },
+          "secretName": {
+            "type": "string"
+          },
+          "visibility": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "orgs.codespaces.secrets.delete": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Delete an organization codespaces secret",
+      "description": "DELETE /orgs/{org}/codespaces/secrets/{secret_name}. kind=action, sideEffect=write. Success is 204. No effectPolicy. A 404 is CONNECTOR_UPSTREAM_ERROR.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "org",
+          "secretName"
+        ],
+        "properties": {
+          "org": {
+            "type": "string",
+            "description": "Organization login."
+          },
+          "secretName": {
+            "type": "string",
+            "description": "Secret name."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "deleted": {
+            "type": "boolean"
+          },
+          "org": {
+            "type": "string"
+          },
+          "secretName": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "orgs.codespaces.secrets.repositories.set": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Set selected repositories for an organization codespaces secret",
+      "description": "PUT /orgs/{org}/codespaces/secrets/{secret_name}/repositories. Replaces the selected repository list. kind=action, sideEffect=write. Success is 204. List observe is not exact on id. No effectPolicy. A 404 is CONNECTOR_UPSTREAM_ERROR.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "org",
+          "secretName",
+          "selectedRepositoryIds"
+        ],
+        "properties": {
+          "org": {
+            "type": "string",
+            "description": "Organization login."
+          },
+          "secretName": {
+            "type": "string",
+            "description": "Secret name."
+          },
+          "selectedRepositoryIds": {
+            "type": "array",
+            "items": {
+              "type": "integer"
+            }
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "set": {
+            "type": "boolean"
+          },
+          "org": {
+            "type": "string"
+          },
+          "secretName": {
+            "type": "string"
+          },
+          "selectedRepositoryIds": {
+            "type": "array",
+            "items": {
+              "type": "integer"
+            }
+          }
+        }
+      }
+    },
+    "orgs.codespaces.secrets.repositories.remove": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Remove a repository from an organization codespaces secret",
+      "description": "DELETE /orgs/{org}/codespaces/secrets/{secret_name}/repositories/{repository_id}. kind=action, sideEffect=write. Success is 204. Detach. No effectPolicy. A 404 is CONNECTOR_UPSTREAM_ERROR.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "org",
+          "secretName",
+          "repositoryId"
+        ],
+        "properties": {
+          "org": {
+            "type": "string",
+            "description": "Organization login."
+          },
+          "secretName": {
+            "type": "string",
+            "description": "Secret name."
+          },
+          "repositoryId": {
+            "type": "integer",
+            "description": "Repository id."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "removed": {
+            "type": "boolean"
+          },
+          "org": {
+            "type": "string"
+          },
+          "secretName": {
+            "type": "string"
+          },
+          "repositoryId": {
+            "type": "integer"
+          }
+        }
+      }
+    },
+    "repos.codespaces.secrets.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Get a repository codespaces secret metadata",
+      "description": "GET /repos/{owner}/{repo}/codespaces/secrets/{secret_name}. Returns metadata only (never a value). Secret GETs are not observes. A 404 is CONNECTOR_UPSTREAM_ERROR. Read only. No effectPolicy.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "owner",
+          "repo",
+          "secretName"
+        ],
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "secretName": {
+            "type": "string",
+            "description": "Secret name."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "secret": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "dependabot.secrets.delete": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Delete a repository Dependabot secret",
+      "description": "DELETE /repos/{owner}/{repo}/dependabot/secrets/{secret_name}. kind=action, sideEffect=write. Success is 204. No effectPolicy. A 404 is CONNECTOR_UPSTREAM_ERROR.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "owner",
+          "repo",
+          "secretName"
+        ],
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "secretName": {
+            "type": "string",
+            "description": "Secret name."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "deleted": {
+            "type": "boolean"
+          },
+          "owner": {
+            "type": "string"
+          },
+          "repo": {
+            "type": "string"
+          },
+          "secretName": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "orgs.codespaces.secrets.public_key.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Get the organization codespaces secrets public key",
+      "description": "GET /orgs/{org}/codespaces/secrets/public-key. Returns key_id and key for sealed-box encryption. A 404 is CONNECTOR_UPSTREAM_ERROR. Read only. No effectPolicy.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "org"
+        ],
+        "properties": {
+          "org": {
+            "type": "string",
+            "description": "Organization login."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "publicKey": {
+            "type": "object",
+            "properties": {
+              "keyId": {
+                "type": "string"
+              },
+              "key": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "orgs.codespaces.secrets.repositories.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "List selected repositories for an organization codespaces secret",
+      "description": "GET /orgs/{org}/codespaces/secrets/{secret_name}/repositories. Lists selected repositories. A 200 is total_count and repositories. A 404 is CONNECTOR_UPSTREAM_ERROR. Read only. No effectPolicy.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "org",
+          "secretName"
+        ],
+        "properties": {
+          "org": {
+            "type": "string",
+            "description": "Organization login."
+          },
+          "secretName": {
+            "type": "string",
+            "description": "Secret name."
+          },
+          "perPage": {
+            "type": "integer",
+            "description": "Results per page."
+          },
+          "page": {
+            "type": "integer",
+            "description": "Page number."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "totalCount": {
+            "type": "integer"
+          },
+          "repositories": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      }
+    },
+    "repos.pages.update": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "effectPolicy": "Reconcile",
+      "reconcile": "repos.pages.get",
+      "title": "Update a GitHub Pages site",
+      "description": "PUT /repos/{owner}/{repo}/pages. Updates Pages settings. Reconcile via repos.pages.get (exact observe on tip). Success is 204. A 404 is CONNECTOR_UPSTREAM_ERROR.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "owner",
+          "repo"
+        ],
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "cname": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Custom domain or null to clear."
+          },
+          "httpsEnforced": {
+            "type": "boolean",
+            "description": "Enforce HTTPS."
+          },
+          "buildType": {
+            "type": "string",
+            "description": "legacy or workflow."
+          },
+          "source": {
+            "type": "object",
+            "properties": {
+              "branch": {
+                "type": "string"
+              },
+              "path": {
+                "type": "string"
+              }
+            },
+            "description": "Publishing source."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "updated": {
+            "type": "boolean"
+          },
+          "owner": {
+            "type": "string"
+          },
+          "repo": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "repos.private_vulnerability_reporting.enable": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "effectPolicy": "Reconcile",
+      "reconcile": "repos.private_vulnerability_reporting.get",
+      "title": "Enable private vulnerability reporting",
+      "description": "PUT /repos/{owner}/{repo}/private-vulnerability-reporting. Reconcile via repos.private_vulnerability_reporting.get (exact enabled observe on tip G3). Success is 204. A 404 is CONNECTOR_UPSTREAM_ERROR.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "owner",
+          "repo"
+        ],
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "owner": {
+            "type": "string"
+          },
+          "repo": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "repos.private_vulnerability_reporting.disable": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "effectPolicy": "Reconcile",
+      "reconcile": "repos.private_vulnerability_reporting.get",
+      "title": "Disable private vulnerability reporting",
+      "description": "DELETE /repos/{owner}/{repo}/private-vulnerability-reporting. Reconcile via repos.private_vulnerability_reporting.get (exact enabled observe on tip G3). Success is 204. A 404 is CONNECTOR_UPSTREAM_ERROR.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "owner",
+          "repo"
+        ],
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "owner": {
+            "type": "string"
+          },
+          "repo": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "code_scanning.sarifs.upload": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Upload a SARIF analysis",
+      "description": "POST /repos/{owner}/{repo}/code-scanning/sarifs. Async upload. Success is 202. Never Reconcile. A 404 is CONNECTOR_UPSTREAM_ERROR. No effectPolicy.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "owner",
+          "repo",
+          "commitSha",
+          "ref",
+          "sarif"
+        ],
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "commitSha": {
+            "type": "string",
+            "description": "Commit SHA."
+          },
+          "ref": {
+            "type": "string",
+            "description": "Fully qualified ref."
+          },
+          "sarif": {
+            "type": "string",
+            "description": "SARIF payload (base64 gzip)."
+          },
+          "checkoutUri": {
+            "type": "string",
+            "description": "Checkout URI."
+          },
+          "startedAt": {
+            "type": "string",
+            "description": "ISO8601 start."
+          },
+          "toolName": {
+            "type": "string",
+            "description": "Tool name."
+          },
+          "validate": {
+            "type": "boolean",
+            "description": "Validate SARIF."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "upload": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "repos.attestations.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "List repository attestations",
+      "description": "GET /repos/{owner}/{repo}/attestations/{subject_digest}. Lists attestations for a subject digest. A 200 is attestations. A 404 is CONNECTOR_UPSTREAM_ERROR. Read only. No effectPolicy.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "owner",
+          "repo",
+          "subjectDigest"
+        ],
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "subjectDigest": {
+            "type": "string",
+            "description": "Artifact digest."
+          },
+          "predicateType": {
+            "type": "string",
+            "description": "Predicate type filter."
+          },
+          "perPage": {
+            "type": "integer",
+            "description": "Results per page."
+          },
+          "before": {
+            "type": "string",
+            "description": "Cursor."
+          },
+          "after": {
+            "type": "string",
+            "description": "Cursor."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "attestations": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      }
+    },
+    "orgs.issues.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "List organization issues for the authenticated user",
+      "description": "GET /orgs/{org}/issues. Lists issues. A 200 is the issue list. A 404 is CONNECTOR_UPSTREAM_ERROR. Read only. No effectPolicy.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "org"
+        ],
+        "properties": {
+          "org": {
+            "type": "string",
+            "description": "Organization login."
+          },
+          "filter": {
+            "type": "string",
+            "description": "assigned|created|mentioned|subscribed|repos|all."
+          },
+          "state": {
+            "type": "string",
+            "description": "open|closed|all."
+          },
+          "labels": {
+            "type": "string",
+            "description": "Comma-separated labels."
+          },
+          "type": {
+            "type": "string",
+            "description": "Issue type."
+          },
+          "sort": {
+            "type": "string",
+            "description": "created|updated|comments."
+          },
+          "direction": {
+            "type": "string",
+            "description": "asc|desc."
+          },
+          "since": {
+            "type": "string",
+            "description": "ISO8601."
+          },
+          "perPage": {
+            "type": "integer",
+            "description": "Results per page."
+          },
+          "page": {
+            "type": "integer",
+            "description": "Page number."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "issues": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      }
+    },
+    "orgs.packages.versions.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "List organization package versions",
+      "description": "GET /orgs/{org}/packages/{package_type}/{package_name}/versions. Lists package versions. A 200 is the version list. A 404 is CONNECTOR_UPSTREAM_ERROR. Read only. No effectPolicy.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "org",
+          "packageType",
+          "packageName"
+        ],
+        "properties": {
+          "org": {
+            "type": "string",
+            "description": "Organization login."
+          },
+          "packageType": {
+            "type": "string",
+            "description": "Package type."
+          },
+          "packageName": {
+            "type": "string",
+            "description": "Package name."
+          },
+          "state": {
+            "type": "string",
+            "description": "active|deleted."
+          },
+          "perPage": {
+            "type": "integer",
+            "description": "Results per page."
+          },
+          "page": {
+            "type": "integer",
+            "description": "Page number."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "versions": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      }
+    },
+    "orgs.public_members.remove": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "effectPolicy": "Reconcile",
+      "reconcile": "orgs.public_members.check",
+      "title": "Conceal a public organization membership",
+      "description": "DELETE /orgs/{org}/public_members/{username}. Conceals public membership. Reconcile via orgs.public_members.check (exact GET on tip). Success is 204. A 404 is CONNECTOR_UPSTREAM_ERROR.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "org",
+          "username"
+        ],
+        "properties": {
+          "org": {
+            "type": "string",
+            "description": "Organization login."
+          },
+          "username": {
+            "type": "string",
+            "description": "Username."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "removed": {
+            "type": "boolean"
+          },
+          "org": {
+            "type": "string"
+          },
+          "username": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "user.interaction_limits.delete": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Remove authenticated user interaction limits",
+      "description": "DELETE /user/interaction-limits. kind=action, sideEffect=write. Success is 204. No effectPolicy (tip sibling orgs.interaction_limits.delete omits). A 404 is CONNECTOR_UPSTREAM_ERROR.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [],
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "deleted": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    "user.starred.check": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Check if the authenticated user starred a repository",
+      "description": "GET /user/starred/{owner}/{repo}. HTTP 204 means starred; HTTP 404 means not starred (both successful reads). Read only. No effectPolicy.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "owner",
+          "repo"
+        ],
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "starred": {
+            "type": "boolean"
+          },
+          "owner": {
+            "type": "string"
+          },
+          "repo": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "user.packages.delete": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Delete a package for the authenticated user",
+      "description": "DELETE /user/packages/{package_type}/{package_name}. kind=action, sideEffect=write. Success is 204. No effectPolicy. A 404 is CONNECTOR_UPSTREAM_ERROR.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "packageType",
+          "packageName"
+        ],
+        "properties": {
+          "packageType": {
+            "type": "string",
+            "description": "Package type."
+          },
+          "packageName": {
+            "type": "string",
+            "description": "Package name."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "deleted": {
+            "type": "boolean"
+          },
+          "packageType": {
+            "type": "string"
+          },
+          "packageName": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "user.packages.versions.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "List package versions for the authenticated user",
+      "description": "GET /user/packages/{package_type}/{package_name}/versions. Lists package versions. A 200 is the version list. A 404 is CONNECTOR_UPSTREAM_ERROR. Read only. No effectPolicy.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "packageType",
+          "packageName"
+        ],
+        "properties": {
+          "packageType": {
+            "type": "string",
+            "description": "Package type."
+          },
+          "packageName": {
+            "type": "string",
+            "description": "Package name."
+          },
+          "state": {
+            "type": "string",
+            "description": "active|deleted."
+          },
+          "perPage": {
+            "type": "integer",
+            "description": "Results per page."
+          },
+          "page": {
+            "type": "integer",
+            "description": "Page number."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "versions": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      }
+    },
+    "dependabot.secrets.public_key.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Get repository Dependabot secrets public key",
+      "description": "GET /repos/{owner}/{repo}/dependabot/secrets/public-key. Returns key_id and key for sealed-box encryption. A 404 is CONNECTOR_UPSTREAM_ERROR. Read only. No effectPolicy.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "owner",
+          "repo"
+        ],
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "publicKey": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "dependabot.secrets.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "List repository Dependabot secrets",
+      "description": "GET /repos/{owner}/{repo}/dependabot/secrets. Lists secret names and timestamps only. A 404 is CONNECTOR_UPSTREAM_ERROR. Read only. No effectPolicy.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "owner",
+          "repo"
+        ],
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "perPage": {
+            "type": "integer",
+            "description": "Results per page."
+          },
+          "page": {
+            "type": "integer",
+            "description": "Page number."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "totalCount": {
+            "type": "integer"
+          },
+          "secrets": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      }
+    },
+    "dependabot.secrets.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Get repository Dependabot secret metadata",
+      "description": "GET /repos/{owner}/{repo}/dependabot/secrets/{secret_name}. Metadata only (never a value). Secret GETs are not observes. A 404 is CONNECTOR_UPSTREAM_ERROR. Read only. No effectPolicy.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "owner",
+          "repo",
+          "secretName"
+        ],
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "secretName": {
+            "type": "string",
+            "description": "Secret name."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "secret": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "dependabot.secrets.create_or_update": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Create or update a repository Dependabot secret",
+      "description": "PUT /repos/{owner}/{repo}/dependabot/secrets/{secret_name}. Sealed-box upsert with encrypted_value + key_id. Success is 201/204. Secret GETs are not observes. No effectPolicy. A 404 is CONNECTOR_UPSTREAM_ERROR.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "owner",
+          "repo",
+          "secretName",
+          "encryptedValue",
+          "keyId"
+        ],
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "secretName": {
+            "type": "string",
+            "description": "Secret name."
+          },
+          "encryptedValue": {
+            "type": "string",
+            "description": "Libsodium ciphertext."
+          },
+          "keyId": {
+            "type": "string",
+            "description": "Public key id."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "upserted": {
+            "type": "boolean"
+          },
+          "created": {
+            "type": "boolean"
+          },
+          "status": {
+            "type": "integer"
+          }
+        }
+      }
+    },
+    "orgs.dependabot.secrets.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "List organization Dependabot secrets",
+      "description": "GET /orgs/{org}/dependabot/secrets. Lists names, timestamps, visibility. A 404 is CONNECTOR_UPSTREAM_ERROR. Read only. No effectPolicy.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "org"
+        ],
+        "properties": {
+          "org": {
+            "type": "string",
+            "description": "Organization login."
+          },
+          "perPage": {
+            "type": "integer",
+            "description": "Results per page."
+          },
+          "page": {
+            "type": "integer",
+            "description": "Page number."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "totalCount": {
+            "type": "integer"
+          },
+          "secrets": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      }
+    },
+    "orgs.dependabot.secrets.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Get organization Dependabot secret metadata",
+      "description": "GET /orgs/{org}/dependabot/secrets/{secret_name}. Metadata only. Secret GETs are not observes. A 404 is CONNECTOR_UPSTREAM_ERROR. Read only. No effectPolicy.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "org",
+          "secretName"
+        ],
+        "properties": {
+          "org": {
+            "type": "string",
+            "description": "Organization login."
+          },
+          "secretName": {
+            "type": "string",
+            "description": "Secret name."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "secret": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "orgs.dependabot.secrets.create_or_update": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Create or update an organization Dependabot secret",
+      "description": "PUT /orgs/{org}/dependabot/secrets/{secret_name}. Sealed-box upsert with encrypted_value + key_id + visibility. Success is 201/204. Secret GETs are not observes. No effectPolicy. A 404 is CONNECTOR_UPSTREAM_ERROR.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "org",
+          "secretName",
+          "encryptedValue",
+          "keyId",
+          "visibility"
+        ],
+        "properties": {
+          "org": {
+            "type": "string",
+            "description": "Organization login."
+          },
+          "secretName": {
+            "type": "string",
+            "description": "Secret name."
+          },
+          "encryptedValue": {
+            "type": "string",
+            "description": "Libsodium ciphertext."
+          },
+          "keyId": {
+            "type": "string",
+            "description": "Public key id."
+          },
+          "visibility": {
+            "type": "string",
+            "description": "all|private|selected."
+          },
+          "selectedRepositoryIds": {
+            "type": "array",
+            "items": {
+              "type": "integer"
+            }
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "upserted": {
+            "type": "boolean"
+          },
+          "created": {
+            "type": "boolean"
+          },
+          "status": {
+            "type": "integer"
+          }
+        }
+      }
+    },
+    "orgs.dependabot.secrets.delete": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Delete an organization Dependabot secret",
+      "description": "DELETE /orgs/{org}/dependabot/secrets/{secret_name}. kind=action, sideEffect=write. Success is 204. No effectPolicy. A 404 is CONNECTOR_UPSTREAM_ERROR.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "org",
+          "secretName"
+        ],
+        "properties": {
+          "org": {
+            "type": "string",
+            "description": "Organization login."
+          },
+          "secretName": {
+            "type": "string",
+            "description": "Secret name."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "deleted": {
+            "type": "boolean"
+          },
+          "org": {
+            "type": "string"
+          },
+          "secretName": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "orgs.dependabot.secrets.repositories.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "List selected repositories for an organization Dependabot secret",
+      "description": "GET /orgs/{org}/dependabot/secrets/{secret_name}/repositories. Lists selected repositories. A 404 is CONNECTOR_UPSTREAM_ERROR. Read only. No effectPolicy.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "org",
+          "secretName"
+        ],
+        "properties": {
+          "org": {
+            "type": "string",
+            "description": "Organization login."
+          },
+          "secretName": {
+            "type": "string",
+            "description": "Secret name."
+          },
+          "perPage": {
+            "type": "integer",
+            "description": "Results per page."
+          },
+          "page": {
+            "type": "integer",
+            "description": "Page number."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "totalCount": {
+            "type": "integer"
+          },
+          "repositories": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      }
+    },
+    "orgs.dependabot.secrets.repositories.set": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Set selected repositories for an organization Dependabot secret",
+      "description": "PUT /orgs/{org}/dependabot/secrets/{secret_name}/repositories. Replaces the selected repository list. kind=action, sideEffect=write. Success is 204. List observe is not exact on id. No effectPolicy. A 404 is CONNECTOR_UPSTREAM_ERROR.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "org",
+          "secretName",
+          "selectedRepositoryIds"
+        ],
+        "properties": {
+          "org": {
+            "type": "string",
+            "description": "Organization login."
+          },
+          "secretName": {
+            "type": "string",
+            "description": "Secret name."
+          },
+          "selectedRepositoryIds": {
+            "type": "array",
+            "items": {
+              "type": "integer"
+            }
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "set": {
+            "type": "boolean"
+          },
+          "selectedRepositoryIds": {
+            "type": "array",
+            "items": {
+              "type": "integer"
+            }
+          }
+        }
+      }
+    },
+    "orgs.dependabot.secrets.repositories.add": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Add a repository to an organization Dependabot secret",
+      "description": "PUT /orgs/{org}/dependabot/secrets/{secret_name}/repositories/{repository_id}. kind=action, sideEffect=write. Success is 204. No effectPolicy. A 404 is CONNECTOR_UPSTREAM_ERROR.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "org",
+          "secretName",
+          "repositoryId"
+        ],
+        "properties": {
+          "org": {
+            "type": "string",
+            "description": "Organization login."
+          },
+          "secretName": {
+            "type": "string",
+            "description": "Secret name."
+          },
+          "repositoryId": {
+            "type": "integer",
+            "description": "Repository id."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "added": {
+            "type": "boolean"
+          },
+          "repositoryId": {
+            "type": "integer"
+          }
+        }
+      }
+    },
+    "orgs.dependabot.secrets.repositories.remove": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Remove a repository from an organization Dependabot secret",
+      "description": "DELETE /orgs/{org}/dependabot/secrets/{secret_name}/repositories/{repository_id}. kind=action, sideEffect=write. Success is 204. Detach. No effectPolicy. A 404 is CONNECTOR_UPSTREAM_ERROR.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "org",
+          "secretName",
+          "repositoryId"
+        ],
+        "properties": {
+          "org": {
+            "type": "string",
+            "description": "Organization login."
+          },
+          "secretName": {
+            "type": "string",
+            "description": "Secret name."
+          },
+          "repositoryId": {
+            "type": "integer",
+            "description": "Repository id."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "removed": {
+            "type": "boolean"
+          },
+          "repositoryId": {
+            "type": "integer"
+          }
+        }
+      }
+    },
+    "repos.codespaces.secrets.public_key.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Get repository codespaces secrets public key",
+      "description": "GET /repos/{owner}/{repo}/codespaces/secrets/public-key. Returns key_id and key. A 404 is CONNECTOR_UPSTREAM_ERROR. Read only. No effectPolicy.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "owner",
+          "repo"
+        ],
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "publicKey": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "repos.codespaces.secrets.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "List repository codespaces secrets",
+      "description": "GET /repos/{owner}/{repo}/codespaces/secrets. Lists secret names only. A 404 is CONNECTOR_UPSTREAM_ERROR. Read only. No effectPolicy.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "owner",
+          "repo"
+        ],
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "perPage": {
+            "type": "integer",
+            "description": "Results per page."
+          },
+          "page": {
+            "type": "integer",
+            "description": "Page number."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "totalCount": {
+            "type": "integer"
+          },
+          "secrets": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      }
+    },
+    "repos.codespaces.secrets.create_or_update": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Create or update a repository codespaces secret",
+      "description": "PUT /repos/{owner}/{repo}/codespaces/secrets/{secret_name}. Sealed-box upsert with encrypted_value + key_id (no plaintext). Success is 201/204. Secret GETs are not observes. No effectPolicy. A 404 is CONNECTOR_UPSTREAM_ERROR.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "owner",
+          "repo",
+          "secretName",
+          "encryptedValue",
+          "keyId"
+        ],
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "secretName": {
+            "type": "string",
+            "description": "Secret name."
+          },
+          "encryptedValue": {
+            "type": "string",
+            "description": "Libsodium ciphertext."
+          },
+          "keyId": {
+            "type": "string",
+            "description": "Public key id."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "upserted": {
+            "type": "boolean"
+          },
+          "created": {
+            "type": "boolean"
+          },
+          "status": {
+            "type": "integer"
+          }
+        }
+      }
+    },
+    "graphql.node.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Get a GraphQL node by id",
+      "description": "POST /graphql query node(id:). Fixed fragments for Repository, Issue, PullRequest, User, Organization, Discussion, plus Subscribable.viewerSubscription and User/Organization.viewerIsFollowing for exact observes. Returns found:false on NOT_FOUND. Read only. No effectPolicy. No free-form fragment param.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Global node id."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "found": {
+            "type": "boolean"
+          },
+          "node": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "graphql.nodes.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Look up GraphQL nodes by ids",
+      "description": "POST /graphql query nodes(ids:). Same fixed fragments as graphql.node.get (including viewerIsFollowing and viewerSubscription enrichment). ids length 1\u2013100. Read only. No effectPolicy.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "ids"
+        ],
+        "properties": {
+          "ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "nodes": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      }
+    },
+    "graphql.rate_limit.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Get GraphQL rate limit",
+      "description": "POST /graphql query rateLimit(dryRun:). Returns limit, remaining, used, resetAt, cost. Read only. No effectPolicy.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [],
+        "properties": {
+          "dryRun": {
+            "type": "boolean",
+            "description": "If true, estimate cost without evaluating."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "rateLimit": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "graphql.viewer.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Get the authenticated GraphQL viewer",
+      "description": "POST /graphql query viewer. Includes status { emoji message expiresAt indicatesLimitedAvailability organization { id } } so changeUserStatus has an exact observe. Read only. No effectPolicy.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [],
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "viewer": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "graphql.repository.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Get a repository via GraphQL",
+      "description": "POST /graphql query repository(owner:,name:,followRenames:). Returns found:false when missing. Read only. No effectPolicy.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "owner",
+          "repo"
+        ],
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Owner login."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "followRenames": {
+            "type": "boolean",
+            "description": "Follow renames (default true)."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "found": {
+            "type": "boolean"
+          },
+          "repository": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "graphql.organization.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Get an organization via GraphQL",
+      "description": "POST /graphql query organization(login:). Includes viewerIsFollowing. Returns found:false when missing. Read only. No effectPolicy.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "login"
+        ],
+        "properties": {
+          "login": {
+            "type": "string",
+            "description": "Organization login."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "found": {
+            "type": "boolean"
+          },
+          "organization": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "graphql.repository_owner.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Get a repository owner via GraphQL",
+      "description": "POST /graphql query repositoryOwner(login:). Returns __typename User or Organization with viewerIsFollowing. found:false when missing. Read only. No effectPolicy.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "login"
+        ],
+        "properties": {
+          "login": {
+            "type": "string",
+            "description": "User or organization login."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "found": {
+            "type": "boolean"
+          },
+          "repositoryOwner": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "graphql.topic.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Look up a topic by name via GraphQL",
+      "description": "POST /graphql query topic(name:). Optional relatedTopics via includeRelatedTopics / relatedTopicsCount (1\u201310). found:false when missing. Read only. No effectPolicy.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Topic name."
+          },
+          "includeRelatedTopics": {
+            "type": "boolean",
+            "description": "Include relatedTopics."
+          },
+          "relatedTopicsCount": {
+            "type": "integer",
+            "description": "relatedTopics first (1\u201310, default 3)."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "found": {
+            "type": "boolean"
+          },
+          "topic": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "graphql.resource.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Look up a GitHub resource by URL via GraphQL",
+      "description": "POST /graphql query resource(url:). Returns UniformResourceLocatable fragments. found:false when missing. Read only. No effectPolicy.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "url"
+        ],
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "GitHub resource URL."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "found": {
+            "type": "boolean"
+          },
+          "resource": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "graphql.codes_of_conduct.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Get a code of conduct via GraphQL",
+      "description": "POST /graphql query codeOfConduct(key:). GraphQL twin of REST codes_of_conduct.get. found:false when missing. Read only. No effectPolicy.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "key"
+        ],
+        "properties": {
+          "key": {
+            "type": "string",
+            "description": "Code of conduct key."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "found": {
+            "type": "boolean"
+          },
+          "codeOfConduct": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "graphql.codes_of_conduct.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "List codes of conduct via GraphQL",
+      "description": "POST /graphql query codesOfConduct. GraphQL twin of REST codes_of_conduct.list. Read only. No effectPolicy.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [],
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "codesOfConduct": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      }
+    },
+    "graphql.licenses.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Get a license via GraphQL",
+      "description": "POST /graphql query license(key:). GraphQL twin of REST licenses.get. found:false when missing. Read only. No effectPolicy.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "key"
+        ],
+        "properties": {
+          "key": {
+            "type": "string",
+            "description": "License SPDX key (downcased)."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "found": {
+            "type": "boolean"
+          },
+          "license": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "graphql.licenses.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "List licenses via GraphQL",
+      "description": "POST /graphql query licenses. GraphQL twin of REST licenses.list. Read only. No effectPolicy.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [],
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "licenses": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      }
+    },
+    "graphql.security_advisories.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "List security advisories via GraphQL",
+      "description": "POST /graphql query securityAdvisories connection. Cursor pagination first/after/last/before (1\u2013100). Optional orderBy, identifier, publishedSince, updatedSince, epssPercentage, epssPercentile, classifications. Read only. No effectPolicy.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [],
+        "properties": {
+          "first": {
+            "type": "integer",
+            "description": "Page size forward."
+          },
+          "after": {
+            "type": "string",
+            "description": "Forward cursor."
+          },
+          "last": {
+            "type": "integer",
+            "description": "Page size backward."
+          },
+          "before": {
+            "type": "string",
+            "description": "Backward cursor."
+          },
+          "orderBy": {
+            "type": "object"
+          },
+          "identifier": {
+            "type": "object"
+          },
+          "publishedSince": {
+            "type": "string",
+            "description": "ISO datetime."
+          },
+          "updatedSince": {
+            "type": "string",
+            "description": "ISO datetime."
+          },
+          "epssPercentage": {
+            "type": "number"
+          },
+          "epssPercentile": {
+            "type": "number"
+          },
+          "classifications": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "advisories": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "pageInfo": {
+            "type": "object"
+          },
+          "totalCount": {
+            "type": "integer"
+          }
+        }
+      }
+    },
+    "graphql.security_vulnerabilities.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "List security vulnerabilities via GraphQL",
+      "description": "POST /graphql query securityVulnerabilities connection. Cursor pagination. Optional package, ecosystem, severities, classifications, orderBy. Read only. No effectPolicy.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [],
+        "properties": {
+          "first": {
+            "type": "integer",
+            "description": "Page size forward."
+          },
+          "after": {
+            "type": "string",
+            "description": "Forward cursor."
+          },
+          "last": {
+            "type": "integer",
+            "description": "Page size backward."
+          },
+          "before": {
+            "type": "string",
+            "description": "Backward cursor."
+          },
+          "package": {
+            "type": "string",
+            "description": "Package name."
+          },
+          "ecosystem": {
+            "type": "string",
+            "description": "Advisory ecosystem."
+          },
+          "severities": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "classifications": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "orderBy": {
+            "type": "object"
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "vulnerabilities": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "pageInfo": {
+            "type": "object"
+          },
+          "totalCount": {
+            "type": "integer"
           }
         }
       }

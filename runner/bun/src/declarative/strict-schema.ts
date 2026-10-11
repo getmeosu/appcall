@@ -4,12 +4,17 @@ import type { JSONSchema } from "./validate";
 const MAX_DEPTH = 64;
 const MAX_NODES = 4096;
 const forbidden = new Set(["__proto__", "constructor", "prototype"]);
-const supported = new Set(["type", "enum", "properties", "required", "additionalProperties", "items", "minItems", "maxItems", "minLength", "maxLength", "minimum", "maximum", "exclusiveMinimum", "exclusiveMaximum", "minProperties", "maxProperties", "uniqueItems", "const", "title", "description"]);
+const supported = new Set(["type", "enum", "const", "properties", "required", "additionalProperties", "items", "minItems", "maxItems", "minLength", "maxLength", "minProperties", "maxProperties", "minimum", "maximum", "exclusiveMinimum", "exclusiveMaximum", "uniqueItems", "title", "description", "anyOf", "allOf", "oneOf"]);
+// Bounded combinators, shared with the control plane validator
+// (crates/appcall-connectors/src/schema.rs): each branch is a schema node that
+// counts toward MAX_NODES and MAX_DEPTH, and a combinator holds 1..64 branches.
+const COMBINATORS = ["anyOf", "allOf", "oneOf"] as const;
+const MAX_COMBINATOR_BRANCHES = 64;
 
 // Annotation-only keywords the control plane's schema checker accepts
 // (crates/appcall-connectors/src/schema.rs `check_schema`). They never
 // constrain a value, so registry dispatch validation may skip over them.
-const annotations = new Set(["default", "examples", "$schema", "$id", "$comment", "readOnly", "writeOnly", "deprecated", "format"]);
+const annotations = new Set(["default", "examples", "format", "$schema", "$id", "$comment", "readOnly", "writeOnly", "deprecated"]);
 
 export function assertStrictSchema(schema: JSONSchema, depth = 0, state = { nodes: 0 }, allowAnnotations = false): void {
   if (!isRecord(schema)) throw new Error("Invalid strict-generated schema");
@@ -26,7 +31,6 @@ export function assertStrictSchema(schema: JSONSchema, depth = 0, state = { node
   for (const key of ["minimum", "maximum", "exclusiveMinimum", "exclusiveMaximum"]) if (schema[key] !== undefined && (typeof schema[key] !== "number" || !Number.isFinite(schema[key]) || Math.abs(schema[key] as number) > Number.MAX_SAFE_INTEGER)) throw new Error(`${key} must be a finite safe number`);
   if (schema.uniqueItems !== undefined && typeof schema.uniqueItems !== "boolean") throw new Error("uniqueItems must be a boolean");
   if (schema.enum !== undefined && (!Array.isArray(schema.enum) || schema.enum.length === 0)) throw new Error("enum must be a non-empty array");
-  // `const` may be any JSON value, including null/false/0/"" ; only `undefined` means absent.
   if (schema.required !== undefined && (!Array.isArray(schema.required) || !schema.required.every((x) => typeof x === "string" && !forbidden.has(x)))) throw new Error("required must be an array of safe property names");
   if (schema.additionalProperties !== undefined && typeof schema.additionalProperties !== "boolean" && !isRecord(schema.additionalProperties)) throw new Error("additionalProperties must be boolean or schema");
   if (isRecord(schema.properties)) for (const [key, child] of Object.entries(schema.properties)) { if (forbidden.has(key)) throw new Error("Forbidden property name"); assertStrictSchema(child as JSONSchema, depth + 1, state, allowAnnotations); }
@@ -34,7 +38,20 @@ export function assertStrictSchema(schema: JSONSchema, depth = 0, state = { node
   if (schema.items !== undefined && !isRecord(schema.items)) throw new Error("items must be a schema");
   if (isRecord(schema.items)) assertStrictSchema(schema.items, depth + 1, state, allowAnnotations);
   if (isRecord(schema.additionalProperties)) assertStrictSchema(schema.additionalProperties, depth + 1, state, allowAnnotations);
+  for (const key of COMBINATORS) {
+    const branches = schema[key];
+    if (branches === undefined) continue;
+    if (!Array.isArray(branches) || branches.length === 0 || branches.length > MAX_COMBINATOR_BRANCHES) throw new Error(`${key} must be an array of 1-${MAX_COMBINATOR_BRANCHES} schemas`);
+    for (const branch of branches) {
+      if (!isRecord(branch)) throw new Error(`${key} branches must be schemas`);
+      assertStrictSchema(branch, depth + 1, state, allowAnnotations);
+    }
+  }
 }
+
+// A resource-limit failure inside a combinator branch must not be mistaken
+// for "this branch does not match"; it always propagates.
+class InputLimitError extends Error {}
 
 export function validateStrictInput(input: unknown, schema: JSONSchema, credentialKeys: ReadonlySet<string> = new Set<string>()): Record<string, unknown> {
   return compileStrictValidator(schema, { credentialKeys })(input);
@@ -90,6 +107,8 @@ export function compileStrictValidator(schema: JSONSchema, options: StrictValida
     const matchers = types.map((t) => typeMatchers[t] ?? ((value: unknown) => typeof value === t));
     const expected = registry ? ` (expected ${types.join(" or ")})` : "";
     const enumValues = s.enum ? s.enum as unknown[] : undefined;
+    const hasConst = Object.hasOwn(s, "const");
+    const constant = s.const;
     const minLength = s.minLength as number | undefined;
     const maxLength = s.maxLength as number | undefined;
     const minimum = s.minimum as number | undefined;
@@ -101,7 +120,6 @@ export function compileStrictValidator(schema: JSONSchema, options: StrictValida
     const minProperties = s.minProperties as number | undefined;
     const maxProperties = s.maxProperties as number | undefined;
     const uniqueItems = s.uniqueItems === true;
-    const constValue = Object.hasOwn(s, "const") ? s.const : undefined;
     const props = isRecord(s.properties) ? s.properties : {};
     const propChecks = new Map<string, NodeCheck>();
     for (const [k, child] of Object.entries(props)) propChecks.set(k, compileNode(child as JSONSchema));
@@ -110,7 +128,7 @@ export function compileStrictValidator(schema: JSONSchema, options: StrictValida
     const closed = s.additionalProperties === false;
     const items = isRecord(s.items) ? compileNode(s.items) : undefined;
     const check: NodeCheck = (value, parent, key, depth, ctx) => {
-      if (depth > MAX_DEPTH || ++ctx.nodes > maxNodes) throw new Error("Input nesting exceeds limit");
+      if (depth > MAX_DEPTH || ++ctx.nodes > maxNodes) throw new InputLimitError("Input nesting exceeds limit");
       if (typeof value === "number" && !Number.isFinite(value)) throw new Error(`${pathOf(parent, key) || "input"} must be finite`);
       if (matchers.length) {
         let matched = false;
@@ -122,18 +140,20 @@ export function compileStrictValidator(schema: JSONSchema, options: StrictValida
         for (let i = 0; i < enumValues.length && !allowed; i++) allowed = deepEqual(enumValues[i], value);
         if (!allowed) throw new Error(`${pathOf(parent, key) || "input"} is not an allowed value`);
       }
-      if (constValue !== undefined && !deepEqual(constValue, value)) throw new Error(`${pathOf(parent, key) || "input"} is not an allowed value`);
+      if (hasConst && !deepEqual(constant, value)) throw new Error(`${pathOf(parent, key) || "input"} is not an allowed value`);
       if (typeof value === "string") {
+        const path = pathOf(parent, key);
         const len = [...value].length;
-        if (minLength !== undefined && len < minLength) throw new Error(`${pathOf(parent, key)} is too short`);
-        if (maxLength !== undefined && len > maxLength) throw new Error(`${pathOf(parent, key)} is too long`);
+        if (minLength !== undefined && len < minLength) throw new Error(`${path} is too short`);
+        if (maxLength !== undefined && len > maxLength) throw new Error(`${path} is too long`);
         return;
       }
       if (typeof value === "number") {
-        if (minimum !== undefined && value < minimum) throw new Error(`${pathOf(parent, key)} is below minimum`);
-        if (maximum !== undefined && value > maximum) throw new Error(`${pathOf(parent, key)} is above maximum`);
-        if (exclusiveMinimum !== undefined && value <= exclusiveMinimum) throw new Error(`${pathOf(parent, key)} is below minimum`);
-        if (exclusiveMaximum !== undefined && value >= exclusiveMaximum) throw new Error(`${pathOf(parent, key)} is above maximum`);
+        const path = pathOf(parent, key);
+        if (minimum !== undefined && value < minimum) throw new Error(`${path} is below minimum`);
+        if (exclusiveMinimum !== undefined && value <= exclusiveMinimum) throw new Error(`${path} is below minimum`);
+        if (maximum !== undefined && value > maximum) throw new Error(`${path} is above maximum`);
+        if (exclusiveMaximum !== undefined && value >= exclusiveMaximum) throw new Error(`${path} is above maximum`);
         return;
       }
       if (Array.isArray(value)) {
@@ -141,11 +161,7 @@ export function compileStrictValidator(schema: JSONSchema, options: StrictValida
         if (minItems !== undefined && value.length < minItems) throw new Error(`${path} has too few items`);
         if (maxItems !== undefined && value.length > maxItems) throw new Error(`${path} has too many items`);
         if (uniqueItems) {
-          for (let i = 0; i < value.length; i++) {
-            for (let j = i + 1; j < value.length; j++) {
-              if (deepEqual(value[i], value[j])) throw new Error(`${path} has duplicate items`);
-            }
-          }
+          for (let i = 0; i < value.length; i++) for (let j = i + 1; j < value.length; j++) if (deepEqual(value[i], value[j])) throw new Error(`${path} has duplicate items`);
         }
         const item = items ?? empty;
         for (let i = 0; i < value.length; i++) item(value[i], path, i, depth + 1, ctx);
@@ -170,7 +186,38 @@ export function compileStrictValidator(schema: JSONSchema, options: StrictValida
         }
       }
     };
-    return check;
+    const allOf = Array.isArray(s.allOf) ? (s.allOf as JSONSchema[]).map(compileNode) : undefined;
+    const anyOf = Array.isArray(s.anyOf) ? (s.anyOf as JSONSchema[]).map(compileNode) : undefined;
+    const oneOf = Array.isArray(s.oneOf) ? (s.oneOf as JSONSchema[]).map(compileNode) : undefined;
+    if (!allOf && !anyOf && !oneOf) return check;
+    // "requires one of: a | b+c" when every anyOf branch only lists required
+    // keys (the github identifier alternatives); a generic message otherwise.
+    const anyOfRequired = Array.isArray(s.anyOf) && (s.anyOf as JSONSchema[]).every((b) => Object.keys(b).length === 1 && Array.isArray(b.required) && b.required.length > 0)
+      ? (s.anyOf as JSONSchema[]).map((b) => (b.required as string[]).join("+")).join(" | ")
+      : undefined;
+    const matches = (branch: NodeCheck, value: unknown, parent: string, key: string | number | undefined, depth: number, ctx: Ctx): boolean => {
+      try {
+        branch(value, parent, key, depth + 1, ctx);
+        return true;
+      } catch (error) {
+        if (error instanceof InputLimitError) throw error;
+        return false;
+      }
+    };
+    return (value, parent, key, depth, ctx) => {
+      check(value, parent, key, depth, ctx);
+      if (allOf) for (const branch of allOf) branch(value, parent, key, depth + 1, ctx);
+      if (anyOf) {
+        let matched = false;
+        for (let i = 0; i < anyOf.length && !matched; i++) matched = matches(anyOf[i], value, parent, key, depth, ctx);
+        if (!matched) throw new Error(anyOfRequired ? `${pathOf(parent, key) || "input"} requires one of: ${anyOfRequired}` : `${pathOf(parent, key) || "input"} does not match any allowed alternative`);
+      }
+      if (oneOf) {
+        let matched = 0;
+        for (let i = 0; i < oneOf.length && matched < 2; i++) if (matches(oneOf[i], value, parent, key, depth, ctx)) matched += 1;
+        if (matched !== 1) throw new Error(`${pathOf(parent, key) || "input"} must match exactly one allowed alternative`);
+      }
+    };
   };
   empty = compileNode({});
   const root = compileNode(schema);

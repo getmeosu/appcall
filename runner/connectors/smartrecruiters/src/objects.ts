@@ -1,12 +1,20 @@
 /**
  * SmartRecruiters object normalization.
  *
- * jobs.list / postings.list use the public company postings shape ({ content: [...] }).
+ * jobs.list / postings.list use the public Posting API PostingList shape
+ * ({ offset, limit, totalFound, content: PostingItem[] }). A PostingItem carries
+ * its title in `name`, its publish time in `releasedDate`, its employment type in
+ * `typeOfEmployment`, and a location of { city, region, country (ISO-2), remote }.
+ * See https://developers.smartrecruiters.com/reference/v1listpostings
  * jobs.get uses authenticated JobDetails (GET /jobs/{id}) — location is a full
  * city/region/country object; type comes from typeOfEmployment.
- * Authenticated Customer API list ops return { content, totalFound, ... }
- * (GET /candidates, GET /users). candidates.get returns a bare CandidateDetails
- * object (GET /candidates/{id}).
+ * GET /candidates returns { content, totalFound, nextPageId, ... }.
+ * users.list uses the current Users API (GET /user-api/v201804/users), which
+ * returns { limit, nextPageId, content } with no totalFound/offset, and carries
+ * the role as systemRole { id, name } (https://developers.smartrecruiters.com/reference/usersall-2).
+ * The deprecated root GET /users returned a flat `role` string; it is still read
+ * as a fallback. candidates.get returns a bare CandidateDetails object
+ * (GET /candidates/{id}).
  * interviews.list returns { content: Interview[] } from Interviews API
  * (GET /interviews-api/v201904/interviews).
  */
@@ -95,12 +103,17 @@ interface SRProperty {
 
 interface SRJob {
   id: string;
+  /** Authenticated JobDetails title (GET /jobs/{id}). */
   title?: string | null;
+  /** Public Posting API PostingItem title (GET /v1/companies/{company}/postings). */
+  name?: string | null;
+  /** Public Posting API PostingItem publish time. */
+  releasedDate?: string | null;
   location?: SRLocation | null;
   department?: SRDepartment | null;
-  /** Public posting employment type. */
+  /** Legacy employment type shape; live postings use typeOfEmployment. */
   type?: { id?: string; label?: string } | null;
-  /** Authenticated JobDetails employment type. */
+  /** Employment type on both JobDetails and Posting API PostingItem. */
   typeOfEmployment?: SRProperty | null;
   status?: string | null;
   postingStatus?: string | null;
@@ -135,7 +148,8 @@ function formatLocation(location: unknown): string | null {
     country?: string | null;
     countryCode?: string | null;
   };
-  // Public postings often stash a display string in location.id.
+  // Tolerate a bare display string in location.id (not part of the documented
+  // PostingLocation / JobDetails Location shapes).
   if (typeof loc.id === "string" && loc.id.length > 0) {
     const parts = [loc.city, loc.region, loc.country ?? loc.countryCode].filter(
       (p): p is string => typeof p === "string" && p.length > 0,
@@ -152,14 +166,14 @@ export function normalizeJob(job: SRJob): NormalizedJob {
   return {
     id: `sr-job:${job.id}`,
     provider: "smartrecruiters",
-    title: job.title ?? "",
+    title: job.title ?? job.name ?? "",
     location: formatLocation(job.location),
     department: job.department?.label ?? null,
     type: job.type?.label ?? job.typeOfEmployment?.label ?? null,
     status: job.status ?? null,
     postingStatus: job.postingStatus ?? null,
     refNumber: job.refNumber ?? null,
-    createdAt: job.createdOn ?? null,
+    createdAt: job.createdOn ?? job.releasedDate ?? null,
     updatedAt: job.updatedOn ?? null,
   };
 }
@@ -296,6 +310,9 @@ interface SRUser {
   firstName?: string | null;
   lastName?: string | null;
   email?: string | null;
+  /** Current Users API (v201804): system role object. */
+  systemRole?: { id?: string | null; name?: string | null } | null;
+  /** Deprecated root GET /users: flat role string. */
   role?: string | null;
   active?: boolean | null;
   updatedOn?: string | null;
@@ -316,7 +333,7 @@ export function normalizeUser(user: SRUser): NormalizedUser {
     lastName,
     name: nameParts.join(" "),
     email: user.email ?? null,
-    role: user.role ?? null,
+    role: user.systemRole?.id ?? user.role ?? null,
     active: user.active !== false,
     language: user.language?.code ?? null,
     updatedAt: asIso(user.updatedOn),
@@ -325,20 +342,24 @@ export function normalizeUser(user: SRUser): NormalizedUser {
 
 interface SRUsersResponse {
   content?: SRUser[];
+  /** Deprecated root GET /users only; the v201804 Users API omits it. */
   totalFound?: number;
   limit?: number;
-  offset?: number;
+  nextPageId?: string;
 }
 
 export function parseUsersResponse(raw: unknown): {
   users: NormalizedUser[];
   total: number | null;
+  nextPageId: string | null;
 } {
   const data = (raw ?? {}) as SRUsersResponse;
   const items = Array.isArray(data.content) ? data.content : [];
   return {
     users: items.map(normalizeUser),
     total: typeof data.totalFound === "number" ? data.totalFound : null,
+    nextPageId:
+      typeof data.nextPageId === "string" && data.nextPageId.length > 0 ? data.nextPageId : null,
   };
 }
 

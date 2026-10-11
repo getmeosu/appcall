@@ -4,7 +4,7 @@ import manifest from "../manifest.json";
 describe("meta-ads manifest", () => {
   it("has correct key and version", () => {
     expect(manifest.key).toBe("meta-ads");
-    expect(manifest.version).toBe("0.1.1");
+    expect(manifest.version).toBe("0.3.0");
     expect(manifest.runtime).toBe("bun");
   });
 
@@ -20,7 +20,7 @@ describe("meta-ads manifest", () => {
     expect(manifest.network.allowedHosts).toContain("graph.facebook.com");
   });
 
-  it("has all expected sync operations", () => {
+  it("has tip sync operations", () => {
     const ops = Object.keys(manifest.operations);
     expect(ops).toContain("campaigns.list");
     expect(ops).toContain("ad_sets.list");
@@ -28,12 +28,91 @@ describe("meta-ads manifest", () => {
     expect(ops).toContain("ad_accounts.list");
   });
 
+  it("has G1+G2 action operations and totals 35", () => {
+    const ops = Object.keys(manifest.operations);
+    expect(ops).toHaveLength(35);
+    for (const id of [
+      "campaigns.get",
+      "campaigns.create",
+      "campaigns.update",
+      "ad_sets.get",
+      "ad_sets.create",
+      "ad_sets.update",
+      "ads.get",
+      "ads.create",
+      "ads.update",
+      "ad_creatives.list",
+      "ad_creatives.get",
+      "ad_creatives.create",
+      "insights.get",
+      "ad_accounts.get",
+      "targeting.search",
+      "campaigns.delete",
+      "ad_sets.delete",
+      "ads.delete",
+      "ad_creatives.update",
+      "ad_creatives.preview",
+      "ad_images.list",
+      "ad_images.upload",
+      "ad_videos.create",
+      "ad_videos.get",
+      "custom_audiences.list",
+      "custom_audiences.get",
+      "custom_audiences.create",
+      "insights.async.create",
+      "insights.async.get",
+      "reach_estimate.get",
+    ]) {
+      expect(ops).toContain(id);
+      expect((manifest.operations as any)[id].kind).toBe("action");
+    }
+  });
+
+  it("applies effect rules: creates omit, updates Reconcile, never Idempotent", () => {
+    const ops = manifest.operations as Record<string, any>;
+    expect(ops["campaigns.create"].effectPolicy).toBeUndefined();
+    expect(ops["ad_sets.create"].effectPolicy).toBeUndefined();
+    expect(ops["ads.create"].effectPolicy).toBeUndefined();
+    expect(ops["ad_creatives.create"].effectPolicy).toBeUndefined();
+    expect(ops["ad_images.upload"].effectPolicy).toBeUndefined();
+    expect(ops["ad_videos.create"].effectPolicy).toBeUndefined();
+    expect(ops["custom_audiences.create"].effectPolicy).toBeUndefined();
+    expect(ops["campaigns.delete"].effectPolicy).toBeUndefined();
+    expect(ops["ad_sets.delete"].effectPolicy).toBeUndefined();
+    expect(ops["ads.delete"].effectPolicy).toBeUndefined();
+    expect(ops["insights.async.create"].effectPolicy).toBeUndefined();
+    expect(ops["insights.async.get"].effectPolicy).toBeUndefined();
+    expect(ops["ad_creatives.preview"].effectPolicy).toBeUndefined();
+    expect(ops["reach_estimate.get"].effectPolicy).toBeUndefined();
+    expect(ops["campaigns.update"].effectPolicy).toBe("Reconcile");
+    expect(ops["campaigns.update"].reconcile).toBe("campaigns.get");
+    expect(ops["ad_sets.update"].effectPolicy).toBe("Reconcile");
+    expect(ops["ad_sets.update"].reconcile).toBe("ad_sets.get");
+    expect(ops["ads.update"].effectPolicy).toBe("Reconcile");
+    expect(ops["ads.update"].reconcile).toBe("ads.get");
+    expect(ops["ad_creatives.update"].effectPolicy).toBe("Reconcile");
+    expect(ops["ad_creatives.update"].reconcile).toBe("ad_creatives.get");
+    expect(ops["ads.update"].inputSchema.properties.bidAmount).toBeUndefined();
+    expect(ops["ads.create"].inputSchema.properties.bidAmount).toBeUndefined();
+    const blob = JSON.stringify(manifest);
+    expect(blob.includes("Idempotent")).toBe(false);
+  });
+
   it("has healthcheck operation", () => {
     expect(manifest.operations).toHaveProperty("healthcheck");
     expect((manifest.operations as any).healthcheck.kind).toBe("action");
   });
 
-  it("has correct models", () => {
-    expect(manifest.models).toEqual(["campaign", "ad_set", "ad", "ad_account"]);
+  it("has correct models including G2 assets/audiences", () => {
+    expect(manifest.models).toEqual([
+      "campaign",
+      "ad_set",
+      "ad",
+      "ad_account",
+      "ad_creative",
+      "ad_image",
+      "ad_video",
+      "custom_audience",
+    ]);
   });
 });

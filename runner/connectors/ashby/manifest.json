@@ -1,7 +1,7 @@
 {
   "key": "ashby",
   "name": "Ashby",
-  "version": "0.6.0",
+  "version": "0.11.0",
   "runtime": "bun",
   "categories": [
     "ats-recruitment"
@@ -61,7 +61,7 @@
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
       "title": "List jobs",
-      "description": "List public job postings via GET /posting-api/job-board/{boardName}/jobs."
+      "description": "List public job postings via GET /posting-api/job-board/{boardName}."
     },
     "candidates.list": {
       "kind": "sync",
@@ -98,13 +98,11 @@
     "applications.create": {
       "kind": "action",
       "sideEffect": "write",
-      "effectPolicy": "Idempotent",
-      "reconcile": "applications.get",
       "timeoutMs": 20000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 1048576,
       "title": "Create application",
-      "description": "Consider a candidate for a job via authenticated POST /application.create. Requires candidateId and jobId. EffectPolicy Idempotent observes the created application via applications.get.",
+      "description": "Consider a candidate for a job via authenticated POST /application.create. Requires candidateId and jobId. No effect keys (creates always omit; a retry after a lost response would double-POST).",
       "inputSchema": {
         "type": "object",
         "additionalProperties": false,
@@ -163,13 +161,11 @@
     "candidates.create": {
       "kind": "action",
       "sideEffect": "write",
-      "effectPolicy": "Idempotent",
-      "reconcile": "candidates.get",
       "timeoutMs": 20000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 1048576,
       "title": "Create candidate",
-      "description": "Create a candidate via authenticated POST /candidate.create. Requires name. AppCall websiteUrl maps to Ashby native body field website. EffectPolicy Idempotent observes the created candidate via candidates.get.",
+      "description": "Create a candidate via authenticated POST /candidate.create. Requires name. AppCall websiteUrl maps to Ashby native body field website. No effect keys (creates always omit; a retry after a lost response would double-POST).",
       "inputSchema": {
         "type": "object",
         "additionalProperties": false,
@@ -628,7 +624,7 @@
       "maxInputBytes": 65536,
       "maxResponseBytes": 1048576,
       "title": "Update candidate",
-      "description": "Update a candidate via authenticated POST /candidate.update. AppCall websiteUrl maps to Ashby native body field website. EffectPolicy Reconcile observes via candidates.get.",
+      "description": "Update a candidate via authenticated POST /candidate.update. AppCall id maps to Ashby body candidateId; websiteUrl is sent as Ashby websiteUrl. EffectPolicy Reconcile observes via candidates.get.",
       "inputSchema": {
         "type": "object",
         "additionalProperties": false,
@@ -659,7 +655,7 @@
           },
           "websiteUrl": {
             "type": "string",
-            "description": "Website URL. Mapped to Ashby native body field website."
+            "description": "Website URL. Sent as Ashby body field websiteUrl."
           },
           "sourceId": {
             "type": "string",
@@ -747,21 +743,13 @@
       "title": "List interview schedules",
       "description": "List interview schedules via authenticated POST /interviewSchedule.list. Optional limit, cursor, and syncToken filters."
     },
-    "interview_schedules.get": {
-      "kind": "sync",
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 1048576,
-      "title": "Get interview schedule",
-      "description": "Fetch a single interview schedule via authenticated POST /interviewSchedule.info. Maps interviewScheduleId to Ashby body field id."
-    },
     "interview_stages.list": {
       "kind": "sync",
       "timeoutMs": 30000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
       "title": "List interview stages",
-      "description": "List interview stages via authenticated POST /interviewStage.list. Optional limit, cursor, and syncToken filters."
+      "description": "List interview stages for one interview plan via POST /interviewStage.list. Requires interviewPlanId."
     },
     "openings.list": {
       "kind": "sync",
@@ -798,6 +786,2089 @@
       "maxInputBytes": 1048576,
       "maxResponseBytes": 1048576,
       "sideEffect": "read"
+    },
+    "candidates.create_note": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Create candidate note",
+      "description": "Create a note on a candidate via authenticated POST /candidate.createNote. Requires candidateId and note. No effect keys (no note get).",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "candidateId",
+          "note"
+        ],
+        "properties": {
+          "candidateId": {
+            "type": "string",
+            "description": "Ashby candidate UUID."
+          },
+          "note": {
+            "description": "Note body as a plain string or Ashby {type, value} object.",
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "object"
+              }
+            ]
+          },
+          "sendNotifications": {
+            "type": "boolean",
+            "description": "Whether to notify followers."
+          },
+          "isPrivate": {
+            "type": "boolean",
+            "description": "Whether the note is private."
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "Optional created-at override (ISO-8601)."
+          }
+        }
+      }
+    },
+    "candidates.list_notes": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "List candidate notes",
+      "description": "List notes on a candidate via authenticated POST /candidate.listNotes. Requires candidateId. Optional limit, cursor, and syncToken.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "candidateId"
+        ],
+        "properties": {
+          "candidateId": {
+            "type": "string",
+            "description": "Ashby candidate UUID."
+          },
+          "limit": {
+            "type": "number",
+            "description": "Page size."
+          },
+          "cursor": {
+            "type": "string",
+            "description": "Pagination cursor."
+          },
+          "syncToken": {
+            "type": "string",
+            "description": "Incremental sync token."
+          }
+        }
+      }
+    },
+    "candidates.add_tag": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Add candidate tag",
+      "description": "Add a tag to a candidate via authenticated POST /candidate.addTag. Requires candidateId and tagId.get does not expose tags. EffectPolicy Reconcile observes via candidates.get (tags).",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "candidateId",
+          "tagId"
+        ],
+        "properties": {
+          "candidateId": {
+            "type": "string",
+            "description": "Ashby candidate UUID."
+          },
+          "tagId": {
+            "type": "string",
+            "description": "Ashby candidate tag UUID."
+          }
+        }
+      },
+      "effectPolicy": "Reconcile",
+      "reconcile": "candidates.get"
+    },
+    "candidate_tags.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "List candidate tags",
+      "description": "List candidate tags via authenticated POST /candidateTag.list. Optional includeArchived, limit, cursor, and syncToken.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [],
+        "properties": {
+          "includeArchived": {
+            "type": "boolean",
+            "description": "Include archived tags."
+          },
+          "limit": {
+            "type": "number",
+            "description": "Page size."
+          },
+          "cursor": {
+            "type": "string",
+            "description": "Pagination cursor."
+          },
+          "syncToken": {
+            "type": "string",
+            "description": "Incremental sync token."
+          }
+        }
+      }
+    },
+    "candidate_tags.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Create candidate tag",
+      "description": "Create a candidate tag via authenticated POST /candidateTag.create. Requires title. No effect keys (no tag get).",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "title"
+        ],
+        "properties": {
+          "title": {
+            "type": "string",
+            "description": "Tag title."
+          }
+        }
+      }
+    },
+    "applications.change_source": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Change application source",
+      "description": "Change an application's source via authenticated POST /application.changeSource. Requires applicationId and sourceId.get does not expose source. EffectPolicy Reconcile observes via applications.get (sourceId).",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "applicationId",
+          "sourceId"
+        ],
+        "properties": {
+          "applicationId": {
+            "type": "string",
+            "description": "Ashby application UUID."
+          },
+          "sourceId": {
+            "type": "string",
+            "description": "Ashby source UUID."
+          }
+        }
+      },
+      "effectPolicy": "Reconcile",
+      "reconcile": "applications.get"
+    },
+    "applications.transfer": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Transfer application",
+      "description": "Transfer an application to another job via authenticated POST /application.transfer. Requires applicationId, jobId, interviewPlanId, and interviewStageId. EffectPolicy Reconcile observes via applications.get (jobId/stageId).",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "applicationId",
+          "jobId",
+          "interviewPlanId",
+          "interviewStageId"
+        ],
+        "properties": {
+          "applicationId": {
+            "type": "string",
+            "description": "Ashby application UUID."
+          },
+          "jobId": {
+            "type": "string",
+            "description": "Destination job UUID."
+          },
+          "interviewPlanId": {
+            "type": "string",
+            "description": "Destination interview plan UUID."
+          },
+          "interviewStageId": {
+            "type": "string",
+            "description": "Destination interview stage UUID."
+          },
+          "startAutomaticActivities": {
+            "type": "boolean",
+            "description": "Whether to start automatic activities on transfer."
+          }
+        }
+      },
+      "effectPolicy": "Reconcile",
+      "reconcile": "applications.get"
+    },
+    "applications.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Update application",
+      "description": "Update an application via authenticated POST /application.update. Requires applicationId. Optional sourceId, creditedToUserId, createdAt, sendNotifications.get does not expose source or creditedToUser. EffectPolicy Reconcile observes via applications.get (sourceId/creditedToUserId).",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "applicationId"
+        ],
+        "properties": {
+          "applicationId": {
+            "type": "string",
+            "description": "Ashby application UUID."
+          },
+          "sourceId": {
+            "type": "string",
+            "description": "Ashby source UUID."
+          },
+          "creditedToUserId": {
+            "type": "string",
+            "description": "User UUID to credit."
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "Created-at override (ISO-8601)."
+          },
+          "sendNotifications": {
+            "type": "boolean",
+            "description": "Whether to send notifications."
+          }
+        }
+      },
+      "effectPolicy": "Reconcile",
+      "reconcile": "applications.get"
+    },
+    "applications.list_history": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "List application history",
+      "description": "List application history via authenticated POST /application.listHistory. Requires applicationId. Optional limit and cursor.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "applicationId"
+        ],
+        "properties": {
+          "applicationId": {
+            "type": "string",
+            "description": "Ashby application UUID."
+          },
+          "limit": {
+            "type": "number",
+            "description": "Page size."
+          },
+          "cursor": {
+            "type": "string",
+            "description": "Pagination cursor."
+          }
+        }
+      }
+    },
+    "application_feedback.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "List application feedback",
+      "description": "List application feedback via authenticated POST /applicationFeedback.list. Optional applicationId, createdAfter, limit, cursor, and syncToken.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [],
+        "properties": {
+          "applicationId": {
+            "type": "string",
+            "description": "Ashby application UUID."
+          },
+          "createdAfter": {
+            "type": "string",
+            "description": "ISO-8601 lower bound on createdAt."
+          },
+          "limit": {
+            "type": "number",
+            "description": "Page size."
+          },
+          "cursor": {
+            "type": "string",
+            "description": "Pagination cursor."
+          },
+          "syncToken": {
+            "type": "string",
+            "description": "Incremental sync token."
+          }
+        }
+      }
+    },
+    "application_feedback.submit": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Submit application feedback",
+      "description": "Submit application feedback via authenticated POST /applicationFeedback.submit. Requires applicationId, formDefinitionId, and feedbackForm. No effect keys (no feedback get).",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "applicationId",
+          "formDefinitionId",
+          "feedbackForm"
+        ],
+        "properties": {
+          "applicationId": {
+            "type": "string",
+            "description": "Ashby application UUID."
+          },
+          "formDefinitionId": {
+            "type": "string",
+            "description": "Feedback form definition UUID."
+          },
+          "feedbackForm": {
+            "type": "object",
+            "description": "Map of form field path to submitted value.",
+            "additionalProperties": true
+          },
+          "userId": {
+            "type": "string",
+            "description": "Submitting user UUID."
+          },
+          "interviewEventId": {
+            "type": "string",
+            "description": "Optional interview event UUID."
+          }
+        }
+      }
+    },
+    "hiring_team.add_member": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Add hiring team member",
+      "description": "Add a user to a hiring team via authenticated POST /hiringTeam.addMember. Requires teamMemberId, roleId, and exactly one of applicationId, jobId, or openingId. No effect keys.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "teamMemberId",
+          "roleId"
+        ],
+        "properties": {
+          "teamMemberId": {
+            "type": "string",
+            "description": "Ashby user UUID to add."
+          },
+          "roleId": {
+            "type": "string",
+            "description": "Hiring team role id or name."
+          },
+          "applicationId": {
+            "type": "string",
+            "description": "Application-scoped hiring team."
+          },
+          "jobId": {
+            "type": "string",
+            "description": "Job-scoped hiring team."
+          },
+          "openingId": {
+            "type": "string",
+            "description": "Opening-scoped hiring team."
+          }
+        }
+      }
+    },
+    "hiring_team.remove_member": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Remove hiring team member",
+      "description": "Remove a user from a hiring team via authenticated POST /hiringTeam.removeMember. Requires teamMemberId, roleId, and exactly one of applicationId, jobId, or openingId. No effect keys.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "teamMemberId",
+          "roleId"
+        ],
+        "properties": {
+          "teamMemberId": {
+            "type": "string",
+            "description": "Ashby user UUID to remove."
+          },
+          "roleId": {
+            "type": "string",
+            "description": "Hiring team role id or name."
+          },
+          "applicationId": {
+            "type": "string",
+            "description": "Application-scoped hiring team."
+          },
+          "jobId": {
+            "type": "string",
+            "description": "Job-scoped hiring team."
+          },
+          "openingId": {
+            "type": "string",
+            "description": "Opening-scoped hiring team."
+          }
+        }
+      }
+    },
+    "hiring_team_roles.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "List hiring team roles",
+      "description": "List hiring team roles via authenticated POST /hiringTeamRole.list. Requires namesOnly (boolean).",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "namesOnly"
+        ],
+        "properties": {
+          "namesOnly": {
+            "type": "boolean",
+            "description": "When true, results are role name strings."
+          }
+        }
+      }
+    },
+    "users.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get user",
+      "description": "Fetch a user via authenticated POST /user.info. Requires userId.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "userId"
+        ],
+        "properties": {
+          "userId": {
+            "type": "string",
+            "description": "Ashby user UUID."
+          }
+        }
+      }
+    },
+    "jobs.list_internal": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "List jobs (internal)",
+      "description": "List internal jobs via authenticated POST /job.list. Distinct from public jobs.list (posting board). Agent tool.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "status": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Filter by status values (Draft/Open/Closed/Archived)."
+          },
+          "createdAfter": {
+            "type": "number",
+            "description": "Unix ms; jobs created at or after."
+          },
+          "openedAfter": {
+            "type": "number",
+            "description": "Unix ms; jobs opened after."
+          },
+          "openedBefore": {
+            "type": "number",
+            "description": "Unix ms; jobs opened before."
+          },
+          "closedAfter": {
+            "type": "number",
+            "description": "Unix ms; jobs closed after."
+          },
+          "closedBefore": {
+            "type": "number",
+            "description": "Unix ms; jobs closed before."
+          },
+          "includeUnpublishedJobPostingsIds": {
+            "type": "boolean",
+            "description": "Include unpublished posting ids."
+          },
+          "expand": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Expansions to include."
+          },
+          "limit": {
+            "type": "number",
+            "description": "Page size (max 100)."
+          },
+          "cursor": {
+            "type": "string",
+            "description": "Pagination cursor."
+          },
+          "syncToken": {
+            "type": "string",
+            "description": "Incremental sync token."
+          }
+        }
+      }
+    },
+    "jobs.search": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Search jobs",
+      "description": "Search jobs by title or custom requisition id via authenticated POST /job.search. At least one of title or requisitionId is required. Agent tool.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "title": {
+            "type": "string",
+            "description": "Title or substring."
+          },
+          "requisitionId": {
+            "type": "string",
+            "description": "Custom requisition id or substring."
+          },
+          "limit": {
+            "type": "number",
+            "description": "Max results (max 100)."
+          }
+        }
+      }
+    },
+    "jobs.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Create job",
+      "description": "Create a job via authenticated POST /job.create. Requires title, teamId, and locationId. No effect keys (creates always omit; a retry after a lost response would double-POST).",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "title": {
+            "type": "string",
+            "description": "Job title."
+          },
+          "teamId": {
+            "type": "string",
+            "description": "Department/team UUID."
+          },
+          "locationId": {
+            "type": "string",
+            "description": "Location UUID."
+          },
+          "defaultInterviewPlanId": {
+            "type": "string",
+            "description": "Default interview plan UUID."
+          },
+          "jobTemplateId": {
+            "type": "string",
+            "description": "Active job template UUID."
+          },
+          "employmentType": {
+            "type": "string",
+            "description": "FullTime|PartTime|Intern|Contract|Temporary."
+          },
+          "brandId": {
+            "type": "string",
+            "description": "Brand UUID."
+          }
+        },
+        "required": [
+          "title",
+          "teamId",
+          "locationId"
+        ]
+      }
+    },
+    "jobs.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Update job",
+      "description": "Update a job via authenticated POST /job.update. Requires jobId and at least one other field. EffectPolicy Reconcile observes via jobs.get.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "jobId": {
+            "type": "string",
+            "description": "Job UUID."
+          },
+          "title": {
+            "type": "string",
+            "description": "New title."
+          },
+          "teamId": {
+            "type": "string",
+            "description": "New team/department UUID (null clears)."
+          },
+          "locationId": {
+            "type": "string",
+            "description": "New location UUID."
+          },
+          "defaultInterviewPlanId": {
+            "type": "string",
+            "description": "New default interview plan UUID."
+          },
+          "employmentType": {
+            "type": "string",
+            "description": "New employment type."
+          },
+          "customRequisitionId": {
+            "type": "string",
+            "description": "New custom requisition id (null clears)."
+          }
+        },
+        "required": [
+          "jobId"
+        ]
+      },
+      "effectPolicy": "Reconcile",
+      "reconcile": "jobs.get"
+    },
+    "jobs.set_status": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Set job status",
+      "description": "Set a job status via authenticated POST /job.setStatus. Requires jobId and status. Optional closeReasonId when Closed. EffectPolicy Reconcile observes via jobs.get.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "jobId": {
+            "type": "string",
+            "description": "Job UUID."
+          },
+          "status": {
+            "type": "string",
+            "description": "Draft|Open|Closed|Archived."
+          },
+          "closeReasonId": {
+            "type": "string",
+            "description": "Close reason UUID when setting Closed."
+          }
+        },
+        "required": [
+          "jobId",
+          "status"
+        ]
+      },
+      "effectPolicy": "Reconcile",
+      "reconcile": "jobs.get"
+    },
+    "job_templates.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "List job templates",
+      "description": "List job templates via authenticated POST /jobTemplate.list. Agent tool.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "expand": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Expansions to include."
+          },
+          "limit": {
+            "type": "number",
+            "description": "Page size."
+          },
+          "cursor": {
+            "type": "string",
+            "description": "Pagination cursor."
+          },
+          "syncToken": {
+            "type": "string",
+            "description": "Incremental sync token."
+          }
+        }
+      }
+    },
+    "job_interview_plans.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get job interview plan",
+      "description": "Fetch a job interview plan via authenticated POST /jobInterviewPlan.info. Requires jobId. Agent tool.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "jobId": {
+            "type": "string",
+            "description": "Job UUID."
+          }
+        },
+        "required": [
+          "jobId"
+        ]
+      }
+    },
+    "job_postings.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "List job postings",
+      "description": "List job postings via authenticated POST /jobPosting.list. Agent tool.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "location": {
+            "type": "string",
+            "description": "Location filter."
+          },
+          "department": {
+            "type": "string",
+            "description": "Department filter."
+          },
+          "listedOnly": {
+            "type": "boolean",
+            "description": "Only listed postings."
+          },
+          "includeUnpublishedJobPostings": {
+            "type": "boolean",
+            "description": "Include draft postings."
+          },
+          "jobBoardId": {
+            "type": "string",
+            "description": "Job board UUID."
+          }
+        }
+      }
+    },
+    "job_postings.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get job posting",
+      "description": "Fetch a job posting via authenticated POST /jobPosting.info. Requires jobPostingId. Observe for job_postings.update. Agent tool.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "jobPostingId": {
+            "type": "string",
+            "description": "Job posting UUID."
+          },
+          "jobBoardId": {
+            "type": "string",
+            "description": "Job board UUID."
+          },
+          "includeUnpublishedJobPostings": {
+            "type": "boolean",
+            "description": "Allow draft postings."
+          },
+          "expand": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Expansions (e.g. job)."
+          }
+        },
+        "required": [
+          "jobPostingId"
+        ]
+      }
+    },
+    "job_postings.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Update job posting",
+      "description": "Update a job posting via authenticated POST /jobPosting.update. Requires jobPostingId. EffectPolicy Reconcile observes via job_postings.get.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "jobPostingId": {
+            "type": "string",
+            "description": "Job posting UUID."
+          },
+          "title": {
+            "type": "string",
+            "description": "New title."
+          },
+          "workplaceType": {
+            "type": "string",
+            "description": "OnSite|Hybrid|Remote."
+          },
+          "description": {
+            "description": "HTML description block or string.",
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "type": {
+                    "type": "string"
+                  },
+                  "value": {
+                    "type": "string"
+                  }
+                }
+              }
+            ]
+          },
+          "suppressDescriptionOpening": {
+            "type": "boolean",
+            "description": "Suppress brand description opening."
+          },
+          "suppressDescriptionClosing": {
+            "type": "boolean",
+            "description": "Suppress brand description closing."
+          },
+          "applicationConfirmationEmailTemplateId": {
+            "type": "string",
+            "description": "Confirmation email template UUID."
+          },
+          "includeUnpublishedJobPostings": {
+            "type": "boolean",
+            "description": "Allow updating draft postings."
+          }
+        },
+        "required": [
+          "jobPostingId"
+        ]
+      },
+      "effectPolicy": "Reconcile",
+      "reconcile": "job_postings.get"
+    },
+    "openings.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get opening",
+      "description": "Fetch an opening via authenticated POST /opening.info. Requires openingId (id accepted as alias). Returns the raw opening (isArchived, openingState, latestVersion.jobIds/locationIds). Observe for openings.update and G3 opening writes. Agent tool.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "openingId": {
+            "type": "string",
+            "description": "Opening UUID."
+          },
+          "id": {
+            "type": "string",
+            "description": "Alias for openingId (Idempotent observe injects top-level id)."
+          }
+        }
+      }
+    },
+    "openings.search": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Search openings",
+      "description": "Search openings by identifier via authenticated POST /opening.search. Requires identifier. Agent tool.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "identifier": {
+            "type": "string",
+            "description": "Opening identifier to search."
+          }
+        },
+        "required": [
+          "identifier"
+        ]
+      }
+    },
+    "openings.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Create opening",
+      "description": "Create an opening via authenticated POST /opening.create. No required body fields. No effect keys (creates always omit; a retry after a lost response would double-POST).",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "identifier": {
+            "type": "string",
+            "description": "Human-readable identifier."
+          },
+          "description": {
+            "type": "string",
+            "description": "Opening description."
+          },
+          "teamId": {
+            "type": "string",
+            "description": "Department/team UUID."
+          },
+          "locationIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Location UUIDs."
+          },
+          "jobIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Job UUIDs."
+          },
+          "targetHireDate": {
+            "type": "string",
+            "description": "YYYY-MM-DD target hire date."
+          },
+          "targetStartDate": {
+            "type": "string",
+            "description": "YYYY-MM-DD target start date."
+          },
+          "isBackfill": {
+            "type": "boolean",
+            "description": "Whether this opening is a backfill."
+          },
+          "employmentType": {
+            "type": "string",
+            "description": "Employment type."
+          },
+          "openingState": {
+            "type": "string",
+            "description": "Opening state."
+          }
+        }
+      }
+    },
+    "openings.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Update opening",
+      "description": "Update an opening via authenticated POST /opening.update. Requires openingId. EffectPolicy Reconcile observes via openings.get.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "openingId": {
+            "type": "string",
+            "description": "Opening UUID."
+          },
+          "identifier": {
+            "type": "string",
+            "description": "Human-readable identifier."
+          },
+          "description": {
+            "type": "string",
+            "description": "Opening description."
+          },
+          "teamId": {
+            "type": "string",
+            "description": "Department/team UUID."
+          },
+          "targetHireDate": {
+            "type": "string",
+            "description": "YYYY-MM-DD target hire date."
+          },
+          "targetStartDate": {
+            "type": "string",
+            "description": "YYYY-MM-DD target start date."
+          },
+          "isBackfill": {
+            "type": "boolean",
+            "description": "Whether this opening is a backfill."
+          },
+          "employmentType": {
+            "type": "string",
+            "description": "Employment type."
+          }
+        },
+        "required": [
+          "openingId"
+        ]
+      },
+      "effectPolicy": "Reconcile",
+      "reconcile": "openings.get"
+    },
+    "close_reasons.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "List close reasons",
+      "description": "List job/opening close reasons via authenticated POST /closeReason.list. Agent tool.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "includeArchived": {
+            "type": "boolean",
+            "description": "Include archived close reasons."
+          }
+        }
+      }
+    },
+    "openings.set_archived": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Set opening archived",
+      "description": "Archive or unarchive an opening via authenticated POST /opening.setArchived. Requires openingId and archive (boolean). EffectPolicy Reconcile observes via openings.get.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "openingId": {
+            "type": "string",
+            "description": "Opening UUID."
+          },
+          "archive": {
+            "type": "boolean",
+            "description": "true to archive, false to unarchive."
+          }
+        },
+        "required": [
+          "openingId",
+          "archive"
+        ]
+      },
+      "effectPolicy": "Reconcile",
+      "reconcile": "openings.get"
+    },
+    "openings.set_state": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Set opening state",
+      "description": "Set an opening state via authenticated POST /opening.setOpeningState. Requires openingId and openingState (Draft|Approved|Open|Closed). Optional closeReasonId when Closed. EffectPolicy Reconcile observes via openings.get.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "openingId": {
+            "type": "string",
+            "description": "Opening UUID."
+          },
+          "openingState": {
+            "type": "string",
+            "enum": [
+              "Draft",
+              "Approved",
+              "Open",
+              "Closed"
+            ],
+            "description": "Target opening state."
+          },
+          "closeReasonId": {
+            "type": "string",
+            "description": "Close reason UUID when setting Closed."
+          }
+        },
+        "required": [
+          "openingId",
+          "openingState"
+        ]
+      },
+      "effectPolicy": "Reconcile",
+      "reconcile": "openings.get"
+    },
+    "openings.add_job": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Add job to opening",
+      "description": "Attach an existing job to an opening via authenticated POST /opening.addJob. Requires openingId and jobId. EffectPolicy Reconcile observes via openings.get.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "openingId": {
+            "type": "string",
+            "description": "Opening UUID."
+          },
+          "jobId": {
+            "type": "string",
+            "description": "Job UUID to attach."
+          }
+        },
+        "required": [
+          "openingId",
+          "jobId"
+        ]
+      },
+      "effectPolicy": "Reconcile",
+      "reconcile": "openings.get"
+    },
+    "openings.remove_job": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Remove job from opening",
+      "description": "Detach a job from an opening via authenticated POST /opening.removeJob. Requires openingId and jobId. EffectPolicy Reconcile observes via openings.get.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "openingId": {
+            "type": "string",
+            "description": "Opening UUID."
+          },
+          "jobId": {
+            "type": "string",
+            "description": "Job UUID to detach."
+          }
+        },
+        "required": [
+          "openingId",
+          "jobId"
+        ]
+      },
+      "effectPolicy": "Reconcile",
+      "reconcile": "openings.get"
+    },
+    "openings.add_location": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Add location to opening",
+      "description": "Attach an existing location to an opening via authenticated POST /opening.addLocation. Requires openingId and locationId. EffectPolicy Reconcile observes via openings.get.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "openingId": {
+            "type": "string",
+            "description": "Opening UUID."
+          },
+          "locationId": {
+            "type": "string",
+            "description": "Location UUID to attach."
+          }
+        },
+        "required": [
+          "openingId",
+          "locationId"
+        ]
+      },
+      "effectPolicy": "Reconcile",
+      "reconcile": "openings.get"
+    },
+    "openings.remove_location": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Remove location from opening",
+      "description": "Detach a location from an opening via authenticated POST /opening.removeLocation. Requires openingId and locationId. EffectPolicy Reconcile observes via openings.get.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "openingId": {
+            "type": "string",
+            "description": "Opening UUID."
+          },
+          "locationId": {
+            "type": "string",
+            "description": "Location UUID to detach."
+          }
+        },
+        "required": [
+          "openingId",
+          "locationId"
+        ]
+      },
+      "effectPolicy": "Reconcile",
+      "reconcile": "openings.get"
+    },
+    "locations.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "List locations",
+      "description": "List locations via authenticated POST /location.list. Regions are not returned. Optional includeArchived, includeLocationHierarchy, limit, cursor, syncToken. Agent tool.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "includeArchived": {
+            "type": "boolean",
+            "description": "Include archived locations."
+          },
+          "includeLocationHierarchy": {
+            "type": "boolean",
+            "description": "Include location hierarchy nodes."
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Page size (max 100)."
+          },
+          "cursor": {
+            "type": "string",
+            "description": "Opaque pagination cursor."
+          },
+          "syncToken": {
+            "type": "string",
+            "description": "Incremental sync token."
+          }
+        }
+      }
+    },
+    "locations.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get location",
+      "description": "Fetch a location via authenticated POST /location.info. Requires locationId. Agent tool.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "locationId": {
+            "type": "string",
+            "description": "Location UUID."
+          }
+        },
+        "required": [
+          "locationId"
+        ]
+      }
+    },
+    "departments.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get department",
+      "description": "Fetch a department via authenticated POST /department.info. Requires departmentId. Agent tool.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "departmentId": {
+            "type": "string",
+            "description": "Department UUID."
+          }
+        },
+        "required": [
+          "departmentId"
+        ]
+      }
+    },
+    "users.search": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Search users",
+      "description": "Search users by email via authenticated POST /user.search. Requires email. Returns [] when no user matches. Agent tool.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "email": {
+            "type": "string",
+            "description": "User email address."
+          }
+        },
+        "required": [
+          "email"
+        ]
+      }
+    },
+    "offers.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Create offer",
+      "description": "Create an offer via authenticated POST /offer.create from an offer version started with offers.start. Requires offerProcessId, offerFormId and offerForm.fieldSubmissions[{path, value}]. No effect keys (creates always omit; a retry after a lost response would create a second record).",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "offerProcessId": {
+            "type": "string",
+            "description": "Offer process UUID."
+          },
+          "offerFormId": {
+            "type": "string",
+            "description": "Offer form (version) UUID returned by offers.start."
+          },
+          "offerForm": {
+            "type": "object",
+            "description": "Offer form submission.",
+            "properties": {
+              "fieldSubmissions": {
+                "type": "array",
+                "description": "Field values keyed by form field path.",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "path": {
+                      "type": "string",
+                      "description": "Form field path."
+                    },
+                    "value": {
+                      "description": "Field value (type depends on the field)."
+                    }
+                  },
+                  "required": [
+                    "path",
+                    "value"
+                  ]
+                }
+              }
+            },
+            "required": [
+              "fieldSubmissions"
+            ]
+          },
+          "excludeFormDefinition": {
+            "type": "boolean",
+            "description": "Omit formDefinition from the response."
+          }
+        },
+        "required": [
+          "offerProcessId",
+          "offerFormId",
+          "offerForm"
+        ]
+      }
+    },
+    "offers.start": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Start offer",
+      "description": "Start a new offer version for an offer process via authenticated POST /offer.start. Requires offerProcessId. Returns the version id and formDefinition to fill with offers.create. No effect keys (creates always omit; a retry after a lost response would create a second record).",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "offerProcessId": {
+            "type": "string",
+            "description": "Offer process UUID."
+          }
+        },
+        "required": [
+          "offerProcessId"
+        ]
+      }
+    },
+    "offer_processes.start": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Start offer process",
+      "description": "Start an offer process for an application via authenticated POST /offerProcess.start. Requires applicationId. No effect keys (creates always omit; a retry after a lost response would create a second record).",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "applicationId": {
+            "type": "string",
+            "description": "Application UUID."
+          }
+        },
+        "required": [
+          "applicationId"
+        ]
+      }
+    },
+    "communication_templates.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "List communication templates",
+      "description": "List enabled communication templates via authenticated POST /communicationTemplate.list. Optional ownershipFilter. Agent tool.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "ownershipFilter": {
+            "type": "string",
+            "enum": [
+              "org",
+              "personal",
+              "personalAndOrg"
+            ],
+            "description": "Template ownership filter."
+          }
+        }
+      }
+    },
+    "application_hiring_team_roles.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "List application hiring team roles",
+      "description": "List hiring team roles available on applications via authenticated POST /applicationHiringTeamRole.list. No inputs. Agent tool.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      }
+    },
+    "interviews.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get interview",
+      "description": "Fetch an interview definition via authenticated POST /interview.info. Requires id. Agent tool.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Interview UUID."
+          }
+        },
+        "required": [
+          "id"
+        ]
+      }
+    },
+    "interview_stages.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get interview stage",
+      "description": "Fetch an interview stage via authenticated POST /interviewStage.info. Requires interviewStageId. Agent tool.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "interviewStageId": {
+            "type": "string",
+            "description": "Interview stage UUID."
+          }
+        },
+        "required": [
+          "interviewStageId"
+        ]
+      }
+    },
+    "interview_events.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "List interview events",
+      "description": "List interview events for a schedule via authenticated POST /interviewEvent.list. Requires interviewScheduleId. Optional expand, createdAfter, limit, cursor, syncToken. Agent tool.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "interviewScheduleId": {
+            "type": "string",
+            "description": "Interview schedule UUID."
+          },
+          "expand": {
+            "type": "array",
+            "description": "Optional expansions (e.g. interview).",
+            "items": {
+              "type": "string"
+            }
+          },
+          "createdAfter": {
+            "type": "string",
+            "description": "ISO-8601 lower bound on createdAt."
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Page size (max 100)."
+          },
+          "cursor": {
+            "type": "string",
+            "description": "Opaque pagination cursor."
+          },
+          "syncToken": {
+            "type": "string",
+            "description": "Incremental sync token."
+          }
+        },
+        "required": [
+          "interviewScheduleId"
+        ]
+      }
+    },
+    "interview_plans.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "List interview plans",
+      "description": "List published interview plans via authenticated POST /interviewPlan.list. Optional includeArchived, limit, cursor, syncToken. Feeds interviewPlanId for interview_stages.list / applications.transfer. Agent tool.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "includeArchived": {
+            "type": "boolean",
+            "description": "Include archived records."
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Page size (max 100)."
+          },
+          "cursor": {
+            "type": "string",
+            "description": "Opaque pagination cursor."
+          },
+          "syncToken": {
+            "type": "string",
+            "description": "Incremental sync token."
+          }
+        }
+      }
+    },
+    "interview_stage_groups.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "List interview stage groups",
+      "description": "List interview stage groups via authenticated POST /interviewStageGroup.list. No inputs. Agent tool.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      }
+    },
+    "feedback_form_definitions.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "List feedback form definitions",
+      "description": "List feedback form definitions via authenticated POST /feedbackFormDefinition.list. Optional includeArchived, limit, cursor, syncToken. Feeds formDefinitionId on application_feedback.submit. Agent tool.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "includeArchived": {
+            "type": "boolean",
+            "description": "Include archived records."
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Page size (max 100)."
+          },
+          "cursor": {
+            "type": "string",
+            "description": "Opaque pagination cursor."
+          },
+          "syncToken": {
+            "type": "string",
+            "description": "Incremental sync token."
+          }
+        }
+      }
+    },
+    "feedback_form_definitions.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get feedback form definition",
+      "description": "Fetch a feedback form definition via authenticated POST /feedbackFormDefinition.info. Requires feedbackFormDefinitionId. Agent tool.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "feedbackFormDefinitionId": {
+            "type": "string",
+            "description": "Feedback form definition UUID."
+          }
+        },
+        "required": [
+          "feedbackFormDefinitionId"
+        ]
+      }
+    },
+    "custom_fields.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "List custom fields",
+      "description": "List custom fields via authenticated POST /customField.list. Optional includeArchived, limit, cursor, syncToken. Agent tool.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "includeArchived": {
+            "type": "boolean",
+            "description": "Include archived records."
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Page size (max 100)."
+          },
+          "cursor": {
+            "type": "string",
+            "description": "Opaque pagination cursor."
+          },
+          "syncToken": {
+            "type": "string",
+            "description": "Incremental sync token."
+          }
+        }
+      }
+    },
+    "custom_fields.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get custom field",
+      "description": "Fetch a custom field via authenticated POST /customField.info. Provide customFieldId or referenceIdentifier. Agent tool.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "customFieldId": {
+            "type": "string",
+            "description": "Custom field UUID."
+          },
+          "referenceIdentifier": {
+            "type": "string",
+            "description": "Custom field reference identifier."
+          }
+        }
+      }
+    },
+    "custom_fields.set_value": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Set custom field value",
+      "description": "Set one custom field value via authenticated POST /customField.setValue. Requires objectId, objectType, fieldValue (null to clear), and fieldId or referenceIdentifier. No effect keys (no dedicated observe for the field value).",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "objectId": {
+            "type": "string",
+            "description": "Target object UUID."
+          },
+          "objectType": {
+            "type": "string",
+            "description": "Object type.",
+            "enum": [
+              "Application",
+              "Candidate",
+              "Job",
+              "Opening"
+            ]
+          },
+          "fieldValue": {
+            "description": "Value to set; null clears the field."
+          },
+          "fieldId": {
+            "type": "string",
+            "description": "Custom field UUID."
+          },
+          "referenceIdentifier": {
+            "type": "string",
+            "description": "Custom field reference identifier."
+          }
+        },
+        "required": [
+          "objectId",
+          "objectType",
+          "fieldValue"
+        ]
+      }
+    },
+    "custom_fields.set_values": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Set custom field values",
+      "description": "Set multiple custom field values via authenticated POST /customField.setValues. Requires objectId, objectType, and values[]. No effect keys (no dedicated observe for the field values).",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "objectId": {
+            "type": "string",
+            "description": "Target object UUID."
+          },
+          "objectType": {
+            "type": "string",
+            "description": "Object type.",
+            "enum": [
+              "Application",
+              "Candidate",
+              "Job",
+              "Opening"
+            ]
+          },
+          "values": {
+            "type": "array",
+            "description": "Batch of field value updates.",
+            "items": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          }
+        },
+        "required": [
+          "objectId",
+          "objectType",
+          "values"
+        ]
+      }
+    },
+    "referrals.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Create referral",
+      "description": "Create a referral via authenticated POST /referral.create. Requires id (referral form id), creditedToUserId, and fieldSubmissions[{path,value}]. No effect keys (creates always omit; a retry after a lost response would create a second record).",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Referral form definition UUID."
+          },
+          "creditedToUserId": {
+            "type": "string",
+            "description": "User UUID credited for the referral."
+          },
+          "fieldSubmissions": {
+            "type": "array",
+            "description": "Form field submissions.",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "path"
+              ],
+              "properties": {
+                "path": {
+                  "type": "string",
+                  "description": "Form field path."
+                },
+                "value": {
+                  "description": "Submitted value."
+                }
+              }
+            }
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "Optional ISO-8601 createdAt override."
+          }
+        },
+        "required": [
+          "id",
+          "creditedToUserId",
+          "fieldSubmissions"
+        ]
+      }
+    },
+    "referral_forms.get": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get referral form",
+      "description": "Fetch the default referral form via authenticated POST /referralForm.info (may create the default form on first call). No inputs. Agent tool.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      }
+    },
+    "files.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get file info",
+      "description": "Retrieve a signed URL for a file handle via authenticated POST /file.info. Requires fileHandle. Returns URL metadata only (no binary transport). Agent tool.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "fileHandle": {
+            "type": "string",
+            "description": "Ashby file handle string."
+          }
+        },
+        "required": [
+          "fileHandle"
+        ]
+      }
+    },
+    "applications.list_criteria_evaluations": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "List application criteria evaluations",
+      "description": "List AI criteria evaluations for an application via authenticated POST /application.listCriteriaEvaluations. Requires applicationId. Optional limit, cursor. Requires AI Application Review. Agent tool.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "applicationId": {
+            "type": "string",
+            "description": "Application UUID."
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Page size."
+          },
+          "cursor": {
+            "type": "string",
+            "description": "Opaque pagination cursor."
+          }
+        },
+        "required": [
+          "applicationId"
+        ]
+      }
+    },
+    "candidates.add_project": {
+      "kind": "action",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Add candidate to project",
+      "description": "Add a candidate to a sourcing project via authenticated POST /candidate.addProject. Requires candidateId and projectId (candidatesWrite). Returns the Candidate object. No effect keys: candidate.info has no projects field and candidate.listProjects is a paginated list, so there is no exact observe.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "candidateId",
+          "projectId"
+        ],
+        "properties": {
+          "candidateId": {
+            "type": "string",
+            "description": "Ashby candidate UUID."
+          },
+          "projectId": {
+            "type": "string",
+            "description": "Ashby project UUID (from projects.list / projects.search)."
+          }
+        }
+      }
+    },
+    "candidates.list_projects": {
+      "kind": "action",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "List candidate projects",
+      "description": "List the projects a candidate has been added to via authenticated POST /candidate.listProjects. Requires candidateId. Optional limit (max 100) and cursor. Agent tool.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "candidateId"
+        ],
+        "properties": {
+          "candidateId": {
+            "type": "string",
+            "description": "Ashby candidate UUID."
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Page size (max 100)."
+          },
+          "cursor": {
+            "type": "string",
+            "description": "Opaque pagination cursor."
+          }
+        }
+      }
+    },
+    "projects.list": {
+      "kind": "action",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "List projects",
+      "description": "List sourcing projects via authenticated POST /project.list. Optional createdAfter (epoch milliseconds), limit (max 100), cursor, syncToken. Agent tool.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "createdAfter": {
+            "type": "integer",
+            "description": "Only projects created after this time (Unix epoch milliseconds)."
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Page size (max 100)."
+          },
+          "cursor": {
+            "type": "string",
+            "description": "Opaque pagination cursor."
+          },
+          "syncToken": {
+            "type": "string",
+            "description": "Incremental sync token."
+          }
+        }
+      }
+    },
+    "projects.search": {
+      "kind": "action",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Search projects",
+      "description": "Search sourcing projects by title via authenticated POST /project.search. Requires title. Returns at most 100 results (use projects.list to paginate). Agent tool.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "title"
+        ],
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Project title to search."
+          }
+        }
+      }
     }
   },
   "models": [

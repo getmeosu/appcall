@@ -1,7 +1,7 @@
 /**
  * Ashby list/get/search/write syncs.
  *
- * jobs.list               → public GET /posting-api/job-board/{board}/jobs
+ * jobs.list               → public GET /posting-api/job-board/{board}
  * candidates.list         → authenticated POST /candidate.list
  * applications.list       → authenticated POST /application.list
  * candidates.get          → authenticated POST /candidate.info
@@ -9,9 +9,9 @@
  * candidates.search       → authenticated POST /candidate.search
  * interviews.list         → authenticated POST /interview.list
  * candidates.create       → POST /candidate.create
- *                           (runner EffectPolicy Idempotent → candidates.get)
+ *                           (no effect keys: creates always omit)
  * applications.create     → POST /application.create
- *                           (runner EffectPolicy Idempotent → applications.get)
+ *                           (no effect keys: creates always omit)
  * applications.move       → POST /application.changeStage
  *                           (runner EffectPolicy Reconcile → applications.get)
  * applications.reject     → POST /application.changeStage (Archived + archiveReasonId)
@@ -69,7 +69,7 @@ export async function executeJobsListSync(
   input: ExecuteJobsListSyncInput,
 ): Promise<ExecuteJobsListSyncOutput> {
   const client = createClient({ boardName: input.boardName, fetch: input.fetch });
-  const raw = await client.getJSON("/jobs");
+  const raw = await client.getJSON("");
   return { jobs: parseJobsResponse(raw) };
 }
 
@@ -419,7 +419,7 @@ export async function executeApplicationsHireSync(
 
 // ---------------------------------------------------------------------------
 // candidates.create — POST /candidate.create
-// Runtime owns EffectPolicy Idempotent → candidates.get
+// No effect keys: creates always omit (a retry after a lost response would double-POST).
 // ---------------------------------------------------------------------------
 
 export interface ExecuteCandidatesCreateSyncInput extends AshbyAuthInput {
@@ -445,7 +445,7 @@ export interface ExecuteCandidatesCreateSyncInput extends AshbyAuthInput {
 }
 
 export interface ExecuteCandidatesCreateSyncOutput {
-  /** Raw Ashby results payload; runner Idempotent replaces with candidates.get. */
+  /** Raw Ashby results payload (no runner observe; creates omit effect keys). */
   id?: string;
   [key: string]: unknown;
 }
@@ -481,14 +481,14 @@ export async function executeCandidatesCreateSync(
     fetch: input.fetch,
     operation: "candidates.create",
   });
-  // POST only — runner EffectPolicy Idempotent observes via candidates.get.
+  // POST only — no effect keys; the runner never retries this create.
   const raw = await client.postJSON("/candidate.create", body);
   return unwrapAshbyCreateResults(raw, "candidates.create");
 }
 
 // ---------------------------------------------------------------------------
 // applications.create — POST /application.create
-// Runtime owns EffectPolicy Idempotent → applications.get
+// No effect keys: creates always omit (a retry after a lost response would double-POST).
 // ---------------------------------------------------------------------------
 
 export interface ExecuteApplicationsCreateSyncInput extends AshbyAuthInput {
@@ -508,7 +508,7 @@ export interface ExecuteApplicationsCreateSyncInput extends AshbyAuthInput {
 }
 
 export interface ExecuteApplicationsCreateSyncOutput {
-  /** Raw Ashby results payload; runner Idempotent replaces with applications.get. */
+  /** Raw Ashby results payload (no runner observe; creates omit effect keys). */
   id?: string;
   [key: string]: unknown;
 }
@@ -531,7 +531,7 @@ export async function executeApplicationsCreateSync(
     fetch: input.fetch,
     operation: "applications.create",
   });
-  // POST only — runner EffectPolicy Idempotent observes via applications.get.
+  // POST only — no effect keys; the runner never retries this create.
   const raw = await client.postJSON("/application.create", body);
   return unwrapAshbyCreateResults(raw, "applications.create");
 }
@@ -695,13 +695,13 @@ export async function executeCandidatesUpdateSync(
   await client.postJSON(
     "/candidate.update",
     compactBody({
-      id,
+      candidateId: id,
       name: input.name,
       email: input.email,
       phoneNumber: input.phoneNumber,
       linkedInUrl: input.linkedInUrl,
       githubUrl: input.githubUrl,
-      website: input.websiteUrl,
+      websiteUrl: input.websiteUrl,
       sourceId: input.sourceId,
       creditedToUserId: input.creditedToUserId,
     }),
@@ -887,31 +887,8 @@ export async function executeInterviewSchedulesListSync(
   return parseInterviewSchedulesResponse(raw);
 }
 
-export interface ExecuteInterviewSchedulesGetSyncInput extends AshbyAuthInput {
-  interviewScheduleId: string;
-}
-
-export interface ExecuteInterviewSchedulesGetSyncOutput {
-  interviewSchedule: NormalizedInterviewSchedule | null;
-}
-
-export async function executeInterviewSchedulesGetSync(
-  input: ExecuteInterviewSchedulesGetSyncInput,
-): Promise<ExecuteInterviewSchedulesGetSyncOutput> {
-  const interviewScheduleId = requireNonEmptyString(input.interviewScheduleId, "interviewScheduleId");
-  const client = createAuthClient({
-    apiKey: input.apiKey,
-    fetch: input.fetch,
-    operation: "interview_schedules.get",
-  });
-  const raw = await client.postJSON("/interviewSchedule.info", { id: interviewScheduleId });
-  return parseInterviewScheduleInfoResponse(raw);
-}
-
 export interface ExecuteInterviewStagesListSyncInput extends AshbyAuthInput {
-  limit?: number;
-  cursor?: string;
-  syncToken?: string;
+  interviewPlanId: string;
 }
 
 export interface ExecuteInterviewStagesListSyncOutput {
@@ -924,12 +901,13 @@ export interface ExecuteInterviewStagesListSyncOutput {
 export async function executeInterviewStagesListSync(
   input: ExecuteInterviewStagesListSyncInput,
 ): Promise<ExecuteInterviewStagesListSyncOutput> {
+  const interviewPlanId = requireNonEmptyString(input.interviewPlanId, "interviewPlanId");
   const client = createAuthClient({
     apiKey: input.apiKey,
     fetch: input.fetch,
     operation: "interview_stages.list",
   });
-  const raw = await client.postJSON("/interviewStage.list", listBody(input));
+  const raw = await client.postJSON("/interviewStage.list", { interviewPlanId });
   return parseInterviewStagesResponse(raw);
 }
 

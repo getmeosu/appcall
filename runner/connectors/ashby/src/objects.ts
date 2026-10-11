@@ -15,6 +15,12 @@ export interface NormalizedJob {
   department: string | null;
   employmentType: string | null;
   createdAt: string | null;
+  /** Authenticated job.info fields (output additions for G2 Reconcile). */
+  status: string | null;
+  locationId: string | null;
+  departmentId: string | null;
+  defaultInterviewPlanId: string | null;
+  customRequisitionId: string | null;
 }
 
 export interface NormalizedCandidate {
@@ -26,6 +32,8 @@ export interface NormalizedCandidate {
   applicationIds: string[];
   profileUrl: string | null;
   source: string | null;
+  /** Tag titles from candidate.info (G2 fold-in; output addition). */
+  tags: string[];
   createdAt: string | null;
   updatedAt: string | null;
 }
@@ -43,6 +51,12 @@ export interface NormalizedApplication {
   archivedAt: string | null;
   createdAt: string | null;
   updatedAt: string | null;
+  /** Source title from application.info (G2 fold-in; output addition). */
+  source: string | null;
+  /** Source UUID from application.info.source.id (G2 fold-in). */
+  sourceId: string | null;
+  /** Credited user UUID from application.info.creditedToUser.id (G2 fold-in). */
+  creditedToUserId: string | null;
 }
 
 export interface NormalizedInterview {
@@ -83,10 +97,23 @@ interface AshbyJob {
   title?: string | null;
   locationName?: string | null;
   departmentName?: string | null;
+  /**
+   * Live public posting-api (jobs.list) returns `location` / `department` as
+   * strings; authenticated job.info returns `location` as an object
+   * ({ id, name, ... }, when expanded) and no department name.
+   */
+  location?: unknown;
+  department?: unknown;
   employmentType?: string | null;
   descriptionHtml?: string | null;
   url?: string | null;
   publishedAt?: string | null;
+  status?: string | null;
+  locationId?: string | null;
+  departmentId?: string | null;
+  defaultInterviewPlanId?: string | null;
+  customRequisitionId?: string | null;
+  createdAt?: string | null;
 }
 
 function asStringId(value: unknown): string | null {
@@ -129,15 +156,32 @@ function sourceTitle(source: unknown): string | null {
   return null;
 }
 
+function nameOf(value: unknown): string | null {
+  if (typeof value === "string") return value.length > 0 ? value : null;
+  if (value != null && typeof value === "object") {
+    const name = (value as { name?: unknown }).name;
+    return typeof name === "string" && name.length > 0 ? name : null;
+  }
+  return null;
+}
+
 export function normalizeJob(job: AshbyJob): NormalizedJob {
   return {
     id: `ash-job:${job.id}`,
     provider: "ashby",
     title: job.title ?? "",
-    location: job.locationName ?? null,
-    department: job.departmentName ?? null,
+    location: job.locationName ?? nameOf(job.location),
+    department: job.departmentName ?? nameOf(job.department),
     employmentType: job.employmentType ?? null,
-    createdAt: job.publishedAt ?? null,
+    createdAt: job.publishedAt ?? job.createdAt ?? null,
+    status: job.status ?? null,
+    locationId: asStringId(job.locationId ?? null),
+    departmentId: asStringId(job.departmentId ?? null),
+    defaultInterviewPlanId: asStringId(job.defaultInterviewPlanId ?? null),
+    customRequisitionId:
+      typeof job.customRequisitionId === "string" && job.customRequisitionId.length > 0
+        ? job.customRequisitionId
+        : null,
   };
 }
 
@@ -161,8 +205,36 @@ interface AshbyCandidate {
   applicationIds?: unknown;
   profileUrl?: string | null;
   source?: unknown;
+  tags?: unknown;
   createdAt?: string | null;
   updatedAt?: string | null;
+}
+
+
+function tagTitles(tags: unknown): string[] {
+  if (!Array.isArray(tags)) return [];
+  const out: string[] = [];
+  for (const item of tags) {
+    if (typeof item === "string" && item.length > 0) {
+      out.push(item);
+      continue;
+    }
+    if (item != null && typeof item === "object") {
+      const title = (item as { title?: unknown }).title;
+      if (typeof title === "string" && title.length > 0) out.push(title);
+    }
+  }
+  return out;
+}
+
+function sourceIdOf(source: unknown): string | null {
+  if (source == null || typeof source !== "object") return null;
+  return asStringId((source as { id?: unknown }).id ?? null);
+}
+
+function creditedToUserIdOf(user: unknown): string | null {
+  if (user == null || typeof user !== "object") return null;
+  return asStringId((user as { id?: unknown }).id ?? null);
 }
 
 export function normalizeCandidate(candidate: AshbyCandidate): NormalizedCandidate {
@@ -190,6 +262,7 @@ export function normalizeCandidate(candidate: AshbyCandidate): NormalizedCandida
     applicationIds,
     profileUrl: asIso(candidate.profileUrl),
     source: sourceTitle(candidate.source),
+    tags: tagTitles(candidate.tags),
     createdAt: asIso(candidate.createdAt),
     updatedAt: asIso(candidate.updatedAt),
   };
@@ -247,6 +320,8 @@ interface AshbyApplication {
     id?: string | null;
     title?: string | null;
   } | null;
+  source?: unknown;
+  creditedToUser?: unknown;
 }
 
 export function normalizeApplication(application: AshbyApplication): NormalizedApplication {
@@ -264,6 +339,9 @@ export function normalizeApplication(application: AshbyApplication): NormalizedA
     archivedAt: asIso(application.archivedAt),
     createdAt: asIso(application.createdAt),
     updatedAt: asIso(application.updatedAt),
+    source: sourceTitle(application.source),
+    sourceId: sourceIdOf(application.source),
+    creditedToUserId: creditedToUserIdOf(application.creditedToUser),
   };
 }
 
@@ -456,7 +534,15 @@ interface AshbyOffer {
   decidedAt?: string | null;
   createdAt?: string | null;
   updatedAt?: string | null;
-  latestVersion?: { id?: string | null; startDate?: string | null } | null;
+  /**
+   * Live offer.list / offer.info carry no top-level createdAt/updatedAt; the
+   * creation timestamp lives at latestVersion.createdAt.
+   */
+  latestVersion?: {
+    id?: string | null;
+    startDate?: string | null;
+    createdAt?: string | null;
+  } | null;
 }
 
 export function normalizeOffer(offer: AshbyOffer): NormalizedOffer {
@@ -470,7 +556,7 @@ export function normalizeOffer(offer: AshbyOffer): NormalizedOffer {
     decidedAt: asIso(offer.decidedAt),
     latestVersionId: asStringId(offer.latestVersion?.id ?? null),
     startDate: asIso(offer.latestVersion?.startDate),
-    createdAt: asIso(offer.createdAt),
+    createdAt: asIso(offer.createdAt) ?? asIso(offer.latestVersion?.createdAt),
     updatedAt: asIso(offer.updatedAt),
   };
 }
@@ -726,26 +812,104 @@ export interface NormalizedOpening {
   openedAt: string | null;
   closedAt: string | null;
   identifier: string | null;
+  /** G2 observe fields for openings.update / create (output additions). */
+  description: string | null;
+  teamId: string | null;
+  targetHireDate: string | null;
+  targetStartDate: string | null;
+  isBackfill: boolean | null;
+  employmentType: string | null;
+  openingState: string | null;
+}
+
+/**
+ * Live Ashby opening shape (opening.list / opening.info / opening.search /
+ * opening.create / opening.update): top level carries id, openedAt, closedAt,
+ * isArchived, closeReasonId, archivedAt, openingState; the version fields
+ * (identifier, description, teamId, targetHireDate, targetStartDate,
+ * isBackfill, employmentType, jobIds, locationIds, ...) are nested under
+ * `latestVersion` (nullable). There is no top-level jobId or isOpen.
+ * The legacy top-level keys are kept only as a fallback.
+ */
+interface AshbyOpeningVersion {
+  id?: string | null;
+  identifier?: string | null;
+  description?: string | null;
+  authorId?: string | null;
+  createdAt?: string | null;
+  teamId?: string | null;
+  targetHireDate?: string | null;
+  targetStartDate?: string | null;
+  isBackfill?: boolean | null;
+  employmentType?: string | null;
+  jobIds?: unknown;
+  locationIds?: unknown;
 }
 
 interface AshbyOpening {
   id: string;
-  jobId?: string | null;
-  isOpen?: boolean | null;
   openedAt?: string | null;
   closedAt?: string | null;
+  isArchived?: boolean | null;
+  closeReasonId?: string | null;
+  archivedAt?: string | null;
+  openingState?: string | null;
+  latestVersion?: AshbyOpeningVersion | null;
+  /** Legacy top-level fallbacks (not in the live response). */
+  jobId?: string | null;
+  isOpen?: boolean | null;
   identifier?: string | null;
+  description?: string | null;
+  teamId?: string | null;
+  targetHireDate?: string | null;
+  targetStartDate?: string | null;
+  isBackfill?: boolean | null;
+  employmentType?: string | null;
+}
+
+function nonEmptyString(value: unknown): string | null {
+  return typeof value === "string" && value.length > 0 ? value : null;
+}
+
+function firstStringId(list: unknown): string | null {
+  if (!Array.isArray(list)) return null;
+  for (const item of list) {
+    const id = asStringId(item);
+    if (id != null) return id;
+  }
+  return null;
 }
 
 export function normalizeOpening(opening: AshbyOpening): NormalizedOpening {
+  const version: AshbyOpeningVersion =
+    opening.latestVersion != null && typeof opening.latestVersion === "object"
+      ? opening.latestVersion
+      : {};
+  const isBackfill =
+    typeof version.isBackfill === "boolean"
+      ? version.isBackfill
+      : typeof opening.isBackfill === "boolean"
+        ? opening.isBackfill
+        : null;
+  const openingState = nonEmptyString(opening.openingState);
   return {
     id: `ash-opening:${asStringId(opening.id) ?? ""}`,
     provider: "ashby",
-    jobId: asStringId(opening.jobId ?? null),
-    isOpen: opening.isOpen === true,
+    jobId: firstStringId(version.jobIds) ?? asStringId(opening.jobId ?? null),
+    isOpen: typeof opening.isOpen === "boolean" ? opening.isOpen : openingState === "Open",
     openedAt: asIso(opening.openedAt),
     closedAt: asIso(opening.closedAt),
-    identifier: opening.identifier ?? null,
+    identifier: nonEmptyString(version.identifier) ?? nonEmptyString(opening.identifier),
+    description: nonEmptyString(version.description) ?? nonEmptyString(opening.description),
+    teamId: asStringId(version.teamId ?? null) ?? asStringId(opening.teamId ?? null),
+    targetHireDate:
+      nonEmptyString(version.targetHireDate) ?? nonEmptyString(opening.targetHireDate),
+    targetStartDate:
+      nonEmptyString(version.targetStartDate) ?? nonEmptyString(opening.targetStartDate),
+    isBackfill,
+    employmentType:
+      nonEmptyString(version.employmentType) ?? nonEmptyString(opening.employmentType),
+    openingState,
   };
 }
 

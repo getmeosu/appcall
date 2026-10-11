@@ -6,8 +6,8 @@ describe("Lever manifest", () => {
     expect(manifest.key).toBe("lever");
   });
 
-  it("has version 0.5.0", () => {
-    expect(manifest.version).toBe("0.5.0");
+  it("has version 0.8.0", () => {
+    expect(manifest.version).toBe("0.8.0");
   });
 
   it("uses bun runtime", () => {
@@ -21,12 +21,13 @@ describe("Lever manifest", () => {
   });
 
   it("allows expected hosts", () => {
-    expect(manifest.network.allowedHosts).toEqual(["api.lever.co", "api.lever.eu"]);
+    expect(manifest.network.allowedHosts).toEqual(["api.lever.co", "api.eu.lever.co"]);
   });
 
   it("requires region for US/EU host selection", () => {
     expect(manifest.auth.setup.fields.some((field: { key: string }) => field.key === "region")).toBe(true);
-    expect(manifest.http.baseUrl).toContain("{{region}}");
+    // Declarative default is the US root; custom handlers map region=eu → api.eu.lever.co.
+    expect(manifest.http.baseUrl).toBe("https://api.lever.co/v1");
     expect(manifest.http.auth.basic).toEqual({ username: "{{apiKey}}", password: "" });
   });
 
@@ -40,27 +41,63 @@ describe("Lever manifest", () => {
       "archive_reasons.list",
       "candidates.get",
       "feedback.get",
+      "files.get",
+      "files.list",
+      "form_templates.get",
+      "form_templates.list",
+      "forms.create",
+      "forms.get",
+      "forms.list",
       "healthcheck",
+      "interviews.create",
+      "interviews.delete",
       "interviews.get",
       "interviews.list",
+      "interviews.update",
       "jobs.list",
+      "notes.create",
+      "notes.delete",
+      "notes.get",
       "notes.list",
+      "notes.update",
       "offers.get",
       "offers.list",
+      "opportunities.add_links",
+      "opportunities.add_sources",
+      "opportunities.add_tags",
       "opportunities.archive",
+      "opportunities.create",
       "opportunities.feedback.list",
       "opportunities.get",
       "opportunities.interviews.list",
       "opportunities.list",
+      "opportunities.remove_links",
+      "opportunities.remove_sources",
+      "opportunities.remove_tags",
       "opportunities.update",
       "opportunities.update_stage",
+      "panels.create",
+      "panels.delete",
+      "panels.get",
+      "panels.list",
+      "panels.update",
       "postings.get",
       "postings.list",
+      "referrals.list",
+      "requisitions.create",
+      "requisitions.delete",
+      "requisitions.get",
       "requisitions.list",
+      "requisitions.update",
+      "resumes.list",
+      "sources.list",
+      "stages.get",
       "stages.list",
+      "tags.list",
       "users.get",
       "users.list",
     ]);
+    expect(Object.keys(manifest.operations)).toHaveLength(58);
     expect(manifest.operations["jobs.list"].kind).toBe("sync");
     expect(manifest.operations["opportunities.list"].kind).toBe("sync");
     expect(manifest.operations["opportunities.get"].kind).toBe("sync");

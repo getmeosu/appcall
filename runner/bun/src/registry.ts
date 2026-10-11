@@ -735,6 +735,103 @@ import {
   listOrgActionsSecretRepositories as ghListOrgActionsSecretRepositories,
   listOrgActionsPermissionsRepositories as ghListOrgActionsPermissionsRepositories,
   getOrgOidcCustomizationSub as ghGetOrgOidcCustomizationSub,
+  getRepoActionsSecretsPublicKey as ghGetRepoActionsSecretsPublicKey,
+  getRepoActionsSecret as ghGetRepoActionsSecret,
+  upsertRepoActionsSecret as ghUpsertRepoActionsSecret,
+  deleteRepoActionsSecret as ghDeleteRepoActionsSecret,
+  upsertOrgActionsSecret as ghUpsertOrgActionsSecret,
+  deleteOrgActionsSecret as ghDeleteOrgActionsSecret,
+  setOrgActionsSecretRepositories as ghSetOrgActionsSecretRepositories,
+  addOrgActionsSecretRepository as ghAddOrgActionsSecretRepository,
+  createDeploymentProtectionRule as ghCreateDeploymentProtectionRule,
+  renderMarkdownRaw as ghRenderMarkdownRaw,
+  deleteRepoCodespaceSecret as ghDeleteRepoCodespaceSecret,
+  getUserCodespace as ghGetUserCodespace,
+  updateUserCodespace as ghUpdateUserCodespace,
+  deleteUserEmails as ghDeleteUserEmails,
+  setPrimaryEmailVisibility as ghSetPrimaryEmailVisibility,
+  listOrgMemberships as ghListOrgMemberships,
+  addOrgRunnerLabels as ghAddOrgRunnerLabels,
+  setOrgRunnerLabels as ghSetOrgRunnerLabels,
+  removeAllOrgRunnerLabels as ghRemoveAllOrgRunnerLabels,
+  addRepoRunnerLabels as ghAddRepoRunnerLabels,
+  setRepoRunnerLabels as ghSetRepoRunnerLabels,
+  createOrgRunnerJitConfig as ghCreateOrgRunnerJitConfig,
+  createRepoRunnerJitConfig as ghCreateRepoRunnerJitConfig,
+  getActionsPermissionsAccess as ghGetActionsPermissionsAccess,
+  setActionsPermissionsAccess as ghSetActionsPermissionsAccess,
+  removeOrgActionsPermissionsRepository as ghRemoveOrgActionsPermissionsRepository,
+  setOrgActionsPermissionsRepositories as ghSetOrgActionsPermissionsRepositories,
+  addOrgActionsPermissionsRepository as ghAddOrgActionsPermissionsRepository,
+  reviewDeploymentProtectionRule as ghReviewDeploymentProtectionRule,
+  setOrgOidcCustomizationSub as ghSetOrgOidcCustomizationSub,
+  getRepoOidcCustomizationSub as ghGetRepoOidcCustomizationSub,
+  setRepoOidcCustomizationSub as ghSetRepoOidcCustomizationSub,
+  listOrgVariableRepositories as ghListOrgVariableRepositories,
+  setOrgVariableRepositories as ghSetOrgVariableRepositories,
+  removeOrgVariableRepository as ghRemoveOrgVariableRepository,
+  removeOrgActionsSecretRepository as ghRemoveOrgActionsSecretRepository,
+  updateOrgPropertiesSchema as ghUpdateOrgPropertiesSchema,
+  createOrUpdateOrgPropertySchema as ghCreateOrUpdateOrgPropertySchema,
+  updateOrgPropertyValues as ghUpdateOrgPropertyValues,
+  updateRepoPropertyValues as ghUpdateRepoPropertyValues,
+  listEnvironmentDeploymentProtectionRuleApps as ghListEnvironmentDeploymentProtectionRuleApps,
+  deleteUserCodespace as ghDeleteUserCodespace,
+  deleteOrgMemberCodespace as ghDeleteOrgMemberCodespace,
+  listRepoCodespaces as ghListRepoCodespaces,
+  listRepoDevcontainers as ghListRepoDevcontainers,
+  getRepoCodespacesPermissionsCheck as ghGetRepoCodespacesPermissionsCheck,
+  getOrgCodespacesSecret as ghGetOrgCodespacesSecret,
+  upsertOrgCodespacesSecret as ghUpsertOrgCodespacesSecret,
+  deleteOrgCodespacesSecret as ghDeleteOrgCodespacesSecret,
+  setOrgCodespacesSecretRepositories as ghSetOrgCodespacesSecretRepositories,
+  removeOrgCodespacesSecretRepository as ghRemoveOrgCodespacesSecretRepository,
+  getRepoCodespacesSecret as ghGetRepoCodespacesSecret,
+  deleteDependabotSecret as ghDeleteDependabotSecret,
+  getOrgCodespacesSecretsPublicKey as ghGetOrgCodespacesSecretsPublicKey,
+  listOrgCodespacesSecretRepositories as ghListOrgCodespacesSecretRepositories,
+  updatePagesSite as ghUpdatePagesSite,
+  enablePrivateVulnerabilityReporting as ghEnablePrivateVulnerabilityReporting,
+  disablePrivateVulnerabilityReporting as ghDisablePrivateVulnerabilityReporting,
+  uploadCodeScanningSarif as ghUploadCodeScanningSarif,
+  listRepoAttestations as ghListRepoAttestations,
+  listOrgIssues as ghListOrgIssues,
+  listOrgPackageVersions as ghListOrgPackageVersions,
+  removeOrgPublicMember as ghRemoveOrgPublicMember,
+  deleteUserInteractionLimits as ghDeleteUserInteractionLimits,
+  checkUserStarred as ghCheckUserStarred,
+  deleteAuthenticatedUserPackage as ghDeleteAuthenticatedUserPackage,
+  listAuthenticatedUserPackageVersions as ghListAuthenticatedUserPackageVersions,
+  getRepoDependabotSecretsPublicKey as ghGetRepoDependabotSecretsPublicKey,
+  listRepoDependabotSecrets as ghListRepoDependabotSecrets,
+  getRepoDependabotSecret as ghGetRepoDependabotSecret,
+  upsertRepoDependabotSecret as ghUpsertRepoDependabotSecret,
+  listOrgDependabotSecrets as ghListOrgDependabotSecrets,
+  getOrgDependabotSecret as ghGetOrgDependabotSecret,
+  upsertOrgDependabotSecret as ghUpsertOrgDependabotSecret,
+  deleteOrgDependabotSecret as ghDeleteOrgDependabotSecret,
+  listOrgDependabotSecretRepositories as ghListOrgDependabotSecretRepositories,
+  setOrgDependabotSecretRepositories as ghSetOrgDependabotSecretRepositories,
+  addOrgDependabotSecretRepository as ghAddOrgDependabotSecretRepository,
+  removeOrgDependabotSecretRepository as ghRemoveOrgDependabotSecretRepository,
+  getRepoCodespacesSecretsPublicKey as ghGetRepoCodespacesSecretsPublicKey,
+  listRepoCodespacesSecrets as ghListRepoCodespacesSecrets,
+  upsertRepoCodespacesSecret as ghUpsertRepoCodespacesSecret,
+  getGraphqlNode as ghGetGraphqlNode,
+  getGraphqlNodes as ghGetGraphqlNodes,
+  getGraphqlRateLimit as ghGetGraphqlRateLimit,
+  getGraphqlViewer as ghGetGraphqlViewer,
+  getGraphqlRepository as ghGetGraphqlRepository,
+  getGraphqlOrganization as ghGetGraphqlOrganization,
+  getGraphqlRepositoryOwner as ghGetGraphqlRepositoryOwner,
+  getGraphqlTopic as ghGetGraphqlTopic,
+  getGraphqlResource as ghGetGraphqlResource,
+  getGraphqlCodeOfConduct as ghGetGraphqlCodeOfConduct,
+  listGraphqlCodesOfConduct as ghListGraphqlCodesOfConduct,
+  getGraphqlLicense as ghGetGraphqlLicense,
+  listGraphqlLicenses as ghListGraphqlLicenses,
+  listGraphqlSecurityAdvisories as ghListGraphqlSecurityAdvisories,
+  listGraphqlSecurityVulnerabilities as ghListGraphqlSecurityVulnerabilities,
 } from "../../connectors/github/src/actions";
 import { healthcheck as githubHealthcheck } from "../../connectors/github/src/healthcheck";
 import { executeIssuesListSync as listGitHubIssues, executePullRequestsListSync as listGitHubPRs, executeCommitsListSync as listGitHubCommits, executeRepositoriesListSync as listGitHubRepos } from "../../connectors/github/src/sync";
@@ -933,6 +1030,31 @@ import {
   executeCandidateTagsDelete as deleteGreenhouseCandidateTag,
   executeRejectionDetailsUpdate as updateGreenhouseRejectionDetail,
 } from "../../connectors/greenhouse/src/g2";
+import {
+  executeJobsCreate as createGreenhouseJob,
+  executeJobsUpdate as updateGreenhouseJob,
+  executeJobPostsList as listGreenhouseJobPosts,
+  executeOpeningsList as listGreenhouseOpenings,
+  executeOpeningsCreate as createGreenhouseOpening,
+  executeOpeningsUpdate as updateGreenhouseOpening,
+  executeJobOwnersList as listGreenhouseJobOwners,
+  executeJobOwnersCreate as createGreenhouseJobOwner,
+  executeJobOwnersDelete as deleteGreenhouseJobOwner,
+  executeJobHiringManagersList as listGreenhouseJobHiringManagers,
+  executeJobHiringManagersCreate as createGreenhouseJobHiringManager,
+  executeJobHiringManagersDelete as deleteGreenhouseJobHiringManager,
+  executeJobNotesList as listGreenhouseJobNotes,
+  executeJobNotesCreate as createGreenhouseJobNote,
+  executeJobNotesUpdate as updateGreenhouseJobNote,
+} from "../../connectors/greenhouse/src/g3"
+import {
+  executeJobNotesDelete as deleteGreenhouseJobNote,
+  executeJobInterviewsList as listGreenhouseJobInterviews,
+  executeDefaultInterviewersList as listGreenhouseDefaultInterviewers,
+  executeInterviewerTagsList as listGreenhouseInterviewerTags,
+  executeReferrersList as listGreenhouseReferrers,
+  executeEmailTemplatesList as listGreenhouseEmailTemplates,
+} from "../../connectors/greenhouse/src/g4"
 import leverManifest from "../../connectors/lever/manifest.json";
 import {
   executeJobsListSync as listLeverJobs,
@@ -957,6 +1079,41 @@ import {
   executeUsersGetSync as getLeverUser,
   executeRequisitionsListSync as listLeverRequisitions,
   executeFeedbackGetSync as getLeverFeedback,
+  executeOpportunitiesCreate as createLeverOpportunity,
+  executeOpportunitiesAddTags as addLeverOpportunityTags,
+  executeOpportunitiesRemoveTags as removeLeverOpportunityTags,
+  executeOpportunitiesAddLinks as addLeverOpportunityLinks,
+  executeOpportunitiesRemoveLinks as removeLeverOpportunityLinks,
+  executeOpportunitiesAddSources as addLeverOpportunitySources,
+  executeOpportunitiesRemoveSources as removeLeverOpportunitySources,
+  executeNotesCreate as createLeverNote,
+  executeNotesGet as getLeverNote,
+  executeNotesUpdate as updateLeverNote,
+  executeNotesDelete as deleteLeverNote,
+  executeSourcesList as listLeverSources,
+  executeTagsList as listLeverTags,
+  executeStagesGet as getLeverStage,
+  executeReferralsList as listLeverReferrals,
+  executePanelsList as listLeverPanels,
+  executePanelsGet as getLeverPanel,
+  executePanelsCreate as createLeverPanel,
+  executePanelsUpdate as updateLeverPanel,
+  executePanelsDelete as deleteLeverPanel,
+  executeInterviewsCreate as createLeverInterview,
+  executeInterviewsUpdate as updateLeverInterview,
+  executeInterviewsDelete as deleteLeverInterview,
+  executeRequisitionsGet as getLeverRequisition,
+  executeRequisitionsCreate as createLeverRequisition,
+  executeRequisitionsUpdate as updateLeverRequisition,
+  executeRequisitionsDelete as deleteLeverRequisition,
+  executeResumesList as listLeverResumes,
+  executeFilesList as listLeverFiles,
+  executeFilesGet as getLeverFile,
+  executeFormsList as listLeverForms,
+  executeFormsGet as getLeverForm,
+  executeFormsCreate as createLeverForm,
+  executeFormTemplatesList as listLeverFormTemplates,
+  executeFormTemplatesGet as getLeverFormTemplate,
 } from "../../connectors/lever/src/sync";
 import ashbyManifest from "../../connectors/ashby/manifest.json";
 import {
@@ -983,10 +1140,83 @@ import {
   executeSourcesListSync as listAshbySources,
   executeArchiveReasonsListSync as listAshbyArchiveReasons,
   executeInterviewSchedulesListSync as listAshbyInterviewSchedules,
-  executeInterviewSchedulesGetSync as getAshbyInterviewSchedule,
   executeInterviewStagesListSync as listAshbyInterviewStages,
   executeOpeningsListSync as listAshbyOpenings,
 } from "../../connectors/ashby/src/sync";
+import {
+  executeCandidatesCreateNote as createAshbyCandidateNote,
+  executeCandidatesListNotes as listAshbyCandidateNotes,
+  executeCandidatesAddTag as addAshbyCandidateTag,
+  executeCandidateTagsList as listAshbyCandidateTags,
+  executeCandidateTagsCreate as createAshbyCandidateTag,
+  executeApplicationsChangeSource as changeAshbyApplicationSource,
+  executeApplicationsTransfer as transferAshbyApplication,
+  executeApplicationsUpdate as updateAshbyApplication,
+  executeApplicationsListHistory as listAshbyApplicationHistory,
+  executeApplicationFeedbackList as listAshbyApplicationFeedback,
+  executeApplicationFeedbackSubmit as submitAshbyApplicationFeedback,
+  executeHiringTeamAddMember as addAshbyHiringTeamMember,
+  executeHiringTeamRemoveMember as removeAshbyHiringTeamMember,
+  executeHiringTeamRolesList as listAshbyHiringTeamRoles,
+  executeUsersGet as getAshbyUser,
+} from "../../connectors/ashby/src/g1";
+import {
+  executeJobsListInternal as listAshbyJobsInternal,
+  executeJobsSearch as searchAshbyJobs,
+  executeJobsCreate as createAshbyJob,
+  executeJobsUpdate as updateAshbyJob,
+  executeJobsSetStatus as setAshbyJobStatus,
+  executeJobTemplatesList as listAshbyJobTemplates,
+  executeJobInterviewPlansGet as getAshbyJobInterviewPlan,
+  executeJobPostingsList as listAshbyJobPostings,
+  executeJobPostingsGet as getAshbyJobPosting,
+  executeJobPostingsUpdate as updateAshbyJobPosting,
+  executeOpeningsGet as getAshbyOpening,
+  executeOpeningsSearch as searchAshbyOpenings,
+  executeOpeningsCreate as createAshbyOpening,
+  executeOpeningsUpdate as updateAshbyOpening,
+  executeCloseReasonsList as listAshbyCloseReasons,
+} from "../../connectors/ashby/src/g2";
+import {
+  executeOpeningsSetArchived as setAshbyOpeningArchived,
+  executeOpeningsSetState as setAshbyOpeningState,
+  executeOpeningsAddJob as addAshbyOpeningJob,
+  executeOpeningsRemoveJob as removeAshbyOpeningJob,
+  executeOpeningsAddLocation as addAshbyOpeningLocation,
+  executeOpeningsRemoveLocation as removeAshbyOpeningLocation,
+  executeLocationsList as listAshbyLocations,
+  executeLocationsGet as getAshbyLocation,
+  executeDepartmentsGet as getAshbyDepartment,
+  executeUsersSearch as searchAshbyUsers,
+  executeOffersCreate as createAshbyOffer,
+  executeOffersStart as startAshbyOffer,
+  executeOfferProcessesStart as startAshbyOfferProcess,
+  executeCommunicationTemplatesList as listAshbyCommunicationTemplates,
+  executeApplicationHiringTeamRolesList as listAshbyApplicationHiringTeamRoles,
+} from "../../connectors/ashby/src/g3";
+import {
+  executeInterviewsGet as getAshbyInterview,
+  executeInterviewStagesGet as getAshbyInterviewStage,
+  executeInterviewEventsList as listAshbyInterviewEvents,
+  executeInterviewPlansList as listAshbyInterviewPlans,
+  executeInterviewStageGroupsList as listAshbyInterviewStageGroups,
+  executeFeedbackFormDefinitionsList as listAshbyFeedbackFormDefinitions,
+  executeFeedbackFormDefinitionsGet as getAshbyFeedbackFormDefinition,
+  executeCustomFieldsList as listAshbyCustomFields,
+  executeCustomFieldsGet as getAshbyCustomField,
+  executeCustomFieldsSetValue as setAshbyCustomFieldValue,
+  executeCustomFieldsSetValues as setAshbyCustomFieldValues,
+  executeReferralsCreate as createAshbyReferral,
+  executeReferralFormsGet as getAshbyReferralForm,
+  executeFilesGet as getAshbyFile,
+  executeApplicationsListCriteriaEvaluations as listAshbyApplicationCriteriaEvaluations,
+} from "../../connectors/ashby/src/g4";
+import {
+  executeCandidatesAddProject as addAshbyCandidateProject,
+  executeCandidatesListProjects as listAshbyCandidateProjects,
+  executeProjectsList as listAshbyProjects,
+  executeProjectsSearch as searchAshbyProjects,
+} from "../../connectors/ashby/src/g5";
 import { parseWebhook as ashbyParseWebhook } from "../../connectors/ashby/src/webhook";
 import intercomManifest from "../../connectors/intercom/manifest.json";
 import {
@@ -1023,6 +1253,23 @@ import {
   executeUsersListSync as listSmartRecruitersUsers,
   executeInterviewsListSync as listSmartRecruitersInterviews,
 } from "../../connectors/smartrecruiters/src/sync";
+import {
+  executeCandidatesCreate as createSmartRecruitersCandidate,
+  executeApplicationsCreate as createSmartRecruitersApplication,
+  executeCandidatesUpdate as updateSmartRecruitersCandidate,
+  executeApplicationsGet as getSmartRecruitersApplication,
+  executeApplicationsUpdateStatus as updateSmartRecruitersApplicationStatus,
+  executeApplicationsStatusHistory as getSmartRecruitersApplicationStatusHistory,
+  executeCandidatesTagsGet as getSmartRecruitersCandidateTags,
+  executeCandidatesTagsAdd as addSmartRecruitersCandidateTags,
+  executeCandidatesTagsReplace as replaceSmartRecruitersCandidateTags,
+  executeCandidatesAttachmentsList as listSmartRecruitersCandidateAttachments,
+  executeApplicationsAttachmentsList as listSmartRecruitersApplicationAttachments,
+  executeApplicationsPropertiesGet as getSmartRecruitersApplicationProperties,
+  executeApplicationsPropertiesUpdate as updateSmartRecruitersApplicationProperties,
+  executeApplicationsScreeningAnswersGet as getSmartRecruitersScreeningAnswers,
+  executeJobApplicationsGet as getSmartRecruitersJobApplication,
+} from "../../connectors/smartrecruiters/src/g1";
 import recruiteeManifest from "../../connectors/recruitee/manifest.json";
 import { healthcheck as recruiteeHealthcheck } from "../../connectors/recruitee/src/healthcheck";
 import {
@@ -1145,6 +1392,40 @@ import {
 import metaAdsManifest from "../../connectors/meta-ads/manifest.json";
 import { healthcheck as metaAdsHealthcheck } from "../../connectors/meta-ads/src/healthcheck";
 import { executeCampaignsListSync as listMetaCampaigns, executeAdSetsListSync as listMetaAdSets, executeAdsListSync as listMetaAds, executeAdAccountsListSync as listMetaAdAccounts } from "../../connectors/meta-ads/src/sync";
+import {
+  getCampaign as metaAdsGetCampaign,
+  createCampaign as metaAdsCreateCampaign,
+  updateCampaign as metaAdsUpdateCampaign,
+  getAdSet as metaAdsGetAdSet,
+  createAdSet as metaAdsCreateAdSet,
+  updateAdSet as metaAdsUpdateAdSet,
+  getAd as metaAdsGetAd,
+  createAd as metaAdsCreateAd,
+  updateAd as metaAdsUpdateAd,
+  listAdCreatives as metaAdsListAdCreatives,
+  getAdCreative as metaAdsGetAdCreative,
+  createAdCreative as metaAdsCreateAdCreative,
+  getInsights as metaAdsGetInsights,
+  getAdAccount as metaAdsGetAdAccount,
+  searchTargeting as metaAdsSearchTargeting,
+} from "../../connectors/meta-ads/src/g1";
+import {
+  deleteCampaign as metaAdsDeleteCampaign,
+  deleteAdSet as metaAdsDeleteAdSet,
+  deleteAd as metaAdsDeleteAd,
+  updateAdCreative as metaAdsUpdateAdCreative,
+  previewAdCreative as metaAdsPreviewAdCreative,
+  listAdImages as metaAdsListAdImages,
+  uploadAdImage as metaAdsUploadAdImage,
+  createAdVideo as metaAdsCreateAdVideo,
+  getAdVideo as metaAdsGetAdVideo,
+  listCustomAudiences as metaAdsListCustomAudiences,
+  getCustomAudience as metaAdsGetCustomAudience,
+  createCustomAudience as metaAdsCreateCustomAudience,
+  createAsyncInsights as metaAdsCreateAsyncInsights,
+  getAsyncInsights as metaAdsGetAsyncInsights,
+  getReachEstimate as metaAdsGetReachEstimate,
+} from "../../connectors/meta-ads/src/g2";
 import linkedinAdsManifest from "../../connectors/linkedin-ads/manifest.json";
 import { healthcheck as linkedinAdsHealthcheck } from "../../connectors/linkedin-ads/src/healthcheck";
 import {
@@ -2367,7 +2648,105 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
       "actions.org_secrets.repositories.list": ghListOrgActionsSecretRepositories,
       "orgs.actions.permissions.repositories.list": ghListOrgActionsPermissionsRepositories,
       "orgs.actions.oidc.customization.sub.get": ghGetOrgOidcCustomizationSub,
-    },
+    
+      "actions.secrets.public_key.get": ghGetRepoActionsSecretsPublicKey,
+      "actions.secrets.get": ghGetRepoActionsSecret,
+      "actions.secrets.create_or_update": ghUpsertRepoActionsSecret,
+      "actions.secrets.delete": ghDeleteRepoActionsSecret,
+      "actions.org_secrets.create_or_update": ghUpsertOrgActionsSecret,
+      "actions.org_secrets.delete": ghDeleteOrgActionsSecret,
+      "actions.org_secrets.repositories.set": ghSetOrgActionsSecretRepositories,
+      "actions.org_secrets.repositories.add": ghAddOrgActionsSecretRepository,
+      "repos.environments.deployment_protection_rules.create": ghCreateDeploymentProtectionRule,
+      "markdown.render_raw": ghRenderMarkdownRaw,
+      "repos.codespaces.secrets.delete": ghDeleteRepoCodespaceSecret,
+      "user.codespaces.get": ghGetUserCodespace,
+      "user.codespaces.update": ghUpdateUserCodespace,
+      "user.emails.delete": ghDeleteUserEmails,
+      "user.email.visibility.set": ghSetPrimaryEmailVisibility,
+      "user.memberships.orgs.list": ghListOrgMemberships,
+      "orgs.actions.runners.labels.add": ghAddOrgRunnerLabels,
+      "orgs.actions.runners.labels.set": ghSetOrgRunnerLabels,
+      "orgs.actions.runners.labels.remove_all": ghRemoveAllOrgRunnerLabels,
+      "repos.actions.runners.labels.add": ghAddRepoRunnerLabels,
+      "repos.actions.runners.labels.set": ghSetRepoRunnerLabels,
+      "orgs.actions.runners.jitconfig.create": ghCreateOrgRunnerJitConfig,
+      "repos.actions.runners.jitconfig.create": ghCreateRepoRunnerJitConfig,
+      "actions.permissions.access.get": ghGetActionsPermissionsAccess,
+      "actions.permissions.access.set": ghSetActionsPermissionsAccess,
+      "orgs.actions.permissions.repositories.remove": ghRemoveOrgActionsPermissionsRepository,
+      "orgs.actions.permissions.repositories.set": ghSetOrgActionsPermissionsRepositories,
+      "orgs.actions.permissions.repositories.add": ghAddOrgActionsPermissionsRepository,
+      "actions.runs.deployment_protection_rule.review": ghReviewDeploymentProtectionRule,
+      "orgs.actions.oidc.customization.sub.set": ghSetOrgOidcCustomizationSub,
+      "actions.oidc.customization.sub.get": ghGetRepoOidcCustomizationSub,
+      "actions.oidc.customization.sub.set": ghSetRepoOidcCustomizationSub,
+      "actions.org_variables.repositories.list": ghListOrgVariableRepositories,
+      "actions.org_variables.repositories.set": ghSetOrgVariableRepositories,
+      "actions.org_variables.repositories.remove": ghRemoveOrgVariableRepository,
+      "actions.org_secrets.repositories.remove": ghRemoveOrgActionsSecretRepository,
+      "orgs.properties.schema.update": ghUpdateOrgPropertiesSchema,
+      "orgs.properties.schema.create_or_update": ghCreateOrUpdateOrgPropertySchema,
+      "orgs.properties.values.update": ghUpdateOrgPropertyValues,
+      "repos.properties.values.update": ghUpdateRepoPropertyValues,
+      "repos.environments.deployment_protection_rules.apps.list": ghListEnvironmentDeploymentProtectionRuleApps,
+      "user.codespaces.delete": ghDeleteUserCodespace,
+      "orgs.members.codespaces.delete": ghDeleteOrgMemberCodespace,
+      "repos.codespaces.list": ghListRepoCodespaces,
+      "repos.codespaces.devcontainers.list": ghListRepoDevcontainers,
+      "repos.codespaces.permissions_check.get": ghGetRepoCodespacesPermissionsCheck,
+      "orgs.codespaces.secrets.get": ghGetOrgCodespacesSecret,
+      "orgs.codespaces.secrets.create_or_update": ghUpsertOrgCodespacesSecret,
+      "orgs.codespaces.secrets.delete": ghDeleteOrgCodespacesSecret,
+      "orgs.codespaces.secrets.repositories.set": ghSetOrgCodespacesSecretRepositories,
+      "orgs.codespaces.secrets.repositories.remove": ghRemoveOrgCodespacesSecretRepository,
+      "repos.codespaces.secrets.get": ghGetRepoCodespacesSecret,
+      "dependabot.secrets.delete": ghDeleteDependabotSecret,
+      "orgs.codespaces.secrets.public_key.get": ghGetOrgCodespacesSecretsPublicKey,
+      "orgs.codespaces.secrets.repositories.list": ghListOrgCodespacesSecretRepositories,
+      "repos.pages.update": ghUpdatePagesSite,
+      "repos.private_vulnerability_reporting.enable": ghEnablePrivateVulnerabilityReporting,
+      "repos.private_vulnerability_reporting.disable": ghDisablePrivateVulnerabilityReporting,
+      "code_scanning.sarifs.upload": ghUploadCodeScanningSarif,
+      "repos.attestations.list": ghListRepoAttestations,
+      "orgs.issues.list": ghListOrgIssues,
+      "orgs.packages.versions.list": ghListOrgPackageVersions,
+      "orgs.public_members.remove": ghRemoveOrgPublicMember,
+      "user.interaction_limits.delete": ghDeleteUserInteractionLimits,
+      "user.starred.check": ghCheckUserStarred,
+      "user.packages.delete": ghDeleteAuthenticatedUserPackage,
+      "user.packages.versions.list": ghListAuthenticatedUserPackageVersions,
+      "dependabot.secrets.public_key.get": ghGetRepoDependabotSecretsPublicKey,
+      "dependabot.secrets.list": ghListRepoDependabotSecrets,
+      "dependabot.secrets.get": ghGetRepoDependabotSecret,
+      "dependabot.secrets.create_or_update": ghUpsertRepoDependabotSecret,
+      "orgs.dependabot.secrets.list": ghListOrgDependabotSecrets,
+      "orgs.dependabot.secrets.get": ghGetOrgDependabotSecret,
+      "orgs.dependabot.secrets.create_or_update": ghUpsertOrgDependabotSecret,
+      "orgs.dependabot.secrets.delete": ghDeleteOrgDependabotSecret,
+      "orgs.dependabot.secrets.repositories.list": ghListOrgDependabotSecretRepositories,
+      "orgs.dependabot.secrets.repositories.set": ghSetOrgDependabotSecretRepositories,
+      "orgs.dependabot.secrets.repositories.add": ghAddOrgDependabotSecretRepository,
+      "orgs.dependabot.secrets.repositories.remove": ghRemoveOrgDependabotSecretRepository,
+      "repos.codespaces.secrets.public_key.get": ghGetRepoCodespacesSecretsPublicKey,
+      "repos.codespaces.secrets.list": ghListRepoCodespacesSecrets,
+      "repos.codespaces.secrets.create_or_update": ghUpsertRepoCodespacesSecret,
+      "graphql.node.get": ghGetGraphqlNode,
+      "graphql.nodes.get": ghGetGraphqlNodes,
+      "graphql.rate_limit.get": ghGetGraphqlRateLimit,
+      "graphql.viewer.get": ghGetGraphqlViewer,
+      "graphql.repository.get": ghGetGraphqlRepository,
+      "graphql.organization.get": ghGetGraphqlOrganization,
+      "graphql.repository_owner.get": ghGetGraphqlRepositoryOwner,
+      "graphql.topic.get": ghGetGraphqlTopic,
+      "graphql.resource.get": ghGetGraphqlResource,
+      "graphql.codes_of_conduct.get": ghGetGraphqlCodeOfConduct,
+      "graphql.codes_of_conduct.list": ghListGraphqlCodesOfConduct,
+      "graphql.licenses.get": ghGetGraphqlLicense,
+      "graphql.licenses.list": ghListGraphqlLicenses,
+      "graphql.security_advisories.list": ghListGraphqlSecurityAdvisories,
+      "graphql.security_vulnerabilities.list": ghListGraphqlSecurityVulnerabilities,
+},
     salesforce: {
       "contacts.create": createContact,
       "leads.create": createLead,
@@ -2676,6 +3055,38 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
       "portfolio_bidding_strategies.mutate": gadsMutatePortfolioBiddingStrategies,
       "conversion_actions.tag_snippets.get": gadsGetConversionActionTagSnippets,
     },
+    "meta-ads": {
+      "campaigns.get": metaAdsGetCampaign,
+      "campaigns.create": metaAdsCreateCampaign,
+      "campaigns.update": metaAdsUpdateCampaign,
+      "ad_sets.get": metaAdsGetAdSet,
+      "ad_sets.create": metaAdsCreateAdSet,
+      "ad_sets.update": metaAdsUpdateAdSet,
+      "ads.get": metaAdsGetAd,
+      "ads.create": metaAdsCreateAd,
+      "ads.update": metaAdsUpdateAd,
+      "ad_creatives.list": metaAdsListAdCreatives,
+      "ad_creatives.get": metaAdsGetAdCreative,
+      "ad_creatives.create": metaAdsCreateAdCreative,
+      "insights.get": metaAdsGetInsights,
+      "ad_accounts.get": metaAdsGetAdAccount,
+      "targeting.search": metaAdsSearchTargeting,
+      "campaigns.delete": metaAdsDeleteCampaign,
+      "ad_sets.delete": metaAdsDeleteAdSet,
+      "ads.delete": metaAdsDeleteAd,
+      "ad_creatives.update": metaAdsUpdateAdCreative,
+      "ad_creatives.preview": metaAdsPreviewAdCreative,
+      "ad_images.list": metaAdsListAdImages,
+      "ad_images.upload": metaAdsUploadAdImage,
+      "ad_videos.create": metaAdsCreateAdVideo,
+      "ad_videos.get": metaAdsGetAdVideo,
+      "custom_audiences.list": metaAdsListCustomAudiences,
+      "custom_audiences.get": metaAdsGetCustomAudience,
+      "custom_audiences.create": metaAdsCreateCustomAudience,
+      "insights.async.create": metaAdsCreateAsyncInsights,
+      "insights.async.get": metaAdsGetAsyncInsights,
+      "reach_estimate.get": metaAdsGetReachEstimate,
+    },
     "linkedin-ads": {
       "campaigns.get": linkedinAdsGetCampaign,
       "ad_accounts.get": linkedinAdsGetAdAccount,
@@ -2792,11 +3203,71 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
       "candidate_tags.create": createGreenhouseCandidateTag,
       "candidate_tags.delete": deleteGreenhouseCandidateTag,
       "rejection_details.update": updateGreenhouseRejectionDetail,
-    },
+    
+      "jobs.create": createGreenhouseJob,
+      "jobs.update": updateGreenhouseJob,
+      "job_posts.list": listGreenhouseJobPosts,
+      "openings.list": listGreenhouseOpenings,
+      "openings.create": createGreenhouseOpening,
+      "openings.update": updateGreenhouseOpening,
+      "job_owners.list": listGreenhouseJobOwners,
+      "job_owners.create": createGreenhouseJobOwner,
+      "job_owners.delete": deleteGreenhouseJobOwner,
+      "job_hiring_managers.list": listGreenhouseJobHiringManagers,
+      "job_hiring_managers.create": createGreenhouseJobHiringManager,
+      "job_hiring_managers.delete": deleteGreenhouseJobHiringManager,
+      "job_notes.list": listGreenhouseJobNotes,
+      "job_notes.create": createGreenhouseJobNote,
+      "job_notes.update": updateGreenhouseJobNote,
+      "job_notes.delete": deleteGreenhouseJobNote,
+      "job_interviews.list": listGreenhouseJobInterviews,
+      "default_interviewers.list": listGreenhouseDefaultInterviewers,
+      "interviewer_tags.list": listGreenhouseInterviewerTags,
+      "referrers.list": listGreenhouseReferrers,
+      "email_templates.list": listGreenhouseEmailTemplates,
+},
     lever: {
       "opportunities.update_stage": updateLeverOpportunityStage,
       "opportunities.archive": archiveLeverOpportunity,
       "opportunities.update": updateLeverOpportunity,
+      // G1: hand-written so region=eu reaches api.eu.lever.co.
+      "opportunities.create": createLeverOpportunity,
+      "opportunities.add_tags": addLeverOpportunityTags,
+      "opportunities.remove_tags": removeLeverOpportunityTags,
+      "opportunities.add_links": addLeverOpportunityLinks,
+      "opportunities.remove_links": removeLeverOpportunityLinks,
+      "opportunities.add_sources": addLeverOpportunitySources,
+      "opportunities.remove_sources": removeLeverOpportunitySources,
+      "notes.create": createLeverNote,
+      "notes.get": getLeverNote,
+      "notes.update": updateLeverNote,
+      "notes.delete": deleteLeverNote,
+      "sources.list": listLeverSources,
+      "tags.list": listLeverTags,
+      "stages.get": getLeverStage,
+      "referrals.list": listLeverReferrals,
+      // G2: panels / interviews writes / requisitions / resumes / files
+      "panels.list": listLeverPanels,
+      "panels.get": getLeverPanel,
+      "panels.create": createLeverPanel,
+      "panels.update": updateLeverPanel,
+      "panels.delete": deleteLeverPanel,
+      "interviews.create": createLeverInterview,
+      "interviews.update": updateLeverInterview,
+      "interviews.delete": deleteLeverInterview,
+      "requisitions.get": getLeverRequisition,
+      "requisitions.create": createLeverRequisition,
+      "requisitions.update": updateLeverRequisition,
+      "requisitions.delete": deleteLeverRequisition,
+      "resumes.list": listLeverResumes,
+      "files.list": listLeverFiles,
+      "files.get": getLeverFile,
+      // G3: profile forms + form-template reads
+      "forms.list": listLeverForms,
+      "forms.get": getLeverForm,
+      "forms.create": createLeverForm,
+      "form_templates.list": listLeverFormTemplates,
+      "form_templates.get": getLeverFormTemplate,
     },
     ashby: {
       "candidates.create": createAshbyCandidate,
@@ -2807,6 +3278,87 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
       "applications.hire": hireAshbyApplication,
       "interviews.schedule": scheduleAshbyInterview,
       "interviews.cancel": cancelAshbyInterview,
+      "candidates.create_note": createAshbyCandidateNote,
+      "candidates.list_notes": listAshbyCandidateNotes,
+      "candidates.add_tag": addAshbyCandidateTag,
+      "candidate_tags.list": listAshbyCandidateTags,
+      "candidate_tags.create": createAshbyCandidateTag,
+      "applications.change_source": changeAshbyApplicationSource,
+      "applications.transfer": transferAshbyApplication,
+      "applications.update": updateAshbyApplication,
+      "applications.list_history": listAshbyApplicationHistory,
+      "application_feedback.list": listAshbyApplicationFeedback,
+      "application_feedback.submit": submitAshbyApplicationFeedback,
+      "hiring_team.add_member": addAshbyHiringTeamMember,
+      "hiring_team.remove_member": removeAshbyHiringTeamMember,
+      "hiring_team_roles.list": listAshbyHiringTeamRoles,
+      "users.get": getAshbyUser,
+      "jobs.list_internal": listAshbyJobsInternal,
+      "jobs.search": searchAshbyJobs,
+      "jobs.create": createAshbyJob,
+      "jobs.update": updateAshbyJob,
+      "jobs.set_status": setAshbyJobStatus,
+      "job_templates.list": listAshbyJobTemplates,
+      "job_interview_plans.get": getAshbyJobInterviewPlan,
+      "job_postings.list": listAshbyJobPostings,
+      "job_postings.get": getAshbyJobPosting,
+      "job_postings.update": updateAshbyJobPosting,
+      "openings.get": getAshbyOpening,
+      "openings.search": searchAshbyOpenings,
+      "openings.create": createAshbyOpening,
+      "openings.update": updateAshbyOpening,
+      "close_reasons.list": listAshbyCloseReasons,
+      "openings.set_archived": setAshbyOpeningArchived,
+      "openings.set_state": setAshbyOpeningState,
+      "openings.add_job": addAshbyOpeningJob,
+      "openings.remove_job": removeAshbyOpeningJob,
+      "openings.add_location": addAshbyOpeningLocation,
+      "openings.remove_location": removeAshbyOpeningLocation,
+      "locations.list": listAshbyLocations,
+      "locations.get": getAshbyLocation,
+      "departments.get": getAshbyDepartment,
+      "users.search": searchAshbyUsers,
+      "offers.create": createAshbyOffer,
+      "offers.start": startAshbyOffer,
+      "offer_processes.start": startAshbyOfferProcess,
+      "communication_templates.list": listAshbyCommunicationTemplates,
+      "application_hiring_team_roles.list": listAshbyApplicationHiringTeamRoles,
+      "interviews.get": getAshbyInterview,
+      "interview_stages.get": getAshbyInterviewStage,
+      "interview_events.list": listAshbyInterviewEvents,
+      "interview_plans.list": listAshbyInterviewPlans,
+      "interview_stage_groups.list": listAshbyInterviewStageGroups,
+      "feedback_form_definitions.list": listAshbyFeedbackFormDefinitions,
+      "feedback_form_definitions.get": getAshbyFeedbackFormDefinition,
+      "custom_fields.list": listAshbyCustomFields,
+      "custom_fields.get": getAshbyCustomField,
+      "custom_fields.set_value": setAshbyCustomFieldValue,
+      "custom_fields.set_values": setAshbyCustomFieldValues,
+      "referrals.create": createAshbyReferral,
+      "referral_forms.get": getAshbyReferralForm,
+      "files.get": getAshbyFile,
+      "applications.list_criteria_evaluations": listAshbyApplicationCriteriaEvaluations,
+      "candidates.add_project": addAshbyCandidateProject,
+      "candidates.list_projects": listAshbyCandidateProjects,
+      "projects.list": listAshbyProjects,
+      "projects.search": searchAshbyProjects,
+    },
+    smartrecruiters: {
+      "candidates.create": createSmartRecruitersCandidate,
+      "applications.create": createSmartRecruitersApplication,
+      "candidates.update": updateSmartRecruitersCandidate,
+      "applications.get": getSmartRecruitersApplication,
+      "applications.update_status": updateSmartRecruitersApplicationStatus,
+      "applications.status_history": getSmartRecruitersApplicationStatusHistory,
+      "candidates.tags.get": getSmartRecruitersCandidateTags,
+      "candidates.tags.add": addSmartRecruitersCandidateTags,
+      "candidates.tags.replace": replaceSmartRecruitersCandidateTags,
+      "candidates.attachments.list": listSmartRecruitersCandidateAttachments,
+      "applications.attachments.list": listSmartRecruitersApplicationAttachments,
+      "applications.properties.get": getSmartRecruitersApplicationProperties,
+      "applications.properties.update": updateSmartRecruitersApplicationProperties,
+      "applications.screening_answers.get": getSmartRecruitersScreeningAnswers,
+      "job_applications.get": getSmartRecruitersJobApplication,
     },
     intercom: {
       "conversations.reply": replyIntercomConversation,
@@ -3128,7 +3680,6 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
       "sources.list": listAshbySources,
       "archive_reasons.list": listAshbyArchiveReasons,
       "interview_schedules.list": listAshbyInterviewSchedules,
-      "interview_schedules.get": getAshbyInterviewSchedule,
       "interview_stages.list": listAshbyInterviewStages,
       "openings.list": listAshbyOpenings,
     },
@@ -3242,6 +3793,7 @@ export function createConnectorRegistry(input: {
 }): ConnectorRegistry {
   const descriptions = buildConnectorDescriptions(input.manifests);
   const operationSpecs = buildConnectorOperationSpecs(input.manifests);
+  assertReconcilePairingsLoadable(operationSpecs);
   const connectorNetworks = buildConnectorNetworks(input.manifests);
   // Every inputSchema is checked here; each operation's validator is compiled
   // once on first dispatch and cached (input_schema.ts).
@@ -3347,6 +3899,19 @@ export function createConnectorRegistry(input: {
         if (schemaFailure) {
           return schemaFailure;
         }
+      }
+      // Everything that could make the post-write observe fail for a reason
+      // known up front is checked here, before the write is sent.
+      const reconcileFailure = precheckEffectPolicyReconcile(
+        connectorKey,
+        inputValue,
+        operationSpec,
+        operationSpecs,
+        input.actions,
+        input.syncs,
+      );
+      if (reconcileFailure) {
+        return reconcileFailure;
       }
       if (action === "healthcheck") {
         try {
@@ -3611,7 +4176,26 @@ type OperationSpec = OperationBudgetLike & {
   kind?: string;
   effectPolicy?: string;
   reconcile?: string;
+  /** Property names declared by the operation's inputSchema (empty when none). */
+  inputProperties?: ReadonlySet<string>;
+  /** inputSchema.required (empty when none). */
+  inputRequired?: readonly string[];
+  /** inputSchema.additionalProperties === false (closed input surface). */
+  inputClosed?: boolean;
 };
+
+function inputSchemaFacts(spec: Record<string, unknown>): Pick<OperationSpec, "inputProperties" | "inputRequired" | "inputClosed"> {
+  const schema = isRecord(spec.inputSchema) ? spec.inputSchema : undefined;
+  const properties = schema && isRecord(schema.properties) ? Object.keys(schema.properties) : [];
+  const required = schema && Array.isArray(schema.required)
+    ? schema.required.filter((key): key is string => typeof key === "string")
+    : [];
+  return {
+    inputProperties: new Set(properties),
+    inputRequired: required,
+    inputClosed: schema?.additionalProperties === false,
+  };
+}
 
 function buildConnectorOperationSpecs(manifests: Array<{ key: string; operations: unknown }>): Record<string, Record<string, OperationSpec>> {
   return Object.fromEntries(
@@ -3629,6 +4213,7 @@ function buildConnectorOperationSpecs(manifests: Array<{ key: string; operations
             maxResponseBytes: typeof spec.maxResponseBytes === "number" ? spec.maxResponseBytes : undefined,
             effectPolicy: typeof spec.effectPolicy === "string" ? spec.effectPolicy : undefined,
             reconcile: typeof spec.reconcile === "string" ? spec.reconcile : undefined,
+            ...inputSchemaFacts(spec),
           }]];
         }),
       );
@@ -3683,11 +4268,115 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+// Observe input projection.
+//
+// Credentials and runtime values (fetch, connection fields) travel inside the
+// action input itself, so they cannot be told apart by name. They are told
+// apart by schema instead: a key declared by neither the action nor the observe
+// schema is a runtime/context key and always travels. A key the action declares
+// but a closed observe (additionalProperties: false) does not declare is
+// dropped, so conversations.close {id, adminId, body} observes
+// conversations.get {id}. Open observes keep the full action input.
+function projectObserveInput(
+  inputValue: unknown,
+  actionSpec: OperationSpec,
+  observeSpec: OperationSpec | undefined,
+): unknown {
+  if (!isRecord(inputValue) || !observeSpec?.inputClosed) {
+    return inputValue;
+  }
+  const observeProps = observeSpec.inputProperties ?? new Set<string>();
+  const actionProps = actionSpec.inputProperties ?? new Set<string>();
+  const projected: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(inputValue)) {
+    if (observeProps.has(key) || !actionProps.has(key)) {
+      projected[key] = value;
+    }
+  }
+  return projected;
+}
+
+function observeKeysSuppliedByPolicy(policy: string | undefined): ReadonlySet<string> {
+  // Idempotent projects `id` from the primary response after the write.
+  return policy === "Idempotent" ? new Set(["id"]) : new Set();
+}
+
+// Registry-build guard: a pairing whose closed observe requires a key the
+// action cannot even accept would fail after every write, so it cannot load.
+function assertReconcilePairingsLoadable(
+  operationSpecs: Record<string, Record<string, OperationSpec>>,
+): void {
+  for (const [connectorKey, specs] of Object.entries(operationSpecs)) {
+    for (const [operation, spec] of Object.entries(specs)) {
+      if (spec.effectPolicy !== "Reconcile" && spec.effectPolicy !== "Idempotent") continue;
+      if (typeof spec.reconcile !== "string" || spec.reconcile.length === 0) {
+        if (spec.effectPolicy === "Reconcile") {
+          throw new Error(`${connectorKey}.${operation}: Reconcile effectPolicy requires a reconcile operation.`);
+        }
+        continue;
+      }
+      const observe = specs[spec.reconcile];
+      if (!observe) {
+        throw new Error(`${connectorKey}.${operation}: reconcile operation ${spec.reconcile} is not declared.`);
+      }
+      if (!observe.inputClosed) continue;
+      const supplied = observeKeysSuppliedByPolicy(spec.effectPolicy);
+      const actionProps = spec.inputProperties ?? new Set<string>();
+      for (const key of observe.inputRequired ?? []) {
+        if (!supplied.has(key) && !actionProps.has(key)) {
+          throw new Error(
+            `${connectorKey}.${operation}: reconcile ${spec.reconcile} requires ${key}, which the action input does not declare.`,
+          );
+        }
+      }
+    }
+  }
+}
+
+// Pre-write guard: everything that would make the observe fail for a reason
+// known before the write (missing handler, a required observe key absent from
+// this call's projected input) fails here with nothing sent upstream.
+function precheckEffectPolicyReconcile(
+  connectorKey: string,
+  inputValue: unknown,
+  operationSpec: OperationSpec,
+  operationSpecs: Record<string, Record<string, OperationSpec>>,
+  actions: Record<string, Record<string, ActionHandler>>,
+  syncs: Record<string, Record<string, ActionHandler>> | undefined,
+): RegistryFailure | null {
+  const policy = operationSpec.effectPolicy;
+  if (policy !== "Reconcile" && policy !== "Idempotent") return null;
+  const reconcileName = operationSpec.reconcile;
+  if (typeof reconcileName !== "string" || reconcileName.length === 0) {
+    // Idempotent may omit reconcile; Reconcile without a target cannot load.
+    return null;
+  }
+  if (!(actions[connectorKey]?.[reconcileName] ?? syncs?.[connectorKey]?.[reconcileName])) {
+    return { ok: false, code: "RECONCILE_HANDLER_MISSING", message: "Reconcile operation has no registered handler." };
+  }
+  const observeSpec = operationSpecs[connectorKey]?.[reconcileName];
+  if (!observeSpec?.inputClosed) return null;
+  const projected = projectObserveInput(inputValue, operationSpec, observeSpec);
+  const supplied = observeKeysSuppliedByPolicy(policy);
+  for (const key of observeSpec.inputRequired ?? []) {
+    if (supplied.has(key)) continue;
+    if (!isRecord(projected) || projected[key] === undefined) {
+      return {
+        ok: false,
+        code: "INVALID_ACTION_INPUT",
+        message: `${key} is required to reconcile via ${reconcileName}.`,
+      };
+    }
+  }
+  return null;
+}
+
 // Manifest effectPolicy Reconcile | Idempotent: after a successful mutating
 // action, observe post-write state via the declared reconcile handler.
-// Reconcile reuses the action input (id already known). Idempotent projects
-// id from the primary JSON (id | application.id) fail-closed, merges into
-// action input, then observes. Return observe output either way.
+// Reconcile reuses the action input projected onto the observe schema.
+// Idempotent projects id from the primary JSON (id | application.id)
+// fail-closed, merges into the projected input, then observes. Idempotent
+// without a reconcile target returns the primary.
 function applyEffectPolicyReconcile(
   connectorKey: string,
   inputValue: unknown,
@@ -3702,6 +4391,9 @@ function applyEffectPolicyReconcile(
     return primary;
   }
   const reconcileName = operationSpec.reconcile;
+  if (policy === "Idempotent" && (typeof reconcileName !== "string" || reconcileName.length === 0)) {
+    return primary;
+  }
   if (typeof reconcileName !== "string" || reconcileName.length === 0) {
     throw {
       ok: false,
@@ -3721,10 +4413,10 @@ function applyEffectPolicyReconcile(
   }
   const reconcileSpec = operationSpecs[connectorKey]?.[reconcileName];
   const runObserve = (resolvedPrimary: unknown) => {
-    let observeInput = inputValue;
+    let observeInput = projectObserveInput(inputValue, operationSpec, reconcileSpec);
     if (policy === "Idempotent") {
       const id = projectIdempotentId(resolvedPrimary);
-      observeInput = isRecord(inputValue) ? { ...inputValue, id } : { id };
+      observeInput = isRecord(observeInput) ? { ...observeInput, id } : { id };
     }
     return boundedOutput(
       reconcileHandler(observeInput),

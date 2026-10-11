@@ -87,7 +87,7 @@ beforeEach(() => {
   clearGreenhouseTokenCache();
 });
 
-describe("Greenhouse candidates.create (POST only; runner owns Idempotent)", () => {
+describe("Greenhouse candidates.create (POST only; creates omit effect keys)", () => {
   test("POSTs /v3/candidates and returns primary payload", async () => {
     const { calls, impl } = stubFetch(JSON.stringify(candidateCreatedFixture), { status: 201 });
     const result = await executeCandidatesCreateSync({
