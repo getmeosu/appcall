@@ -1,7 +1,7 @@
 {
   "key": "linkedin-ads",
   "name": "LinkedIn Ads",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "runtime": "bun",
   "categories": [
     "ads"
@@ -443,7 +443,7 @@
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
       "title": "List Campaign Groups",
-      "description": "List campaign groups for an ad account with start/count paging.",
+      "description": "List campaign groups for an ad account (q=search) with cursor paging via pageSize/pageToken.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -453,15 +453,25 @@
           },
           "start": {
             "type": "number",
-            "description": "Paging start offset (default 0)."
+            "description": "Deprecated: index paging was replaced by cursor paging in 202401. Only 0 (or omitted) is accepted; use pageToken."
           },
           "count": {
             "type": "number",
-            "description": "Page size (default 10)."
+            "description": "Alias for pageSize (default 100, max 1000)."
+          },
+          "pageSize": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000,
+            "description": "Cursor page size (default 100, max 1000)."
+          },
+          "pageToken": {
+            "type": "string",
+            "description": "metadata.nextPageToken from the previous response."
           },
           "status": {
             "type": "string",
-            "description": "Optional status filter, e.g. ACTIVE."
+            "description": "Optional status filter, e.g. ACTIVE. Sent as search=(status:(values:List(...)))."
           },
           "ad_account_id": {
             "type": [
@@ -518,9 +528,9 @@
         },
         "query": {
           "q": "search",
-          "start": "{{start}}",
-          "count": "{{count}}",
-          "status": "{{status}}"
+          "search": "(status:(values:List({{status}})))",
+          "pageSize": "{{pageSize}}",
+          "pageToken": "{{pageToken}}"
         }
       },
       "sideEffect": "read"
@@ -541,11 +551,11 @@
           },
           "start": {
             "type": "number",
-            "description": "Paging start offset (default 0)."
+            "description": "Deprecated: index paging was replaced by cursor paging in 202401. Only 0 (or omitted) is accepted; use pageToken."
           },
           "count": {
             "type": "number",
-            "description": "Page size (default 10)."
+            "description": "Alias for pageSize (max 100)."
           },
           "campaignId": {
             "type": "string",
@@ -769,7 +779,7 @@
             "items": {
               "type": "string"
             },
-            "description": "Metric projection. An array or a comma-separated string. Maximum 20 metrics."
+            "description": "Metric projection. An array or a comma-separated string. Maximum 20 metrics; dateRange and pivotValues are always added. Defaults to dateRange,pivotValues,impressions,clicks,costInLocalCurrency,costInUsd,landingPageClicks,externalWebsiteConversions,totalEngagements,oneClickLeads,videoViews."
           },
           "q": {
             "type": "string",
@@ -865,7 +875,7 @@
         },
         "query": {
           "q": "search",
-          "count": "1"
+          "pageSize": "1"
         },
         "echo": {
           "status": "ok"
@@ -2245,10 +2255,6 @@
           },
           "count": {
             "type": "number"
-          },
-          "linkedin_version": {
-            "type": "string",
-            "description": "Optional LinkedIn-Version override in YYYYMM."
           }
         },
         "required": [],
@@ -2313,9 +2319,6 @@
           "ids": {
             "type": "array",
             "description": "Numeric organization IDs."
-          },
-          "linkedin_version": {
-            "type": "string"
           }
         },
         "required": [
@@ -2540,7 +2543,7 @@
           "organizer": "{{organizer}}",
           "sortOrder": "{{sortOrder}}",
           "entryCriteria": "{{entryCriteria}}",
-          "lifeCycleState": "{{lifeCycleState}}",
+          "timeBasedFilter": "(lifeCycleState:{{lifeCycleState}})",
           "excludeCancelled": "{{excludeCancelled}}",
           "start": "{{start}}",
           "count": "{{count}}"
@@ -2727,7 +2730,7 @@
     },
     "headers": {
       "X-Restli-Protocol-Version": "2.0.0",
-      "LinkedIn-Version": "202608"
+      "LinkedIn-Version": "202609"
     },
     "errors": {
       "rateLimitStatuses": [

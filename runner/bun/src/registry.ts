@@ -1443,6 +1443,8 @@ import {
   getAnalyticsReport as linkedinAdsGetAnalyticsReport,
 } from "../../connectors/linkedin-ads/src/actions";
 import { executeCampaignsListSync as listLinkedInAdsCampaigns, executeAdAccountsListSync as listLinkedInAdsAccounts, executeCreativeAssetsListSync as listLinkedInAdsCreatives } from "../../connectors/linkedin-ads/src/sync";
+import * as liAdsExt from "../../connectors/linkedin-ads/src/extended-actions";
+import * as liAdsParity from "../../connectors/linkedin-ads/src/parity-actions";
 import tiktokAdsManifest from "../../connectors/tiktok-ads/manifest.json";
 import { healthcheck as tiktokAdsHealthcheck } from "../../connectors/tiktok-ads/src/healthcheck";
 import {
@@ -3134,6 +3136,32 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
       "campaign_groups.list": linkedinAdsListCampaignGroups,
       "creatives.list": linkedinAdsListCreatives,
       "analytics.report.get": linkedinAdsGetAnalyticsReport,
+      // LI-0: every linkedin-ads action runs through the connector's own client, so the
+      // pinned LinkedIn-Version and Rest.li 2.0 query encoding apply to all of them
+      // (the compiled declarative fallback re-encodes Rest.li structure via URLSearchParams).
+      "campaign_groups.get": liAdsExt.getCampaignGroup,
+      "audience_counts.get": liAdsExt.getAudienceCounts,
+      "targeting.facets.list": liAdsExt.listTargetingFacets,
+      "targeting.entities.list": liAdsExt.listTargetingEntities,
+      "supply_forecasts.get": liAdsExt.getSupplyForecasts,
+      "lead_forms.list": liAdsExt.listLeadForms,
+      "lead_forms.get": liAdsExt.getLeadForm,
+      "ad_accounts.create": liAdsParity.createAdAccount,
+      "lead_forms.create": liAdsParity.createLeadForm,
+      "organizations.network_size.get": liAdsParity.getNetworkSize,
+      "organizations.acls.list": liAdsParity.listOrganizationAcls,
+      "organizations.page_statistics.get": liAdsParity.getOrganizationPageStatistics,
+      "organizations.follower_statistics.get": liAdsParity.getOrgFollowerStatistics,
+      "organizations.share_statistics.get": liAdsParity.getOrgShareStatistics,
+      "conversion_rules.list": liAdsParity.listConversionRules,
+      "dmp_segments.list": liAdsParity.listDmpSegments,
+      "organizations.list": liAdsParity.listOrganizations,
+      "organizations.lookup": liAdsParity.lookupOrganizations,
+      "posts.list": liAdsParity.listPosts,
+      "uploads.register": liAdsParity.registerUpload,
+      "events.search": liAdsParity.searchEvents,
+      "lead_forms.update": liAdsParity.updateLeadForm,
+      "organizations.acls.update": liAdsParity.updateOrganizationAcl,
     },
     "tiktok-ads": ttRt.wrapActions({
       "analytics.report.get": tiktokAdsGetAnalyticsReport,

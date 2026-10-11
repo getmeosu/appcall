@@ -14,7 +14,7 @@ export function healthcheck(input?: unknown): HealthcheckResult | Promise<Health
   }
   const fetchImpl = isRecord(input) && typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
   return createLinkedInAdsClient({ accessToken: token, fetch: fetchImpl, operation: "healthcheck" })
-    .fetchJSON("/rest/adAccounts?q=search&count=1", { method: "GET", headers: { "X-RestLi-Method": "FINDER" } })
+    .fetchJSON("/rest/adAccounts?q=search&pageSize=1", { method: "GET", headers: { "X-RestLi-Method": "FINDER" } })
     .then((response) => {
       if (response.status === 429) {
         throw Object.assign(new Error("LinkedIn Ads rate limit exceeded."), { code: "CONNECTOR_RATE_LIMITED", retryAfterSeconds: 30 });
