@@ -1,4 +1,4 @@
-import { createZoomClient, parseZoomRateLimit, isRecord } from "./http";
+import { createZoomClient, parseZoomRateLimit, isRecord, requireField, fieldString, fieldNumber, fieldValue } from "./http";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -59,9 +59,12 @@ export type UsersListInput = { page_size?: number; next_page_token?: string; sta
 export function validateUsersListInput(input: unknown): UsersListInput {
   if (!isRecord(input)) throw new Error("users.list input must be an object");
   const payload: UsersListInput = {};
-  if (typeof input.page_size === "number") payload.page_size = input.page_size;
-  if (typeof input.next_page_token === "string") payload.next_page_token = input.next_page_token;
-  if (typeof input.status === "string") payload.status = input.status;
+  const pageSize = fieldNumber(input, "page_size", "pageSize");
+  if (pageSize !== undefined) payload.page_size = pageSize;
+  const nextPageToken = fieldString(input, "next_page_token", "nextPageToken");
+  if (nextPageToken) payload.next_page_token = nextPageToken;
+  const status = fieldString(input, "status");
+  if (status) payload.status = status;
   return payload;
 }
 
@@ -115,19 +118,32 @@ export type MeetingsCreateInput = {
   settings?: Record<string, unknown>;
 };
 
+function collectPrefixedObject(input: Record<string, unknown>, prefix: string): Record<string, unknown> {
+  const collected: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(input)) {
+    if (!key.startsWith(prefix)) continue;
+    collected[key.slice(prefix.length).replaceAll("__", "_")] = value;
+  }
+  return collected;
+}
+
 export function validateMeetingsCreateInput(input: unknown): MeetingsCreateInput {
   if (!isRecord(input)) throw new Error("meetings.create input must be an object");
-  return {
-    userId: typeof input.userId === "string" ? input.userId : undefined,
+  const settings = { ...(isRecord(input.settings) ? input.settings : {}), ...collectPrefixedObject(input, "settings__") };
+  const recurrence = collectPrefixedObject(input, "recurrence__");
+  const payload: MeetingsCreateInput = {
+    userId: fieldString(input, "userId", "user_id"),
     topic: requireString(input.topic, "topic"),
-    type: typeof input.type === "number" ? input.type : undefined,
-    start_time: typeof input.start_time === "string" ? input.start_time : undefined,
-    duration: typeof input.duration === "number" ? input.duration : undefined,
-    timezone: typeof input.timezone === "string" ? input.timezone : undefined,
-    password: typeof input.password === "string" ? input.password : undefined,
-    agenda: typeof input.agenda === "string" ? input.agenda : undefined,
-    settings: isRecord(input.settings) ? input.settings : undefined,
+    type: fieldNumber(input, "type"),
+    start_time: fieldString(input, "start_time"),
+    duration: fieldNumber(input, "duration"),
+    timezone: fieldString(input, "timezone"),
+    password: fieldString(input, "password"),
+    agenda: fieldString(input, "agenda"),
+    settings: Object.keys(settings).length > 0 ? settings : undefined,
   };
+  if (Object.keys(recurrence).length > 0) (payload as Record<string, unknown>).recurrence = recurrence;
+  return payload;
 }
 
 export function createMeetingsClient(options: { accessToken: string; fetch?: typeof fetch }) {
@@ -144,6 +160,8 @@ export function createMeetingsClient(options: { accessToken: string; fetch?: typ
       if (payload.password) body.password = payload.password;
       if (payload.agenda) body.agenda = payload.agenda;
       if (payload.settings) body.settings = payload.settings;
+      const recurrence = (payload as Record<string, unknown>).recurrence;
+      if (isRecord(recurrence)) body.recurrence = recurrence;
       const response = await client.fetchJSON(`/v2/users/${userId}/meetings`, {
         method: "POST",
         body: JSON.stringify(body),
@@ -176,10 +194,14 @@ export type MeetingsListInput = { userId?: string; type?: string; page_size?: nu
 export function validateMeetingsListInput(input: unknown): MeetingsListInput {
   if (!isRecord(input)) throw new Error("meetings.list input must be an object");
   const payload: MeetingsListInput = {};
-  if (typeof input.userId === "string") payload.userId = input.userId;
-  if (typeof input.type === "string") payload.type = input.type;
-  if (typeof input.page_size === "number") payload.page_size = input.page_size;
-  if (typeof input.next_page_token === "string") payload.next_page_token = input.next_page_token;
+  const userId = fieldString(input, "userId", "user_id");
+  if (userId) payload.userId = userId;
+  const type = fieldString(input, "type");
+  if (type) payload.type = type;
+  const pageSize = fieldNumber(input, "page_size", "pageSize");
+  if (pageSize !== undefined) payload.page_size = pageSize;
+  const nextPageToken = fieldString(input, "next_page_token", "nextPageToken");
+  if (nextPageToken) payload.next_page_token = nextPageToken;
   return payload;
 }
 
@@ -224,7 +246,7 @@ export function listMeetings(input: unknown): Record<string, unknown> | Promise<
 
 export function validateMeetingsGetInput(input: unknown): { meetingId: string } {
   if (!isRecord(input)) throw new Error("meetings.get input must be an object");
-  return { meetingId: requireString(input.meetingId, "meetingId") };
+  return { meetingId: requireField(input, "meetingId", "meeting_id") };
 }
 
 export function createMeetingsGetClient(options: { accessToken: string; fetch?: typeof fetch }) {
@@ -272,16 +294,23 @@ export type MeetingsUpdateInput = {
 
 export function validateMeetingsUpdateInput(input: unknown): MeetingsUpdateInput {
   if (!isRecord(input)) throw new Error("meetings.update input must be an object");
+  const settings = { ...(isRecord(input.settings) ? input.settings : {}), ...collectPrefixedObject(input, "settings__") };
   const payload: MeetingsUpdateInput = {
-    meetingId: requireString(input.meetingId, "meetingId"),
+    meetingId: requireField(input, "meetingId", "meeting_id"),
   };
-  if (typeof input.topic === "string") payload.topic = input.topic;
-  if (typeof input.start_time === "string") payload.start_time = input.start_time;
-  if (typeof input.duration === "number") payload.duration = input.duration;
-  if (typeof input.timezone === "string") payload.timezone = input.timezone;
-  if (typeof input.password === "string") payload.password = input.password;
-  if (typeof input.agenda === "string") payload.agenda = input.agenda;
-  if (isRecord(input.settings)) payload.settings = input.settings;
+  const topic = fieldString(input, "topic");
+  if (topic) payload.topic = topic;
+  const startTime = fieldString(input, "start_time");
+  if (startTime) payload.start_time = startTime;
+  const duration = fieldNumber(input, "duration");
+  if (duration !== undefined) payload.duration = duration;
+  const timezone = fieldString(input, "timezone");
+  if (timezone) payload.timezone = timezone;
+  const password = fieldString(input, "password");
+  if (password) payload.password = password;
+  const agenda = fieldString(input, "agenda");
+  if (agenda) payload.agenda = agenda;
+  if (Object.keys(settings).length > 0) payload.settings = settings;
   return payload;
 }
 
@@ -331,7 +360,7 @@ export function updateMeeting(input: unknown): Record<string, unknown> | Promise
 
 export function validateMeetingsDeleteInput(input: unknown): { meetingId: string } {
   if (!isRecord(input)) throw new Error("meetings.delete input must be an object");
-  return { meetingId: requireString(input.meetingId, "meetingId") };
+  return { meetingId: requireField(input, "meetingId", "meeting_id") };
 }
 
 export function createMeetingsDeleteClient(options: { accessToken: string; fetch?: typeof fetch }) {
@@ -372,9 +401,9 @@ export type MeetingsListRegistrantsInput = { meetingId: string; page_size?: numb
 export function validateMeetingsListRegistrantsInput(input: unknown): MeetingsListRegistrantsInput {
   if (!isRecord(input)) throw new Error("meetings.list_registrants input must be an object");
   return {
-    meetingId: requireString(input.meetingId, "meetingId"),
-    page_size: typeof input.page_size === "number" ? input.page_size : undefined,
-    next_page_token: typeof input.next_page_token === "string" ? input.next_page_token : undefined,
+    meetingId: requireField(input, "meetingId", "meeting_id"),
+    page_size: fieldNumber(input, "page_size", "pageSize"),
+    next_page_token: fieldString(input, "next_page_token", "nextPageToken"),
   };
 }
 
@@ -402,12 +431,18 @@ export function createMeetingsRegistrantsClient(options: { accessToken: string; 
 
     async addRegistrant(input: unknown) {
       if (!isRecord(input)) throw new Error("meetings.add_registrant input must be an object");
-      const meetingId = requireString(input.meetingId, "meetingId");
-      const email = requireString(input.email, "email");
-      const first_name = requireString(input.first_name, "first_name");
-      const body: Record<string, unknown> = { email, first_name };
-      if (typeof input.last_name === "string") body.last_name = input.last_name;
-      const response = await client.fetchJSON(`/v2/meetings/${meetingId}/registrants`, {
+      const payload = validateMeetingsAddRegistrantInput(input);
+      const body: Record<string, unknown> = { email: payload.email, first_name: payload.first_name };
+      if (payload.last_name) body.last_name = payload.last_name;
+      for (const key of ["org", "zip", "city", "phone", "state", "address", "country", "comments", "industry", "language", "job_title", "auto_approve", "no_of_employees", "custom_questions", "purchasing_time_frame", "role_in_purchase_process"] as const) {
+        const value = fieldValue(input, key);
+        if (value !== undefined) body[key] = value;
+      }
+      const params = new URLSearchParams();
+      const occurrenceIds = fieldString(input, "occurrence_ids");
+      if (occurrenceIds) params.set("occurrence_ids", occurrenceIds);
+      const query = params.toString();
+      const response = await client.fetchJSON(`/v2/meetings/${payload.meetingId}/registrants${query ? `?${query}` : ""}`, {
         method: "POST",
         body: JSON.stringify(body),
       });
@@ -425,10 +460,10 @@ export function createMeetingsRegistrantsClient(options: { accessToken: string; 
 export function validateMeetingsAddRegistrantInput(input: unknown): { meetingId: string; email: string; first_name: string; last_name?: string } {
   if (!isRecord(input)) throw new Error("meetings.add_registrant input must be an object");
   return {
-    meetingId: requireString(input.meetingId, "meetingId"),
-    email: requireString(input.email, "email"),
-    first_name: requireString(input.first_name, "first_name"),
-    last_name: typeof input.last_name === "string" ? input.last_name : undefined,
+    meetingId: requireField(input, "meetingId", "meeting_id"),
+    email: requireField(input, "email"),
+    first_name: requireField(input, "first_name"),
+    last_name: fieldString(input, "last_name"),
   };
 }
 
@@ -479,9 +514,9 @@ function requireSafeMeetingUUID(value: unknown): string {
 export function validatePastMeetingParticipantsInput(input: unknown): PastMeetingParticipantsInput {
   if (!isRecord(input)) throw new Error("past_meetings.participants input must be an object");
   return {
-    meetingUUID: requireSafeMeetingUUID(input.meetingUUID),
-    page_size: typeof input.page_size === "number" ? input.page_size : undefined,
-    next_page_token: typeof input.next_page_token === "string" ? input.next_page_token : undefined,
+    meetingUUID: requireSafeMeetingUUID(fieldString(input, "meetingUUID", "meeting_uuid", "meeting_id", "meetingId")),
+    page_size: fieldNumber(input, "page_size", "pageSize"),
+    next_page_token: fieldString(input, "next_page_token", "nextPageToken"),
   };
 }
 
@@ -542,14 +577,14 @@ export type WebinarsCreateInput = {
 export function validateWebinarsCreateInput(input: unknown): WebinarsCreateInput {
   if (!isRecord(input)) throw new Error("webinars.create input must be an object");
   return {
-    userId: typeof input.userId === "string" ? input.userId : undefined,
+    userId: fieldString(input, "userId", "user_id"),
     topic: requireString(input.topic, "topic"),
-    type: typeof input.type === "number" ? input.type : undefined,
-    start_time: typeof input.start_time === "string" ? input.start_time : undefined,
-    duration: typeof input.duration === "number" ? input.duration : undefined,
-    timezone: typeof input.timezone === "string" ? input.timezone : undefined,
-    agenda: typeof input.agenda === "string" ? input.agenda : undefined,
-    password: typeof input.password === "string" ? input.password : undefined,
+    type: fieldNumber(input, "type"),
+    start_time: fieldString(input, "start_time"),
+    duration: fieldNumber(input, "duration"),
+    timezone: fieldString(input, "timezone"),
+    agenda: fieldString(input, "agenda"),
+    password: fieldString(input, "password"),
   };
 }
 
@@ -578,10 +613,12 @@ export function createWebinarsClient(options: { accessToken: string; fetch?: typ
 
     async list(input: unknown) {
       if (!isRecord(input)) throw new Error("webinars.list input must be an object");
-      const userId = typeof input.userId === "string" ? input.userId : "me";
+      const userId = fieldString(input, "userId", "user_id") ?? "me";
       const params = new URLSearchParams();
-      if (typeof input.page_size === "number") params.set("page_size", String(input.page_size));
-      if (typeof input.next_page_token === "string") params.set("next_page_token", input.next_page_token);
+      const pageSize = fieldNumber(input, "page_size", "pageSize");
+      if (pageSize !== undefined) params.set("page_size", String(pageSize));
+      const nextPageToken = fieldString(input, "next_page_token", "nextPageToken");
+      if (nextPageToken) params.set("next_page_token", nextPageToken);
       const query = params.toString();
       const response = await client.fetchJSON(`/v2/users/${userId}/webinars${query ? `?${query}` : ""}`);
       if (response.status === 200) {
@@ -599,9 +636,12 @@ export function createWebinarsClient(options: { accessToken: string; fetch?: typ
 export function validateWebinarsListInput(input: unknown): { userId?: string; page_size?: number; next_page_token?: string } {
   if (!isRecord(input)) throw new Error("webinars.list input must be an object");
   const payload: { userId?: string; page_size?: number; next_page_token?: string } = {};
-  if (typeof input.userId === "string") payload.userId = input.userId;
-  if (typeof input.page_size === "number") payload.page_size = input.page_size;
-  if (typeof input.next_page_token === "string") payload.next_page_token = input.next_page_token;
+  const userId = fieldString(input, "userId", "user_id");
+  if (userId) payload.userId = userId;
+  const pageSize = fieldNumber(input, "page_size", "pageSize");
+  if (pageSize !== undefined) payload.page_size = pageSize;
+  const nextPageToken = fieldString(input, "next_page_token", "nextPageToken");
+  if (nextPageToken) payload.next_page_token = nextPageToken;
   return payload;
 }
 
@@ -635,7 +675,7 @@ export function listWebinars(input: unknown): Record<string, unknown> | Promise<
 
 export function validateUsersGetInput(input: unknown): { userId: string } {
   if (!isRecord(input)) throw new Error("users.get input must be an object");
-  return { userId: requireString(input.userId, "userId") };
+  return { userId: requireField(input, "userId", "user_id", "id") };
 }
 
 export function createUsersGetClient(options: { accessToken: string; fetch?: typeof fetch }) {
@@ -675,10 +715,14 @@ export type RecordingsListInput = { userId?: string; from: string; to?: string; 
 export function validateRecordingsListInput(input: unknown): RecordingsListInput {
   if (!isRecord(input)) throw new Error("recordings.list input must be an object");
   const payload: RecordingsListInput = { from: requireString(input.from, "from") };
-  if (typeof input.userId === "string") payload.userId = input.userId;
-  if (typeof input.to === "string") payload.to = input.to;
-  if (typeof input.page_size === "number") payload.page_size = input.page_size;
-  if (typeof input.next_page_token === "string") payload.next_page_token = input.next_page_token;
+  const userId = fieldString(input, "userId", "user_id");
+  if (userId) payload.userId = userId;
+  const to = fieldString(input, "to");
+  if (to) payload.to = to;
+  const pageSize = fieldNumber(input, "page_size", "pageSize");
+  if (pageSize !== undefined) payload.page_size = pageSize;
+  const nextPageToken = fieldString(input, "next_page_token", "nextPageToken");
+  if (nextPageToken) payload.next_page_token = nextPageToken;
   return payload;
 }
 
@@ -723,7 +767,7 @@ export function listRecordings(input: unknown): Record<string, unknown> | Promis
 
 export function validateRecordingsGetInput(input: unknown): { meetingId: string } {
   if (!isRecord(input)) throw new Error("recordings.get input must be an object");
-  return { meetingId: requireString(input.meetingId, "meetingId") };
+  return { meetingId: requireField(input, "meetingId", "meeting_id") };
 }
 
 export function createRecordingsGetClient(options: { accessToken: string; fetch?: typeof fetch }) {
@@ -760,8 +804,9 @@ export function getRecording(input: unknown): Record<string, unknown> | Promise<
 
 export function validateRecordingsDeleteInput(input: unknown): { meetingId: string; recordingId?: string } {
   if (!isRecord(input)) throw new Error("recordings.delete input must be an object");
-  const payload: { meetingId: string; recordingId?: string } = { meetingId: requireString(input.meetingId, "meetingId") };
-  if (typeof input.recordingId === "string") payload.recordingId = input.recordingId;
+  const payload: { meetingId: string; recordingId?: string } = { meetingId: requireField(input, "meetingId", "meeting_id") };
+  const recordingId = fieldString(input, "recordingId", "recording_id");
+  if (recordingId) payload.recordingId = recordingId;
   return payload;
 }
 
@@ -802,7 +847,7 @@ export function deleteRecording(input: unknown): Record<string, unknown> | Promi
 
 export function validateWebinarsGetInput(input: unknown): { webinarId: string } {
   if (!isRecord(input)) throw new Error("webinars.get input must be an object");
-  return { webinarId: requireString(input.webinarId, "webinarId") };
+  return { webinarId: requireField(input, "webinarId", "webinar_id") };
 }
 
 export function createWebinarsGetClient(options: { accessToken: string; fetch?: typeof fetch }) {

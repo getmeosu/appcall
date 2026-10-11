@@ -28,7 +28,7 @@ import manifest from "../manifest.json";
 
 describe("whatsapp depth slice", () => {
   test("bumps the connector to a minor version for the new surface", () => {
-    expect(manifest.version).toBe("0.2.0");
+    expect(manifest.version).toBe("0.3.0");
   });
 
   test("declares the depth-slice action keys with object input schemas", () => {

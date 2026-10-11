@@ -26,6 +26,7 @@ import cyclesFixture from "../fixtures/cycles.json";
 import attachmentCreateFixture from "../fixtures/attachment_create.json";
 import errorGraphqlFixture from "../fixtures/error_graphql.json";
 import errorRateLimitedFixture from "../fixtures/error_rate_limited.json";
+import issueSearchFixture from "../fixtures/issue_search.json";
 
 const { actions } = compileDeclarativeConnector(manifest as never);
 const actionKeys = Object.entries(manifest.operations)
@@ -246,9 +247,7 @@ describe("issues.search", () => {
   });
 
   it("accepts after and flattens the relay cursor to nextCursor/hasNextPage, matching the other list operations", async () => {
-    const { calls, fetchFn } = mockJson({
-      data: { searchIssues: { nodes: [{ id: "issue-1" }], pageInfo: { hasNextPage: true, endCursor: "cursor-search-1" } } },
-    });
+    const { calls, fetchFn } = mockJson(issueSearchFixture);
     const result = await actions["issues.search"]!({
       apiKey: "k", term: "login redirect", after: "cursor-search-0", fetch: fetchFn,
     }) as Record<string, unknown>;

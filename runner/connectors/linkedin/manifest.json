@@ -1,9 +1,11 @@
 {
   "key": "linkedin",
   "name": "LinkedIn",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "runtime": "bun",
-  "categories": ["social"],
+  "categories": [
+    "social"
+  ],
   "auth": {
     "type": "oauth2",
     "scopes": [
@@ -150,11 +152,1033 @@
           }
         }
       }
+    },
+    "shares.article.create": {
+      "kind": "action",
+      "timeoutMs": 20000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Create article or URL share",
+      "description": "Create a LinkedIn article or URL share with POST /v2/ugcPosts. specificContent is the com.linkedin.ugc.ShareContent object and visibility is the MemberNetworkVisibility object.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "author": {
+            "type": "string",
+            "description": "URN of the person or organization author."
+          },
+          "visibility": {
+            "type": "object",
+            "description": "Visibility object, typically com.linkedin.ugc.MemberNetworkVisibility."
+          },
+          "lifecycleState": {
+            "type": "string",
+            "description": "PUBLISHED or DRAFT. Omitted when unset.",
+            "enum": [
+              "PUBLISHED",
+              "DRAFT"
+            ]
+          },
+          "specificContent": {
+            "type": "object",
+            "description": "UGC ShareContent container, including shareCommentary and media."
+          }
+        },
+        "required": [
+          "author",
+          "visibility",
+          "specificContent"
+        ]
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v2/ugcPosts",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "author": "{{author}}",
+          "lifecycleState": "{{lifecycleState}}",
+          "specificContent": "{{specificContent}}",
+          "visibility": "{{visibility}}"
+        },
+        "success": [
+          201
+        ],
+        "result": {
+          "data": "{{response}}",
+          "id": "{{headers.x-restli-id}}"
+        }
+      }
+    },
+    "comments.create": {
+      "kind": "action",
+      "timeoutMs": 20000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Create comment on a post",
+      "description": "Create a first-level or nested comment with POST /rest/socialActions/{target}/comments. parent_comment is sent as parentComment when replying.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "actor": {
+            "type": "string",
+            "description": "URN of the person or organization writing the comment."
+          },
+          "object": {
+            "type": "string",
+            "description": "URN of the share or ugcPost that contains the comment."
+          },
+          "message": {
+            "type": "object",
+            "description": "Comment message, including text and optional attributes."
+          },
+          "target_urn": {
+            "type": "string",
+            "description": "Share, ugcPost, or parent comment URN where the comment is created."
+          },
+          "content": {
+            "type": "array",
+            "description": "Optional content entities such as an image URN."
+          },
+          "parent_comment": {
+            "type": "string",
+            "description": "Parent comment URN when this comment is a reply."
+          }
+        },
+        "required": [
+          "actor",
+          "object",
+          "message",
+          "target_urn"
+        ]
+      },
+      "request": {
+        "method": "POST",
+        "path": "/rest/socialActions/{{target_urn}}/comments",
+        "headers": {
+          "Linkedin-Version": "202609",
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "actor": "{{actor}}",
+          "object": "{{object}}",
+          "message": "{{message}}",
+          "content": "{{content}}",
+          "parentComment": "{{parent_comment}}"
+        },
+        "success": [
+          200,
+          201
+        ],
+        "result": {
+          "data": "{{response}}",
+          "id": "{{headers.x-restli-id}}"
+        }
+      }
+    },
+    "posts.publish": {
+      "kind": "action",
+      "timeoutMs": 20000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Create a LinkedIn post",
+      "description": "Create an organic post with POST /rest/posts. One image URN is sent as content.media and two or more as content.multiImage. An explicit content object wins over images.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "author": {
+            "type": "string",
+            "description": "Person or organization URN that authors the post."
+          },
+          "commentary": {
+            "type": "string",
+            "description": "Post text. Mentions use Little Text Format. Maximum 3000 characters."
+          },
+          "visibility": {
+            "type": "string",
+            "description": "Who can see the post. Defaults to PUBLIC.",
+            "enum": [
+              "PUBLIC",
+              "CONNECTIONS",
+              "LOGGED_IN",
+              "CONTAINER"
+            ]
+          },
+          "lifecycleState": {
+            "type": "string",
+            "description": "PUBLISHED, DRAFT, or PUBLISH_REQUESTED. Defaults to PUBLISHED.",
+            "enum": [
+              "PUBLISHED",
+              "DRAFT",
+              "PUBLISH_REQUESTED"
+            ]
+          },
+          "distribution": {
+            "type": "object",
+            "description": "Feed distribution and targeting. Defaults to MAIN_FEED with no targets."
+          },
+          "container": {
+            "type": "string",
+            "description": "Container URN, such as a group, when visibility is CONTAINER."
+          },
+          "reshareContext": {
+            "type": "object",
+            "description": "Reshare parent context. parent is the post being reshared."
+          },
+          "contentLandingPage": {
+            "type": "string",
+            "description": "Landing page opened by the call-to-action button."
+          },
+          "contentCallToActionLabel": {
+            "type": "string",
+            "description": "Call-to-action label.",
+            "enum": [
+              "APPLY",
+              "DOWNLOAD",
+              "VIEW_QUOTE",
+              "LEARN_MORE",
+              "SIGN_UP",
+              "SUBSCRIBE",
+              "REGISTER",
+              "JOIN",
+              "ATTEND",
+              "REQUEST_DEMO",
+              "SEE_MORE",
+              "BUY_NOW",
+              "SHOP_NOW"
+            ]
+          },
+          "isReshareDisabledByAuthor": {
+            "type": "boolean",
+            "description": "Set true to prevent reshares."
+          },
+          "content": {
+            "type": "object",
+            "description": "Posts API content object (media, article, multiImage, or poll)."
+          },
+          "images": {
+            "type": "array",
+            "description": "Uploaded image URNs, or objects with id. Ignored when content is set."
+          }
+        },
+        "required": [
+          "author",
+          "commentary"
+        ]
+      }
+    },
+    "posts.video.create": {
+      "kind": "action",
+      "timeoutMs": 20000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Create a native video post",
+      "description": "Publish a member or organization video that is already AVAILABLE with POST /rest/posts. author is required by the Posts API; call profile.whoami to obtain the member id.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "author": {
+            "type": "string",
+            "description": "Person or organization URN that authors the video post."
+          },
+          "video_urn": {
+            "type": "string",
+            "description": "URN of an uploaded video that is ready to publish."
+          },
+          "commentary": {
+            "type": "string",
+            "description": "Text published with the video."
+          },
+          "title": {
+            "type": "string",
+            "description": "Optional title stored on the video media object."
+          },
+          "visibility": {
+            "type": "string",
+            "description": "Who can see the post. Omitted when unset.",
+            "enum": [
+              "PUBLIC",
+              "CONNECTIONS",
+              "LOGGED_IN"
+            ]
+          }
+        },
+        "required": [
+          "author",
+          "video_urn",
+          "commentary"
+        ]
+      },
+      "request": {
+        "method": "POST",
+        "path": "/rest/posts",
+        "headers": {
+          "Linkedin-Version": "202609",
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "author": "{{author}}",
+          "commentary": "{{commentary}}",
+          "visibility": "{{visibility}}",
+          "distribution": {
+            "feedDistribution": "MAIN_FEED",
+            "targetEntities": [],
+            "thirdPartyDistributionChannels": []
+          },
+          "content": {
+            "media": {
+              "id": "{{video_urn}}",
+              "title": "{{title}}"
+            }
+          },
+          "lifecycleState": "PUBLISHED",
+          "isReshareDisabledByAuthor": false
+        },
+        "success": [
+          201
+        ],
+        "result": {
+          "data": "{{response}}",
+          "id": "{{headers.x-restli-id}}"
+        }
+      }
+    },
+    "posts.share.delete": {
+      "kind": "action",
+      "timeoutMs": 20000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Delete a legacy share",
+      "description": "Delete a share by numeric id or urn:li:share:{id} with DELETE /v2/shares/{id}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "share_id": {
+            "type": "string",
+            "description": "Numeric share id or urn:li:share:{id}."
+          }
+        },
+        "required": [
+          "share_id"
+        ]
+      }
+    },
+    "posts.delete": {
+      "kind": "action",
+      "timeoutMs": 20000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Delete a post",
+      "description": "Delete a share or ugcPost with DELETE /rest/posts/{postUrn}. LinkedIn's live endpoint returns 404 on a repeat delete; 404 is treated as success so the call is idempotent.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "post_urn": {
+            "type": "string",
+            "description": "ugcPost or share URN to delete."
+          }
+        },
+        "required": [
+          "post_urn"
+        ]
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/rest/posts/{{post_urn}}",
+        "headers": {
+          "Linkedin-Version": "202609"
+        },
+        "success": [
+          200,
+          204,
+          404
+        ],
+        "result": {
+          "deleted": true
+        }
+      }
+    },
+    "posts.ugc.delete": {
+      "kind": "action",
+      "timeoutMs": 20000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Delete a legacy UGC post",
+      "description": "Delete a UGC post or share with DELETE /v2/ugcPosts/{urn}. A 404 from an already-deleted post is treated as success.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "ugc_post_urn": {
+            "type": "string",
+            "description": "ugcPost or share URN to delete."
+          }
+        },
+        "required": [
+          "ugc_post_urn"
+        ]
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/v2/ugcPosts/{{ugc_post_urn}}",
+        "success": [
+          200,
+          204,
+          404
+        ],
+        "result": {
+          "deleted": true
+        }
+      }
+    },
+    "ads.targetingFacets.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get ad targeting facets",
+      "description": "List LinkedIn ad targeting facets with GET /v2/adTargetingFacets.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/adTargetingFacets",
+        "success": [
+          200
+        ]
+      }
+    },
+    "ads.audienceCounts.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get audience counts",
+      "description": "Estimate audience size with GET /v2/audienceCounts?q=targetingCriteriaV2. Pass targetingCriteria with literal parentheses and URN colons; the connector encodes the query value once.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "q": {
+            "type": "string",
+            "description": "Finder name. Must be targetingCriteriaV2.",
+            "enum": [
+              "targetingCriteriaV2"
+            ]
+          },
+          "targetingCriteria": {
+            "type": "string",
+            "description": "Rest.li targeting criteria. URN colons may be literal; they are encoded once."
+          }
+        },
+        "required": [
+          "q",
+          "targetingCriteria"
+        ]
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/audienceCounts",
+        "query": {
+          "q": "{{q}}",
+          "targetingCriteria": "{{targetingCriteria}}"
+        },
+        "success": [
+          200
+        ]
+      }
+    },
+    "organizations.acls.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get administered organizations",
+      "description": "List organization ACLs for the authenticated member with GET /rest/organizationAcls?q=roleAssignee.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "role": {
+            "type": "string",
+            "description": "Role filter.",
+            "enum": [
+              "ADMINISTRATOR",
+              "DIRECT_SPONSORED_CONTENT_POSTER"
+            ]
+          },
+          "state": {
+            "type": "string",
+            "description": "Approval state filter.",
+            "enum": [
+              "APPROVED",
+              "REQUESTED"
+            ]
+          },
+          "count": {
+            "type": "integer",
+            "description": "Page size."
+          },
+          "start": {
+            "type": "integer",
+            "description": "Number of ACLs to skip."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/rest/organizationAcls",
+        "headers": {
+          "Linkedin-Version": "202609",
+          "X-RestLi-Method": "FINDER"
+        },
+        "query": {
+          "q": "roleAssignee",
+          "role": "{{role}}",
+          "state": "{{state}}",
+          "start": "{{start}}",
+          "count": "{{count}}"
+        },
+        "success": [
+          200
+        ]
+      }
+    },
+    "images.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get an image",
+      "description": "Retrieve one image with GET /rest/images/{imageUrn}. The URN is URL-encoded.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "image_urn": {
+            "type": "string",
+            "description": "Image URN (urn:li:image:{id}) or the raw id."
+          }
+        },
+        "required": [
+          "image_urn"
+        ]
+      },
+      "request": {
+        "method": "GET",
+        "path": "/rest/images/{{image_urn}}",
+        "headers": {
+          "Linkedin-Version": "202609"
+        },
+        "success": [
+          200
+        ]
+      }
+    },
+    "images.batchGet": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get images",
+      "description": "Batch-get images with GET /rest/images?ids=List({encoded URN},...) and X-RestLi-Method BATCH_GET.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "ids": {
+            "type": "array",
+            "description": "Image URNs to retrieve."
+          }
+        },
+        "required": [
+          "ids"
+        ]
+      }
+    },
+    "profile.me.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get my info",
+      "description": "Fetch the authenticated member with GET /v2/me.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/me",
+        "success": [
+          200
+        ]
+      }
+    },
+    "organizations.networkSize.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get organization follower count",
+      "description": "Read an organization follower count with GET /rest/networkSizes/urn:li:organization:{id}?edgeType=COMPANY_FOLLOWED_BY_MEMBER.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "organization_id": {
+            "type": "string",
+            "description": "Numeric organization id, without the URN prefix."
+          },
+          "edgeType": {
+            "type": "string",
+            "description": "Network edge. COMPANY_FOLLOWED_BY_MEMBER is the follower count.",
+            "enum": [
+              "COMPANY_FOLLOWED_BY_MEMBER"
+            ]
+          }
+        },
+        "required": [
+          "organization_id",
+          "edgeType"
+        ]
+      },
+      "request": {
+        "method": "GET",
+        "path": "/rest/networkSizes/urn:li:organization:{{organization_id}}",
+        "headers": {
+          "Linkedin-Version": "202609"
+        },
+        "query": {
+          "edgeType": "{{edgeType}}"
+        },
+        "success": [
+          200
+        ]
+      }
+    },
+    "organizations.pageStats.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get organization page statistics",
+      "description": "Read page statistics with GET /rest/organizationPageStatistics?q=organization. Time bounds are sent as a Rest.li timeIntervals value built from timeRangeStart, timeRangeEnd, and timeGranularityType.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "organization": {
+            "type": "string",
+            "description": "Organization URN (urn:li:organization:{id})."
+          },
+          "timeRangeStart": {
+            "type": "integer",
+            "description": "Exclusive range start, epoch milliseconds."
+          },
+          "timeRangeEnd": {
+            "type": "integer",
+            "description": "Inclusive range end, epoch milliseconds."
+          },
+          "timeGranularityType": {
+            "type": "string",
+            "description": "DAY or MONTH. Required together with the time range.",
+            "enum": [
+              "DAY",
+              "MONTH"
+            ]
+          },
+          "timeIntervals": {
+            "type": "string",
+            "description": "Exact Rest.li timeIntervals value. Cannot be combined with the time range fields."
+          }
+        },
+        "required": [
+          "organization"
+        ]
+      }
+    },
+    "people.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get a person profile",
+      "description": "Retrieve a member profile with GET /v2/people/(id:{person_id}).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "person_id": {
+            "type": "string",
+            "description": "Application-scoped member id."
+          }
+        },
+        "required": [
+          "person_id"
+        ]
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/people/(id:{{person_id}})",
+        "success": [
+          200
+        ]
+      }
+    },
+    "posts.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get post content",
+      "description": "Retrieve a post with GET /rest/posts/{postUrn}. viewContext AUTHOR returns the latest draft; the default upstream view is READER.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "post_id": {
+            "type": "string",
+            "description": "ugcPost or share URN."
+          },
+          "viewContext": {
+            "type": "string",
+            "description": "READER or AUTHOR.",
+            "enum": [
+              "READER",
+              "AUTHOR"
+            ]
+          }
+        },
+        "required": [
+          "post_id"
+        ]
+      },
+      "request": {
+        "method": "GET",
+        "path": "/rest/posts/{{post_id}}",
+        "headers": {
+          "Linkedin-Version": "202609"
+        },
+        "query": {
+          "viewContext": "{{viewContext}}"
+        },
+        "success": [
+          200
+        ]
+      }
+    },
+    "organizations.shareStats.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get organization share statistics",
+      "description": "Read organizational share statistics with GET /rest/organizationalEntityShareStatistics?q=organizationalEntity. time_intervals is the Rest.li timeIntervals value and is omitted for lifetime stats.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "organizational_entity": {
+            "type": "string",
+            "description": "Organization URN (urn:li:organization:{id})."
+          },
+          "time_intervals": {
+            "type": "string",
+            "description": "Rest.li timeIntervals value. Omit for lifetime statistics."
+          }
+        },
+        "required": [
+          "organizational_entity"
+        ]
+      },
+      "request": {
+        "method": "GET",
+        "path": "/rest/organizationalEntityShareStatistics",
+        "headers": {
+          "Linkedin-Version": "202609",
+          "X-RestLi-Method": "FINDER"
+        },
+        "query": {
+          "q": "organizationalEntity",
+          "organizationalEntity": "{{organizational_entity}}",
+          "timeIntervals": "{{time_intervals}}"
+        },
+        "success": [
+          200
+        ]
+      }
+    },
+    "videos.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get videos",
+      "description": "Get one video with GET /rest/videos/{videoUrn}, or batch-get with GET /rest/videos?ids=List(...) and X-RestLi-Method BATCH_GET. video_urn and video_ids are mutually exclusive.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "video_urn": {
+            "type": "string",
+            "description": "Single video URN."
+          },
+          "video_ids": {
+            "type": "array",
+            "description": "Video URNs for a batch get."
+          }
+        }
+      }
+    },
+    "images.initializeUpload": {
+      "kind": "action",
+      "timeoutMs": 20000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Initialize an image upload",
+      "description": "Register an image upload with POST /rest/images?action=initializeUpload. Upload the bytes to the returned uploadUrl, then attach the image URN to a post.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Person or organization URN that will own the image."
+          }
+        },
+        "required": [
+          "owner"
+        ]
+      },
+      "request": {
+        "method": "POST",
+        "path": "/rest/images?action=initializeUpload",
+        "headers": {
+          "Linkedin-Version": "202609",
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "initializeUploadRequest": {
+            "owner": "{{owner}}"
+          }
+        },
+        "success": [
+          200,
+          201
+        ]
+      }
+    },
+    "reactions.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "List reactions on an entity",
+      "description": "List reactions with GET /rest/reactions/(entity:{entity})?q=entity. sort is sent as the Rest.li value (value:SORT).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "entity": {
+            "type": "string",
+            "description": "Share, ugcPost, activity, or comment URN. Do not pre-encode it."
+          },
+          "sort": {
+            "type": "string",
+            "description": "Reaction sort order.",
+            "enum": [
+              "CHRONOLOGICAL",
+              "REVERSE_CHRONOLOGICAL",
+              "RELEVANCE"
+            ]
+          },
+          "count": {
+            "type": "integer",
+            "description": "Page size."
+          },
+          "start": {
+            "type": "integer",
+            "description": "Number of reactions to skip."
+          }
+        },
+        "required": [
+          "entity"
+        ]
+      },
+      "request": {
+        "method": "GET",
+        "path": "/rest/reactions/(entity:{{entity}})",
+        "headers": {
+          "Linkedin-Version": "202609",
+          "X-RestLi-Method": "FINDER"
+        },
+        "query": {
+          "q": "entity",
+          "sort": "(value:{{sort}})",
+          "count": "{{count}}",
+          "start": "{{start}}"
+        },
+        "success": [
+          200
+        ]
+      }
+    },
+    "assets.registerUpload": {
+      "kind": "action",
+      "timeoutMs": 20000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Register a legacy image upload",
+      "description": "Register a feed-share image with POST /v2/assets?action=registerUpload. recipe defaults to urn:li:digitalmediaRecipe:feedshare-image.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner_urn": {
+            "type": "string",
+            "description": "Person or organization URN that will own the asset."
+          },
+          "recipe": {
+            "type": "string",
+            "description": "Digital media recipe URN. Defaults to feedshare-image."
+          },
+          "supported_upload_mechanism": {
+            "type": "array",
+            "description": "Upload mechanisms such as SYNCHRONOUS_UPLOAD."
+          }
+        },
+        "required": [
+          "owner_urn"
+        ]
+      }
+    },
+    "ads.targetingEntities.search": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Search ad targeting entities",
+      "description": "Typeahead-search ad targeting entities with GET /rest/adTargetingEntities?q=typeahead.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "facet": {
+            "type": "string",
+            "description": "Ad targeting facet URN, such as urn:li:adTargetingFacet:locations."
+          },
+          "query": {
+            "type": "string",
+            "description": "Typeahead text, such as a location or job title."
+          },
+          "queryVersion": {
+            "type": "string",
+            "description": "Query version.",
+            "enum": [
+              "QUERY_USES_URNS"
+            ]
+          },
+          "count": {
+            "type": "integer",
+            "description": "Maximum results."
+          },
+          "start": {
+            "type": "integer",
+            "description": "Number of results to skip."
+          }
+        },
+        "required": [
+          "facet",
+          "query"
+        ]
+      },
+      "request": {
+        "method": "GET",
+        "path": "/rest/adTargetingEntities",
+        "headers": {
+          "Linkedin-Version": "202609",
+          "X-RestLi-Method": "FINDER"
+        },
+        "query": {
+          "q": "typeahead",
+          "facet": "{{facet}}",
+          "query": "{{query}}",
+          "queryVersion": "{{queryVersion}}",
+          "count": "{{count}}",
+          "start": "{{start}}"
+        },
+        "success": [
+          200
+        ]
+      }
+    },
+    "videos.upload": {
+      "kind": "action",
+      "timeoutMs": 120000,
+      "maxInputBytes": 26214400,
+      "maxResponseBytes": 26214400,
+      "title": "Upload a video",
+      "description": "Upload an MP4 for the authenticated member: POST /rest/videos?action=initializeUpload, PUT each part to the returned upload URL, POST /rest/videos?action=finalizeUpload, then GET /rest/videos/{videoUrn} up to three times. video_url and file.s3key are rejected; pass video_base64 or file.data.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Owner URN. When omitted, the member id is read from GET /v2/userinfo."
+          },
+          "video_base64": {
+            "type": "string",
+            "description": "Raw base64 or a data: URL of the MP4."
+          },
+          "video_url": {
+            "type": "string",
+            "description": "Not fetched. Pass video_base64 or file.data instead."
+          },
+          "file": {
+            "type": "object",
+            "description": "Inline file. data or a data: url is accepted; s3key is not readable here."
+          }
+        }
+      }
+    },
+    "profile.whoami": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Who am I",
+      "description": "Return the OpenID Connect identity of the connected member with GET /v2/userinfo.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/userinfo",
+        "success": [
+          200
+        ]
+      }
     }
   },
   "models": [
     "profile",
     "post",
     "organization"
-  ]
+  ],
+  "http": {
+    "baseUrl": "https://api.linkedin.com",
+    "auth": {
+      "field": "accessToken",
+      "in": "header",
+      "name": "Authorization",
+      "value": "Bearer {{accessToken}}"
+    },
+    "headers": {
+      "Accept": "application/json",
+      "X-Restli-Protocol-Version": "2.0.0"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after",
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "message",
+        "error.message",
+        "error",
+        "serviceErrorMessage"
+      ]
+    }
+  }
 }

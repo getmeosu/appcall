@@ -5,7 +5,7 @@ describe("apify connector manifest", () => {
   test("declares key, name, runtime, version", () => {
     expect(manifest.key).toBe("apify");
     expect(manifest.name).toBe("Apify");
-    expect(manifest.version).toBe("0.2.0");
+    expect(manifest.version).toBe("0.3.0");
     expect(manifest.runtime).toBe("bun");
   });
 
@@ -141,6 +141,51 @@ describe("apify connector manifest", () => {
     const ops = manifest.operations as Record<string, any>;
     for (const key of ["actor.run", "actor.run_sync_get_dataset_items", "runs.list"]) {
       expect(ops[key].inputSchema.properties.actorId["x-dynamic-options"].detailSource).toBe("actors.input_schema");
+    }
+  });
+
+  test("declares http auth for compiled Composio operations", () => {
+    const http = (manifest as { http: { baseUrl: string; auth: { field: string; value: string }; headers?: Record<string, string> } }).http;
+    expect(http.baseUrl).toBe("https://api.apify.com");
+    expect(http.auth.field).toBe("apiKey");
+    expect(http.auth.value).toBe("Bearer {{apiKey}}");
+    expect(http.headers?.Accept).toBe("application/json");
+    expect(http.headers?.["Content-Type"]).toBeUndefined();
+  });
+
+  test("JSON Content-Type is declared only on operations that send a body", () => {
+    const ops = manifest.operations as Record<string, {
+      request?: { method?: string; body?: unknown; headers?: Record<string, string> };
+    }>;
+    for (const [key, op] of Object.entries(ops)) {
+      const request = op.request;
+      if (!request) continue;
+      const method = (request.method ?? "GET").toUpperCase();
+      const hasBody = request.body !== undefined;
+      const contentType = request.headers?.["Content-Type"];
+      if (hasBody) {
+        expect(contentType, key).toBe("application/json");
+        expect(["POST", "PUT", "PATCH", "DELETE"]).toContain(method);
+        if (method === "DELETE") expect(key).toBe("request_queues.requests.batch_delete");
+      } else {
+        expect(contentType, key).toBeUndefined();
+        if (method === "GET" || method === "HEAD" || method === "DELETE") {
+          expect(request.body, key).toBeUndefined();
+        }
+      }
+    }
+  });
+
+  test("new Composio operations include a request block, title, description, and object inputSchema", () => {
+    const ops = manifest.operations as Record<string, { request?: unknown; title?: string; description?: string; inputSchema?: { type?: string } }>;
+    const added = ["actors.create", "actors.update", "actors.delete", "actors.webhooks.list", "actors.versions.list", "actors.versions.create", "actors.versions.get", "actors.versions.update", "actors.versions.delete", "actors.versions.env_vars.list", "actors.versions.env_vars.create", "actors.versions.env_vars.get", "actors.versions.env_vars.update", "actors.versions.env_vars.delete", "actors.builds.create", "actors.builds.list", "actors.builds.default", "actors.runs.last", "actors.runs.last.dataset_items", "actor.run_sync", "actor.run_sync_get", "actor.run_sync_get_dataset_items_get", "actor_builds.list", "actor_builds.get", "actor_builds.delete", "actor_builds.abort", "actor_builds.log", "actor_builds.openapi", "runs.delete", "runs.update", "runs.resurrect", "runs.list_user", "runs.dataset_items", "runs.default_dataset", "runs.default_key_value_store", "runs.default_request_queue", "tasks.create", "tasks.update", "tasks.delete", "tasks.runs.last", "tasks.runs.last.dataset_items", "tasks.runs.list", "tasks.webhooks.list", "tasks.input.get", "tasks.input.update", "task.run_sync", "task.run_sync_get", "task.run_sync_get_dataset_items_post", "datasets.update", "datasets.statistics", "key_value_stores.create", "key_value_stores.delete", "key_value_stores.update", "key_value_store.head_record", "request_queues.create", "request_queues.get", "request_queues.update", "request_queues.delete", "request_queues.head", "request_queues.head.lock", "request_queues.requests.list", "request_queues.requests.add", "request_queues.requests.get", "request_queues.requests.update", "request_queues.requests.delete", "request_queues.requests.lock.delete", "request_queues.requests.lock.prolong", "request_queues.requests.batch_add", "request_queues.requests.batch_delete", "request_queues.requests.unlock", "schedules.list", "schedules.create", "schedules.get", "schedules.update", "schedules.delete", "schedules.log", "webhooks.create", "webhooks.get", "webhooks.update", "webhooks.delete", "webhooks.test", "webhooks.dispatches.list", "webhook_dispatches.list", "webhook_dispatches.get", "users.get", "users.me.limits.get", "users.me.limits.update", "users.me.usage.monthly", "store.list", "discover.g2_products", "reports.carfax_by_vin", "reports.us_fuel_price_averages", "scrape.amazon_product_details", "scrape.amazon_reviews", "scrape.booking_reviews", "scrape.facebook_ads", "scrape.facebook_comments", "scrape.facebook_events", "scrape.facebook_group_posts", "scrape.facebook_pages", "scrape.facebook_photos", "scrape.facebook_posts", "scrape.facebook_reels", "scrape.facebook_reviews", "scrape.g2_reviews", "scrape.google_maps_places", "scrape.google_maps_reviews", "scrape.indeed_jobs", "scrape.instagram_comments", "scrape.instagram_hashtags", "scrape.instagram_mentions", "scrape.instagram_posts", "scrape.instagram_profiles", "scrape.instagram_reels", "scrape.linkedin_companies", "scrape.linkedin_company_employees", "scrape.linkedin_profile_posts", "scrape.linkedin_profiles", "scrape.snapchat_profiles", "scrape.snapchat_spotlight", "scrape.tik_tok_ads", "scrape.tik_tok_comments", "scrape.tik_tok_posts", "scrape.tik_tok_video", "scrape.tripadvisor_reviews", "scrape.trustpilot_reviews", "scrape.twitter_posts", "scrape.website_traffic_insights", "scrape.yelp_reviews", "scrape.youtube_comments", "scrape.youtube_videos", "scrape.youtube_video_transcripts", "scrape.zillow_property_details", "search.aliexpress_products", "search.amazon_products", "search.booking_properties", "search.eventbrite_events", "search.facebook_marketplace", "search.google", "search.google_images", "search.google_news", "search.google_shopping", "search.instagram", "search.jobs_across_sites", "search.linkedin_companies", "search.linkedin_jobs", "search.linkedin_posts", "search.linkedin_profiles", "search.linkedin_profiles_by_name", "search.linkedin_profiles_by_services", "search.local_fuel_prices", "search.tik_tok_users", "search.tripadvisor_places", "search.upwork_jobs", "search.yandex_market_products", "search.zillow_properties"];
+    for (const key of added) {
+      expect(ops[key], key).toBeDefined();
+      expect(ops[key].request, key).toBeDefined();
+      expect(typeof ops[key].title).toBe("string");
+      expect((ops[key].title as string).length).toBeGreaterThan(0);
+      expect(typeof ops[key].description).toBe("string");
+      expect(ops[key].inputSchema?.type).toBe("object");
     }
   });
 });

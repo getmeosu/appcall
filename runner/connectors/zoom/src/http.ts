@@ -17,9 +17,15 @@ export function createZoomClient(options: ZoomClientOptions) {
   const httpClient = createConnectorHttpClient({ allowedHosts: manifest.network.allowedHosts as string[], maxResponseBytes, fetch: options.fetch });
   return {
     async fetchJSON(path: string, init: RequestInit = {}): Promise<{ status: number; headers: Record<string, string>; body: unknown }> {
-      const response = await httpClient.fetchText(`https://api.zoom.us${path}`, {
-        ...init, headers: { "Authorization": `Bearer ${options.accessToken}`, "Content-Type": "application/json", ...(init.headers as Record<string, string>) },
-      });
+      const headerBag: Record<string, string> = { ...(init.headers as Record<string, string> | undefined) };
+      const hasContentType = Object.keys(headerBag).some((key) => key.toLowerCase() === "content-type");
+      const isForm = typeof FormData !== "undefined" && init.body instanceof FormData;
+      const headers: Record<string, string> = {
+        "Authorization": `Bearer ${options.accessToken}`,
+        ...headerBag,
+      };
+      if (!hasContentType && !isForm) headers["Content-Type"] = "application/json";
+      const response = await httpClient.fetchText(`https://api.zoom.us${path}`, { ...init, headers });
       let body: unknown;
       if (response.body && response.body.trim().length > 0) {
         try { body = JSON.parse(response.body); } catch { body = response.body; }
@@ -35,3 +41,53 @@ export type ZoomClient = ReturnType<typeof createZoomClient>;
 export function prop(obj: Record<string, unknown>, field: string, fallback: string = ""): string { const v = obj[field]; return typeof v === "string" ? v : fallback; }
 export function propNum(obj: Record<string, unknown>, field: string, fallback: number = 0): number { const v = obj[field]; if (typeof v === "number") return v; if (typeof v === "string") { const n = Number(v); return Number.isFinite(n) ? n : fallback; } return fallback; }
 export function isRecord(v: unknown): v is Record<string, unknown> { return typeof v === "object" && v !== null && !Array.isArray(v); }
+
+export function fieldString(obj: Record<string, unknown>, ...keys: string[]): string | undefined {
+  for (const key of keys) {
+    const value = obj[key];
+    if (typeof value === "string" && value.length > 0) return value;
+    if (typeof value === "number" && Number.isFinite(value)) return String(value);
+  }
+  return undefined;
+}
+
+export function fieldNumber(obj: Record<string, unknown>, ...keys: string[]): number | undefined {
+  for (const key of keys) {
+    const value = obj[key];
+    if (typeof value === "number" && Number.isFinite(value)) return value;
+    if (typeof value === "string" && value.trim().length > 0) {
+      const parsed = Number(value);
+      if (Number.isFinite(parsed)) return parsed;
+    }
+  }
+  return undefined;
+}
+
+export function fieldBoolean(obj: Record<string, unknown>, ...keys: string[]): boolean | undefined {
+  for (const key of keys) {
+    const value = obj[key];
+    if (typeof value === "boolean") return value;
+  }
+  return undefined;
+}
+
+export function fieldValue(obj: Record<string, unknown>, ...keys: string[]): unknown {
+  for (const key of keys) {
+    if (obj[key] !== undefined) return obj[key];
+  }
+  return undefined;
+}
+
+export function requireField(obj: Record<string, unknown>, field: string, ...aliases: string[]): string {
+  const value = fieldString(obj, field, ...aliases);
+  if (!value) throw new Error(`${field} is required`);
+  return value;
+}
+
+export function queryValue(value: unknown): string | undefined {
+  if (typeof value === "string") return value;
+  if (typeof value === "number" && Number.isFinite(value)) return String(value);
+  if (typeof value === "boolean") return value ? "true" : "false";
+  if (Array.isArray(value)) return value.map((item) => String(item)).join(",");
+  return undefined;
+}

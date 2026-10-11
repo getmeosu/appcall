@@ -861,6 +861,50 @@ import {
   validateListGraphqlSecurityAdvisoriesInput,
   validateListGraphqlSecurityVulnerabilitiesInput,
 } from "./gap_g11";
+
+import {
+  createGapG12Client,
+  validateAddProjectCollaboratorInput,
+  validateAddTeamProjectInput,
+  validateCreateOrgProjectInput,
+  validateCreateProjectCardInput,
+  validateCreateProjectColumnInput,
+  validateCreateRepoProjectInput,
+  validateCreateTeamDiscussionInput,
+  validateCreateUserProjectInput,
+  validateDeleteProjectCardInput,
+  validateDeleteProjectColumnInput,
+  validateDeleteProjectInput,
+  validateDeleteTeamDiscussionInput,
+  validateGetAssignmentInput,
+  validateGetClassroomInput,
+  validateGetProjectCardInput,
+  validateGetProjectCollaboratorPermissionInput,
+  validateGetProjectColumnInput,
+  validateGetProjectInput,
+  validateGetTeamDiscussionInput,
+  validateGetTeamProjectPermissionInput,
+  validateListAcceptedAssignmentsInput,
+  validateListAssignmentGradesInput,
+  validateListClassroomAssignmentsInput,
+  validateListClassroomsInput,
+  validateListOrgClassicProjectsInput,
+  validateListProjectCardsInput,
+  validateListProjectCollaboratorsInput,
+  validateListProjectColumnsInput,
+  validateListRepoProjectsInput,
+  validateListTeamDiscussionsInput,
+  validateListTeamProjectsInput,
+  validateListUserClassicProjectsInput,
+  validateMoveProjectCardInput,
+  validateMoveProjectColumnInput,
+  validateRemoveProjectCollaboratorInput,
+  validateRemoveTeamProjectInput,
+  validateUpdateProjectCardInput,
+  validateUpdateProjectColumnInput,
+  validateUpdateProjectInput,
+  validateUpdateTeamDiscussionInput,
+} from "./gap_g12";
 import {
   createReposReadsClient,
   validateGetAutolinkInput,
@@ -6801,11 +6845,9 @@ export function listRepoPullComments(input: unknown): Record<string, unknown> | 
 
 function liveCard19Client(input: Record<string, unknown>, operation: string) {
   const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
-  const sleepFn = typeof input.sleep === "function" ? input.sleep as (ms: number) => Promise<void> : undefined;
   return createCard19ReadsClient({
     accessToken: input.accessToken as string,
     fetch: fetchFn,
-    sleep: sleepFn,
     githubClient: createGitHubClient({ accessToken: input.accessToken as string, fetch: fetchFn, operation }),
   });
 }
@@ -10203,6 +10245,15 @@ export function upsertRepoCodespacesSecret(input: unknown): Record<string, unkno
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 
+
+function liveGapG12Client(input: Record<string, unknown>, operation: string) {
+  void operation;
+  return createGapG12Client({
+    accessToken: input.accessToken as string,
+    fetch: typeof input.fetch === "function" ? (input.fetch as typeof fetch) : undefined,
+  });
+}
+
 function liveGapG11Client(input: Record<string, unknown>, operation: string) {
   void operation;
   return createGapG11Client({
@@ -10359,6 +10410,406 @@ export function listGraphqlSecurityVulnerabilities(input: unknown): Record<strin
     });
   }
   return { connector: "github", action: "graphql.security_vulnerabilities.list", source: "connector", validated: validateListGraphqlSecurityVulnerabilitiesInput(input) };
+}
+
+export function getProject(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG12Client(input, "projects.get").getProject(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "projects.get", source: "connector", project: result.item };
+    });
+  }
+  return { connector: "github", action: "projects.get", source: "connector", validated: validateGetProjectInput(input) };
+}
+
+export function updateProject(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG12Client(input, "projects.update").updateProject(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "projects.update", source: "connector", project: result.item, status: result.status };
+    });
+  }
+  return { connector: "github", action: "projects.update", source: "connector", validated: validateUpdateProjectInput(input) };
+}
+
+export function deleteProject(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG12Client(input, "projects.delete").deleteProject(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "projects.delete", source: "connector", deleted: result.deleted, projectId: result.projectId };
+    });
+  }
+  return { connector: "github", action: "projects.delete", source: "connector", validated: validateDeleteProjectInput(input) };
+}
+
+export function listOrgClassicProjects(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG12Client(input, "orgs.projects.list").listOrgClassicProjects(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "orgs.projects.list", source: "connector", projects: result.items };
+    });
+  }
+  return { connector: "github", action: "orgs.projects.list", source: "connector", validated: validateListOrgClassicProjectsInput(input) };
+}
+
+export function createOrgProject(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG12Client(input, "orgs.projects.create").createOrgProject(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "orgs.projects.create", source: "connector", project: result.item, status: result.status };
+    });
+  }
+  return { connector: "github", action: "orgs.projects.create", source: "connector", validated: validateCreateOrgProjectInput(input) };
+}
+
+export function listRepoProjects(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG12Client(input, "repos.projects.list").listRepoProjects(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "repos.projects.list", source: "connector", projects: result.items };
+    });
+  }
+  return { connector: "github", action: "repos.projects.list", source: "connector", validated: validateListRepoProjectsInput(input) };
+}
+
+export function createRepoProject(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG12Client(input, "repos.projects.create").createRepoProject(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "repos.projects.create", source: "connector", project: result.item, status: result.status };
+    });
+  }
+  return { connector: "github", action: "repos.projects.create", source: "connector", validated: validateCreateRepoProjectInput(input) };
+}
+
+export function listUserClassicProjects(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG12Client(input, "users.projects.list").listUserClassicProjects(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "users.projects.list", source: "connector", projects: result.items };
+    });
+  }
+  return { connector: "github", action: "users.projects.list", source: "connector", validated: validateListUserClassicProjectsInput(input) };
+}
+
+export function createUserProject(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG12Client(input, "user.projects.create").createUserProject(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "user.projects.create", source: "connector", project: result.item, status: result.status };
+    });
+  }
+  return { connector: "github", action: "user.projects.create", source: "connector", validated: validateCreateUserProjectInput(input) };
+}
+
+export function listProjectColumns(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG12Client(input, "projects.columns.list").listProjectColumns(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "projects.columns.list", source: "connector", columns: result.items };
+    });
+  }
+  return { connector: "github", action: "projects.columns.list", source: "connector", validated: validateListProjectColumnsInput(input) };
+}
+
+export function createProjectColumn(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG12Client(input, "projects.columns.create").createProjectColumn(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "projects.columns.create", source: "connector", column: result.item, status: result.status };
+    });
+  }
+  return { connector: "github", action: "projects.columns.create", source: "connector", validated: validateCreateProjectColumnInput(input) };
+}
+
+export function getProjectColumn(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG12Client(input, "projects.columns.get").getProjectColumn(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "projects.columns.get", source: "connector", column: result.item };
+    });
+  }
+  return { connector: "github", action: "projects.columns.get", source: "connector", validated: validateGetProjectColumnInput(input) };
+}
+
+export function updateProjectColumn(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG12Client(input, "projects.columns.update").updateProjectColumn(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "projects.columns.update", source: "connector", column: result.item, status: result.status };
+    });
+  }
+  return { connector: "github", action: "projects.columns.update", source: "connector", validated: validateUpdateProjectColumnInput(input) };
+}
+
+export function deleteProjectColumn(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG12Client(input, "projects.columns.delete").deleteProjectColumn(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "projects.columns.delete", source: "connector", deleted: result.deleted, columnId: result.columnId };
+    });
+  }
+  return { connector: "github", action: "projects.columns.delete", source: "connector", validated: validateDeleteProjectColumnInput(input) };
+}
+
+export function moveProjectColumn(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG12Client(input, "projects.columns.move").moveProjectColumn(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "projects.columns.move", source: "connector", moved: result.moved, columnId: result.columnId, position: result.position };
+    });
+  }
+  return { connector: "github", action: "projects.columns.move", source: "connector", validated: validateMoveProjectColumnInput(input) };
+}
+
+export function listProjectCards(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG12Client(input, "projects.cards.list").listProjectCards(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "projects.cards.list", source: "connector", cards: result.items };
+    });
+  }
+  return { connector: "github", action: "projects.cards.list", source: "connector", validated: validateListProjectCardsInput(input) };
+}
+
+export function createProjectCard(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG12Client(input, "projects.cards.create").createProjectCard(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "projects.cards.create", source: "connector", card: result.item, status: result.status };
+    });
+  }
+  return { connector: "github", action: "projects.cards.create", source: "connector", validated: validateCreateProjectCardInput(input) };
+}
+
+export function getProjectCard(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG12Client(input, "projects.cards.get").getProjectCard(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "projects.cards.get", source: "connector", card: result.item };
+    });
+  }
+  return { connector: "github", action: "projects.cards.get", source: "connector", validated: validateGetProjectCardInput(input) };
+}
+
+export function updateProjectCard(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG12Client(input, "projects.cards.update").updateProjectCard(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "projects.cards.update", source: "connector", card: result.item, status: result.status };
+    });
+  }
+  return { connector: "github", action: "projects.cards.update", source: "connector", validated: validateUpdateProjectCardInput(input) };
+}
+
+export function deleteProjectCard(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG12Client(input, "projects.cards.delete").deleteProjectCard(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "projects.cards.delete", source: "connector", deleted: result.deleted, cardId: result.cardId };
+    });
+  }
+  return { connector: "github", action: "projects.cards.delete", source: "connector", validated: validateDeleteProjectCardInput(input) };
+}
+
+export function moveProjectCard(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG12Client(input, "projects.cards.move").moveProjectCard(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "projects.cards.move", source: "connector", moved: result.moved, cardId: result.cardId, position: result.position, columnId: result.columnId };
+    });
+  }
+  return { connector: "github", action: "projects.cards.move", source: "connector", validated: validateMoveProjectCardInput(input) };
+}
+
+export function listProjectCollaborators(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG12Client(input, "projects.collaborators.list").listProjectCollaborators(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "projects.collaborators.list", source: "connector", collaborators: result.items };
+    });
+  }
+  return { connector: "github", action: "projects.collaborators.list", source: "connector", validated: validateListProjectCollaboratorsInput(input) };
+}
+
+export function addProjectCollaborator(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG12Client(input, "projects.collaborators.add").addProjectCollaborator(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "projects.collaborators.add", source: "connector", added: result.added, projectId: result.projectId, username: result.username, permission: result.permission };
+    });
+  }
+  return { connector: "github", action: "projects.collaborators.add", source: "connector", validated: validateAddProjectCollaboratorInput(input) };
+}
+
+export function removeProjectCollaborator(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG12Client(input, "projects.collaborators.remove").removeProjectCollaborator(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "projects.collaborators.remove", source: "connector", removed: result.removed, projectId: result.projectId, username: result.username };
+    });
+  }
+  return { connector: "github", action: "projects.collaborators.remove", source: "connector", validated: validateRemoveProjectCollaboratorInput(input) };
+}
+
+export function getProjectCollaboratorPermission(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG12Client(input, "projects.collaborators.permission.get").getProjectCollaboratorPermission(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "projects.collaborators.permission.get", source: "connector", permission: result.permission, username: result.username, projectId: result.projectId };
+    });
+  }
+  return { connector: "github", action: "projects.collaborators.permission.get", source: "connector", validated: validateGetProjectCollaboratorPermissionInput(input) };
+}
+
+export function listTeamProjects(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG12Client(input, "orgs.teams.projects.list").listTeamProjects(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "orgs.teams.projects.list", source: "connector", projects: result.items };
+    });
+  }
+  return { connector: "github", action: "orgs.teams.projects.list", source: "connector", validated: validateListTeamProjectsInput(input) };
+}
+
+export function addTeamProject(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG12Client(input, "orgs.teams.projects.add").addTeamProject(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "orgs.teams.projects.add", source: "connector", added: result.added, org: result.org, teamSlug: result.teamSlug, projectId: result.projectId, permission: result.permission };
+    });
+  }
+  return { connector: "github", action: "orgs.teams.projects.add", source: "connector", validated: validateAddTeamProjectInput(input) };
+}
+
+export function removeTeamProject(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG12Client(input, "orgs.teams.projects.remove").removeTeamProject(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "orgs.teams.projects.remove", source: "connector", removed: result.removed, org: result.org, teamSlug: result.teamSlug, projectId: result.projectId };
+    });
+  }
+  return { connector: "github", action: "orgs.teams.projects.remove", source: "connector", validated: validateRemoveTeamProjectInput(input) };
+}
+
+export function getTeamProjectPermission(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG12Client(input, "orgs.teams.projects.permission.get").getTeamProjectPermission(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "orgs.teams.projects.permission.get", source: "connector", permission: result.permission, state: result.state, org: result.org, teamSlug: result.teamSlug, projectId: result.projectId };
+    });
+  }
+  return { connector: "github", action: "orgs.teams.projects.permission.get", source: "connector", validated: validateGetTeamProjectPermissionInput(input) };
+}
+
+export function listClassrooms(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG12Client(input, "classrooms.list").listClassrooms(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "classrooms.list", source: "connector", classrooms: result.items };
+    });
+  }
+  return { connector: "github", action: "classrooms.list", source: "connector", validated: validateListClassroomsInput(input) };
+}
+
+export function getClassroom(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG12Client(input, "classrooms.get").getClassroom(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "classrooms.get", source: "connector", classroom: result.item };
+    });
+  }
+  return { connector: "github", action: "classrooms.get", source: "connector", validated: validateGetClassroomInput(input) };
+}
+
+export function listClassroomAssignments(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG12Client(input, "classrooms.assignments.list").listClassroomAssignments(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "classrooms.assignments.list", source: "connector", assignments: result.items };
+    });
+  }
+  return { connector: "github", action: "classrooms.assignments.list", source: "connector", validated: validateListClassroomAssignmentsInput(input) };
+}
+
+export function getAssignment(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG12Client(input, "assignments.get").getAssignment(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "assignments.get", source: "connector", assignment: result.item };
+    });
+  }
+  return { connector: "github", action: "assignments.get", source: "connector", validated: validateGetAssignmentInput(input) };
+}
+
+export function listAssignmentGrades(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG12Client(input, "assignments.grades.list").listAssignmentGrades(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "assignments.grades.list", source: "connector", grades: result.items };
+    });
+  }
+  return { connector: "github", action: "assignments.grades.list", source: "connector", validated: validateListAssignmentGradesInput(input) };
+}
+
+export function listAcceptedAssignments(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG12Client(input, "assignments.accepted.list").listAcceptedAssignments(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "assignments.accepted.list", source: "connector", accepted: result.items };
+    });
+  }
+  return { connector: "github", action: "assignments.accepted.list", source: "connector", validated: validateListAcceptedAssignmentsInput(input) };
+}
+
+export function listTeamDiscussions(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG12Client(input, "teams.discussions.list").listTeamDiscussions(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "teams.discussions.list", source: "connector", discussions: result.items };
+    });
+  }
+  return { connector: "github", action: "teams.discussions.list", source: "connector", validated: validateListTeamDiscussionsInput(input) };
+}
+
+export function getTeamDiscussion(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG12Client(input, "teams.discussions.get").getTeamDiscussion(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "teams.discussions.get", source: "connector", discussion: result.item };
+    });
+  }
+  return { connector: "github", action: "teams.discussions.get", source: "connector", validated: validateGetTeamDiscussionInput(input) };
+}
+
+export function createTeamDiscussion(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG12Client(input, "teams.discussions.create").createTeamDiscussion(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "teams.discussions.create", source: "connector", discussion: result.item, status: result.status };
+    });
+  }
+  return { connector: "github", action: "teams.discussions.create", source: "connector", validated: validateCreateTeamDiscussionInput(input) };
+}
+
+export function updateTeamDiscussion(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG12Client(input, "teams.discussions.update").updateTeamDiscussion(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "teams.discussions.update", source: "connector", discussion: result.item, status: result.status };
+    });
+  }
+  return { connector: "github", action: "teams.discussions.update", source: "connector", validated: validateUpdateTeamDiscussionInput(input) };
+}
+
+export function deleteTeamDiscussion(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG12Client(input, "teams.discussions.delete").deleteTeamDiscussion(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "teams.discussions.delete", source: "connector", deleted: result.deleted, org: result.org, teamSlug: result.teamSlug, discussionNumber: result.discussionNumber };
+    });
+  }
+  return { connector: "github", action: "teams.discussions.delete", source: "connector", validated: validateDeleteTeamDiscussionInput(input) };
 }
 
 

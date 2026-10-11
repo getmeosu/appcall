@@ -1,8 +1,9 @@
-import { createJiraClient, parseJiraRateLimit } from "./http";
+import { createJiraClient, parseJiraRateLimit, pickStr, pickNum, asAdf } from "./http";
 import { normalizeIssue } from "./issues";
 import { normalizeProject } from "./projects";
 import { normalizeUser } from "./users";
 import { normalizeComment, parseCommentsResponse, parseTransitionsResponse } from "./comments";
+export { jiraDepthActions } from "./depth";
 
 // ────────────────────────────────────────────────────────────────────────────
 // Shared helpers
@@ -40,6 +41,10 @@ function hasAuth(input: unknown): input is Record<string, unknown> & { accessTok
 
 export type CreateIssueInput = { projectKey: string; summary: string; description?: string; issueType?: string; priority?: string; assigneeId?: string; labels?: string[] };
 
+function namedOrId(value: string): Record<string, string> {
+  return /^\d+$/.test(value) ? { id: value } : { name: value };
+}
+
 export function createIssue(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
   if (hasAuth(input)) {
     const payload = validateCreateIssueInput(input);
@@ -47,12 +52,25 @@ export function createIssue(input: unknown): Record<string, unknown> | Promise<R
     const fields: Record<string, unknown> = {
       project: { key: payload.projectKey },
       summary: payload.summary,
-      description: payload.description ? { type: "doc", version: 1, content: [{ type: "paragraph", content: [{ type: "text", text: payload.description }] }] } : undefined,
-      issuetype: { name: payload.issueType || "Task" },
+      issuetype: namedOrId(payload.issueType || "Task"),
     };
-    if (payload.priority) fields.priority = { name: payload.priority };
+    if (payload.description) fields.description = asAdf(payload.description);
+    if (payload.priority) fields.priority = namedOrId(payload.priority);
     if (payload.assigneeId) fields.assignee = { accountId: payload.assigneeId };
     if (payload.labels?.length) fields.labels = payload.labels;
+    const parent = pickStr(input, "parent", "parent_key", "parent_id");
+    if (parent) fields.parent = /^\d+$/.test(parent) ? { id: parent } : { key: parent };
+    const dueDate = pickStr(input, "dueDate", "due_date");
+    if (dueDate) fields.duedate = dueDate;
+    const reporter = pickStr(input, "reporter");
+    if (reporter) fields.reporter = { accountId: reporter };
+    const extra = input.additional_properties;
+    if (typeof extra === "string") {
+      try { Object.assign(fields, JSON.parse(extra)); } catch { /* ignore malformed extra fields */ }
+    } else if (isRecord(extra)) {
+      Object.assign(fields, extra);
+    }
+    delete fields.resolution;
 
     return client
       .fetchJSON("/issue", { method: "POST", body: JSON.stringify({ fields }) })
@@ -67,12 +85,12 @@ export function createIssue(input: unknown): Record<string, unknown> | Promise<R
 function validateCreateIssueInput(input: unknown): CreateIssueInput {
   if (!isRecord(input)) throw new Error("create issue input must be an object");
   return {
-    projectKey: requireString(input.projectKey, "projectKey"),
-    summary: requireString(input.summary, "summary"),
-    description: typeof input.description === "string" ? input.description : undefined,
-    issueType: typeof input.issueType === "string" ? input.issueType : undefined,
-    priority: typeof input.priority === "string" ? input.priority : undefined,
-    assigneeId: typeof input.assigneeId === "string" ? input.assigneeId : undefined,
+    projectKey: requireString(pickStr(input, "projectKey", "project_key"), "projectKey"),
+    summary: requireString(pickStr(input, "summary"), "summary"),
+    description: pickStr(input, "description"),
+    issueType: pickStr(input, "issueType", "issue_type"),
+    priority: pickStr(input, "priority"),
+    assigneeId: pickStr(input, "assigneeId", "assignee"),
     labels: Array.isArray(input.labels) ? input.labels.filter((l): l is string => typeof l === "string") : undefined,
   };
 }
@@ -85,14 +103,21 @@ export type GetIssueInput = { issueKey: string };
 
 export function validateGetIssueInput(input: unknown): GetIssueInput {
   if (!isRecord(input)) throw new Error("get issue input must be an object");
-  return { issueKey: requireString(input.issueKey, "issueKey") };
+  return { issueKey: requireString(pickStr(input, "issueKey", "issue_id_or_key", "issue_key"), "issueKey") };
 }
 
 export function getIssue(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
   if (hasAuth(input)) {
     const payload = validateGetIssueInput(input);
+    const qs = new URLSearchParams();
+    const expand = pickStr(input, "expand");
+    if (expand) qs.set("expand", expand);
+    const fields = input.fields;
+    if (Array.isArray(fields)) qs.set("fields", fields.map(String).join(","));
+    else if (typeof fields === "string") qs.set("fields", fields);
+    const query = qs.toString();
     return getClient(input, "issues.get")
-      .fetchJSON(`/issue/${encodeURIComponent(payload.issueKey)}`)
+      .fetchJSON(`/issue/${encodeURIComponent(payload.issueKey)}${query ? `?${query}` : ""}`)
       .then((result) => {
         if (result.status === 200) return { connector: "jira", action: "issues.get", source: "connector", issue: normalizeIssue(result.body as any) };
         throw handleError(result);
@@ -110,13 +135,13 @@ export type UpdateIssueInput = { issueKey: string; summary?: string; description
 export function validateUpdateIssueInput(input: unknown): UpdateIssueInput {
   if (!isRecord(input)) throw new Error("update issue input must be an object");
   return {
-    issueKey: requireString(input.issueKey, "issueKey"),
-    summary: typeof input.summary === "string" ? input.summary : undefined,
-    description: typeof input.description === "string" ? input.description : undefined,
-    priority: typeof input.priority === "string" ? input.priority : undefined,
-    assigneeId: typeof input.assigneeId === "string" ? input.assigneeId : undefined,
+    issueKey: requireString(pickStr(input, "issueKey", "issue_id_or_key", "issue_key"), "issueKey"),
+    summary: pickStr(input, "summary"),
+    description: pickStr(input, "description"),
+    priority: pickStr(input, "priority", "priority_id_or_name"),
+    assigneeId: pickStr(input, "assigneeId", "assignee"),
     labels: Array.isArray(input.labels) ? input.labels.filter((l): l is string => typeof l === "string") : undefined,
-    dueDate: typeof input.dueDate === "string" ? input.dueDate : undefined,
+    dueDate: pickStr(input, "dueDate", "due_date"),
   };
 }
 
@@ -152,8 +177,8 @@ export type DeleteIssueInput = { issueKey: string; deleteSubtasks?: boolean };
 export function validateDeleteIssueInput(input: unknown): DeleteIssueInput {
   if (!isRecord(input)) throw new Error("delete issue input must be an object");
   return {
-    issueKey: requireString(input.issueKey, "issueKey"),
-    deleteSubtasks: input.deleteSubtasks === true,
+    issueKey: requireString(pickStr(input, "issueKey", "issue_id_or_key", "issue_key"), "issueKey"),
+    deleteSubtasks: input.deleteSubtasks === true || input.delete_subtasks === true,
   };
 }
 
@@ -227,9 +252,10 @@ export type AddCommentInput = { issueKey: string; body: string };
 
 export function validateAddCommentInput(input: unknown): AddCommentInput {
   if (!isRecord(input)) throw new Error("add comment input must be an object");
+  const body = pickStr(input, "body", "comment");
   return {
-    issueKey: requireString(input.issueKey, "issueKey"),
-    body: requireString(input.body, "body"),
+    issueKey: requireString(pickStr(input, "issueKey", "issue_id_or_key", "issue_key"), "issueKey"),
+    body: requireString(body, "body"),
   };
 }
 
@@ -262,9 +288,9 @@ export type ListCommentsInput = { issueKey: string; startAt?: number; maxResults
 export function validateListCommentsInput(input: unknown): ListCommentsInput {
   if (!isRecord(input)) throw new Error("list comments input must be an object");
   return {
-    issueKey: requireString(input.issueKey, "issueKey"),
-    startAt: typeof input.startAt === "number" ? input.startAt : 0,
-    maxResults: typeof input.maxResults === "number" ? input.maxResults : 50,
+    issueKey: requireString(pickStr(input, "issueKey", "issue_id_or_key", "issue_key"), "issueKey"),
+    startAt: pickNum(input, "startAt", "start_at") ?? 0,
+    maxResults: pickNum(input, "maxResults", "max_results") ?? 50,
   };
 }
 
@@ -293,7 +319,7 @@ export type ListTransitionsInput = { issueKey: string };
 
 export function validateListTransitionsInput(input: unknown): ListTransitionsInput {
   if (!isRecord(input)) throw new Error("list transitions input must be an object");
-  return { issueKey: requireString(input.issueKey, "issueKey") };
+  return { issueKey: requireString(pickStr(input, "issueKey", "issue_id_or_key", "issue_key"), "issueKey") };
 }
 
 export function listTransitions(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
@@ -321,9 +347,9 @@ export type DoTransitionInput = { issueKey: string; transitionId: string; commen
 export function validateDoTransitionInput(input: unknown): DoTransitionInput {
   if (!isRecord(input)) throw new Error("do transition input must be an object");
   return {
-    issueKey: requireString(input.issueKey, "issueKey"),
-    transitionId: requireString(input.transitionId, "transitionId"),
-    comment: typeof input.comment === "string" ? input.comment : undefined,
+    issueKey: requireString(pickStr(input, "issueKey", "issue_id_or_key", "issue_key"), "issueKey"),
+    transitionId: requireString(pickStr(input, "transitionId", "transition_id", "transition_id_or_name"), "transitionId"),
+    comment: pickStr(input, "comment"),
   };
 }
 
@@ -365,8 +391,8 @@ export type AssignIssueInput = { issueKey: string; accountId?: string };
 export function validateAssignIssueInput(input: unknown): AssignIssueInput {
   if (!isRecord(input)) throw new Error("assign issue input must be an object");
   return {
-    issueKey: requireString(input.issueKey, "issueKey"),
-    accountId: typeof input.accountId === "string" ? input.accountId : undefined,
+    issueKey: requireString(pickStr(input, "issueKey", "issue_id_or_key", "issue_key"), "issueKey"),
+    accountId: pickStr(input, "accountId", "account_id"),
   };
 }
 
@@ -392,14 +418,18 @@ export type GetProjectInput = { projectKey: string };
 
 export function validateGetProjectInput(input: unknown): GetProjectInput {
   if (!isRecord(input)) throw new Error("get project input must be an object");
-  return { projectKey: requireString(input.projectKey, "projectKey") };
+  return { projectKey: requireString(pickStr(input, "projectKey", "project_id_or_key", "project_key"), "projectKey") };
 }
 
 export function getProject(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
   if (hasAuth(input)) {
     const payload = validateGetProjectInput(input);
+    const qs = new URLSearchParams();
+    const expand = pickStr(input, "expand");
+    if (expand) qs.set("expand", expand);
+    const query = qs.toString();
     return getClient(input, "projects.get")
-      .fetchJSON(`/project/${encodeURIComponent(payload.projectKey)}`)
+      .fetchJSON(`/project/${encodeURIComponent(payload.projectKey)}${query ? `?${query}` : ""}`)
       .then((result) => {
         if (result.status === 200) return { connector: "jira", action: "projects.get", source: "connector", project: normalizeProject(result.body as any) };
         throw handleError(result);
@@ -416,7 +446,7 @@ export type GetUserInput = { accountId: string };
 
 export function validateGetUserInput(input: unknown): GetUserInput {
   if (!isRecord(input)) throw new Error("get user input must be an object");
-  return { accountId: requireString(input.accountId, "accountId") };
+  return { accountId: requireString(pickStr(input, "accountId", "account_id"), "accountId") };
 }
 
 export function getUser(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
@@ -445,9 +475,9 @@ export type GetIssueChangelogInput = { issueKey: string; startAt?: number; maxRe
 export function validateGetIssueChangelogInput(input: unknown): GetIssueChangelogInput {
   if (!isRecord(input)) throw new Error("get changelog input must be an object");
   return {
-    issueKey: requireString(input.issueKey, "issueKey"),
-    startAt: typeof input.startAt === "number" ? input.startAt : 0,
-    maxResults: typeof input.maxResults === "number" ? input.maxResults : 50,
+    issueKey: requireString(pickStr(input, "issueKey", "issue_id_or_key", "issue_key"), "issueKey"),
+    startAt: pickNum(input, "startAt", "start_at") ?? 0,
+    maxResults: pickNum(input, "maxResults", "max_results") ?? 50,
   };
 }
 
@@ -486,8 +516,8 @@ export type AddWatcherInput = { issueKey: string; accountId: string };
 export function validateAddWatcherInput(input: unknown): AddWatcherInput {
   if (!isRecord(input)) throw new Error("add watcher input must be an object");
   return {
-    issueKey: requireString(input.issueKey, "issueKey"),
-    accountId: requireString(input.accountId, "accountId"),
+    issueKey: requireString(pickStr(input, "issueKey", "issue_id_or_key", "issue_key"), "issueKey"),
+    accountId: requireString(pickStr(input, "accountId", "account_id"), "accountId"),
   };
 }
 
@@ -513,10 +543,10 @@ export type CreateIssueLinkInput = { inwardIssueKey: string; outwardIssueKey: st
 export function validateCreateIssueLinkInput(input: unknown): CreateIssueLinkInput {
   if (!isRecord(input)) throw new Error("create issue link input must be an object");
   return {
-    inwardIssueKey: requireString(input.inwardIssueKey, "inwardIssueKey"),
-    outwardIssueKey: requireString(input.outwardIssueKey, "outwardIssueKey"),
-    type: requireString(input.type, "type"),
-    comment: typeof input.comment === "string" ? input.comment : undefined,
+    inwardIssueKey: requireString(pickStr(input, "inwardIssueKey", "inward_issue_key"), "inwardIssueKey"),
+    outwardIssueKey: requireString(pickStr(input, "outwardIssueKey", "outward_issue_key"), "outwardIssueKey"),
+    type: requireString(pickStr(input, "type", "link_type", "link_type_id"), "type"),
+    comment: pickStr(input, "comment"),
   };
 }
 
@@ -543,15 +573,19 @@ export function createIssueLink(input: unknown): Record<string, unknown> | Promi
 // worklogs.add
 // ────────────────────────────────────────────────────────────────────────────
 
-export type AddWorklogInput = { issueKey: string; timeSpent: string; started?: string; comment?: string };
+export type AddWorklogInput = { issueKey: string; timeSpent?: string; timeSpentSeconds?: number; started?: string; comment?: string };
 
 export function validateAddWorklogInput(input: unknown): AddWorklogInput {
   if (!isRecord(input)) throw new Error("add worklog input must be an object");
+  const timeSpent = pickStr(input, "timeSpent", "time_spent");
+  const timeSpentSeconds = pickNum(input, "timeSpentSeconds", "time_spent_seconds");
+  if (!timeSpent && timeSpentSeconds === undefined) throw new Error("timeSpent is required");
   return {
-    issueKey: requireString(input.issueKey, "issueKey"),
-    timeSpent: requireString(input.timeSpent, "timeSpent"),
-    started: typeof input.started === "string" ? input.started : undefined,
-    comment: typeof input.comment === "string" ? input.comment : undefined,
+    issueKey: requireString(pickStr(input, "issueKey", "issue_id_or_key", "issue_key"), "issueKey"),
+    timeSpent,
+    timeSpentSeconds,
+    started: pickStr(input, "started"),
+    comment: pickStr(input, "comment"),
   };
 }
 
@@ -575,9 +609,11 @@ function normalizeWorklog(data: Record<string, unknown>, issueKey: string): Reco
 export function addWorklog(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
   if (hasAuth(input)) {
     const payload = validateAddWorklogInput(input);
-    const body: Record<string, unknown> = { timeSpent: payload.timeSpent };
+    const body: Record<string, unknown> = {};
+    if (payload.timeSpent) body.timeSpent = payload.timeSpent;
+    if (payload.timeSpentSeconds !== undefined) body.timeSpentSeconds = payload.timeSpentSeconds;
     if (payload.started) body.started = payload.started;
-    if (payload.comment) body.comment = adfParagraph(payload.comment);
+    if (payload.comment) body.comment = asAdf(payload.comment) ?? adfParagraph(payload.comment);
     return getClient(input, "worklogs.add")
       .fetchJSON(`/issue/${encodeURIComponent(payload.issueKey)}/worklog`, { method: "POST", body: JSON.stringify(body) })
       .then((result) => {
@@ -609,8 +645,9 @@ export function validateGetMyselfInput(input: unknown): GetMyselfInput {
 export function getMyself(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
   if (hasAuth(input)) {
     validateGetMyselfInput(input);
+    const expand = pickStr(input, "expand");
     return getClient(input, "myself.get")
-      .fetchJSON("/myself")
+      .fetchJSON(expand ? `/myself?expand=${encodeURIComponent(expand)}` : "/myself")
       .then((result) => {
         if (result.status === 200) return { connector: "jira", action: "myself.get", source: "connector", user: normalizeUser(result.body as any) };
         throw handleError(result);

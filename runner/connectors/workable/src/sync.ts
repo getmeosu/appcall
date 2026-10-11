@@ -47,7 +47,15 @@ function buildQuery(params: Record<string, string | undefined>): string {
 // jobs.list
 // ---------------------------------------------------------------------------
 
-export interface ExecuteJobsListSyncInput extends WorkableAuthInput {}
+export interface ExecuteJobsListSyncInput extends WorkableAuthInput {
+  state?: string;
+  limit?: number | string;
+  sinceId?: string;
+  maxId?: string;
+  createdAfter?: string;
+  updatedAfter?: string;
+  includeFields?: string;
+}
 
 export interface ExecuteJobsListSyncOutput {
   jobs: NormalizedJob[];
@@ -62,7 +70,18 @@ export async function executeJobsListSync(
     fetch: input.fetch,
     operation: "jobs.list",
   });
-  const raw = await client.getJSON("/jobs");
+  const path =
+    "/jobs" +
+    buildQuery({
+      state: input.state,
+      limit: input.limit != null ? String(input.limit) : undefined,
+      since_id: input.sinceId,
+      max_id: input.maxId,
+      created_after: input.createdAfter,
+      updated_after: input.updatedAfter,
+      include_fields: input.includeFields,
+    });
+  const raw = await client.getJSON(path);
   return { jobs: parseJobsResponse(raw) };
 }
 

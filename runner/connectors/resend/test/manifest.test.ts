@@ -1,10 +1,11 @@
 import { describe, expect, it } from "bun:test";
 import manifest from "../manifest.json";
+import composioMappings from "../fixtures/composio_tool_mapping.json";
 
 describe("resend manifest", () => {
   it("has correct key and version", () => {
     expect(manifest.key).toBe("resend");
-    expect(manifest.version).toBe("0.3.0");
+    expect(manifest.version).toBe("0.4.0");
     expect(manifest.runtime).toBe("bun");
   });
 
@@ -32,8 +33,47 @@ describe("resend manifest", () => {
     expect(ops).toContain("domains.list");
     expect(ops).toContain("domains.get");
     expect(ops).toContain("contacts.list");
+    expect(ops).toContain("contacts.retrieve");
     expect(ops).toContain("healthcheck");
-    expect(ops.length).toBe(7);
+    expect(ops).not.toContain("broadcasts.update_draft");
+    expect(ops.length).toBe(67);
+  });
+
+  it("reconciles all current Composio tool mappings exactly once", () => {
+    const mappings = composioMappings as Array<{
+      tool: string;
+      operation: string | null;
+      status: "mapped" | "partial" | "missing";
+      note?: string;
+    }>;
+    const names = mappings.map(({ tool }) => tool);
+    expect(mappings).toHaveLength(66);
+    expect(new Set(names).size).toBe(66);
+    for (const mapping of mappings) {
+      if (mapping.operation !== null) {
+        expect(manifest.operations[mapping.operation as keyof typeof manifest.operations]).toBeDefined();
+      }
+    }
+
+    const byStatus = Object.fromEntries(["mapped", "partial", "missing"].map((status) => [
+      status,
+      mappings.filter((mapping) => mapping.status === status).length,
+    ]));
+    expect(byStatus).toEqual({ mapped: 61, partial: 5, missing: 0 });
+    expect(mappings.find(({ tool }) => tool === "RESEND_UPDATE_DRAFT_BROADCAST")).toMatchObject({
+      operation: "broadcasts.update",
+      status: "partial",
+    });
+    expect(mappings.find(({ tool }) => tool === "RESEND_CREATE_TEMPLATE")).toEqual({
+      tool: "RESEND_CREATE_TEMPLATE",
+      operation: "templates.create",
+      status: "mapped",
+    });
+    expect(mappings.find(({ tool }) => tool === "RESEND_UPDATE_TEMPLATE")).toMatchObject({
+      operation: "templates.update",
+      status: "partial",
+      note: expect.stringMatching(/boolean update variables are rejected before HTTP/i),
+    });
   });
 
   it("operations are all actions", () => {
@@ -43,6 +83,7 @@ describe("resend manifest", () => {
     expect(manifest.operations["domains.list"].kind).toBe("action");
     expect(manifest.operations["domains.get"].kind).toBe("action");
     expect(manifest.operations["contacts.list"].kind).toBe("action");
+    expect(manifest.operations["contacts.retrieve"].kind).toBe("action");
     expect(manifest.operations["healthcheck"].kind).toBe("action");
   });
 
@@ -61,6 +102,7 @@ describe("resend manifest", () => {
   it("read ops use sideEffect read", () => {
     expect(manifest.operations["domains.get"].sideEffect).toBe("read");
     expect(manifest.operations["contacts.list"].sideEffect).toBe("read");
+    expect(manifest.operations["contacts.retrieve"].sideEffect).toBe("read");
   });
 
   it("has correct models", () => {

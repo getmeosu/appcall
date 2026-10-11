@@ -45,8 +45,16 @@ function handleError(result: { status: number; headers: Record<string, string>; 
 }
 
 function requireString(value: unknown, field: string): string {
+  if (typeof value === "number" && Number.isSafeInteger(value) && value > 0) return String(value);
   if (typeof value !== "string" || value.length === 0) throw new Error(`${field} is required`);
   return value;
+}
+
+function firstValue(input: Record<string, unknown>, keys: string[]): unknown {
+  for (const key of keys) {
+    if (input[key] !== undefined && input[key] !== "") return input[key];
+  }
+  return undefined;
 }
 
 function optionalString(value: unknown): string | undefined {
@@ -131,8 +139,8 @@ export function getCampaign(input: unknown): ActionResult {
 function validateCampaignsGetInput(input: unknown): CampaignsGetInput {
   if (!isRecord(input)) throw new Error("campaigns.get input must be an object");
   return {
-    accountId: requireString(input.accountId, "accountId"),
-    campaignId: requireString(input.campaignId ?? input.id, "campaignId"),
+    accountId: requireString(firstValue(input, ["accountId", "ad_account_id", "adAccountId"]), "accountId"),
+    campaignId: requireString(firstValue(input, ["campaignId", "ad_campaign_id", "id"]), "campaignId"),
   };
 }
 
@@ -166,7 +174,7 @@ export function getAdAccount(input: unknown): ActionResult {
 function validateAdAccountsGetInput(input: unknown): AdAccountsGetInput {
   if (!isRecord(input)) throw new Error("ad_accounts.get input must be an object");
   return {
-    accountId: requireString(input.accountId ?? input.id, "accountId"),
+    accountId: requireString(firstValue(input, ["accountId", "ad_account_id", "adAccountId", "id"]), "accountId"),
   };
 }
 
@@ -217,7 +225,7 @@ export function listCampaignGroups(input: unknown): ActionResult {
 function validateCampaignGroupsListInput(input: unknown): CampaignGroupsListInput {
   if (!isRecord(input)) throw new Error("campaign_groups.list input must be an object");
   return {
-    accountId: requireString(input.accountId, "accountId"),
+    accountId: requireString(firstValue(input, ["accountId", "ad_account_id", "adAccountId"]), "accountId"),
     start: optionalNumber(input.start),
     count: optionalNumber(input.count),
     status: optionalString(input.status),
@@ -232,28 +240,49 @@ export type CreativesListInput = {
   accountId: string;
   start?: number;
   count?: number;
+  pageSize?: number;
+  pageToken?: string;
+  sortOrder?: string;
   campaignId?: string;
   intendedStatus?: string;
+  campaigns?: string[];
+  creatives?: string[];
+  intendedStatuses?: string[];
+  contentReferences?: string[];
+  leadgenDestinations?: string[];
+  isTestAccount?: boolean;
 };
+
+function criteriaList(values: string[] | undefined, prefix?: string): string | undefined {
+  if (!values?.length) return undefined;
+  const urns = values.map((value) => prefix ? `${prefix}${sanitizeResourceId(value, [prefix])}` : value);
+  return `List(${urns.map((urn) => encodeURIComponent(urn)).join(",")})`;
+}
 
 export function listCreatives(input: unknown): ActionResult {
   const validated = validateCreativesListInput(input);
   if (hasLiveAuth(input)) {
     const accountId = sanitizeResourceId(validated.accountId, ["urn:li:sponsoredAccount:"]);
-    const start = validated.start ?? 0;
-    const count = validated.count ?? 10;
-    const params = new URLSearchParams();
-    params.set("q", "search");
-    params.set("start", String(start));
-    params.set("count", String(count));
-    if (validated.campaignId) {
-      params.set("search.campaigns.values[0]", toSponsoredCampaignUrn(validated.campaignId));
+    const pairs = ["q=criteria"];
+    const add = (key: string, value: string | undefined) => { if (value) pairs.push(`${encodeURIComponent(key)}=${value}`); };
+    add("campaigns", criteriaList(validated.campaigns ?? (validated.campaignId ? [validated.campaignId] : undefined), "urn:li:sponsoredCampaign:"));
+    add("creatives", criteriaList(validated.creatives, "urn:li:sponsoredCreative:"));
+    const statuses = validated.intendedStatuses ?? (validated.intendedStatus ? [validated.intendedStatus] : undefined);
+    if (statuses?.some((status) => !/^[A-Z_]{1,40}$/.test(status))) throw new Error("intendedStatuses contains an unsupported value");
+    add("intendedStatuses", statuses?.length ? `List(${statuses.join(",")})` : undefined);
+    add("contentReferences", criteriaList(validated.contentReferences));
+    add("leadgenCreativeCallToActionDestinations", criteriaList(validated.leadgenDestinations, "urn:li:adForm:"));
+    if (validated.isTestAccount !== undefined) add("isTestAccount", String(validated.isTestAccount));
+    if (validated.sortOrder) {
+      if (validated.sortOrder !== "ASCENDING" && validated.sortOrder !== "DESCENDING") throw new Error("sortOrder is not supported");
+      add("sortOrder", validated.sortOrder);
     }
-    if (validated.intendedStatus) {
-      params.set("search.intendedStatuses.values[0]", validated.intendedStatus);
+    if (validated.pageToken) add("pageToken", encodeURIComponent(validated.pageToken));
+    if (validated.count !== undefined || validated.pageSize !== undefined) {
+      add("pageSize", String(validated.pageSize ?? validated.count));
     }
     return createLinkedInAdsClient(clientOpts(input, "creatives.list"))
-      .fetchJSON(`/rest/adAccounts/${accountId}/creatives?${params.toString()}`, { method: "GET" })
+      .fetchJSON(`/rest/adAccounts/${accountId}/creatives?${pairs.join("&")}`, { method: "GET", headers: { "X-RestLi-Method": "FINDER" } })
       .then((result) => {
         if (result.status === 200) {
           const parsed = parseCreativesResponse(result.body);
@@ -274,12 +303,28 @@ export function listCreatives(input: unknown): ActionResult {
 
 function validateCreativesListInput(input: unknown): CreativesListInput {
   if (!isRecord(input)) throw new Error("creatives.list input must be an object");
+  const stringArray = (value: unknown): string[] | undefined => {
+    if (value == null) return undefined;
+    if (!Array.isArray(value) || !value.every((item) => typeof item === "string" && item.length > 0)) {
+      throw new Error("creative filters must be string arrays");
+    }
+    return value;
+  };
   return {
-    accountId: requireString(input.accountId, "accountId"),
+    accountId: requireString(firstValue(input, ["accountId", "ad_account_id", "adAccountId"]), "accountId"),
     start: optionalNumber(input.start),
     count: optionalNumber(input.count),
+    pageSize: optionalNumber(input.pageSize ?? input.page_size),
+    pageToken: optionalString(input.pageToken ?? input.page_token),
+    sortOrder: optionalString(input.sortOrder ?? input.sort_order),
     campaignId: optionalString(input.campaignId),
     intendedStatus: optionalString(input.intendedStatus),
+    campaigns: stringArray(input.campaigns),
+    creatives: stringArray(input.creatives),
+    intendedStatuses: stringArray(input.intendedStatuses ?? input.intended_statuses),
+    contentReferences: stringArray(input.contentReferences ?? input.content_references),
+    leadgenDestinations: stringArray(input.leadgenCreativeCallToActionDestinations ?? input.leadgen_creative_call_to_action_destinations),
+    isTestAccount: typeof input.isTestAccount === "boolean" ? input.isTestAccount : typeof input.is_test_account === "boolean" ? input.is_test_account : undefined,
   };
 }
 
@@ -292,6 +337,11 @@ const ANALYTICS_PIVOTS = new Set([
   "CAMPAIGN",
   "CAMPAIGN_GROUP",
   "CREATIVE",
+  "COMPANY",
+  "SHARE",
+  "CONVERSION",
+  "SERVING_LOCATION",
+  "CARD_INDEX",
   "MEMBER_COMPANY",
   "MEMBER_COUNTRY_V2",
   "MEMBER_REGION_V2",
@@ -300,6 +350,9 @@ const ANALYTICS_PIVOTS = new Set([
   "MEMBER_SENIORITY",
   "MEMBER_JOB_FUNCTION",
   "MEMBER_COMPANY_SIZE",
+  "MEMBER_COUNTY",
+  "PLACEMENT_NAME",
+  "IMPRESSION_DEVICE_TYPE",
 ]);
 
 const TIME_GRANULARITIES = new Set(["ALL", "DAILY", "MONTHLY", "YEARLY"]);
@@ -310,6 +363,7 @@ export type AnalyticsReportGetInput = {
   campaignGroups?: string[];
   creatives?: string[];
   pivot: string;
+  finder: string;
   timeGranularity: string;
   dateRangeStart: { year: number; month: number; day: number };
   dateRangeEnd?: { year: number; month: number; day: number };
@@ -319,46 +373,32 @@ export type AnalyticsReportGetInput = {
 export function getAnalyticsReport(input: unknown): ActionResult {
   const validated = validateAnalyticsReportGetInput(input);
   if (hasLiveAuth(input)) {
-    const params = new URLSearchParams();
-    params.set("q", "analytics");
-    params.set("pivot", validated.pivot);
-    params.set("timeGranularity", validated.timeGranularity);
-    params.set("dateRange", formatDateRange(validated.dateRangeStart, validated.dateRangeEnd));
-
-    if (validated.accounts?.length) {
-      params.set("accounts", encodeRestliList(validated.accounts.map(toSponsoredAccountUrn)));
-    }
-    if (validated.campaigns?.length) {
-      params.set("campaigns", encodeRestliList(validated.campaigns.map(toSponsoredCampaignUrn)));
-    }
-    if (validated.campaignGroups?.length) {
-      params.set(
-        "campaignGroups",
-        encodeRestliList(
-          validated.campaignGroups.map((id) => {
-            const simple = sanitizeResourceId(id, ["urn:li:sponsoredCampaignGroup:"]);
-            return `urn:li:sponsoredCampaignGroup:${simple}`;
-          }),
-        ),
-      );
-    }
-    if (validated.creatives?.length) {
-      params.set(
-        "creatives",
-        encodeRestliList(
-          validated.creatives.map((id) => {
-            const simple = sanitizeResourceId(id, ["urn:li:sponsoredCreative:", "urn:li:creatives:"]);
-            return `urn:li:sponsoredCreative:${simple}`;
-          }),
-        ),
-      );
-    }
+    const pairs = [
+      `q=${validated.finder}`,
+      validated.finder === "statistics" ? `pivots=List(${validated.pivot})` : `pivot=${validated.pivot}`,
+      `timeGranularity=${validated.timeGranularity}`,
+      `dateRange=${formatDateRange(validated.dateRangeStart, validated.dateRangeEnd)}`,
+    ];
+    const addList = (key: string, values: string[] | undefined) => {
+      if (values?.length) pairs.push(`${key}=${encodeRestliList(values)}`);
+    };
+    addList("accounts", validated.accounts?.map(toSponsoredAccountUrn));
+    addList("campaigns", validated.campaigns?.map(toSponsoredCampaignUrn));
+    addList("campaignGroups", validated.campaignGroups?.map((id) => {
+      const simple = sanitizeResourceId(id, ["urn:li:sponsoredCampaignGroup:"]);
+      return `urn:li:sponsoredCampaignGroup:${simple}`;
+    }));
+    addList("creatives", validated.creatives?.map((id) => {
+      const simple = sanitizeResourceId(id, ["urn:li:sponsoredCreative:", "urn:li:creatives:"]);
+      return `urn:li:sponsoredCreative:${simple}`;
+    }));
     if (validated.fields?.length) {
-      params.set("fields", validated.fields.join(","));
+      if (validated.fields.some((field) => !/^[A-Za-z0-9_]{1,64}$/.test(field))) throw new Error("fields contains an unsupported value");
+      pairs.push(`fields=${validated.fields.join(",")}`);
     }
 
     return createLinkedInAdsClient(clientOpts(input, "analytics.report.get"))
-      .fetchJSON(`/rest/adAnalytics?${params.toString()}`, { method: "GET" })
+      .fetchJSON(`/rest/adAnalytics?${pairs.join("&")}`, { method: "GET", headers: { "X-RestLi-Method": "FINDER" } })
       .then((result) => {
         if (result.status === 200) {
           const parsed = parseAnalyticsResponse(result.body);
@@ -388,6 +428,8 @@ function requireStringArray(value: unknown, field: string): string[] | undefined
 function validateAnalyticsReportGetInput(input: unknown): AnalyticsReportGetInput {
   if (!isRecord(input)) throw new Error("analytics.report.get input must be an object");
 
+  const finder = requireString(input.q ?? "analytics", "q").toLowerCase();
+  if (finder !== "analytics" && finder !== "statistics") throw new Error("q must be analytics or statistics");
   const pivot = requireString(input.pivot, "pivot").toUpperCase();
   if (!ANALYTICS_PIVOTS.has(pivot)) {
     throw new Error(`pivot must be one of ${[...ANALYTICS_PIVOTS].join(", ")}`);
@@ -407,18 +449,21 @@ function validateAnalyticsReportGetInput(input: unknown): AnalyticsReportGetInpu
     throw new Error("at least one of accounts, campaigns, campaignGroups, or creatives is required");
   }
 
-  if (input.dateRangeStart == null && input.startDate == null) {
+  const dateRangeRecord = isRecord(input.dateRange) ? input.dateRange : undefined;
+  if (input.dateRangeStart == null && input.startDate == null && dateRangeRecord?.start == null) {
     throw new Error("dateRangeStart is required");
   }
 
-  const dateRangeStart = parseDateParts(input.dateRangeStart ?? input.startDate, "dateRangeStart");
+  const dateRangeStart = parseDateParts(input.dateRangeStart ?? input.startDate ?? dateRangeRecord?.start, "dateRangeStart");
   const dateRangeEnd =
-    input.dateRangeEnd != null || input.endDate != null
-      ? parseDateParts(input.dateRangeEnd ?? input.endDate, "dateRangeEnd")
+    input.dateRangeEnd != null || input.endDate != null || dateRangeRecord?.end != null
+      ? parseDateParts(input.dateRangeEnd ?? input.endDate ?? dateRangeRecord?.end, "dateRangeEnd")
       : undefined;
 
   let fields: string[] | undefined;
-  if (Array.isArray(input.fields)) {
+  if (typeof input.fields === "string") {
+    fields = input.fields.split(",").map((field) => field.trim()).filter((field) => field.length > 0);
+  } else if (Array.isArray(input.fields)) {
     if (!input.fields.every((f) => typeof f === "string" && f.length > 0)) {
       throw new Error("fields must be an array of strings");
     }
@@ -431,6 +476,7 @@ function validateAnalyticsReportGetInput(input: unknown): AnalyticsReportGetInpu
     campaignGroups,
     creatives,
     pivot,
+    finder,
     timeGranularity,
     dateRangeStart,
     dateRangeEnd,

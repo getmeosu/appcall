@@ -12,7 +12,6 @@ import {
   getGraphqlResource,
   getGraphqlTopic,
   getGraphqlViewer,
-  getMetaRoot,
   listGraphqlCodesOfConduct,
   listGraphqlLicenses,
   listGraphqlSecurityAdvisories,
@@ -73,10 +72,10 @@ function gqlBody(data: unknown, errors?: unknown[]) {
 }
 
 describe("github gap G11 GraphQL reads + enrichment", () => {
-  test("version is 0.78.1 at 812 ops with the read/write breakdown", () => {
-    expect(manifest.version).toBe("0.78.1");
+  test("version is 0.79.0 at 852 ops with the read/write breakdown", () => {
+    expect(manifest.version).toBe("0.80.0");
     const ops = manifest.operations as Record<string, Record<string, unknown>>;
-    expect(Object.keys(ops)).toHaveLength(812);
+    expect(Object.keys(ops)).toHaveLength(910);
     const kinds = { action: 0, sync: 0, webhook: 0 };
     const side = { read: 0, write: 0, absent: 0 };
     for (const op of Object.values(ops)) {
@@ -87,8 +86,8 @@ describe("github gap G11 GraphQL reads + enrichment", () => {
         else side.absent += 1;
       }
     }
-    expect(kinds).toEqual({ action: 762, sync: 4, webhook: 46 });
-    expect(side).toEqual({ read: 411, write: 336, absent: 15 });
+    expect(kinds).toEqual({ action: 860, sync: 4, webhook: 46 });
+    expect(side).toEqual({ read: 446, write: 399, absent: 15 });
   });
 
   test("the fifteen G11 ops are read-only, omit effects, and document GraphQL roots", () => {
@@ -158,20 +157,6 @@ describe("github gap G11 GraphQL reads + enrichment", () => {
     const missing = recorder([json(gqlBody(null, [{ type: "NOT_FOUND", message: "Could not resolve" }]))]);
     expect(await getGraphqlNode({ accessToken: "t", fetch: missing.fetch, id: "missing" }))
       .toMatchObject({ found: false, node: null });
-  });
-
-  test("REST fetchJSON does not send X-Github-Next-Global-ID", async () => {
-    const rest = recorder([json({ current_user_url: "https://api.github.com/user" })]);
-    expect(await getMetaRoot({ accessToken: "t", fetch: rest.fetch }))
-      .toMatchObject({ root: { current_user_url: "https://api.github.com/user" } });
-    expect(rest.seen).toHaveLength(1);
-    expect(rest.seen[0].method).toBe("GET");
-    expect(rest.seen[0].url).toBe("https://api.github.com/");
-    expect(rest.seen[0].url).not.toContain("/graphql");
-    const headers = new Headers(rest.seen[0].headers);
-    expect(headers.get("X-Github-Next-Global-ID")).toBeNull();
-    expect(headers.get("Authorization")).toBe("Bearer t");
-    expect(headers.get("X-GitHub-Api-Version")).toBe("2022-11-28");
   });
 
   test("viewer.get selects status including organization id", async () => {

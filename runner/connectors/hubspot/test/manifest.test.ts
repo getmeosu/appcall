@@ -1,10 +1,11 @@
 import { describe, expect, it } from "bun:test";
 import manifest from "../manifest.json";
+import dealStageUpdatedWebhookFixture from "../fixtures/webhook_deal_stage_updated.json";
 
 describe("hubspot manifest", () => {
   it("has correct key and version", () => {
     expect(manifest.key).toBe("hubspot");
-    expect(manifest.version).toBe("0.4.0");
+    expect(manifest.version).toBe("0.5.0");
     expect(manifest.runtime).toBe("bun");
   });
 
@@ -84,5 +85,35 @@ describe("hubspot manifest", () => {
 
   it("has correct models", () => {
     expect(manifest.models).toEqual(["contact", "company", "deal", "ticket"]);
+  });
+
+  it("declares deal stage changes as a read-only HubSpot webhook", () => {
+    const operation = (manifest.operations as Record<string, Record<string, any>>)[
+      "HUBSPOT_DEAL_STAGE_UPDATED_TRIGGER"
+    ];
+
+    expect(operation).toBeDefined();
+    expect(operation.kind).toBe("webhook");
+    expect(operation.sideEffect).toBe("read");
+    expect(operation.title).toBe("Deal Stage Updated");
+    expect(operation.description).toContain("dealstage");
+    expect(operation.inputSchema).toMatchObject({
+      type: "array",
+      items: {
+        type: "object",
+        required: ["subscriptionType", "objectId", "propertyName", "propertyValue"],
+        properties: {
+          subscriptionType: { const: "deal.propertyChange" },
+          propertyName: { const: "dealstage" },
+        },
+      },
+    });
+
+    expect(dealStageUpdatedWebhookFixture).toHaveLength(1);
+    expect(dealStageUpdatedWebhookFixture[0]).toMatchObject({
+      subscriptionType: "deal.propertyChange",
+      propertyName: "dealstage",
+      propertyValue: "contractsent",
+    });
   });
 });

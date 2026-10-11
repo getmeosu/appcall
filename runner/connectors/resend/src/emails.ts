@@ -2,8 +2,6 @@ import { createResendClient, parseResendRateLimit, isRecord } from "./http";
 import { isSmtpConfigured, sendSmtpEmail } from "../../_shared/smtp";
 import { normalizeEmail, parseEmailsListResponse } from "./objects";
 
-// ─── Types ────────────────────────────────────────────────────────────────────
-
 export type EmailSendInput = {
   from: string;
   to: string | string[];
@@ -13,12 +11,13 @@ export type EmailSendInput = {
   replyTo?: string | string[];
   cc?: string | string[];
   bcc?: string | string[];
+  headers?: Record<string, string>;
+  scheduledAt?: string;
+  tags?: Array<{ name: string; value: string }>;
 };
 
 export type EmailGetInput = { id: string };
 export type EmailListInput = { limit?: number; after?: string; before?: string };
-
-// ─── Validate ─────────────────────────────────────────────────────────────────
 
 export function validateEmailSendInput(input: unknown): EmailSendInput {
   if (!isRecord(input)) throw new Error("input must be an object");
@@ -31,6 +30,9 @@ export function validateEmailSendInput(input: unknown): EmailSendInput {
     replyTo: optionalRecipient(input.replyTo),
     cc: optionalRecipient(input.cc),
     bcc: optionalRecipient(input.bcc),
+    headers: stringRecord(input.headers),
+    scheduledAt: typeof input.scheduledAt === "string" && input.scheduledAt.length > 0 ? input.scheduledAt : undefined,
+    tags: Array.isArray(input.tags) ? input.tags as EmailSendInput["tags"] : undefined,
   };
 }
 
@@ -48,10 +50,11 @@ export function validateEmailListInput(input: unknown): EmailListInput {
   return { limit, after, before };
 }
 
-// ─── emails.send ──────────────────────────────────────────────────────────────
-
 export function sendEmail(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
   if (isSmtpConfigured(input)) {
+    if (isRecord(input) && input.scheduledAt !== undefined && input.scheduledAt !== null && input.scheduledAt !== "") {
+      throw new Error("scheduled sends are not supported over SMTP");
+    }
     return sendSmtpEmail(input as Record<string, unknown>).then((result) => ({
       connector: "resend",
       action: "emails.send",
@@ -72,11 +75,18 @@ export function sendEmail(input: unknown): Record<string, unknown> | Promise<Rec
     if (payload.replyTo !== undefined) body.reply_to = payload.replyTo;
     if (payload.cc !== undefined) body.cc = payload.cc;
     if (payload.bcc !== undefined) body.bcc = payload.bcc;
+    if (payload.headers !== undefined) body.headers = payload.headers;
+    if (payload.scheduledAt !== undefined) body.scheduled_at = payload.scheduledAt;
+    if (payload.tags !== undefined) body.tags = payload.tags;
+    const headers: Record<string, string> = {};
+    if (typeof input.idempotencyKey === "string" && input.idempotencyKey.length > 0) {
+      headers["Idempotency-Key"] = input.idempotencyKey;
+    }
     return createResendClient({ apiKey: input.apiKey, fetch: fetchFn, operation: "emails.send" })
-      .fetchJSON("/emails", { method: "POST", body: JSON.stringify(body) })
+      .fetchJSON("/emails", { method: "POST", headers, body: JSON.stringify(body) })
       .then((result) => {
         if (result.status === 200 || result.status === 201) {
-          const data = result.body as any;
+          const data = result.body as { id?: unknown };
           const id = isRecord(data) && typeof data.id === "string" ? data.id : "";
           return { connector: "resend", action: "emails.send", source: "provider", id };
         }
@@ -87,8 +97,6 @@ export function sendEmail(input: unknown): Record<string, unknown> | Promise<Rec
   }
   return { connector: "resend", action: "emails.send", source: "connector", validated: validateEmailSendInput(input) };
 }
-
-// ─── emails.get ───────────────────────────────────────────────────────────────
 
 export function getEmail(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
   if (isRecord(input) && typeof input.apiKey === "string") {
@@ -115,8 +123,6 @@ export function getEmail(input: unknown): Record<string, unknown> | Promise<Reco
     validated: validateEmailGetInput(input),
   };
 }
-
-// ─── emails.list ──────────────────────────────────────────────────────────────
 
 export function listEmails(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
   if (isRecord(input) && typeof input.apiKey === "string") {
@@ -146,8 +152,6 @@ export function listEmails(input: unknown): Record<string, unknown> | Promise<Re
   };
 }
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
-
 function requireString(v: unknown, f: string): string {
   if (typeof v !== "string" || !v.length) throw new Error(`${f} is required`);
   return v;
@@ -167,6 +171,14 @@ function optionalRecipient(v: unknown): string | string[] | undefined {
     return list.length ? list : undefined;
   }
   return undefined;
+}
+function stringRecord(value: unknown): Record<string, string> | undefined {
+  if (!isRecord(value)) return undefined;
+  const out: Record<string, string> = {};
+  for (const [key, child] of Object.entries(value)) {
+    if (typeof child === "string") out[key] = child;
+  }
+  return out;
 }
 function optionalLimit(value: unknown): number | undefined {
   if (value === undefined || value === null) return undefined;

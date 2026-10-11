@@ -1,10 +1,12 @@
-import { createResendClient, parseResendRateLimit, isRecord } from "./http";
+import { createResendClient, encodeResendPathIdentifier, parseResendRateLimit, isRecord } from "./http";
 import { parseContactsListResponse } from "./objects";
 
 export type ContactsListInput = {
   limit?: number;
   after?: string;
   before?: string;
+  segmentId?: string;
+  audienceId?: string;
 };
 
 function requireOptionalLimit(value: unknown): number | undefined {
@@ -26,8 +28,13 @@ export function validateContactsListInput(input: unknown): ContactsListInput {
   const limit = requireOptionalLimit(input.limit);
   const after = optionalCursor(input.after, "after");
   const before = optionalCursor(input.before, "before");
+  const segmentId = optionalCursor(input.segmentId, "segmentId");
+  const audienceId = optionalCursor(input.audienceId, "audienceId");
+  if (segmentId && audienceId) throw new Error("provide either segmentId or audienceId, not both");
+  if (segmentId) encodeResendPathIdentifier(segmentId, "segmentId");
+  if (audienceId) encodeResendPathIdentifier(audienceId, "audienceId");
   if (after && before) throw new Error("after and before cannot both be set");
-  return { limit, after, before };
+  return { limit, after, before, segmentId, audienceId };
 }
 
 function buildQuery(payload: ContactsListInput): string {
@@ -51,8 +58,13 @@ export function listContacts(input: unknown): Record<string, unknown> | Promise<
   if (isRecord(input) && typeof input.apiKey === "string") {
     const payload = validateContactsListInput(input);
     const fetchFn = typeof input.fetch === "function" ? (input.fetch as typeof fetch) : undefined;
+    const scopeId = payload.segmentId ?? payload.audienceId;
+    const scopeField = payload.segmentId ? "segmentId" : "audienceId";
+    const path = scopeId
+      ? `/segments/${encodeResendPathIdentifier(scopeId, scopeField)}/contacts`
+      : "/contacts";
     return createResendClient({ apiKey: input.apiKey, fetch: fetchFn, operation: "contacts.list" })
-      .fetchJSON(`/contacts${buildQuery(payload)}`, { method: "GET" })
+      .fetchJSON(`${path}${buildQuery(payload)}`, { method: "GET" })
       .then((result) => {
         if (result.status >= 200 && result.status < 300) {
           const parsed = parseContactsListResponse(result.body);
