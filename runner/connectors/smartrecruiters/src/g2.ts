@@ -44,6 +44,7 @@
 import { assertSafePathSegment } from "../../_shared/jobboard";
 import { createApiClient, createClient } from "./http";
 import { jobIdSegment, userIdSegment, withJobPrefix } from "./ids";
+import { pageIdParam } from "./paging";
 import { normalizeJob, type NormalizedJob } from "./objects";
 
 export interface SmartRecruitersG2AuthInput {
@@ -187,7 +188,7 @@ export function buildJobsSearchQuery(input: JobsSearchInput): string {
     if (!Number.isInteger(input.limit) || input.limit < 1 || input.limit > 100) throw new Error("limit must be 1-100");
     qs.set("limit", String(input.limit));
   }
-  const pageId = optionalString(input.pageId, "pageId");
+  const pageId = pageIdParam(input.pageId, "pageId");
   if (input.sort != null && input.sort !== "default" && input.sort !== "job_id") {
     throw new Error("sort must be default or job_id");
   }
@@ -223,12 +224,13 @@ export function buildJobsSearchQuery(input: JobsSearchInput): string {
 export async function executeJobsSearch(
   input: JobsSearchInput,
 ): Promise<{ jobs: JobSummary[]; total: number | null; nextPageId: string | null }> {
-  const raw = await client(input, "jobs.search").getJSON(`/jobs${buildJobsSearchQuery(input)}`);
-  const { data, items } = itemsOf(raw);
+  const page = await client(input, "jobs.search").getPage(`/jobs${buildJobsSearchQuery(input)}`);
+  const { data, items } = itemsOf(page.data);
   return {
     jobs: items.filter((j) => str(j.id) != null).map(jobSummary),
     total: typeof data.totalFound === "number" ? data.totalFound : null,
-    nextPageId: str(data.nextPageId),
+    // Body nextPageId, else the Link rel="next" pageId (jobsall-1 documents both).
+    nextPageId: page.nextPageId,
   };
 }
 

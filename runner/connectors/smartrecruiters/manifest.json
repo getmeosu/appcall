@@ -1,7 +1,7 @@
 {
   "key": "smartrecruiters",
   "name": "SmartRecruiters",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "runtime": "bun",
   "categories": [
     "ats-recruitment"
@@ -2854,7 +2854,7 @@
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
       "title": "List candidate messages",
-      "description": "List messages for a candidate via authenticated GET /messages (first page; the Link next header is not surfaced, pass pageId to continue). ADMINISTRATOR role only upstream. authorId and application candidateId/jobId are sr-user: / sr-candidate: / sr-job:-prefixed. OAuth scope messages_read (declared per operation; not part of the default connect set). API keys need the matching SmartRecruiters user permission.",
+      "description": "List messages for a candidate via authenticated GET /messages (nextPageId comes from the Link header's rel=\"next\" pageId; pass it back as pageId). ADMINISTRATOR role only upstream. authorId and application candidateId/jobId are sr-user: / sr-candidate: / sr-job:-prefixed. OAuth scope messages_read (declared per operation; not part of the default connect set). API keys need the matching SmartRecruiters user permission.",
       "inputSchema": {
         "type": "object",
         "additionalProperties": false,
@@ -2875,7 +2875,7 @@
           "pageId": {
             "type": "string",
             "minLength": 1,
-            "description": "Next-page id."
+            "description": "Cursor from a previous nextPageId."
           },
           "limit": {
             "type": "integer",
@@ -2890,7 +2890,8 @@
         "additionalProperties": false,
         "required": [
           "messages",
-          "total"
+          "total",
+          "nextPageId"
         ],
         "properties": {
           "messages": {
@@ -2903,6 +2904,9 @@
           "total": {
             "type": "integer",
             "description": "Messages on this page."
+          },
+          "nextPageId": {
+            "description": "Cursor for the next page from the Link rel=\"next\" pageId; null on the last page."
           }
         }
       }
@@ -3272,6 +3276,557 @@
         "properties": {
           "user": {
             "description": "Normalized user; null when the response has no id."
+          }
+        }
+      }
+    },
+    "departments.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List departments",
+      "description": "List company departments via authenticated GET /configuration/departments. OAuth scope configuration_read (declared per operation; not part of the default connect set). API keys need the matching SmartRecruiters user permission.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [],
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "departments",
+          "total"
+        ],
+        "properties": {
+          "departments": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            },
+            "description": "Departments (id, label, description, archived)."
+          },
+          "total": {
+            "type": "integer",
+            "description": "totalFound."
+          }
+        }
+      }
+    },
+    "departments.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get department",
+      "description": "Fetch one department via authenticated GET /configuration/departments/{id}. OAuth scope configuration_read (declared per operation; not part of the default connect set). API keys need the matching SmartRecruiters user permission.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "SmartRecruiters department id."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "department"
+        ],
+        "properties": {
+          "department": {
+            "description": "Department (id, label, description, archived); null when the response has no label."
+          }
+        }
+      }
+    },
+    "hiring_processes.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List hiring processes",
+      "description": "List hiring processes (with IN_REVIEW / INTERVIEW / OFFERED sub-statuses) via authenticated GET /configuration/hiring-processes. OAuth scope configuration_read (declared per operation; not part of the default connect set). API keys need the matching SmartRecruiters user permission.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [],
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "hiringProcesses",
+          "total"
+        ],
+        "properties": {
+          "hiringProcesses": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            },
+            "description": "Hiring processes (id, name, active, subStatuses)."
+          },
+          "total": {
+            "type": "integer",
+            "description": "totalFound."
+          }
+        }
+      }
+    },
+    "hiring_processes.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get hiring process",
+      "description": "Fetch one hiring process via authenticated GET /configuration/hiring-processes/{id}. OAuth scope configuration_read (declared per operation; not part of the default connect set). API keys need the matching SmartRecruiters user permission.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "SmartRecruiters hiring process id."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "hiringProcess"
+        ],
+        "properties": {
+          "hiringProcess": {
+            "description": "Hiring process (id, name, active, subStatuses); null when the response has no id."
+          }
+        }
+      }
+    },
+    "rejection_reasons.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List rejection reasons",
+      "description": "List candidate rejection reasons via authenticated GET /configuration/rejection-reasons (ids feed applications.update_status reason). OAuth scope configuration_read (declared per operation; not part of the default connect set). API keys need the matching SmartRecruiters user permission.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [],
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "reasons",
+          "total"
+        ],
+        "properties": {
+          "reasons": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            },
+            "description": "Reasons (id, label)."
+          },
+          "total": {
+            "type": "integer",
+            "description": "totalFound."
+          }
+        }
+      }
+    },
+    "withdrawal_reasons.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List withdrawal reasons",
+      "description": "List candidate withdrawal reasons via authenticated GET /configuration/withdrawal-reasons (ids feed applications.update_status reason). OAuth scope configuration_read (declared per operation; not part of the default connect set). API keys need the matching SmartRecruiters user permission.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [],
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "reasons",
+          "total"
+        ],
+        "properties": {
+          "reasons": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            },
+            "description": "Reasons (id, label)."
+          },
+          "total": {
+            "type": "integer",
+            "description": "totalFound."
+          }
+        }
+      }
+    },
+    "sources.types.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List candidate source types",
+      "description": "List candidate source types with their subtypes via authenticated GET /configuration/sources. OAuth scope configuration_read (declared per operation; not part of the default connect set). API keys need the matching SmartRecruiters user permission.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [],
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "sourceTypes",
+          "total"
+        ],
+        "properties": {
+          "sourceTypes": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            },
+            "description": "Source types (id, label, subtypes)."
+          },
+          "total": {
+            "type": "integer",
+            "description": "totalFound."
+          }
+        }
+      }
+    },
+    "sources.values.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List candidate source values",
+      "description": "List candidate sources of one type via authenticated GET /configuration/sources/{sourceType}/values. Pages by limit/offset only (the endpoint has no pageId). OAuth scope configuration_read (declared per operation; not part of the default connect set). API keys need the matching SmartRecruiters user permission.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "sourceType"
+        ],
+        "properties": {
+          "sourceType": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Source type id from sources.types.list."
+          },
+          "sourceSubType": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Source subtype id from sources.types.list."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Page size (1-100, default 100)."
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Items to skip."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "sources",
+          "total",
+          "limit",
+          "offset"
+        ],
+        "properties": {
+          "sources": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            },
+            "description": "Sources (id, label, sourceIdentifier, sourceSubType)."
+          },
+          "total": {
+            "type": "integer",
+            "description": "totalFound."
+          },
+          "limit": {
+            "description": "Page size echoed by upstream; null when absent."
+          },
+          "offset": {
+            "description": "Offset echoed by upstream; null when absent."
+          }
+        }
+      }
+    },
+    "candidate_properties.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List candidate property definitions",
+      "description": "List candidate property definitions via authenticated GET /configuration/candidate-properties. OAuth scope configuration_read (declared per operation; not part of the default connect set). API keys need the matching SmartRecruiters user permission.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [],
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "properties",
+          "total"
+        ],
+        "properties": {
+          "properties": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            },
+            "description": "Definitions (id, key, label, type, availableTo, contexts)."
+          },
+          "total": {
+            "type": "integer",
+            "description": "totalFound."
+          }
+        }
+      }
+    },
+    "job_properties.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List job property definitions",
+      "description": "List job property definitions via authenticated GET /configuration/job-properties. OAuth scope configuration_read (declared per operation; not part of the default connect set). API keys need the matching SmartRecruiters user permission.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [],
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "properties",
+          "total"
+        ],
+        "properties": {
+          "properties": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            },
+            "description": "Definitions (id, key, label, category, active, visible, required)."
+          },
+          "total": {
+            "type": "integer",
+            "description": "totalFound."
+          }
+        }
+      }
+    },
+    "job_properties.values.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List job property values",
+      "description": "List the values of a job property via authenticated GET /configuration/job-properties/{id}/values. Pages by pageId / pageSize; nextPageId comes from the response body. OAuth scope configuration_read (declared per operation; not part of the default connect set). API keys need the matching SmartRecruiters user permission.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Job property id or key."
+          },
+          "pageId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Cursor from a previous nextPageId."
+          },
+          "pageSize": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 20000,
+            "description": "Page size (1-20000)."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "values",
+          "total",
+          "nextPageId"
+        ],
+        "properties": {
+          "values": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            },
+            "description": "Values (id, label, archived, externalCode)."
+          },
+          "total": {
+            "type": "integer",
+            "description": "totalFound."
+          },
+          "nextPageId": {
+            "description": "Cursor for the next page; null on the last page."
+          }
+        }
+      }
+    },
+    "offer_properties.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List offer property definitions",
+      "description": "List offer property definitions grouped by category via authenticated GET /configuration/offer-properties. OAuth scope configuration_read (declared per operation; not part of the default connect set). API keys need the matching SmartRecruiters user permission.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [],
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "categories"
+        ],
+        "properties": {
+          "categories": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            },
+            "description": "Categories (id, properties[key, label, required, type])."
+          }
+        }
+      }
+    },
+    "company.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get company configuration",
+      "description": "Fetch the company's own configuration via authenticated GET /configuration/company. OAuth scope configuration_read or company_read (declared per operation; not part of the default connect set). API keys need the matching SmartRecruiters user permission.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [],
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "company"
+        ],
+        "properties": {
+          "company": {
+            "description": "Company (identifier, name, website, logo, industry, location)."
+          }
+        }
+      }
+    },
+    "postings.departments.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List public departments",
+      "description": "List the departments a company publishes via the public Posting API GET /v1/companies/{company}/departments. OAuth scope: none (public Posting API; called without credentials).",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "company"
+        ],
+        "properties": {
+          "company": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Company identifier (e.g. BoschGroup)."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "departments",
+          "total"
+        ],
+        "properties": {
+          "departments": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            },
+            "description": "Departments (id, label, description)."
+          },
+          "total": {
+            "type": "integer",
+            "description": "totalFound."
           }
         }
       }
