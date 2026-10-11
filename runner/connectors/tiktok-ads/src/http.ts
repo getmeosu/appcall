@@ -5,7 +5,8 @@ import manifest from "../manifest.json";
 // TikTok for Business API client factory
 // ---------------------------------------------------------------------------
 
-const BASE_URL = "https://business-api.tiktok.com/open_api/v2.0";
+// Pinned to the manifest base URL (Business API v1.3); v2.0 is not a Business API version.
+const BASE_URL = manifest.http.baseUrl;
 
 export type TikTokRateLimitResult =
   | { limited: true; retryAfterSeconds: number }

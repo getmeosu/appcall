@@ -1043152,7 +1043152,7 @@
     "public": true
   },
   {
-    "digest": "0d8b08d8397a6079ae3fb16d77f12f0b0f1af0e274d549b91231f65bd6b8e625",
+    "digest": "42132b94671fd5dfe5f6c0ed289db2181937c44dda6e5e994747183f72d22289",
     "egress": true,
     "key": "tiktok-ads",
     "operations": [
@@ -1050224,6 +1050224,14 @@
         "inputSchema": {
           "additionalProperties": false,
           "properties": {
+            "advertiser_id": {
+              "description": "TikTok advertiser account ID.",
+              "type": "string"
+            },
+            "app_id": {
+              "description": "Mobile app ID (app event source). Pass app_id, pixel_code, or both.",
+              "type": "string"
+            },
             "bc_id": {
               "description": "Business Center ID.",
               "type": "string"
@@ -1050232,15 +1050240,15 @@
               "description": "Catalog ID.",
               "type": "string"
             },
-            "event_source_id": {
-              "description": "Event source ID.",
+            "pixel_code": {
+              "description": "Pixel code (web event source). Pass app_id, pixel_code, or both.",
               "type": "string"
             }
           },
           "required": [
+            "advertiser_id",
             "bc_id",
-            "catalog_id",
-            "event_source_id"
+            "catalog_id"
           ],
           "type": "object"
         },
@@ -1050301,6 +1050309,14 @@
         "inputSchema": {
           "additionalProperties": false,
           "properties": {
+            "advertiser_id": {
+              "description": "TikTok advertiser account ID.",
+              "type": "string"
+            },
+            "app_id": {
+              "description": "Mobile app ID (app event source). Pass app_id, pixel_code, or both.",
+              "type": "string"
+            },
             "bc_id": {
               "description": "Business Center ID.",
               "type": "string"
@@ -1050309,15 +1050325,15 @@
               "description": "Catalog ID.",
               "type": "string"
             },
-            "event_source_id": {
-              "description": "Event source ID.",
+            "pixel_code": {
+              "description": "Pixel code (web event source). Pass app_id, pixel_code, or both.",
               "type": "string"
             }
           },
           "required": [
+            "advertiser_id",
             "bc_id",
-            "catalog_id",
-            "event_source_id"
+            "catalog_id"
           ],
           "type": "object"
         },
@@ -1050591,14 +1050607,6 @@
             "catalogId": {
               "description": "Catalog ID.",
               "type": "string"
-            },
-            "page": {
-              "description": "Page number.",
-              "type": "number"
-            },
-            "pageSize": {
-              "description": "Page size.",
-              "type": "number"
             }
           },
           "required": [
@@ -1051277,15 +1051285,20 @@
               "description": "Catalog ID.",
               "type": "string"
             },
-            "product_set_id": {
-              "description": "Product set ID.",
-              "type": "string"
+            "product_set_ids": {
+              "description": "Product set IDs to delete (1-10).",
+              "items": {
+                "type": "string"
+              },
+              "maxItems": 10,
+              "minItems": 1,
+              "type": "array"
             }
           },
           "required": [
             "bc_id",
             "catalog_id",
-            "product_set_id"
+            "product_set_ids"
           ],
           "type": "object"
         },
@@ -1051318,13 +1051331,9 @@
               "description": "Catalog ID.",
               "type": "string"
             },
-            "page": {
-              "description": "Page number.",
-              "type": "number"
-            },
-            "pageSize": {
-              "description": "Page size.",
-              "type": "number"
+            "returnProductCount": {
+              "description": "Whether to return the product count of each set.",
+              "type": "boolean"
             }
           },
           "required": [
@@ -1051362,16 +1051371,17 @@
               "description": "Catalog ID.",
               "type": "string"
             },
-            "filter": {
-              "description": "Provider product-set filter.",
+            "conditions": {
+              "description": "Filter conditions object (see the TikTok product set operators and fields reference).",
               "type": "object"
-            },
-            "name": {
-              "description": "Product set name.",
-              "type": "string"
             },
             "product_set_id": {
               "description": "Product set ID.",
+              "type": "string"
+            },
+            "product_set_name": {
+              "description": "New product set name, up to 128 characters.",
+              "maxLength": 128,
               "type": "string"
             }
           },
@@ -1051891,7 +1051901,7 @@
               "type": "number"
             },
             "videoIds": {
-              "description": "TikTok `video_ids` query parameter.",
+              "description": "TikTok `catalog_video_ids` query parameter.",
               "items": {
                 "type": "string"
               },
@@ -1053421,11 +1053431,26 @@
               "type": "string"
             },
             "customAudienceIds": {
-              "description": "Custom audience IDs.",
+              "description": "Custom audience IDs owned by the advertiser.",
               "items": {
                 "type": "string"
               },
+              "minItems": 1,
               "type": "array"
+            },
+            "page": {
+              "description": "Page number. Default 1.",
+              "minimum": 1,
+              "type": "integer"
+            },
+            "pageSize": {
+              "description": "Page size. Default 10.",
+              "minimum": 1,
+              "type": "integer"
+            },
+            "timezone": {
+              "description": "Time zone of returned times (TikTok time zone enum). Default UTC.",
+              "type": "string"
             }
           },
           "required": [
@@ -1053695,33 +1053720,71 @@
               "description": "TikTok advertiser account ID.",
               "type": "string"
             },
-            "custom_audience_id": {
-              "description": "Seed custom audience ID.",
+            "custom_audience_name": {
+              "description": "Audience name, up to 128 characters.",
+              "maxLength": 128,
               "type": "string"
             },
-            "location_ids": {
-              "description": "Target location IDs.",
-              "items": {
-                "type": "string"
+            "lookalike_spec": {
+              "additionalProperties": false,
+              "description": "Lookalike settings.",
+              "properties": {
+                "audience_size": {
+                  "description": "Lookalike size.",
+                  "enum": [
+                    "NARROW",
+                    "BALANCED",
+                    "BROAD"
+                  ],
+                  "type": "string"
+                },
+                "include_source": {
+                  "description": "Whether to include the seed audience.",
+                  "type": "boolean"
+                },
+                "location_ids": {
+                  "description": "Location IDs.",
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "mobile_os": {
+                  "description": "Operating system.",
+                  "enum": [
+                    "ALL",
+                    "ANDROID",
+                    "IOS"
+                  ],
+                  "type": "string"
+                },
+                "placements": {
+                  "description": "Placements, e.g. TikTok, Pangle.",
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "source_audience_id": {
+                  "description": "Seed audience ID (at least 100 users; cannot itself be a lookalike).",
+                  "type": "string"
+                }
               },
-              "type": "array"
-            },
-            "name": {
-              "description": "Lookalike audience name.",
-              "type": "string"
-            },
-            "placement": {
-              "description": "Provider placement value.",
-              "type": "string"
-            },
-            "ratio": {
-              "description": "Lookalike audience ratio.",
-              "type": "number"
+              "required": [
+                "source_audience_id",
+                "include_source",
+                "mobile_os",
+                "placements",
+                "location_ids",
+                "audience_size"
+              ],
+              "type": "object"
             }
           },
           "required": [
             "advertiser_id",
-            "custom_audience_id"
+            "custom_audience_name",
+            "lookalike_spec"
           ],
           "type": "object"
         },
@@ -1053750,25 +1053813,18 @@
               "description": "TikTok advertiser account ID.",
               "type": "string"
             },
-            "custom_audience_id": {
-              "description": "Lookalike audience ID.",
-              "type": "string"
-            },
-            "location_ids": {
-              "description": "Target location IDs.",
+            "custom_audience_ids": {
+              "description": "Lookalike audience IDs to refresh.",
               "items": {
                 "type": "string"
               },
+              "minItems": 1,
               "type": "array"
-            },
-            "name": {
-              "description": "Lookalike audience name.",
-              "type": "string"
             }
           },
           "required": [
             "advertiser_id",
-            "custom_audience_id"
+            "custom_audience_ids"
           ],
           "type": "object"
         },
@@ -1053926,17 +1053982,14 @@
               "description": "TikTok advertiser account ID.",
               "type": "string"
             },
-            "customAudienceIds": {
-              "description": "Custom audience IDs.",
-              "items": {
-                "type": "string"
-              },
-              "type": "array"
+            "customAudienceId": {
+              "description": "ID of the audience whose sharing log you want.",
+              "type": "string"
             }
           },
           "required": [
             "advertiserId",
-            "customAudienceIds"
+            "customAudienceId"
           ],
           "type": "object"
         },
@@ -1057384,14 +1057437,16 @@
           "additionalProperties": false,
           "properties": {
             "batch": {
-              "description": "List of web events. Each item uses type, event, and optional context/properties.",
+              "description": "Events API 2.0 data objects (each needs event and event_time).",
               "items": {
                 "type": "object"
               },
+              "maxItems": 1000,
+              "minItems": 1,
               "type": "array"
             },
             "pixel_code": {
-              "description": "TikTok `pixel_code` body field.",
+              "description": "Pixel code from Events Manager.",
               "type": "string"
             }
           },
@@ -1057885,38 +1057940,43 @@
         "inputSchema": {
           "additionalProperties": false,
           "properties": {
-            "context": {
-              "description": "TikTok `context` body field.",
-              "type": "object"
-            },
             "event": {
-              "description": "Standard or custom conversion event name.",
+              "description": "Standard or custom event name, e.g. CompletePayment.",
               "type": "string"
             },
             "event_id": {
-              "description": "TikTok `event_id` body field.",
+              "description": "Event ID used to deduplicate against pixel events.",
               "type": "string"
+            },
+            "event_time": {
+              "description": "Event time as a Unix timestamp in seconds.",
+              "type": "integer"
+            },
+            "limited_data_use": {
+              "description": "Limited Data Use flag.",
+              "type": "boolean"
+            },
+            "page": {
+              "description": "Page info: url (required for web events), referrer.",
+              "type": "object"
             },
             "pixel_code": {
               "description": "Pixel code from Events Manager.",
               "type": "string"
             },
             "properties": {
-              "description": "TikTok `properties` body field.",
+              "description": "Order/product info: contents, content_type, currency, value, ...",
               "type": "object"
             },
-            "timestamp": {
-              "description": "TikTok `timestamp` body field.",
-              "type": "string"
-            },
-            "type": {
-              "description": "Currently only `track` is accepted.",
-              "type": "string"
+            "user": {
+              "description": "Customer info: hashed email/phone/external_id, ttclid, ttp, ip, user_agent, locale.",
+              "type": "object"
             }
           },
           "required": [
             "pixel_code",
-            "event"
+            "event",
+            "event_time"
           ],
           "type": "object"
         },
@@ -1060390,21 +1060450,20 @@
         "inputSchema": {
           "additionalProperties": false,
           "properties": {
-            "advertiserId": {
-              "description": "TikTok `advertiser_id` query parameter.",
+            "creatorId": {
+              "description": "The creator's open_id from /tt_user/oauth2/token/.",
               "type": "string"
             },
-            "page": {
-              "description": "TikTok `page` query parameter.",
-              "type": "number"
-            },
-            "pageSize": {
-              "description": "TikTok `page_size` query parameter.",
-              "type": "number"
+            "fields": {
+              "description": "Fields to return. Default: profile_image, display_name.",
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
             }
           },
           "required": [
-            "advertiserId"
+            "creatorId"
           ],
           "type": "object"
         },
@@ -1060429,25 +1060488,31 @@
         "inputSchema": {
           "additionalProperties": false,
           "properties": {
-            "advertiserId": {
-              "description": "TikTok `advertiser_id` query parameter.",
-              "type": "string"
-            },
             "creatorId": {
-              "description": "TikTok `creator_id` query parameter.",
+              "description": "The creator's open_id from /tt_user/oauth2/token/.",
               "type": "string"
             },
-            "page": {
-              "description": "TikTok `page` query parameter.",
-              "type": "number"
+            "cursor": {
+              "description": "Timestamp cursor (ms); returns videos before it. Default 0 = newest.",
+              "minimum": 0,
+              "type": "integer"
             },
-            "pageSize": {
-              "description": "TikTok `page_size` query parameter.",
-              "type": "number"
+            "limit": {
+              "description": "Videos per request, 1-10. Default 10.",
+              "maximum": 10,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "videoIds": {
+              "description": "Video IDs to return; when set, limit and cursor are ignored.",
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
             }
           },
           "required": [
-            "advertiserId"
+            "creatorId"
           ],
           "type": "object"
         },
@@ -1060472,25 +1060537,18 @@
         "inputSchema": {
           "additionalProperties": false,
           "properties": {
-            "advertiserId": {
-              "description": "TikTok `advertiser_id` query parameter.",
+            "handleName": {
+              "description": "Exact creator handle.",
               "type": "string"
             },
-            "keyword": {
-              "description": "TikTok `keyword` query parameter.",
+            "ttoTcmAccountId": {
+              "description": "TTO Creator Marketplace account ID (from /tto/oauth2/tcm/).",
               "type": "string"
-            },
-            "page": {
-              "description": "TikTok `page` query parameter.",
-              "type": "number"
-            },
-            "pageSize": {
-              "description": "TikTok `page_size` query parameter.",
-              "type": "number"
             }
           },
           "required": [
-            "advertiserId"
+            "ttoTcmAccountId",
+            "handleName"
           ],
           "type": "object"
         },
@@ -1060515,26 +1060573,37 @@
         "inputSchema": {
           "additionalProperties": false,
           "properties": {
-            "advertiserId": {
-              "description": "TikTok `advertiser_id` query parameter.",
+            "cursor": {
+              "description": "Timestamp cursor from the previous page. Default 0 = newest.",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "handleName": {
+              "description": "Exact creator handle.",
               "type": "string"
             },
-            "creatorId": {
-              "description": "TikTok `creator_id` query parameter.",
+            "limit": {
+              "description": "Posts per request, 1-25. Default 10.",
+              "maximum": 25,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "ttoTcmAccountId": {
+              "description": "TTO Creator Marketplace account ID (from /tto/oauth2/tcm/).",
               "type": "string"
             },
-            "page": {
-              "description": "TikTok `page` query parameter.",
-              "type": "number"
-            },
-            "pageSize": {
-              "description": "TikTok `page_size` query parameter.",
-              "type": "number"
+            "videoIds": {
+              "description": "Filter by up to 25 video IDs.",
+              "items": {
+                "type": "string"
+              },
+              "maxItems": 25,
+              "type": "array"
             }
           },
           "required": [
-            "advertiserId",
-            "creatorId"
+            "ttoTcmAccountId",
+            "handleName"
           ],
           "type": "object"
         },
@@ -1060559,45 +1060628,42 @@
         "inputSchema": {
           "additionalProperties": false,
           "properties": {
-            "advertiserId": {
-              "description": "TikTok `advertiser_id` query parameter.",
+            "campaignId": {
+              "description": "TTO Creator Marketplace campaign ID.",
               "type": "string"
             },
-            "dimensions": {
-              "description": "TikTok `dimensions` query parameter.",
-              "items": {
-                "type": "string"
-              },
-              "type": "array"
+            "countryCode": {
+              "description": "Country or region code of the campaign (Country-Code header), e.g. US.",
+              "type": "string"
             },
             "endDate": {
-              "description": "TikTok `end_date` query parameter.",
+              "description": "Report end date YYYY-MM-DD (UTC). Pass with startDate.",
               "type": "string"
             },
-            "metrics": {
-              "description": "TikTok `metrics` query parameter.",
-              "items": {
-                "type": "string"
-              },
-              "type": "array"
-            },
             "page": {
-              "description": "TikTok `page` query parameter.",
-              "type": "number"
+              "description": "Page number. Default 1.",
+              "minimum": 1,
+              "type": "integer"
             },
             "pageSize": {
-              "description": "TikTok `page_size` query parameter.",
-              "type": "number"
+              "description": "Page size 1-100. Default 25.",
+              "maximum": 100,
+              "minimum": 1,
+              "type": "integer"
             },
             "startDate": {
-              "description": "TikTok `start_date` query parameter.",
+              "description": "Report start date YYYY-MM-DD (UTC). Pass with endDate to get daily_stats.",
+              "type": "string"
+            },
+            "ttoTcmAccountId": {
+              "description": "TTO Creator Marketplace account ID (from /tto/oauth2/tcm/).",
               "type": "string"
             }
           },
           "required": [
-            "advertiserId",
-            "startDate",
-            "endDate"
+            "ttoTcmAccountId",
+            "campaignId",
+            "countryCode"
           ],
           "type": "object"
         },
@@ -1060622,22 +1060688,35 @@
         "inputSchema": {
           "additionalProperties": false,
           "properties": {
-            "advertiser_id": {
-              "description": "TikTok `advertiser_id` body field.",
+            "action": {
+              "description": "EXTEND extends an approved authorization by authorization_days.",
+              "enum": [
+                "EXTEND"
+              ],
               "type": "string"
             },
-            "creator_id": {
-              "description": "TikTok `creator_id` body field.",
+            "authorization_days": {
+              "description": "Requested validity in days. Default 30.",
+              "enum": [
+                7,
+                30,
+                60,
+                365
+              ],
+              "type": "integer"
+            },
+            "tcm_account_id": {
+              "description": "TTO Creator Marketplace account ID.",
               "type": "string"
             },
-            "item_id": {
-              "description": "TikTok `item_id` body field.",
+            "video_id": {
+              "description": "ID of the creator's video linked to the campaign.",
               "type": "string"
             }
           },
           "required": [
-            "advertiser_id",
-            "item_id"
+            "tcm_account_id",
+            "video_id"
           ],
           "type": "object"
         },
@@ -1060662,20 +1060741,18 @@
         "inputSchema": {
           "additionalProperties": false,
           "properties": {
-            "advertiserId": {
-              "description": "TikTok `advertiser_id` query parameter.",
+            "tcmAccountId": {
+              "description": "TTO Creator Marketplace account ID.",
               "type": "string"
             },
-            "itemIds": {
-              "description": "TikTok `item_ids` query parameter.",
-              "items": {
-                "type": "string"
-              },
-              "type": "array"
+            "videoId": {
+              "description": "Video ID.",
+              "type": "string"
             }
           },
           "required": [
-            "advertiserId"
+            "tcmAccountId",
+            "videoId"
           ],
           "type": "object"
         },
@@ -1060692,86 +1060769,6 @@
           "type": "object"
         },
         "read": true,
-        "timeoutMs": 30000,
-        "tool": true
-      },
-      {
-        "destructive": false,
-        "inputSchema": {
-          "additionalProperties": false,
-          "properties": {
-            "advertiserId": {
-              "description": "TikTok `advertiser_id` query parameter.",
-              "type": "string"
-            },
-            "itemIds": {
-              "description": "TikTok `item_ids` query parameter.",
-              "items": {
-                "type": "string"
-              },
-              "type": "array"
-            }
-          },
-          "required": [
-            "advertiserId",
-            "itemIds"
-          ],
-          "type": "object"
-        },
-        "key": "tcm.videos.audit_status.get",
-        "kind": "action",
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "outputSchema": {
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "type": "object"
-        },
-        "read": true,
-        "timeoutMs": 30000,
-        "tool": true
-      },
-      {
-        "destructive": false,
-        "inputSchema": {
-          "additionalProperties": false,
-          "properties": {
-            "advertiser_id": {
-              "description": "TikTok `advertiser_id` body field.",
-              "type": "string"
-            },
-            "audit_status": {
-              "description": "TikTok `audit_status` body field.",
-              "type": "string"
-            },
-            "item_id": {
-              "description": "TikTok `item_id` body field.",
-              "type": "string"
-            }
-          },
-          "required": [
-            "advertiser_id",
-            "item_id",
-            "audit_status"
-          ],
-          "type": "object"
-        },
-        "key": "tcm.videos.audit_status.update",
-        "kind": "action",
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "outputSchema": {
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "type": "object"
-        },
-        "read": false,
         "timeoutMs": 30000,
         "tool": true
       },

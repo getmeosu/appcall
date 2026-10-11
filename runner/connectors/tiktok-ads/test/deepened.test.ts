@@ -119,8 +119,6 @@ const waveOperations = [
   "tcm.spark_ads.status.get",
   "tcm.spark_ads.apply",
   "tcm.reports.get",
-  "tcm.videos.audit_status.get",
-  "tcm.videos.audit_status.update",
   "tcm.creators.authorized.list",
   "tcm.creators.authorized.videos.list",
   "tcm.creators.public.list",
@@ -378,7 +376,7 @@ const addedOperations = [...catalogAudienceOperations, ...campaignReportPixelOpe
 
 describe("TikTok Ads v1.3 coverage", () => {
   it("adds the documented catalog, audience, campaign, reporting, pixel, BC, Smart+, GMV Max, comment, and tool operations as real request-backed actions", () => {
-    expect(Object.keys(manifest.operations)).toHaveLength(426);
+    expect(Object.keys(manifest.operations)).toHaveLength(424);
     for (const key of addedOperations) {
       const operation = manifest.operations[key];
       expect(operation, key).toBeDefined();
@@ -735,10 +733,11 @@ describe("TikTok Ads v1.3 coverage", () => {
       accessToken: "fixture-access-token",
       pixel_code: "CABCDEFG",
       event: "CompletePayment",
+      event_time: 1760000000,
       event_id: "evt-1",
       fetch: async (input: RequestInfo | URL, init: RequestInit = {}) => {
         trackBody = String(init.body ?? "");
-        expect(new URL(String(input)).pathname).toBe("/open_api/v1.3/pixel/track/");
+        expect(new URL(String(input)).pathname).toBe("/open_api/v1.3/event/track/");
         return new Response(readFileSync(new URL("../fixtures/pixel_track.json", import.meta.url), "utf8"), {
           status: 200,
           headers: { "content-type": "application/json" },
@@ -746,11 +745,11 @@ describe("TikTok Ads v1.3 coverage", () => {
       },
     }) as any;
     expect(JSON.parse(trackBody)).toEqual({
-      pixel_code: "CABCDEFG",
-      event: "CompletePayment",
-      event_id: "evt-1",
+      event_source: "web",
+      event_source_id: "CABCDEFG",
+      data: [{ event: "CompletePayment", event_time: 1760000000, event_id: "evt-1" }],
     });
-    expect(tracked.data.pixel_code).toBe("CABCDEFG");
+    expect(tracked.data).toEqual({});
 
     const leadCalls: Array<{ url: string }> = [];
     const lead = await wrapTikTokApiEnvelope(compiled.actions["leads.get"])({

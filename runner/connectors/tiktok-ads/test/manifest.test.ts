@@ -5,15 +5,16 @@ describe("tiktok-ads manifest", () => {
   it("has correct key and version", () => {
     expect(manifest.key).toBe("tiktok-ads");
     expect(manifest.name).toBe("TikTok Ads");
-    expect(manifest.version).toBe("0.7.0");
+    expect(manifest.version).toBe("0.8.0");
     expect(manifest.runtime).toBe("bun");
   });
 
-  it("uses oauth2 auth with scopes", () => {
+  it("uses oauth2 auth with app-level permissions and no fake scope strings", () => {
     expect(manifest.auth.type).toBe("oauth2");
     expect(manifest.auth.setup.mode).toBe("oauth2");
-    expect(manifest.auth.scopes).toContain("ad.management");
-    expect(manifest.auth.scopes).toContain("ad.read");
+    // TikTok permissions are granted to the developer app, not requested as
+    // OAuth scope strings; each op declares requiredScopes instead.
+    expect(manifest.auth.scopes).toEqual([]);
   });
 
   it("allows tiktok hosts", () => {
