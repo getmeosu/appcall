@@ -1,7 +1,17 @@
 {
+  "key": "interzoid",
+  "name": "Interzoid",
+  "version": "0.2.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "utility"
+  ],
   "auth": {
+    "type": "api_key",
     "scopes": [],
     "setup": {
+      "mode": "api_key",
       "fields": [
         {
           "key": "apiKey",
@@ -9,148 +19,129 @@
           "required": true,
           "secret": true
         }
-      ],
-      "mode": "api_key"
-    },
-    "type": "api_key"
-  },
-  "categories": [
-    "utility"
-  ],
-  "evidence": {
-    "fixture": {
-      "status": "supplied"
-    },
-    "live": {
-      "status": "unverified"
+      ]
     }
   },
+  "network": {
+    "allowedHosts": [
+      "api.interzoid.com"
+    ]
+  },
+  "models": [
+    "credits",
+    "email",
+    "ip",
+    "company",
+    "organization",
+    "fullname",
+    "address",
+    "weather",
+    "currency",
+    "language",
+    "phone",
+    "business",
+    "entity"
+  ],
   "http": {
+    "baseUrl": "https://api.interzoid.com",
     "auth": {
       "field": "apiKey",
       "in": "query",
       "name": "license",
       "value": "{{apiKey}}"
     },
-    "baseUrl": "https://api.interzoid.com",
+    "headers": {
+      "Accept": "application/json"
+    },
     "errors": {
-      "bodyErrorPaths": [
-        "Message"
+      "rateLimitStatuses": [
+        429
       ],
+      "retryAfterHeader": "retry-after",
       "defaultRetryAfterSeconds": 30,
       "messagePaths": [
         "Message",
         "Error",
         "message"
       ],
-      "rateLimitStatuses": [
-        429
-      ],
-      "retryAfterHeader": "retry-after"
-    },
-    "headers": {
-      "Accept": "application/json"
+      "bodyErrorPaths": [
+        "Message"
+      ]
     }
   },
-  "key": "interzoid",
-  "models": [
-    "credits",
-    "email",
-    "ip",
-    "company",
-    "organization"
-  ],
-  "name": "Interzoid",
-  "network": {
-    "allowedHosts": [
-      "api.interzoid.com"
-    ]
-  },
   "operations": {
-    "company.match": {
-      "description": "Generate an Interzoid similarity key for a company name.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "algorithm": {
-            "minLength": 1,
-            "type": "string"
-          },
-          "company": {
-            "minLength": 1,
-            "type": "string"
-          }
-        },
-        "required": [
-          "company",
-          "algorithm"
-        ],
-        "type": "object"
-      },
+    "healthcheck": {
+      "timeoutMs": 5000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
       "kind": "action",
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Healthcheck",
+      "description": "Validate the Interzoid license key with GET /getremainingcredits.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
       "outputSchema": {
-        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "required": [
-          "data"
-        ],
-        "type": "object"
+        "additionalProperties": false
       },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
       "request": {
         "method": "GET",
-        "path": "/getcompanymatchadvanced",
-        "query": {
-          "algorithm": "{{algorithm}}",
-          "company": "{{company}}"
-        },
+        "path": "/getremainingcredits",
         "success": [
           200
         ]
-      },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "title": "Get company match key",
-      "validationMode": "strict-generated"
+      }
     },
     "email.info": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Get email info",
       "description": "Validate and enrich an email address with Interzoid.",
-      "enforceOutputSchema": true,
       "inputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "email": {
-            "minLength": 1,
-            "type": "string"
-          }
-        },
+        "type": "object",
         "required": [
           "email"
         ],
-        "type": "object"
+        "properties": {
+          "email": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
       },
-      "kind": "action",
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 1048576,
       "outputSchema": {
-        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "required": [
-          "data"
-        ],
-        "type": "object"
+        "additionalProperties": false
       },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
       "request": {
         "method": "GET",
         "path": "/getemailinfo",
@@ -160,80 +151,44 @@
         "success": [
           200
         ]
-      },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "title": "Get email info",
-      "validationMode": "strict-generated"
-    },
-    "healthcheck": {
-      "description": "Validate the Interzoid license key with GET /getremainingcredits.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {},
-        "type": "object"
-      },
-      "kind": "action",
-      "maxInputBytes": 4096,
-      "maxResponseBytes": 65536,
-      "outputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "type": "object"
-      },
-      "request": {
-        "method": "GET",
-        "path": "/getremainingcredits",
-        "success": [
-          200
-        ]
-      },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 5000,
-      "title": "Healthcheck",
-      "validationMode": "strict-generated"
+      }
     },
     "ip.profile": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Get IP profile",
       "description": "Retrieve Interzoid profile and reputation information for an IP address.",
-      "enforceOutputSchema": true,
       "inputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "ip": {
-            "minLength": 1,
-            "type": "string"
-          }
-        },
+        "type": "object",
         "required": [
           "ip"
         ],
-        "type": "object"
+        "properties": {
+          "ip": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
       },
-      "kind": "action",
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 1048576,
       "outputSchema": {
-        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "required": [
-          "data"
-        ],
-        "type": "object"
+        "additionalProperties": false
       },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
       "request": {
         "method": "GET",
         "path": "/getipprofile",
@@ -243,44 +198,97 @@
         "success": [
           200
         ]
-      },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "title": "Get IP profile",
-      "validationMode": "strict-generated"
+      }
     },
-    "organization.standardize": {
-      "description": "Standardize an organization name using Interzoid.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "organization": {
-            "minLength": 1,
-            "type": "string"
-          }
-        },
-        "required": [
-          "organization"
-        ],
-        "type": "object"
-      },
-      "kind": "action",
+    "company.match": {
+      "timeoutMs": 15000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Get company match key",
+      "description": "Generate an Interzoid similarity key for a company name.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "company",
+          "algorithm"
+        ],
+        "properties": {
+          "company": {
+            "type": "string",
+            "minLength": 1
+          },
+          "algorithm": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      },
       "outputSchema": {
-        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/getcompanymatchadvanced",
+        "query": {
+          "company": "{{company}}",
+          "algorithm": "{{algorithm}}"
+        },
+        "success": [
+          200
+        ]
+      }
+    },
+    "organization.standardize": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Standardize organization name",
+      "description": "Standardize an organization name using Interzoid.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "organization"
+        ],
+        "properties": {
+          "organization": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
         "required": [
           "data"
         ],
-        "type": "object"
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
       },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
       "request": {
         "method": "GET",
         "path": "/getorgstandard",
@@ -290,21 +298,606 @@
         "success": [
           200
         ]
+      }
+    },
+    "credits.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get remaining credits",
+      "description": "Retrieve remaining Interzoid API credits for the license key.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
       },
-      "responseFormat": "json",
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/getremainingcredits",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "fullname.match": {
+      "kind": "action",
       "sideEffect": "read",
       "timeoutMs": 15000,
-      "title": "Standardize organization name",
-      "validationMode": "strict-generated"
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get full name match key",
+      "description": "Generate an Interzoid similarity key for an individual full name.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "fullname": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Individual full name to match."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "fullname"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/getfullnamematch",
+        "success": [
+          200
+        ],
+        "query": {
+          "fullname": "{{fullname}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "address.match": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get address match key",
+      "description": "Generate an Interzoid similarity key for a street address.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "address": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Street address to match."
+          },
+          "algorithm": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Matching algorithm, for example model-v3-narrow."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "address",
+          "algorithm"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/getaddressmatchadvanced",
+        "success": [
+          200
+        ],
+        "query": {
+          "address": "{{address}}",
+          "algorithm": "{{algorithm}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "weather.zip": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get weather by ZIP",
+      "description": "Retrieve current US weather for a ZIP code from Interzoid.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "zip": {
+            "type": "string",
+            "minLength": 1,
+            "description": "US ZIP code."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "zip"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/getweatherzipcode",
+        "success": [
+          200
+        ],
+        "query": {
+          "zip": "{{zip}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "currency.rate": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get currency rate",
+      "description": "Retrieve a live Interzoid currency rate versus USD.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "symbol": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Three-letter currency code, for example EUR."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "symbol"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/getcurrencyrate",
+        "success": [
+          200
+        ],
+        "query": {
+          "symbol": "{{symbol}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "currency.convert": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Convert currency",
+      "description": "Convert an amount between currencies using live Interzoid rates.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "from": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Source currency code."
+          },
+          "to": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Target currency code."
+          },
+          "amount": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Amount to convert."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "from",
+          "to",
+          "amount"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/convertcurrency",
+        "success": [
+          200
+        ],
+        "query": {
+          "from": "{{from}}",
+          "to": "{{to}}",
+          "amount": "{{amount}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "language.identify": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Identify language",
+      "description": "Identify the language of a text string with Interzoid.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Text to identify."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "text"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/identifylanguage",
+        "success": [
+          200
+        ],
+        "query": {
+          "text": "{{text}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "phone.profile": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get phone profile",
+      "description": "Retrieve Interzoid intelligence and risk data for a phone number.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "lookup": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Phone number to profile."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "lookup"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/getphoneprofile",
+        "success": [
+          200
+        ],
+        "query": {
+          "lookup": "{{lookup}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "business.info": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get business info",
+      "description": "Retrieve Interzoid business intelligence for a company name, domain, or email.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "lookup": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Company name, web domain, or email address."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "lookup"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/getbusinessinfo",
+        "success": [
+          200
+        ],
+        "query": {
+          "lookup": "{{lookup}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "email.trust": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get email trust score",
+      "description": "Score an email address for legitimacy with Interzoid.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "lookup": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Email address to score."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "lookup"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/emailtrustscore",
+        "success": [
+          200
+        ],
+        "query": {
+          "lookup": "{{lookup}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "entity.type": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get entity type",
+      "description": "Classify a string as a location, organization, individual, or other Interzoid entity type.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Text to classify."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "text"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/getentitytype",
+        "success": [
+          200
+        ],
+        "query": {
+          "text": "{{text}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "global.weather": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get global weather",
+      "description": "Retrieve current weather for a worldwide location from Interzoid.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "location": {
+            "type": "string",
+            "minLength": 1,
+            "description": "City or location name."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "location"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/getglobalweather",
+        "success": [
+          200
+        ],
+        "query": {
+          "location": "{{location}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
     }
   },
   "provenance": {
     "source": {
-      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
-      "url": "https://github.com/oomol-lab/open-connector"
+      "url": "https://github.com/oomol-lab/open-connector",
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"
     }
   },
-  "runtime": "bun",
-  "version": "0.1.0",
-  "visibility": "public"
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
+    }
+  }
 }

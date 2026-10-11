@@ -1,7 +1,17 @@
 {
+  "key": "bigml",
+  "name": "BigML",
+  "version": "0.2.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "dev-tools"
+  ],
   "auth": {
+    "type": "api_key",
     "scopes": [],
     "setup": {
+      "mode": "api_key",
       "fields": [
         {
           "key": "apiKey",
@@ -15,83 +25,82 @@
           "required": true,
           "secret": false
         }
-      ],
-      "mode": "api_key"
-    },
-    "type": "api_key"
-  },
-  "categories": [
-    "dev-tools"
-  ],
-  "evidence": {
-    "fixture": {
-      "status": "supplied"
-    },
-    "live": {
-      "status": "unverified"
+      ]
     }
   },
+  "provenance": {
+    "source": {
+      "url": "https://github.com/oomol-lab/open-connector",
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "bigml.io"
+    ]
+  },
+  "models": [
+    "model",
+    "prediction",
+    "source",
+    "dataset",
+    "project",
+    "ensemble",
+    "cluster",
+    "evaluation"
+  ],
   "http": {
+    "baseUrl": "https://bigml.io/andromeda",
     "auth": {
       "field": "apiKey",
       "in": "query",
       "name": "api_key",
       "value": "{{apiKey}}"
     },
-    "baseUrl": "https://bigml.io/andromeda",
+    "query": {
+      "username": "{{username}}"
+    },
+    "headers": {
+      "Accept": "application/json"
+    },
     "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after",
       "defaultRetryAfterSeconds": 30,
       "messagePaths": [
         "error.message",
         "message",
         "status.message"
-      ],
-      "rateLimitStatuses": [
-        429
-      ],
-      "retryAfterHeader": "retry-after"
-    },
-    "headers": {
-      "Accept": "application/json"
-    },
-    "query": {
-      "username": "{{username}}"
+      ]
     }
-  },
-  "key": "bigml",
-  "models": [
-    "model",
-    "prediction"
-  ],
-  "name": "BigML",
-  "network": {
-    "allowedHosts": [
-      "bigml.io"
-    ]
   },
   "operations": {
     "healthcheck": {
-      "description": "Validate BigML credentials by listing one model.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {},
-        "type": "object"
-      },
       "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 5000,
       "maxInputBytes": 4096,
       "maxResponseBytes": 65536,
+      "title": "Healthcheck",
+      "description": "Validate BigML credentials by listing one model.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
       "outputSchema": {
-        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "required": [
-          "data"
-        ],
-        "type": "object"
+        "additionalProperties": false
       },
       "request": {
         "method": "GET",
@@ -103,50 +112,115 @@
           200
         ]
       },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 5000,
-      "title": "Healthcheck",
-      "validationMode": "strict-generated"
-    },
-    "models.get": {
-      "description": "Retrieve one BigML model by id.",
       "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "fieldLimit": {
-            "minimum": 1,
-            "type": "integer"
-          },
-          "fieldOffset": {
-            "minimum": 0,
-            "type": "integer"
-          },
-          "modelId": {
-            "minLength": 1,
-            "type": "string"
-          }
-        },
-        "required": [
-          "modelId"
-        ],
-        "type": "object"
-      },
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "models.list": {
       "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
+      "title": "List models",
+      "description": "List existing BigML supervised models.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 200
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "orderBy": {
+            "type": "string",
+            "minLength": 1
+          },
+          "project": {
+            "type": "string",
+            "minLength": 1
+          },
+          "nameContains": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      },
       "outputSchema": {
-        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/model",
+        "query": {
+          "limit": "{{limit}}",
+          "offset": "{{offset}}",
+          "order_by": "{{orderBy}}",
+          "project": "{{project}}",
+          "name__icontains": "{{nameContains}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "models.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get model",
+      "description": "Retrieve one BigML model by id.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "modelId"
+        ],
+        "properties": {
+          "modelId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "fieldLimit": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "fieldOffset": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
         "required": [
           "data"
         ],
-        "type": "object"
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
       },
       "request": {
         "method": "GET",
@@ -159,107 +233,107 @@
           200
         ]
       },
-      "responseFormat": "json",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "predictions.list": {
+      "kind": "action",
       "sideEffect": "read",
       "timeoutMs": 15000,
-      "title": "Get model",
-      "validationMode": "strict-generated"
-    },
-    "models.list": {
-      "description": "List existing BigML supervised models.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "limit": {
-            "maximum": 200,
-            "minimum": 1,
-            "type": "integer"
-          },
-          "nameContains": {
-            "minLength": 1,
-            "type": "string"
-          },
-          "offset": {
-            "minimum": 0,
-            "type": "integer"
-          },
-          "orderBy": {
-            "minLength": 1,
-            "type": "string"
-          },
-          "project": {
-            "minLength": 1,
-            "type": "string"
-          }
-        },
-        "type": "object"
-      },
-      "kind": "action",
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
+      "title": "List predictions",
+      "description": "List stored BigML prediction resources.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 200
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "orderBy": {
+            "type": "string",
+            "minLength": 1
+          },
+          "project": {
+            "type": "string",
+            "minLength": 1
+          },
+          "nameContains": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      },
       "outputSchema": {
-        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "required": [
-          "data"
-        ],
-        "type": "object"
+        "additionalProperties": false
       },
       "request": {
         "method": "GET",
-        "path": "/model",
+        "path": "/prediction",
         "query": {
           "limit": "{{limit}}",
-          "name__icontains": "{{nameContains}}",
           "offset": "{{offset}}",
           "order_by": "{{orderBy}}",
-          "project": "{{project}}"
+          "project": "{{project}}",
+          "name__icontains": "{{nameContains}}"
         },
         "success": [
           200
         ]
       },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "title": "List models",
-      "validationMode": "strict-generated"
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
     },
     "predictions.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "title": "Get prediction",
       "description": "Retrieve one stored BigML prediction by id.",
-      "enforceOutputSchema": true,
       "inputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "predictionId": {
-            "minLength": 1,
-            "type": "string"
-          }
-        },
+        "type": "object",
         "required": [
           "predictionId"
         ],
-        "type": "object"
+        "properties": {
+          "predictionId": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
       },
-      "kind": "action",
-      "maxInputBytes": 4096,
-      "maxResponseBytes": 1048576,
       "outputSchema": {
-        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "required": [
-          "data"
-        ],
-        "type": "object"
+        "additionalProperties": false
       },
       "request": {
         "method": "GET",
@@ -268,85 +342,1010 @@
           200
         ]
       },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 10000,
-      "title": "Get prediction",
-      "validationMode": "strict-generated"
-    },
-    "predictions.list": {
-      "description": "List stored BigML prediction resources.",
       "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "limit": {
-            "maximum": 200,
-            "minimum": 1,
-            "type": "integer"
-          },
-          "nameContains": {
-            "minLength": 1,
-            "type": "string"
-          },
-          "offset": {
-            "minimum": 0,
-            "type": "integer"
-          },
-          "orderBy": {
-            "minLength": 1,
-            "type": "string"
-          },
-          "project": {
-            "minLength": 1,
-            "type": "string"
-          }
-        },
-        "type": "object"
-      },
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "models.create": {
       "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
-      "outputSchema": {
+      "title": "Create model",
+      "description": "Create a BigML supervised model from a dataset.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "dataset": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Dataset resource id."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Model name."
+          },
+          "project": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Project resource id."
+          }
+        },
         "additionalProperties": false,
+        "required": [
+          "dataset"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/model",
+        "success": [
+          201,
+          200
+        ],
+        "body": {
+          "dataset": "{{dataset}}",
+          "name": "{{name}}",
+          "project": "{{project}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "predictions.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create prediction",
+      "description": "Create a BigML prediction from a model and input data.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "model": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Model resource id."
+          },
+          "inputData": {
+            "type": "object",
+            "description": "Feature map for the prediction."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Prediction name."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "model",
+          "inputData"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
         "required": [
           "data"
         ],
-        "type": "object"
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/prediction",
+        "success": [
+          201,
+          200
+        ],
+        "body": {
+          "model": "{{model}}",
+          "input_data": "{{inputData}}",
+          "name": "{{name}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "sources.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List sources",
+      "description": "List BigML source resources.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 200,
+            "description": "Page size."
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Page offset."
+          },
+          "orderBy": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Sort field."
+          },
+          "nameContains": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Case-insensitive name filter."
+          },
+          "project": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Project resource id."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
       },
       "request": {
         "method": "GET",
-        "path": "/prediction",
+        "path": "/source",
+        "success": [
+          200
+        ],
         "query": {
           "limit": "{{limit}}",
-          "name__icontains": "{{nameContains}}",
           "offset": "{{offset}}",
           "order_by": "{{orderBy}}",
+          "name__icontains": "{{nameContains}}",
           "project": "{{project}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "sources.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "title": "Get source",
+      "description": "Retrieve one BigML source by id.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "sourceId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "sourceId without resource prefix."
+          }
         },
+        "additionalProperties": false,
+        "required": [
+          "sourceId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/source/{{sourceId}}",
         "success": [
           200
         ]
       },
-      "responseFormat": "json",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "datasets.list": {
+      "kind": "action",
       "sideEffect": "read",
       "timeoutMs": 15000,
-      "title": "List predictions",
-      "validationMode": "strict-generated"
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List datasets",
+      "description": "List BigML dataset resources.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 200,
+            "description": "Page size."
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Page offset."
+          },
+          "orderBy": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Sort field."
+          },
+          "nameContains": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Case-insensitive name filter."
+          },
+          "project": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Project resource id."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/dataset",
+        "success": [
+          200
+        ],
+        "query": {
+          "limit": "{{limit}}",
+          "offset": "{{offset}}",
+          "order_by": "{{orderBy}}",
+          "name__icontains": "{{nameContains}}",
+          "project": "{{project}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "datasets.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "title": "Get dataset",
+      "description": "Retrieve one BigML dataset by id.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "datasetId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "datasetId without resource prefix."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "datasetId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/dataset/{{datasetId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "datasets.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create dataset",
+      "description": "Create a BigML dataset from a source.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "source": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Source resource id."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Dataset name."
+          },
+          "project": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Project resource id."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "source"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/dataset",
+        "success": [
+          201,
+          200
+        ],
+        "body": {
+          "source": "{{source}}",
+          "name": "{{name}}",
+          "project": "{{project}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "projects.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List projects",
+      "description": "List BigML projects.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 200,
+            "description": "Page size."
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Page offset."
+          },
+          "orderBy": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Sort field."
+          },
+          "nameContains": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Case-insensitive name filter."
+          },
+          "project": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Project resource id."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/project",
+        "success": [
+          200
+        ],
+        "query": {
+          "limit": "{{limit}}",
+          "offset": "{{offset}}",
+          "order_by": "{{orderBy}}",
+          "name__icontains": "{{nameContains}}",
+          "project": "{{project}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "projects.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "title": "Get project",
+      "description": "Retrieve one BigML project by id.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "projectId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "projectId without resource prefix."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "projectId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/project/{{projectId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "projects.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create project",
+      "description": "Create a BigML project.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Project name."
+          },
+          "description": {
+            "type": "string",
+            "description": "Project description."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/project",
+        "success": [
+          201,
+          200
+        ],
+        "body": {
+          "name": "{{name}}",
+          "description": "{{description}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "projects.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Delete project",
+      "description": "Delete a BigML project by id.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "projectId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Project id."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "projectId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "deleted",
+          "projectId"
+        ],
+        "properties": {
+          "deleted": {
+            "type": "boolean"
+          },
+          "projectId": {
+            "type": "string"
+          }
+        }
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/project/{{projectId}}",
+        "success": [
+          204,
+          200
+        ],
+        "result": {
+          "deleted": true,
+          "projectId": "{{input.projectId}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "ensembles.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List ensembles",
+      "description": "List BigML ensemble resources.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 200,
+            "description": "Page size."
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Page offset."
+          },
+          "orderBy": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Sort field."
+          },
+          "nameContains": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Case-insensitive name filter."
+          },
+          "project": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Project resource id."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/ensemble",
+        "success": [
+          200
+        ],
+        "query": {
+          "limit": "{{limit}}",
+          "offset": "{{offset}}",
+          "order_by": "{{orderBy}}",
+          "name__icontains": "{{nameContains}}",
+          "project": "{{project}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "ensembles.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "title": "Get ensemble",
+      "description": "Retrieve one BigML ensemble by id.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "ensembleId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "ensembleId without resource prefix."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "ensembleId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/ensemble/{{ensembleId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "clusters.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List clusters",
+      "description": "List BigML cluster resources.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 200,
+            "description": "Page size."
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Page offset."
+          },
+          "orderBy": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Sort field."
+          },
+          "nameContains": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Case-insensitive name filter."
+          },
+          "project": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Project resource id."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/cluster",
+        "success": [
+          200
+        ],
+        "query": {
+          "limit": "{{limit}}",
+          "offset": "{{offset}}",
+          "order_by": "{{orderBy}}",
+          "name__icontains": "{{nameContains}}",
+          "project": "{{project}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "clusters.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "title": "Get cluster",
+      "description": "Retrieve one BigML cluster by id.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "clusterId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "clusterId without resource prefix."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "clusterId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/cluster/{{clusterId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "evaluations.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List evaluations",
+      "description": "List BigML evaluation resources.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 200,
+            "description": "Page size."
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Page offset."
+          },
+          "orderBy": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Sort field."
+          },
+          "nameContains": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Case-insensitive name filter."
+          },
+          "project": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Project resource id."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/evaluation",
+        "success": [
+          200
+        ],
+        "query": {
+          "limit": "{{limit}}",
+          "offset": "{{offset}}",
+          "order_by": "{{orderBy}}",
+          "name__icontains": "{{nameContains}}",
+          "project": "{{project}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "evaluations.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "title": "Get evaluation",
+      "description": "Retrieve one BigML evaluation by id.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "evaluationId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "evaluationId without resource prefix."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "evaluationId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/evaluation/{{evaluationId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
     }
   },
-  "provenance": {
-    "source": {
-      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
-      "url": "https://github.com/oomol-lab/open-connector"
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
     }
-  },
-  "runtime": "bun",
-  "version": "0.1.0",
-  "visibility": "public"
+  }
 }

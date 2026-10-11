@@ -1,7 +1,17 @@
 {
+  "key": "next-dns",
+  "name": "NextDNS",
+  "version": "0.2.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "utility"
+  ],
   "auth": {
+    "type": "api_key",
     "scopes": [],
     "setup": {
+      "mode": "api_key",
       "fields": [
         {
           "key": "apiKey",
@@ -9,34 +19,43 @@
           "required": true,
           "secret": true
         }
-      ],
-      "mode": "api_key"
-    },
-    "type": "api_key"
-  },
-  "categories": [
-    "utility"
-  ],
-  "evidence": {
-    "fixture": {
-      "status": "supplied"
-    },
-    "live": {
-      "status": "unverified"
+      ]
     }
   },
+  "provenance": {
+    "source": {
+      "url": "https://github.com/oomol-lab/open-connector",
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "api.nextdns.io"
+    ]
+  },
+  "models": [
+    "profile",
+    "log",
+    "analytics",
+    "denylist",
+    "allowlist"
+  ],
   "http": {
+    "baseUrl": "https://api.nextdns.io",
     "auth": {
       "field": "apiKey",
       "in": "header",
       "name": "X-Api-Key",
       "value": "{{apiKey}}"
     },
-    "baseUrl": "https://api.nextdns.io",
+    "headers": {
+      "Accept": "application/json"
+    },
     "errors": {
-      "bodyErrorPaths": [
-        "errors"
+      "rateLimitStatuses": [
+        429
       ],
+      "retryAfterHeader": "retry-after",
       "defaultRetryAfterSeconds": 30,
       "messagePaths": [
         "errors.0.detail",
@@ -44,122 +63,36 @@
         "error.message",
         "message"
       ],
-      "rateLimitStatuses": [
-        429
-      ],
-      "retryAfterHeader": "retry-after"
-    },
-    "headers": {
-      "Accept": "application/json"
+      "bodyErrorPaths": [
+        "errors"
+      ]
     }
   },
-  "key": "next-dns",
-  "models": [
-    "profile",
-    "log",
-    "analytics"
-  ],
-  "name": "NextDNS",
-  "network": {
-    "allowedHosts": [
-      "api.nextdns.io"
-    ]
-  },
   "operations": {
-    "analytics.status": {
-      "description": "List DNS query counts grouped by status for a NextDNS profile.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "cursor": {
-            "minLength": 1,
-            "type": "string"
-          },
-          "device": {
-            "minLength": 1,
-            "type": "string"
-          },
-          "from": {
-            "minLength": 1,
-            "type": "string"
-          },
-          "limit": {
-            "maximum": 500,
-            "minimum": 1,
-            "type": "integer"
-          },
-          "profileId": {
-            "minLength": 1,
-            "type": "string"
-          },
-          "to": {
-            "minLength": 1,
-            "type": "string"
-          }
-        },
-        "required": [
-          "profileId"
-        ],
-        "type": "object"
-      },
-      "kind": "action",
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "outputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "type": "object"
-      },
-      "request": {
-        "method": "GET",
-        "path": "/profiles/{{profileId}}/analytics/status",
-        "query": {
-          "cursor": "{{cursor}}",
-          "device": "{{device}}",
-          "from": "{{from}}",
-          "limit": "{{limit}}",
-          "to": "{{to}}"
-        },
-        "success": [
-          200
-        ]
-      },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "title": "Get status analytics",
-      "validationMode": "strict-generated"
-    },
     "healthcheck": {
-      "description": "Validate the NextDNS API key with GET /profiles.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {},
-        "type": "object"
-      },
       "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 5000,
       "maxInputBytes": 4096,
       "maxResponseBytes": 65536,
+      "title": "Healthcheck",
+      "description": "Validate the NextDNS API key with GET /profiles.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
       "outputSchema": {
-        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "required": [
-          "data"
-        ],
-        "type": "object"
+        "additionalProperties": false
       },
       "request": {
         "method": "GET",
@@ -168,141 +101,78 @@
           200
         ]
       },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 5000,
-      "title": "Healthcheck",
-      "validationMode": "strict-generated"
-    },
-    "logs.list": {
-      "description": "List DNS query logs for a NextDNS profile.",
       "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "cursor": {
-            "minLength": 1,
-            "type": "string"
-          },
-          "device": {
-            "minLength": 1,
-            "type": "string"
-          },
-          "from": {
-            "minLength": 1,
-            "type": "string"
-          },
-          "limit": {
-            "maximum": 1000,
-            "minimum": 10,
-            "type": "integer"
-          },
-          "profileId": {
-            "minLength": 1,
-            "type": "string"
-          },
-          "raw": {
-            "type": "boolean"
-          },
-          "search": {
-            "minLength": 1,
-            "type": "string"
-          },
-          "sort": {
-            "enum": [
-              "asc",
-              "desc"
-            ],
-            "type": "string"
-          },
-          "status": {
-            "enum": [
-              "default",
-              "error",
-              "blocked",
-              "allowed"
-            ],
-            "type": "string"
-          },
-          "to": {
-            "minLength": 1,
-            "type": "string"
-          }
-        },
-        "required": [
-          "profileId"
-        ],
-        "type": "object"
-      },
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "profiles.list": {
       "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
+      "title": "List profiles",
+      "description": "List NextDNS profiles available to the API key.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
       "outputSchema": {
-        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "required": [
-          "data"
-        ],
-        "type": "object"
+        "additionalProperties": false
       },
       "request": {
         "method": "GET",
-        "path": "/profiles/{{profileId}}/logs",
-        "query": {
-          "cursor": "{{cursor}}",
-          "device": "{{device}}",
-          "from": "{{from}}",
-          "limit": "{{limit}}",
-          "raw": "{{raw}}",
-          "search": "{{search}}",
-          "sort": "{{sort}}",
-          "status": "{{status}}",
-          "to": "{{to}}"
-        },
+        "path": "/profiles",
         "success": [
           200
         ]
       },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "title": "List logs",
-      "validationMode": "strict-generated"
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
     },
     "profiles.get": {
-      "description": "Get one NextDNS profile and its settings.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "profileId": {
-            "minLength": 1,
-            "type": "string"
-          }
-        },
-        "required": [
-          "profileId"
-        ],
-        "type": "object"
-      },
       "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
-      "outputSchema": {
+      "title": "Get profile",
+      "description": "Get one NextDNS profile and its settings.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "profileId": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
         "additionalProperties": false,
+        "required": [
+          "profileId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "required": [
-          "data"
-        ],
-        "type": "object"
+        "additionalProperties": false
       },
       "request": {
         "method": "GET",
@@ -311,56 +181,1201 @@
           200
         ]
       },
-      "responseFormat": "json",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "logs.list": {
+      "kind": "action",
       "sideEffect": "read",
       "timeoutMs": 15000,
-      "title": "Get profile",
-      "validationMode": "strict-generated"
-    },
-    "profiles.list": {
-      "description": "List NextDNS profiles available to the API key.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {},
-        "type": "object"
-      },
-      "kind": "action",
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
-      "outputSchema": {
+      "title": "List logs",
+      "description": "List DNS query logs for a NextDNS profile.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "profileId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "from": {
+            "type": "string",
+            "minLength": 1
+          },
+          "to": {
+            "type": "string",
+            "minLength": 1
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 10,
+            "maximum": 1000
+          },
+          "cursor": {
+            "type": "string",
+            "minLength": 1
+          },
+          "device": {
+            "type": "string",
+            "minLength": 1
+          },
+          "search": {
+            "type": "string",
+            "minLength": 1
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "default",
+              "error",
+              "blocked",
+              "allowed"
+            ]
+          },
+          "sort": {
+            "type": "string",
+            "enum": [
+              "asc",
+              "desc"
+            ]
+          },
+          "raw": {
+            "type": "boolean"
+          }
+        },
         "additionalProperties": false,
+        "required": [
+          "profileId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "required": [
-          "data"
-        ],
-        "type": "object"
+        "additionalProperties": false
       },
       "request": {
         "method": "GET",
+        "path": "/profiles/{{profileId}}/logs",
+        "success": [
+          200
+        ],
+        "query": {
+          "from": "{{from}}",
+          "to": "{{to}}",
+          "limit": "{{limit}}",
+          "cursor": "{{cursor}}",
+          "device": "{{device}}",
+          "search": "{{search}}",
+          "status": "{{status}}",
+          "sort": "{{sort}}",
+          "raw": "{{raw}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "analytics.status": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get status analytics",
+      "description": "List DNS query counts grouped by status for a NextDNS profile.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "profileId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "from": {
+            "type": "string",
+            "minLength": 1
+          },
+          "to": {
+            "type": "string",
+            "minLength": 1
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 500
+          },
+          "cursor": {
+            "type": "string",
+            "minLength": 1
+          },
+          "device": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "profileId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/profiles/{{profileId}}/analytics/status",
+        "success": [
+          200
+        ],
+        "query": {
+          "from": "{{from}}",
+          "to": "{{to}}",
+          "limit": "{{limit}}",
+          "cursor": "{{cursor}}",
+          "device": "{{device}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "profiles.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create profile",
+      "description": "Create a NextDNS profile.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Profile display name."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
         "path": "/profiles",
+        "success": [
+          200
+        ],
+        "body": {
+          "name": "{{name}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "profiles.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Update profile",
+      "description": "Patch a NextDNS profile by id.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "profileId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile id."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Profile display name."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "profileId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/profiles/{{profileId}}",
+        "success": [
+          200
+        ],
+        "body": {
+          "name": "{{name}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "profiles.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Delete profile",
+      "description": "Delete a NextDNS profile by id.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "profileId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile id."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "profileId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "deleted"
+        ],
+        "properties": {
+          "deleted": {
+            "type": "boolean"
+          },
+          "id": {},
+          "key": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "domain": {
+            "type": "string"
+          },
+          "profileId": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/profiles/{{profileId}}",
+        "success": [
+          204,
+          200
+        ],
+        "result": {
+          "deleted": true,
+          "profileId": "{{input.profileId}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "logs.clear": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Clear logs",
+      "description": "Delete stored DNS query logs for a NextDNS profile.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "profileId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile id."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "profileId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "deleted"
+        ],
+        "properties": {
+          "deleted": {
+            "type": "boolean"
+          },
+          "id": {},
+          "key": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "domain": {
+            "type": "string"
+          },
+          "profileId": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/profiles/{{profileId}}/logs",
+        "success": [
+          204,
+          200
+        ],
+        "result": {
+          "deleted": true,
+          "profileId": "{{input.profileId}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "analytics.domains": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Domain analytics",
+      "description": "List DNS query counts grouped by domain for a NextDNS profile.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "profileId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile id."
+          },
+          "from": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Inclusive start date."
+          },
+          "to": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Exclusive end date."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Result limit.",
+            "maximum": 500
+          },
+          "cursor": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Pagination cursor."
+          },
+          "device": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Device id filter."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "profileId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/profiles/{{profileId}}/analytics/domains",
+        "success": [
+          200
+        ],
+        "query": {
+          "from": "{{from}}",
+          "to": "{{to}}",
+          "limit": "{{limit}}",
+          "cursor": "{{cursor}}",
+          "device": "{{device}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "analytics.devices": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Device analytics",
+      "description": "List DNS query counts grouped by device for a NextDNS profile.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "profileId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile id."
+          },
+          "from": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Inclusive start date."
+          },
+          "to": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Exclusive end date."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Result limit.",
+            "maximum": 500
+          },
+          "cursor": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Pagination cursor."
+          },
+          "device": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Device id filter."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "profileId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/profiles/{{profileId}}/analytics/devices",
+        "success": [
+          200
+        ],
+        "query": {
+          "from": "{{from}}",
+          "to": "{{to}}",
+          "limit": "{{limit}}",
+          "cursor": "{{cursor}}",
+          "device": "{{device}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "analytics.protocols": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Protocol analytics",
+      "description": "List DNS query counts grouped by protocol for a NextDNS profile.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "profileId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile id."
+          },
+          "from": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Inclusive start date."
+          },
+          "to": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Exclusive end date."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Result limit.",
+            "maximum": 500
+          },
+          "cursor": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Pagination cursor."
+          },
+          "device": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Device id filter."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "profileId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/profiles/{{profileId}}/analytics/protocols",
+        "success": [
+          200
+        ],
+        "query": {
+          "from": "{{from}}",
+          "to": "{{to}}",
+          "limit": "{{limit}}",
+          "cursor": "{{cursor}}",
+          "device": "{{device}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "analytics.reasons": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Reason analytics",
+      "description": "List DNS query counts grouped by block/allow reason for a NextDNS profile.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "profileId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile id."
+          },
+          "from": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Inclusive start date."
+          },
+          "to": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Exclusive end date."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Result limit.",
+            "maximum": 500
+          },
+          "cursor": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Pagination cursor."
+          },
+          "device": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Device id filter."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "profileId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/profiles/{{profileId}}/analytics/reasons",
+        "success": [
+          200
+        ],
+        "query": {
+          "from": "{{from}}",
+          "to": "{{to}}",
+          "limit": "{{limit}}",
+          "cursor": "{{cursor}}",
+          "device": "{{device}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "analytics.queryTypes": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Query type analytics",
+      "description": "List DNS query counts grouped by DNS query type for a NextDNS profile.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "profileId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile id."
+          },
+          "from": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Inclusive start date."
+          },
+          "to": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Exclusive end date."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Result limit.",
+            "maximum": 500
+          },
+          "cursor": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Pagination cursor."
+          },
+          "device": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Device id filter."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "profileId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/profiles/{{profileId}}/analytics/queryTypes",
+        "success": [
+          200
+        ],
+        "query": {
+          "from": "{{from}}",
+          "to": "{{to}}",
+          "limit": "{{limit}}",
+          "cursor": "{{cursor}}",
+          "device": "{{device}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "denylist.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List denylist",
+      "description": "List denylist domains for a NextDNS profile.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "profileId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile id."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "profileId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/profiles/{{profileId}}/denylist",
         "success": [
           200
         ]
       },
-      "responseFormat": "json",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "denylist.add": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Add denylist domain",
+      "description": "Add a domain to a NextDNS profile denylist.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "profileId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile id."
+          },
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Domain to deny."
+          },
+          "active": {
+            "type": "boolean",
+            "description": "Whether the denylist entry is active."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "profileId",
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/profiles/{{profileId}}/denylist",
+        "success": [
+          200
+        ],
+        "body": {
+          "id": "{{id}}",
+          "active": "{{active}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "denylist.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Delete denylist domain",
+      "description": "Remove a domain from a NextDNS profile denylist.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "profileId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile id."
+          },
+          "domain": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Domain to remove."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "profileId",
+          "domain"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "deleted"
+        ],
+        "properties": {
+          "deleted": {
+            "type": "boolean"
+          },
+          "id": {},
+          "key": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "domain": {
+            "type": "string"
+          },
+          "profileId": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/profiles/{{profileId}}/denylist/{{domain}}",
+        "success": [
+          204,
+          200
+        ],
+        "result": {
+          "deleted": true,
+          "domain": "{{input.domain}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "allowlist.list": {
+      "kind": "action",
       "sideEffect": "read",
       "timeoutMs": 15000,
-      "title": "List profiles",
-      "validationMode": "strict-generated"
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List allowlist",
+      "description": "List allowlist domains for a NextDNS profile.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "profileId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile id."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "profileId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/profiles/{{profileId}}/allowlist",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "allowlist.add": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Add allowlist domain",
+      "description": "Add a domain to a NextDNS profile allowlist.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "profileId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile id."
+          },
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Domain to allow."
+          },
+          "active": {
+            "type": "boolean",
+            "description": "Whether the allowlist entry is active."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "profileId",
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/profiles/{{profileId}}/allowlist",
+        "success": [
+          200
+        ],
+        "body": {
+          "id": "{{id}}",
+          "active": "{{active}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "security.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get security settings",
+      "description": "Get NextDNS security settings for a profile.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "profileId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile id."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "profileId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/profiles/{{profileId}}/security",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "privacy.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get privacy settings",
+      "description": "Get NextDNS privacy settings for a profile.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "profileId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile id."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "profileId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/profiles/{{profileId}}/privacy",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "settings.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get profile settings",
+      "description": "Get NextDNS settings for a profile.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "profileId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile id."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "profileId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/profiles/{{profileId}}/settings",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
     }
   },
-  "provenance": {
-    "source": {
-      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
-      "url": "https://github.com/oomol-lab/open-connector"
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
     }
-  },
-  "runtime": "bun",
-  "version": "0.1.0",
-  "visibility": "public"
+  }
 }

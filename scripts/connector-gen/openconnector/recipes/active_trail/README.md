@@ -4,16 +4,12 @@ International ActiveTrail / MyMarketing API recipe. Create an access token in th
 
 ## Operations
 
-- `healthcheck` — `GET /account/balance`
-- Contacts: list, get, create, delete
-- Groups: list, get, create, update, delete, list members, add member
-- Email campaigns: list, get, list sent
-- Templates: list, get
-- Account sending profiles (email and SMS)
-- Automations list
-- SMS campaigns list
+159 operations, one per Composio ACTIVE_TRAIL tool (index version 20260615_00). Help-catalog endpoints that are not in that index are omitted. `smscampaign.operationalMessage.list` is GET /smscampaign/Campaign with FilterType fixed to 3. `operationalMessage.email.create` is POST /OperationalMessage/Message with email_package required, distinct from `operationalMessage.message.create` where email_package is optional.
 
-Page is 0-based per official Guides. Query wire names are PascalCase. Unset optionals are omitted. Responses keep raw provider JSON under `data` (list endpoints often return a JSON array). ActiveTrail does not publish a documented inbound webhook event catalog on this API, so no EventOnly webhook operations are declared.
+Webhook rows in the help catalog are webhook-configuration HTTP calls, not inbound events. ActiveTrail does not publish an inbound webhook event catalog on this API, so no EventOnly webhook operations are declared.
+
+Page is 0-based per official Guides. New operation input names are snake_case. Query and body wire names stay as documented. Unset optionals are omitted. Responses keep raw provider JSON under `data`.
+
 
 ## Adaptations
 

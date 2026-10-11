@@ -72,7 +72,19 @@
     "operations": [
       "healthcheck",
       "content.list",
-      "content.get"
+      "content.get",
+      "content.getById",
+      "content.getByEntry",
+      "content.getByUrl",
+      "content.getByUrlPath",
+      "content.query",
+      "html.get",
+      "html.getByUrl",
+      "html.getByEntry",
+      "html.getByUrlPath",
+      "pages.list",
+      "symbols.list",
+      "sections.list"
     ],
     "upstreamSha": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
     "marketFocus": "international",
@@ -145,8 +157,7 @@
       ],
       "responseContract": "appcall-provider-json-v1",
       "adaptations": [
-        "Credential-only healthcheck lists the official example model page with limit=1 on GET /api/v3/content/page.",
-        "Official Content API authenticates with the public apiKey query parameter. Pinned source also sends Authorization Bearer with the private key and may override query apiKey from input.publicKey. Native Content API reads use query-only public-key auth."
+        "Credential-only healthcheck lists the official example model page with limit=1."
       ]
     },
     "content.list": {
@@ -161,8 +172,7 @@
       ],
       "responseContract": "appcall-provider-json-v1",
       "adaptations": [
-        "Admits model plus optional limit (1-100), offset, includeRefs, and noTargeting. MongoDB-style query/userAttributes/options/sort objects are omitted because native query templates cannot JSON.stringify caller objects.",
-        "Returns raw Builder.io JSON under data; does not apply the pinned content normalizer."
+        "Optional Content API query flags are forwarded. MongoDB objects stay caller-serialized strings on content.query."
       ]
     },
     "content.get": {
@@ -177,15 +187,192 @@
       ],
       "responseContract": "appcall-provider-json-v1",
       "adaptations": [
-        "Pinned get_content sends query=JSON.stringify({id}) and limit=1. Native interpolates the same query string from id plus limit=1.",
-        "Optional includeRefs and noTargeting are forwarded as boolean query flags."
+        "Pinned get_content sends query=JSON.stringify({id}) and limit=1."
+      ]
+    },
+    "content.getById": {
+      "upstreamActionId": "get_content",
+      "sourceRefs": [
+        "action-get-content",
+        "handler-get-content",
+        "content-url"
+      ],
+      "documentationUrls": [
+        "https://www.builder.io/c/docs/query-api",
+        "https://www.builder.io/c/docs/content-api-model-specific-details"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Path form GET /api/v3/content/{model}/{id} from official model-specific Content API docs."
+      ]
+    },
+    "content.getByEntry": {
+      "upstreamActionId": "get_content",
+      "sourceRefs": [
+        "action-get-content",
+        "handler-get-content",
+        "content-url"
+      ],
+      "documentationUrls": [
+        "https://www.builder.io/c/docs/query-api"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Official Content API entry query parameter selects a single entry."
+      ]
+    },
+    "content.getByUrl": {
+      "upstreamActionId": "list_content",
+      "sourceRefs": [
+        "action-list-content",
+        "handler-list-content",
+        "content-url"
+      ],
+      "documentationUrls": [
+        "https://www.builder.io/c/docs/query-api"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Official url targeting query parameter."
+      ]
+    },
+    "content.getByUrlPath": {
+      "upstreamActionId": "list_content",
+      "sourceRefs": [
+        "action-list-content",
+        "handler-list-content",
+        "content-url"
+      ],
+      "documentationUrls": [
+        "https://www.builder.io/c/docs/query-api"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Official userAttributes.urlPath targeting attribute."
+      ]
+    },
+    "content.query": {
+      "upstreamActionId": "list_content",
+      "sourceRefs": [
+        "action-list-content",
+        "handler-list-content",
+        "content-url"
+      ],
+      "documentationUrls": [
+        "https://www.builder.io/c/docs/query-api"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Caller supplies a MongoDB-style query JSON string because native templates cannot JSON.stringify objects."
+      ]
+    },
+    "html.get": {
+      "upstreamActionId": "list_content",
+      "sourceRefs": [
+        "content-url",
+        "pick-public-key",
+        "api-bases"
+      ],
+      "documentationUrls": [
+        "https://www.builder.io/c/docs/html-api"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "HTML API GET /api/v3/html/{model} using the public apiKey query parameter."
+      ]
+    },
+    "html.getByUrl": {
+      "upstreamActionId": "list_content",
+      "sourceRefs": [
+        "content-url",
+        "api-bases"
+      ],
+      "documentationUrls": [
+        "https://www.builder.io/c/docs/html-api"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "HTML API url targeting query parameter."
+      ]
+    },
+    "html.getByEntry": {
+      "upstreamActionId": "get_content",
+      "sourceRefs": [
+        "content-url",
+        "api-bases"
+      ],
+      "documentationUrls": [
+        "https://www.builder.io/c/docs/html-api"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "HTML API entry query parameter."
+      ]
+    },
+    "html.getByUrlPath": {
+      "upstreamActionId": "list_content",
+      "sourceRefs": [
+        "content-url",
+        "api-bases"
+      ],
+      "documentationUrls": [
+        "https://www.builder.io/c/docs/html-api"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "HTML API userAttributes.urlPath targeting attribute."
+      ]
+    },
+    "pages.list": {
+      "upstreamActionId": "list_content",
+      "sourceRefs": [
+        "action-list-content",
+        "handler-list-content",
+        "content-url"
+      ],
+      "documentationUrls": [
+        "https://www.builder.io/c/docs/query-api"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Convenience list of the official page model."
+      ]
+    },
+    "symbols.list": {
+      "upstreamActionId": "list_content",
+      "sourceRefs": [
+        "action-list-content",
+        "handler-list-content",
+        "content-url"
+      ],
+      "documentationUrls": [
+        "https://www.builder.io/c/docs/query-api"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Convenience list of the symbol model."
+      ]
+    },
+    "sections.list": {
+      "upstreamActionId": "list_content",
+      "sourceRefs": [
+        "action-list-content",
+        "handler-list-content",
+        "content-url"
+      ],
+      "documentationUrls": [
+        "https://www.builder.io/c/docs/query-api"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Convenience list of the section model."
       ]
     }
   },
   "manifest": {
     "key": "builder-io",
     "name": "Builder.io",
-    "version": "0.1.0",
+    "version": "0.2.0",
     "runtime": "bun",
     "visibility": "public",
     "categories": [
@@ -218,7 +405,11 @@
       ]
     },
     "models": [
-      "content"
+      "content",
+      "page",
+      "symbol",
+      "section",
+      "html"
     ],
     "http": {
       "baseUrl": "https://cdn.builder.io",
@@ -312,6 +503,41 @@
             },
             "noTargeting": {
               "type": "boolean"
+            },
+            "includeUnpublished": {
+              "type": "boolean"
+            },
+            "enrich": {
+              "type": "boolean"
+            },
+            "locale": {
+              "type": "string",
+              "minLength": 1
+            },
+            "fields": {
+              "type": "string",
+              "minLength": 1
+            },
+            "omit": {
+              "type": "string",
+              "minLength": 1
+            },
+            "cacheSeconds": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "cachebust": {
+              "type": "boolean"
+            },
+            "includeUrl": {
+              "type": "boolean"
+            },
+            "preview": {
+              "type": "string",
+              "minLength": 1
+            },
+            "excludeExpired": {
+              "type": "boolean"
             }
           },
           "required": [
@@ -341,7 +567,17 @@
             "limit": "{{limit}}",
             "offset": "{{offset}}",
             "includeRefs": "{{includeRefs}}",
-            "noTargeting": "{{noTargeting}}"
+            "noTargeting": "{{noTargeting}}",
+            "includeUnpublished": "{{includeUnpublished}}",
+            "enrich": "{{enrich}}",
+            "locale": "{{locale}}",
+            "fields": "{{fields}}",
+            "omit": "{{omit}}",
+            "cacheSeconds": "{{cacheSeconds}}",
+            "cachebust": "{{cachebust}}",
+            "includeUrl": "{{includeUrl}}",
+            "preview": "{{preview}}",
+            "excludeExpired": "{{excludeExpired}}"
           }
         },
         "enforceOutputSchema": true,
@@ -371,6 +607,9 @@
               "type": "boolean"
             },
             "noTargeting": {
+              "type": "boolean"
+            },
+            "enrich": {
               "type": "boolean"
             }
           },
@@ -402,6 +641,745 @@
             "query": "{\"id\":\"{{id}}\"}",
             "limit": "1",
             "includeRefs": "{{includeRefs}}",
+            "noTargeting": "{{noTargeting}}",
+            "enrich": "{{enrich}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "content.getById": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Get content by path ID",
+        "description": "Fetch a Builder.io content entry by model and entry ID in the URL path.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "model": {
+              "type": "string",
+              "minLength": 1
+            },
+            "id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "includeRefs": {
+              "type": "boolean"
+            },
+            "enrich": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "model",
+            "id"
+          ],
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/api/v3/content/{{model}}/{{id}}",
+          "success": [
+            200
+          ],
+          "query": {
+            "includeRefs": "{{includeRefs}}",
+            "enrich": "{{enrich}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "content.getByEntry": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Get content by entry",
+        "description": "Fetch a Builder.io content entry using the entry query parameter.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "model": {
+              "type": "string",
+              "minLength": 1
+            },
+            "entry": {
+              "type": "string",
+              "minLength": 1
+            },
+            "includeRefs": {
+              "type": "boolean"
+            },
+            "noTargeting": {
+              "type": "boolean"
+            },
+            "enrich": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "model",
+            "entry"
+          ],
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/api/v3/content/{{model}}",
+          "success": [
+            200
+          ],
+          "query": {
+            "entry": "{{entry}}",
+            "limit": "1",
+            "includeRefs": "{{includeRefs}}",
+            "noTargeting": "{{noTargeting}}",
+            "enrich": "{{enrich}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "content.getByUrl": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Get content by URL",
+        "description": "Fetch Builder.io content targeted to a visitor URL.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "model": {
+              "type": "string",
+              "minLength": 1
+            },
+            "url": {
+              "type": "string",
+              "minLength": 1
+            },
+            "includeRefs": {
+              "type": "boolean"
+            },
+            "locale": {
+              "type": "string",
+              "minLength": 1
+            },
+            "enrich": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "model",
+            "url"
+          ],
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/api/v3/content/{{model}}",
+          "success": [
+            200
+          ],
+          "query": {
+            "url": "{{url}}",
+            "limit": "1",
+            "includeRefs": "{{includeRefs}}",
+            "locale": "{{locale}}",
+            "enrich": "{{enrich}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "content.getByUrlPath": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Get content by URL path",
+        "description": "Fetch Builder.io content targeted to a urlPath user attribute.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "model": {
+              "type": "string",
+              "minLength": 1
+            },
+            "urlPath": {
+              "type": "string",
+              "minLength": 1
+            },
+            "locale": {
+              "type": "string",
+              "minLength": 1
+            },
+            "includeRefs": {
+              "type": "boolean"
+            },
+            "enrich": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "model",
+            "urlPath"
+          ],
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/api/v3/content/{{model}}",
+          "success": [
+            200
+          ],
+          "query": {
+            "userAttributes.urlPath": "{{urlPath}}",
+            "locale": "{{locale}}",
+            "limit": "1",
+            "includeRefs": "{{includeRefs}}",
+            "enrich": "{{enrich}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "content.query": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Query content",
+        "description": "List Builder.io content with a MongoDB-style JSON query string.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "model": {
+              "type": "string",
+              "minLength": 1
+            },
+            "query": {
+              "type": "string",
+              "minLength": 1
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            },
+            "offset": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "noTargeting": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "model",
+            "query"
+          ],
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/api/v3/content/{{model}}",
+          "success": [
+            200
+          ],
+          "query": {
+            "query": "{{query}}",
+            "limit": "{{limit}}",
+            "offset": "{{offset}}",
+            "noTargeting": "{{noTargeting}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "html.get": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Get HTML",
+        "description": "Fetch server-rendered HTML for a Builder.io model via the HTML API.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "model": {
+              "type": "string",
+              "minLength": 1
+            },
+            "url": {
+              "type": "string",
+              "minLength": 1
+            },
+            "entry": {
+              "type": "string",
+              "minLength": 1
+            },
+            "includeUnpublished": {
+              "type": "boolean"
+            },
+            "locale": {
+              "type": "string",
+              "minLength": 1
+            },
+            "preview": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "model"
+          ],
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/api/v3/html/{{model}}",
+          "success": [
+            200
+          ],
+          "query": {
+            "url": "{{url}}",
+            "entry": "{{entry}}",
+            "includeUnpublished": "{{includeUnpublished}}",
+            "locale": "{{locale}}",
+            "preview": "{{preview}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "html.getByUrl": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Get HTML by URL",
+        "description": "Fetch server-rendered HTML for a Builder.io model targeted to a visitor URL.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "model": {
+              "type": "string",
+              "minLength": 1
+            },
+            "url": {
+              "type": "string",
+              "minLength": 1
+            },
+            "locale": {
+              "type": "string",
+              "minLength": 1
+            },
+            "includeUnpublished": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "model",
+            "url"
+          ],
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/api/v3/html/{{model}}",
+          "success": [
+            200
+          ],
+          "query": {
+            "url": "{{url}}",
+            "locale": "{{locale}}",
+            "includeUnpublished": "{{includeUnpublished}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "html.getByEntry": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Get HTML by entry",
+        "description": "Fetch server-rendered HTML for a specific Builder.io content entry.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "model": {
+              "type": "string",
+              "minLength": 1
+            },
+            "entry": {
+              "type": "string",
+              "minLength": 1
+            },
+            "includeUnpublished": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "model",
+            "entry"
+          ],
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/api/v3/html/{{model}}",
+          "success": [
+            200
+          ],
+          "query": {
+            "entry": "{{entry}}",
+            "includeUnpublished": "{{includeUnpublished}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "html.getByUrlPath": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Get HTML by URL path",
+        "description": "Fetch server-rendered HTML targeted to a urlPath user attribute.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "model": {
+              "type": "string",
+              "minLength": 1
+            },
+            "urlPath": {
+              "type": "string",
+              "minLength": 1
+            },
+            "locale": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "model",
+            "urlPath"
+          ],
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/api/v3/html/{{model}}",
+          "success": [
+            200
+          ],
+          "query": {
+            "userAttributes.urlPath": "{{urlPath}}",
+            "locale": "{{locale}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "pages.list": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "List pages",
+        "description": "List Builder.io page-model content entries.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            },
+            "offset": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "noTargeting": {
+              "type": "boolean"
+            },
+            "includeUnpublished": {
+              "type": "boolean"
+            },
+            "locale": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/api/v3/content/page",
+          "success": [
+            200
+          ],
+          "query": {
+            "limit": "{{limit}}",
+            "offset": "{{offset}}",
+            "noTargeting": "{{noTargeting}}",
+            "includeUnpublished": "{{includeUnpublished}}",
+            "locale": "{{locale}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "symbols.list": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "List symbols",
+        "description": "List Builder.io symbol-model content entries.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            },
+            "offset": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "noTargeting": {
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/api/v3/content/symbol",
+          "success": [
+            200
+          ],
+          "query": {
+            "limit": "{{limit}}",
+            "offset": "{{offset}}",
+            "noTargeting": "{{noTargeting}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "sections.list": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "List sections",
+        "description": "List Builder.io section-model content entries.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            },
+            "offset": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "noTargeting": {
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/api/v3/content/section",
+          "success": [
+            200
+          ],
+          "query": {
+            "limit": "{{limit}}",
+            "offset": "{{offset}}",
             "noTargeting": "{{noTargeting}}"
           }
         },

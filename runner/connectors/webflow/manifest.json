@@ -1,13 +1,1185 @@
 {
-  "key":"webflow","name":"Webflow","version":"0.1.0","runtime":"bun","visibility":"public","categories":["productivity"],
-  "auth":{"type":"api_key","scopes":["sites:read","cms:read"],"setup":{"mode":"api_key","fields":[{"key":"apiKey","label":"Webflow API token","required":true,"secret":true}]}},
-  "network":{"allowedHosts":["api.webflow.com"]},"http":{"baseUrl":"https://api.webflow.com/v2","auth":{"field":"apiKey","in":"header","name":"Authorization","value":"Bearer {{apiKey}}"},"headers":{"Accept":"application/json"},"errors":{"rateLimitStatuses":[429],"retryAfterHeader":"retry-after","defaultRetryAfterSeconds":30,"messagePaths":["message","msg","error","detail"]}},"models":["site","collection","collection_item"],
-  "operations":{
-    "healthcheck":{"kind":"action","sideEffect":"read","timeoutMs":5000,"maxInputBytes":4096,"maxResponseBytes":65536,"title":"Healthcheck","description":"Verify the Webflow token by listing accessible sites.","inputSchema":{"type":"object","properties":{},"additionalProperties":false},"outputSchema":{"type":"object","required":["status"],"properties":{"status":{"type":"string"}}},"request":{"method":"GET","path":"/sites","success":[200],"result":{"status":"ok"}},"enforceOutputSchema":true},
-    "list_sites":{"kind":"action","sideEffect":"read","timeoutMs":10000,"maxInputBytes":4096,"maxResponseBytes":1048576,"title":"List Sites","description":"List Webflow sites available to the connected token.","inputSchema":{"type":"object","properties":{},"additionalProperties":false},"outputSchema":{"type":"object","required":["sites"],"properties":{"sites":{"type":"array","items":{"type":"object"}}}},"request":{"method":"GET","path":"/sites","success":[200],"result":{"sites":"{{response.sites}}"}},"enforceOutputSchema":true},
-    "list_collections":{"kind":"action","sideEffect":"read","timeoutMs":10000,"maxInputBytes":4096,"maxResponseBytes":1048576,"title":"List Collections","description":"List CMS collections for a Webflow site.","inputSchema":{"type":"object","properties":{"siteId":{"type":"string","minLength":1}},"required":["siteId"],"additionalProperties":false},"outputSchema":{"type":"object","required":["collections"],"properties":{"collections":{"type":"array","items":{"type":"object"}}}},"request":{"method":"GET","path":"/sites/{{siteId}}/collections","success":[200],"result":{"collections":"{{response.collections}}"}},"enforceOutputSchema":true},
-    "list_collection_items":{"kind":"action","sideEffect":"read","timeoutMs":15000,"maxInputBytes":65536,"maxResponseBytes":5242880,"title":"List Collection Items","description":"List bounded items in a Webflow CMS collection; pagination links are returned by the provider and never followed.","inputSchema":{"type":"object","properties":{"collectionId":{"type":"string","minLength":1},"limit":{"type":"integer","minimum":1,"maximum":100},"offset":{"type":"integer","minimum":0}},"required":["collectionId"],"additionalProperties":false},"outputSchema":{"type":"object","required":["items","pagination"],"properties":{"items":{"type":"array","items":{"type":"object"}},"pagination":{"type":"object","properties":{"limit":{"type":["integer","null"]},"offset":{"type":["integer","null"]},"total":{"type":["integer","null"]}}}}},"request":{"method":"GET","path":"/collections/{{collectionId}}/items","query":{"limit":"{{limit}}","offset":"{{offset}}"},"success":[200],"result":{"items":"{{response.items}}","pagination":{"limit":"{{response.limit}}","offset":"{{response.offset}}","total":"{{response.total}}"}}},"enforceOutputSchema":true}
+  "key": "webflow",
+  "name": "Webflow",
+  "version": "0.2.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "productivity"
+  ],
+  "auth": {
+    "type": "api_key",
+    "scopes": [
+      "sites:read",
+      "cms:read"
+    ],
+    "setup": {
+      "mode": "api_key",
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "Webflow API token",
+          "required": true,
+          "secret": true
+        }
+      ]
+    }
   },
-  "provenance":{"source":{"url":"https://github.com/oomol-lab/open-connector","revision":"33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"}},
-  "evidence":{"fixture":{"status":"supplied"},"live":{"status":"unverified"}}
+  "network": {
+    "allowedHosts": [
+      "api.webflow.com"
+    ]
+  },
+  "models": [
+    "site",
+    "collection",
+    "collection_item",
+    "page",
+    "form",
+    "asset",
+    "webhook"
+  ],
+  "http": {
+    "baseUrl": "https://api.webflow.com/v2",
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "Authorization",
+      "value": "Bearer {{apiKey}}"
+    },
+    "headers": {
+      "Accept": "application/json"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after",
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "message",
+        "msg",
+        "error",
+        "detail"
+      ]
+    }
+  },
+  "operations": {
+    "healthcheck": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 5000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "title": "Healthcheck",
+      "description": "Verify the Webflow token by listing accessible sites.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "request": {
+        "method": "GET",
+        "path": "/sites",
+        "success": [
+          200
+        ],
+        "result": {
+          "status": "ok"
+        }
+      },
+      "enforceOutputSchema": true
+    },
+    "list_sites": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "title": "List Sites",
+      "description": "List Webflow sites available to the connected token.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "sites": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        },
+        "required": [
+          "sites"
+        ]
+      },
+      "request": {
+        "method": "GET",
+        "path": "/sites",
+        "success": [
+          200
+        ],
+        "result": {
+          "sites": "{{response.sites}}"
+        }
+      },
+      "enforceOutputSchema": true
+    },
+    "list_collections": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "title": "List Collections",
+      "description": "List CMS collections for a Webflow site.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "siteId": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "siteId"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "collections": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        },
+        "required": [
+          "collections"
+        ]
+      },
+      "request": {
+        "method": "GET",
+        "path": "/sites/{{siteId}}/collections",
+        "success": [
+          200
+        ],
+        "result": {
+          "collections": "{{response.collections}}"
+        }
+      },
+      "enforceOutputSchema": true
+    },
+    "list_collection_items": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List Collection Items",
+      "description": "List bounded items in a Webflow CMS collection; pagination links are returned by the provider and never followed.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "collectionId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "collectionId"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "pagination": {
+            "type": "object",
+            "properties": {
+              "limit": {
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              },
+              "offset": {
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              },
+              "total": {
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              }
+            }
+          }
+        },
+        "required": [
+          "items",
+          "pagination"
+        ]
+      },
+      "request": {
+        "method": "GET",
+        "path": "/collections/{{collectionId}}/items",
+        "success": [
+          200
+        ],
+        "query": {
+          "limit": "{{limit}}",
+          "offset": "{{offset}}"
+        },
+        "result": {
+          "items": "{{response.items}}",
+          "pagination": {
+            "limit": "{{response.limit}}",
+            "offset": "{{response.offset}}",
+            "total": "{{response.total}}"
+          }
+        }
+      },
+      "enforceOutputSchema": true
+    },
+    "sites.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get Site",
+      "description": "Retrieve one Webflow site by ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "siteId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Site ID."
+          }
+        },
+        "required": [
+          "siteId"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/sites/{{siteId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "sites.publish": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Publish Site",
+      "description": "Publish a Webflow site to custom domains and/or the webflow.io subdomain.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "siteId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Site ID."
+          },
+          "customDomains": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Custom domains to publish."
+          },
+          "publishToWebflowSubdomain": {
+            "type": "boolean",
+            "description": "Publish to the webflow.io subdomain."
+          }
+        },
+        "required": [
+          "siteId"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/sites/{{siteId}}/publish",
+        "success": [
+          200,
+          202
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "customDomains": "{{customDomains}}",
+          "publishToWebflowSubdomain": "{{publishToWebflowSubdomain}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "collections.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get Collection",
+      "description": "Retrieve one Webflow CMS collection by ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "collectionId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Collection ID."
+          }
+        },
+        "required": [
+          "collectionId"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/collections/{{collectionId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "items.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get Collection Item",
+      "description": "Retrieve one item from a Webflow CMS collection.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "collectionId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Collection ID."
+          },
+          "itemId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Item ID."
+          }
+        },
+        "required": [
+          "collectionId",
+          "itemId"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/collections/{{collectionId}}/items/{{itemId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "items.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Create Collection Item",
+      "description": "Create an item in a Webflow CMS collection.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "collectionId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Collection ID."
+          },
+          "fieldData": {
+            "type": "object",
+            "description": "CMS field values, including name and slug."
+          },
+          "isArchived": {
+            "type": "boolean",
+            "description": "Archive the item on create."
+          },
+          "isDraft": {
+            "type": "boolean",
+            "description": "Create the item as a draft."
+          }
+        },
+        "required": [
+          "collectionId",
+          "fieldData"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/collections/{{collectionId}}/items",
+        "success": [
+          200,
+          201,
+          202
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "fieldData": "{{fieldData}}",
+          "isArchived": "{{isArchived}}",
+          "isDraft": "{{isDraft}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "items.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Update Collection Item",
+      "description": "Update an item in a Webflow CMS collection.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "collectionId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Collection ID."
+          },
+          "itemId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Item ID."
+          },
+          "fieldData": {
+            "type": "object",
+            "description": "CMS field values to update."
+          },
+          "isArchived": {
+            "type": "boolean",
+            "description": "Archive or unarchive the item."
+          },
+          "isDraft": {
+            "type": "boolean",
+            "description": "Mark the item as a draft."
+          }
+        },
+        "required": [
+          "collectionId",
+          "itemId"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/collections/{{collectionId}}/items/{{itemId}}",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "fieldData": "{{fieldData}}",
+          "isArchived": "{{isArchived}}",
+          "isDraft": "{{isDraft}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "items.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Delete Collection Item",
+      "description": "Delete an item from a Webflow CMS collection.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "collectionId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Collection ID."
+          },
+          "itemId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Item ID."
+          }
+        },
+        "required": [
+          "collectionId",
+          "itemId"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "deleted": {
+            "type": "boolean"
+          },
+          "itemId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "deleted",
+          "itemId"
+        ],
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/collections/{{collectionId}}/items/{{itemId}}",
+        "success": [
+          200,
+          204
+        ],
+        "result": {
+          "deleted": true,
+          "itemId": "{{input.itemId}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "items.publish": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Publish Collection Items",
+      "description": "Publish one or more live items in a Webflow CMS collection.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "collectionId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Collection ID."
+          },
+          "itemIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "description": "Item IDs to publish."
+          }
+        },
+        "required": [
+          "collectionId",
+          "itemIds"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/collections/{{collectionId}}/items/publish",
+        "success": [
+          200,
+          202
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "itemIds": "{{itemIds}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "pages.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List Pages",
+      "description": "List pages for a Webflow site with optional limit and offset.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "siteId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Site ID."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Page size."
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Offset."
+          }
+        },
+        "required": [
+          "siteId"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/sites/{{siteId}}/pages",
+        "success": [
+          200
+        ],
+        "query": {
+          "limit": "{{limit}}",
+          "offset": "{{offset}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "pages.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get Page",
+      "description": "Retrieve metadata for one Webflow page.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "pageId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Page ID."
+          }
+        },
+        "required": [
+          "pageId"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/pages/{{pageId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "forms.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "List Forms",
+      "description": "List forms on a Webflow site.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "siteId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Site ID."
+          }
+        },
+        "required": [
+          "siteId"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/sites/{{siteId}}/forms",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "forms.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get Form",
+      "description": "Retrieve one Webflow form by ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "formId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Form ID."
+          }
+        },
+        "required": [
+          "formId"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/forms/{{formId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "form_submissions.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List Form Submissions",
+      "description": "List submissions for a Webflow form with optional limit and offset.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "formId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Form ID."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Page size."
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Offset."
+          }
+        },
+        "required": [
+          "formId"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/forms/{{formId}}/submissions",
+        "success": [
+          200
+        ],
+        "query": {
+          "limit": "{{limit}}",
+          "offset": "{{offset}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "assets.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List Assets",
+      "description": "List assets for a Webflow site with optional limit and offset.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "siteId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Site ID."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Page size."
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Offset."
+          }
+        },
+        "required": [
+          "siteId"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/sites/{{siteId}}/assets",
+        "success": [
+          200
+        ],
+        "query": {
+          "limit": "{{limit}}",
+          "offset": "{{offset}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "webhooks.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "List Webhooks",
+      "description": "List webhooks registered on a Webflow site.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "siteId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Site ID."
+          }
+        },
+        "required": [
+          "siteId"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/sites/{{siteId}}/webhooks",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "webhooks.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Create Webhook",
+      "description": "Register a webhook on a Webflow site for a trigger type.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "siteId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Site ID."
+          },
+          "triggerType": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Webhook trigger type, for example form_submission."
+          },
+          "url": {
+            "type": "string",
+            "minLength": 1,
+            "description": "HTTPS callback URL."
+          }
+        },
+        "required": [
+          "siteId",
+          "triggerType",
+          "url"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/sites/{{siteId}}/webhooks",
+        "success": [
+          200,
+          201,
+          202
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "triggerType": "{{triggerType}}",
+          "url": "{{url}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    }
+  },
+  "provenance": {
+    "source": {
+      "url": "https://github.com/oomol-lab/open-connector",
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"
+    }
+  },
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
+    }
+  }
 }

@@ -1,4 +1,4 @@
-import { createKlaviyoClient, parseKlaviyoRateLimit, isRecord } from "./http";
+import { createKlaviyoClient, parseKlaviyoRateLimit, queryPath, isRecord } from "./http";
 import { parseFlowsResponse } from "./objects";
 import type { NormalizedFlow } from "./objects";
 
@@ -13,7 +13,7 @@ export async function listFlowsFromClient(
 ): Promise<{ ok: true; flows: NormalizedFlow[] } | { ok: false; error: { code: string; message: string; retryAfterSeconds?: number } }> {
   validateListFlowsInput(input);
   const client = createKlaviyoClient({ apiKey: options.apiKey, fetch: options.fetch, operation: "flows.list" });
-  const result = await client.fetchJSON("/flows");
+  const result = await client.fetchJSON(queryPath("/flows", input));
   if (result.status === 200) return { ok: true, flows: parseFlowsResponse(result.body).flows };
   const rl = parseKlaviyoRateLimit(result.status, result.headers);
   if (rl.limited) return { ok: false, error: { code: "CONNECTOR_RATE_LIMITED", message: "Klaviyo rate limit exceeded.", retryAfterSeconds: rl.retryAfterSeconds } };

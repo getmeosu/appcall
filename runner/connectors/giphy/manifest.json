@@ -1,1 +1,1716 @@
-{"auth":{"scopes":[],"setup":{"fields":[{"key":"apiKey","label":"GIPHY API key","required":true,"secret":true}],"mode":"api_key"},"type":"api_key"},"categories":["social"],"evidence":{"fixture":{"status":"supplied"},"live":{"status":"unverified"}},"http":{"auth":{"field":"apiKey","in":"query","name":"api_key","value":"{{apiKey}}"},"baseUrl":"https://api.giphy.com/v1","errors":{"defaultRetryAfterSeconds":30,"messagePaths":["meta.msg","message","error"],"rateLimitStatuses":[429],"retryAfterHeader":"retry-after"},"headers":{"Accept":"application/json"}},"key":"giphy","models":["gif","category"],"name":"GIPHY","network":{"allowedHosts":["api.giphy.com"]},"operations":{"categories.list":{"description":"List GIPHY content categories.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{},"type":"object"},"kind":"action","maxInputBytes":65536,"maxResponseBytes":5242880,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/gifs/categories","success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":15000,"title":"List categories","validationMode":"strict-generated"},"gifs.get":{"description":"Get one GIPHY GIF by GIF Object id.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{"gifId":{"minLength":1,"type":"string"}},"required":["gifId"],"type":"object"},"kind":"action","maxInputBytes":65536,"maxResponseBytes":1048576,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/gifs/{{gifId}}","success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":15000,"title":"Get GIF","validationMode":"strict-generated"},"gifs.search":{"description":"Search GIPHY GIFs by query text.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{"lang":{"minLength":1,"type":"string"},"limit":{"maximum":50,"minimum":1,"type":"integer"},"offset":{"maximum":4999,"minimum":0,"type":"integer"},"query":{"minLength":1,"type":"string"}},"required":["query"],"type":"object"},"kind":"action","maxInputBytes":65536,"maxResponseBytes":5242880,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/gifs/search","query":{"lang":"{{lang}}","limit":"{{limit}}","offset":"{{offset}}","q":"{{query}}"},"success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":15000,"title":"Search GIFs","validationMode":"strict-generated"},"gifs.trending":{"description":"List trending GIPHY GIFs with optional limit and offset.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{"limit":{"maximum":50,"minimum":1,"type":"integer"},"offset":{"maximum":499,"minimum":0,"type":"integer"}},"type":"object"},"kind":"action","maxInputBytes":65536,"maxResponseBytes":5242880,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/gifs/trending","query":{"limit":"{{limit}}","offset":"{{offset}}"},"success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":15000,"title":"List trending GIFs","validationMode":"strict-generated"},"healthcheck":{"description":"Validate the GIPHY API key with GET /v1/gifs/trending?limit=1.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{},"type":"object"},"kind":"action","maxInputBytes":4096,"maxResponseBytes":1048576,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/gifs/trending","query":{"limit":1},"success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":10000,"title":"Healthcheck","validationMode":"strict-generated"}},"provenance":{"source":{"revision":"33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a","url":"https://github.com/oomol-lab/open-connector"}},"runtime":"bun","version":"0.1.0","visibility":"public"}
+{
+  "key": "giphy",
+  "name": "GIPHY",
+  "version": "0.2.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "social"
+  ],
+  "auth": {
+    "type": "api_key",
+    "scopes": [],
+    "setup": {
+      "mode": "api_key",
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "GIPHY API key",
+          "required": true,
+          "secret": true
+        }
+      ]
+    }
+  },
+  "provenance": {
+    "source": {
+      "url": "https://github.com/oomol-lab/open-connector",
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "api.giphy.com",
+      "upload.giphy.com",
+      "giphy-analytics.giphy.com"
+    ]
+  },
+  "models": [
+    "gif",
+    "sticker",
+    "category",
+    "channel",
+    "tag",
+    "emoji"
+  ],
+  "http": {
+    "baseUrl": "https://api.giphy.com/v1",
+    "auth": {
+      "field": "apiKey",
+      "in": "query",
+      "name": "api_key",
+      "value": "{{apiKey}}"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after",
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "meta.msg",
+        "message",
+        "error"
+      ]
+    },
+    "headers": {
+      "Accept": "application/json"
+    }
+  },
+  "operations": {
+    "healthcheck": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "title": "Healthcheck",
+      "description": "Validate the GIPHY API key with GET /v1/gifs/trending?limit=1.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/gifs/trending",
+        "query": {
+          "limit": 1
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "gifs.trending": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List trending GIFs",
+      "description": "List trending GIPHY GIFs with optional limit and offset.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 50
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 499
+          },
+          "rating": {
+            "type": "string",
+            "enum": [
+              "g",
+              "pg",
+              "pg-13",
+              "r"
+            ],
+            "description": "Content rating filter."
+          },
+          "random_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "End-user identifier for personalization."
+          },
+          "bundle": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Named rendition bundle."
+          },
+          "country_code": {
+            "type": "string",
+            "minLength": 2,
+            "description": "ISO 3166-1 alpha-2 country code."
+          },
+          "region": {
+            "type": "string",
+            "minLength": 1,
+            "description": "ISO 3166-2 subdivision."
+          },
+          "remove_low_contrast": {
+            "type": "boolean",
+            "description": "Exclude low-contrast items."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/gifs/trending",
+        "query": {
+          "limit": "{{limit}}",
+          "offset": "{{offset}}",
+          "rating": "{{rating}}",
+          "random_id": "{{random_id}}",
+          "bundle": "{{bundle}}",
+          "country_code": "{{country_code}}",
+          "region": "{{region}}",
+          "remove_low_contrast": "{{remove_low_contrast}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "gifs.search": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Search GIFs",
+      "description": "Search GIPHY GIFs by query text.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "query"
+        ],
+        "properties": {
+          "query": {
+            "type": "string",
+            "minLength": 1
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 50
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 4999
+          },
+          "lang": {
+            "type": "string",
+            "minLength": 1
+          },
+          "rating": {
+            "type": "string",
+            "enum": [
+              "g",
+              "pg",
+              "pg-13",
+              "r"
+            ],
+            "description": "Content rating filter."
+          },
+          "random_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "End-user identifier for personalization."
+          },
+          "bundle": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Named rendition bundle."
+          },
+          "country_code": {
+            "type": "string",
+            "minLength": 2
+          },
+          "region": {
+            "type": "string",
+            "minLength": 1
+          },
+          "remove_low_contrast": {
+            "type": "boolean"
+          },
+          "channel_ids": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Comma-separated channel IDs."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/gifs/search",
+        "query": {
+          "q": "{{query}}",
+          "limit": "{{limit}}",
+          "offset": "{{offset}}",
+          "lang": "{{lang}}",
+          "rating": "{{rating}}",
+          "random_id": "{{random_id}}",
+          "bundle": "{{bundle}}",
+          "country_code": "{{country_code}}",
+          "region": "{{region}}",
+          "remove_low_contrast": "{{remove_low_contrast}}",
+          "channel_ids": "{{channel_ids}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "gifs.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get GIF",
+      "description": "Get one GIPHY GIF by GIF Object id.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "gifId"
+        ],
+        "properties": {
+          "gifId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "rating": {
+            "type": "string",
+            "enum": [
+              "g",
+              "pg",
+              "pg-13",
+              "r"
+            ],
+            "description": "Content rating filter."
+          },
+          "random_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "country_code": {
+            "type": "string",
+            "minLength": 2
+          },
+          "region": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/gifs/{{gifId}}",
+        "success": [
+          200
+        ],
+        "query": {
+          "rating": "{{rating}}",
+          "random_id": "{{random_id}}",
+          "country_code": "{{country_code}}",
+          "region": "{{region}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "categories.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List categories",
+      "description": "List GIPHY content categories.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "random_id": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/gifs/categories",
+        "success": [
+          200
+        ],
+        "query": {
+          "random_id": "{{random_id}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "gifs.translate": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Translate to GIF",
+      "description": "Convert a word or phrase into a single GIPHY GIF.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "s": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Phrase to translate into a GIF."
+          },
+          "rating": {
+            "type": "string",
+            "enum": [
+              "g",
+              "pg",
+              "pg-13",
+              "r"
+            ],
+            "description": "Content rating filter."
+          },
+          "random_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "country_code": {
+            "type": "string",
+            "minLength": 2
+          },
+          "region": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "s"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/gifs/translate",
+        "success": [
+          200
+        ],
+        "query": {
+          "s": "{{s}}",
+          "rating": "{{rating}}",
+          "random_id": "{{random_id}}",
+          "country_code": "{{country_code}}",
+          "region": "{{region}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "gifs.random": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Random GIF",
+      "description": "Return a single random GIPHY GIF, optionally filtered by tag.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "tag": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Optional tag filter."
+          },
+          "rating": {
+            "type": "string",
+            "enum": [
+              "g",
+              "pg",
+              "pg-13",
+              "r"
+            ],
+            "description": "Content rating filter."
+          },
+          "random_id": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/gifs/random",
+        "success": [
+          200
+        ],
+        "query": {
+          "tag": "{{tag}}",
+          "rating": "{{rating}}",
+          "random_id": "{{random_id}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "gifs.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get GIFs by id",
+      "description": "Get metadata for multiple GIPHY GIFs by comma-separated ids.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "ids": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Comma-separated GIF Object ids."
+          },
+          "rating": {
+            "type": "string",
+            "enum": [
+              "g",
+              "pg",
+              "pg-13",
+              "r"
+            ],
+            "description": "Content rating filter."
+          },
+          "random_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "country_code": {
+            "type": "string",
+            "minLength": 2
+          },
+          "region": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "ids"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/gifs",
+        "success": [
+          200
+        ],
+        "query": {
+          "ids": "{{ids}}",
+          "rating": "{{rating}}",
+          "random_id": "{{random_id}}",
+          "country_code": "{{country_code}}",
+          "region": "{{region}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "stickers.search": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Search stickers",
+      "description": "Search GIPHY stickers by query text.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Search query."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 50,
+            "description": "Maximum objects to return."
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 4999,
+            "description": "Result offset."
+          },
+          "lang": {
+            "type": "string",
+            "minLength": 1
+          },
+          "rating": {
+            "type": "string",
+            "enum": [
+              "g",
+              "pg",
+              "pg-13",
+              "r"
+            ],
+            "description": "Content rating filter."
+          },
+          "bundle": {
+            "type": "string",
+            "minLength": 1
+          },
+          "random_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "country_code": {
+            "type": "string",
+            "minLength": 2
+          },
+          "region": {
+            "type": "string",
+            "minLength": 1
+          },
+          "remove_low_contrast": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "query"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/stickers/search",
+        "success": [
+          200
+        ],
+        "query": {
+          "q": "{{query}}",
+          "limit": "{{limit}}",
+          "offset": "{{offset}}",
+          "lang": "{{lang}}",
+          "rating": "{{rating}}",
+          "bundle": "{{bundle}}",
+          "random_id": "{{random_id}}",
+          "country_code": "{{country_code}}",
+          "region": "{{region}}",
+          "remove_low_contrast": "{{remove_low_contrast}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "stickers.trending": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List trending stickers",
+      "description": "List trending GIPHY stickers with optional limit and offset.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 50,
+            "description": "Maximum objects to return."
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 499
+          },
+          "rating": {
+            "type": "string",
+            "enum": [
+              "g",
+              "pg",
+              "pg-13",
+              "r"
+            ],
+            "description": "Content rating filter."
+          },
+          "bundle": {
+            "type": "string",
+            "minLength": 1
+          },
+          "random_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "country_code": {
+            "type": "string",
+            "minLength": 2
+          },
+          "region": {
+            "type": "string",
+            "minLength": 1
+          },
+          "remove_low_contrast": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/stickers/trending",
+        "success": [
+          200
+        ],
+        "query": {
+          "limit": "{{limit}}",
+          "offset": "{{offset}}",
+          "rating": "{{rating}}",
+          "bundle": "{{bundle}}",
+          "random_id": "{{random_id}}",
+          "country_code": "{{country_code}}",
+          "region": "{{region}}",
+          "remove_low_contrast": "{{remove_low_contrast}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "stickers.translate": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Translate to sticker",
+      "description": "Convert a word or phrase into a single GIPHY sticker.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "s": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Phrase to translate into a sticker."
+          },
+          "rating": {
+            "type": "string",
+            "enum": [
+              "g",
+              "pg",
+              "pg-13",
+              "r"
+            ],
+            "description": "Content rating filter."
+          },
+          "random_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "country_code": {
+            "type": "string",
+            "minLength": 2
+          },
+          "region": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "s"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/stickers/translate",
+        "success": [
+          200
+        ],
+        "query": {
+          "s": "{{s}}",
+          "rating": "{{rating}}",
+          "random_id": "{{random_id}}",
+          "country_code": "{{country_code}}",
+          "region": "{{region}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "stickers.random": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Random sticker",
+      "description": "Return a single random GIPHY sticker, optionally filtered by tag.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "tag": {
+            "type": "string",
+            "minLength": 1
+          },
+          "rating": {
+            "type": "string",
+            "enum": [
+              "g",
+              "pg",
+              "pg-13",
+              "r"
+            ],
+            "description": "Content rating filter."
+          },
+          "random_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "country_code": {
+            "type": "string",
+            "minLength": 2
+          },
+          "region": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/stickers/random",
+        "success": [
+          200
+        ],
+        "query": {
+          "tag": "{{tag}}",
+          "rating": "{{rating}}",
+          "random_id": "{{random_id}}",
+          "country_code": "{{country_code}}",
+          "region": "{{region}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "gifs.autocomplete": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Autocomplete search tags",
+      "description": "List GIPHY tag terms that complete the given query.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Search query."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 50,
+            "description": "Maximum objects to return."
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "random_id": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "query"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/gifs/search/tags",
+        "success": [
+          200
+        ],
+        "query": {
+          "q": "{{query}}",
+          "limit": "{{limit}}",
+          "offset": "{{offset}}",
+          "random_id": "{{random_id}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "channels.search": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Search channels",
+      "description": "Search GIPHY channels matching a query term.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Search query."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 50,
+            "description": "Maximum objects to return."
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "random_id": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "query"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/channels/search",
+        "success": [
+          200
+        ],
+        "query": {
+          "q": "{{query}}",
+          "limit": "{{limit}}",
+          "offset": "{{offset}}",
+          "random_id": "{{random_id}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "tags.related": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Related tags",
+      "description": "List GIPHY tag terms related to the given term.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "term": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Tag term."
+          },
+          "random_id": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "term"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/tags/related/{{term}}",
+        "success": [
+          200
+        ],
+        "query": {
+          "random_id": "{{random_id}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "trending.searches": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Trending search terms",
+      "description": "List the most popular trending search terms on GIPHY.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "random_id": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/trending/searches",
+        "success": [
+          200
+        ],
+        "query": {
+          "random_id": "{{random_id}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "randomid.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get random id",
+      "description": "Generate a GIPHY random_id suitable for use as customer_id.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/randomid",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "analytics.register": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Register analytics action",
+      "description": "Register a user view, click, or send of a GIF or sticker with GIPHY analytics.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "ts": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "UNIX timestamp in milliseconds when the action occurred."
+          },
+          "gif_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "GIF or sticker id to record analytics for."
+          },
+          "random_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "End-user identifier used as customer_id."
+          },
+          "action_type": {
+            "type": "string",
+            "enum": [
+              "SEEN",
+              "CLICK",
+              "SENT"
+            ],
+            "description": "Analytics event type."
+          },
+          "analytics_response_payload": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Encoded payload from the GIF analytics object; do not modify."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "ts",
+          "gif_id",
+          "random_id",
+          "action_type",
+          "analytics_response_payload"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "ok"
+        ],
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/pingback_simple",
+        "success": [
+          200
+        ],
+        "baseUrl": "https://giphy-analytics.giphy.com",
+        "query": {
+          "analytics_response_payload": "{{analytics_response_payload}}",
+          "action_type": "{{action_type}}",
+          "ts": "{{ts}}",
+          "customer_id": "{{random_id}}",
+          "gif_id": "{{gif_id}}"
+        },
+        "result": {
+          "ok": true
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "categories.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get category",
+      "description": "Get GIPHY category metadata and subcategories by encoded category name.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "category_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Encoded category name from GET /v1/gifs/categories."
+          },
+          "random_id": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "category_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/gifs/categories/{{category_id}}",
+        "success": [
+          200
+        ],
+        "query": {
+          "random_id": "{{random_id}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "categories.gifs": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List category GIFs",
+      "description": "List GIFs for a GIPHY category subcategory (tagged GIFs endpoint).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "category_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Encoded category name."
+          },
+          "tag": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Encoded subcategory / tag name."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 50
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 4999
+          },
+          "rating": {
+            "type": "string",
+            "enum": [
+              "g",
+              "pg",
+              "pg-13",
+              "r"
+            ],
+            "description": "Content rating filter."
+          },
+          "bundle": {
+            "type": "string",
+            "minLength": 1
+          },
+          "random_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "country_code": {
+            "type": "string",
+            "minLength": 2
+          },
+          "region": {
+            "type": "string",
+            "minLength": 1
+          },
+          "remove_low_contrast": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "category_id",
+          "tag"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/gifs/categories/{{category_id}}/{{tag}}",
+        "success": [
+          200
+        ],
+        "query": {
+          "limit": "{{limit}}",
+          "offset": "{{offset}}",
+          "rating": "{{rating}}",
+          "bundle": "{{bundle}}",
+          "random_id": "{{random_id}}",
+          "country_code": "{{country_code}}",
+          "region": "{{region}}",
+          "remove_low_contrast": "{{remove_low_contrast}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "emoji.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List emoji",
+      "description": "List GIPHY emoji GIF objects with optional pagination.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 50,
+            "description": "Maximum emoji objects to return."
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Result offset."
+          },
+          "random_id": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/emoji",
+        "success": [
+          200
+        ],
+        "baseUrl": "https://api.giphy.com/v2",
+        "query": {
+          "limit": "{{limit}}",
+          "offset": "{{offset}}",
+          "random_id": "{{random_id}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "emoji.variations": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List emoji variations",
+      "description": "List skin-tone and style variations for a GIPHY emoji GIF id.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "gif_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Base emoji GIF Object id."
+          },
+          "random_id": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "gif_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/emoji/{{gif_id}}/variations",
+        "success": [
+          200
+        ],
+        "baseUrl": "https://api.giphy.com/v2",
+        "query": {
+          "random_id": "{{random_id}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "tags.random": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Random tag",
+      "description": "Return a single GIPHY tag suggestion, optionally filtered by a query term.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "tag": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Optional search term to filter tag suggestions."
+          },
+          "random_id": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/gifs/search/tags",
+        "success": [
+          200
+        ],
+        "query": {
+          "q": "{{tag}}",
+          "limit": 1,
+          "random_id": "{{random_id}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "gifs.upload": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Upload GIF",
+      "description": "Upload a GIF or video to GIPHY from a public source URL.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "source_image_url": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Public URL of the GIF or video to upload."
+          },
+          "tags": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Comma-delimited tags."
+          },
+          "username": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Assigned GIPHY channel username (production apps)."
+          },
+          "source_post_url": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Source page URL for the asset."
+          },
+          "country_code": {
+            "type": "string",
+            "minLength": 2
+          },
+          "region": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "source_image_url"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/gifs",
+        "success": [
+          200
+        ],
+        "baseUrl": "https://upload.giphy.com/v1",
+        "body": {
+          "source_image_url": "{{source_image_url}}",
+          "tags": "{{tags}}",
+          "username": "{{username}}",
+          "source_post_url": "{{source_post_url}}",
+          "country_code": "{{country_code}}",
+          "region": "{{region}}"
+        },
+        "bodyEncoding": "form",
+        "headers": {
+          "Content-Type": "application/x-www-form-urlencoded"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    }
+  },
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
+    }
+  }
+}

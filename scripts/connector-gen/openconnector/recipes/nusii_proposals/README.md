@@ -1,17 +1,18 @@
 # Nusii Proposals
 
-Read-only international **Nusii Proposals REST API v2** recipe. Create or view a token under Nusii Settings → API and store it as `apiKey`. Requests send `Authorization: Token token=<key>` and `Accept: application/json` to `https://app.nusii.com/api/v2`.
+International **Nusii Proposals REST API v2** recipe (v0.2.0). Create or view a token under Nusii Settings → API and store it as `apiKey`. Requests send `Authorization: Token token=<key>` and `Accept: application/json` to `https://app.nusii.com/api/v2`.
 
 ## Operations
 
-- `healthcheck`: `GET /account/me` with empty input (cheap authenticated account probe; pinned credential validator).
-- `account.get`: same `GET /account/me`.
-- `clients.list`: `GET /clients` with optional `page` and `per`.
-- `clients.get`: `GET /clients/{id}`; `id` is a required nonempty string.
-- `proposals.list`: `GET /proposals` with optional `page`, `per`, `status` (`draft`|`pending`|`accepted`|`rejected`|`clarification`), `archived`, and `recipient_email`.
-- `templates.list`: `GET /templates` with optional `page`, `per`, and `public_templates`.
+- `healthcheck` / `account.get`: `GET /account/me`.
+- Clients: `clients.list|get|create|update|delete`.
+- Proposals: `proposals.list|get|create|update|delete`, `proposals.archive`, `proposals.send`.
+- Templates: `templates.list|get`.
+- Sections: `sections.list|get|create`.
+- `users.list`, `themes.list`, `webhook_endpoints.list`.
+- EventOnly webhooks: `webhook.proposal_accepted`, `webhook.proposal_sent`, `webhook.proposal_viewed`, `webhook.client_created`.
 
-Successful responses are raw JSON:API under AppCall `data`. Create/update/archive/send writes and OAuth-only MCP flows are omitted.
+Successful responses are raw JSON:API under AppCall `data`.
 
 ## Adaptations
 

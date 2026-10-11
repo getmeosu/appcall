@@ -1,7 +1,17 @@
 {
+  "key": "bamboohr",
+  "name": "BambooHR",
+  "version": "0.2.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "productivity"
+  ],
   "auth": {
+    "type": "api_key",
     "scopes": [],
     "setup": {
+      "mode": "api_key",
       "fields": [
         {
           "key": "apiKey",
@@ -15,62 +25,161 @@
           "required": true,
           "secret": false
         }
-      ],
-      "mode": "api_key"
-    },
-    "type": "api_key"
-  },
-  "categories": [
-    "productivity"
-  ],
-  "evidence": {
-    "fixture": {
-      "status": "supplied"
-    },
-    "live": {
-      "status": "unverified"
+      ]
     }
   },
-  "http": {
-    "auth": {
-      "basic": {
-        "password": "x",
-        "username": "{{apiKey}}"
-      },
-      "field": "apiKey",
-      "in": "header",
-      "name": "Authorization"
-    },
-    "baseUrl": "https://{{companyDomain}}.bamboohr.com",
-    "errors": {
-      "defaultRetryAfterSeconds": 30,
-      "messagePaths": [
-        "detail",
-        "message",
-        "error"
-      ],
-      "rateLimitStatuses": [
-        429
-      ],
-      "retryAfterHeader": "retry-after"
-    },
-    "headers": {
-      "Accept": "application/json"
-    }
-  },
-  "key": "bamboohr",
-  "models": [
-    "company",
-    "field",
-    "employee"
-  ],
-  "name": "BambooHR",
   "network": {
     "allowedHosts": [
       "*.bamboohr.com"
     ]
   },
+  "models": [
+    "company",
+    "field",
+    "employee",
+    "timeOff",
+    "user",
+    "file"
+  ],
+  "http": {
+    "baseUrl": "https://{{companyDomain}}.bamboohr.com",
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "Authorization",
+      "basic": {
+        "username": "{{apiKey}}",
+        "password": "x"
+      }
+    },
+    "headers": {
+      "Accept": "application/json"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after",
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "detail",
+        "message",
+        "error"
+      ]
+    }
+  },
   "operations": {
+    "healthcheck": {
+      "description": "Validate BambooHR credentials with GET /api/v1/company_information.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {},
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/company_information",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 5000,
+      "title": "Healthcheck",
+      "validationMode": "strict-generated"
+    },
+    "fields.list": {
+      "description": "List BambooHR employee fields available to the connected account.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {},
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "items": {
+              "type": "object"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/meta/fields",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List fields",
+      "validationMode": "strict-generated"
+    },
+    "employees.list": {
+      "description": "List BambooHR employees for the connected company.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {},
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/employees",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List employees",
+      "validationMode": "strict-generated"
+    },
     "employees.get": {
       "description": "Retrieve one BambooHR employee by ID.",
       "enforceOutputSchema": true,
@@ -115,125 +224,887 @@
       "title": "Get employee",
       "validationMode": "strict-generated"
     },
-    "employees.list": {
-      "description": "List BambooHR employees for the connected company.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {},
-        "type": "object"
-      },
-      "kind": "action",
-      "maxInputBytes": 4096,
+    "employees.create": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
-      "outputSchema": {
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Create employee",
+      "description": "Create a BambooHR employee.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "firstName": {
+            "type": "string",
+            "minLength": 1,
+            "description": "First name."
+          },
+          "lastName": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Last name."
+          },
+          "workEmail": {
+            "type": "string",
+            "description": "Work email."
+          },
+          "jobTitle": {
+            "type": "string",
+            "description": "Job title."
+          },
+          "hireDate": {
+            "type": "string",
+            "description": "Hire date (YYYY-MM-DD)."
+          }
+        },
         "additionalProperties": false,
+        "required": [
+          "firstName",
+          "lastName"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "required": [
-          "data"
-        ],
-        "type": "object"
+        "additionalProperties": false
       },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
       "request": {
-        "method": "GET",
+        "method": "POST",
         "path": "/api/v1/employees",
         "success": [
+          201,
           200
-        ]
-      },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "title": "List employees",
-      "validationMode": "strict-generated"
+        ],
+        "headers": {
+          "Accept": "application/json",
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "firstName": "{{firstName}}",
+          "lastName": "{{lastName}}",
+          "workEmail": "{{workEmail}}",
+          "jobTitle": "{{jobTitle}}",
+          "hireDate": "{{hireDate}}"
+        }
+      }
     },
-    "fields.list": {
-      "description": "List BambooHR employee fields available to the connected account.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {},
-        "type": "object"
-      },
-      "kind": "action",
-      "maxInputBytes": 4096,
+    "employees.update": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
-      "outputSchema": {
-        "additionalProperties": false,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Update employee",
+      "description": "Update a BambooHR employee by id.",
+      "inputSchema": {
+        "type": "object",
         "properties": {
-          "data": {
-            "items": {
-              "type": "object"
-            },
-            "type": "array"
+          "employeeId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Employee id."
+          },
+          "firstName": {
+            "type": "string",
+            "description": "First name."
+          },
+          "lastName": {
+            "type": "string",
+            "description": "Last name."
+          },
+          "workEmail": {
+            "type": "string",
+            "description": "Work email."
+          },
+          "jobTitle": {
+            "type": "string",
+            "description": "Job title."
+          },
+          "status": {
+            "type": "string",
+            "description": "Employment status."
           }
         },
+        "additionalProperties": false,
+        "required": [
+          "employeeId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
         "required": [
           "data"
         ],
-        "type": "object"
-      },
-      "request": {
-        "method": "GET",
-        "path": "/api/v1/meta/fields",
-        "success": [
-          200
-        ]
-      },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "title": "List fields",
-      "validationMode": "strict-generated"
-    },
-    "healthcheck": {
-      "description": "Validate BambooHR credentials with GET /api/v1/company_information.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {},
-        "type": "object"
-      },
-      "kind": "action",
-      "maxInputBytes": 4096,
-      "maxResponseBytes": 65536,
-      "outputSchema": {
-        "additionalProperties": false,
         "properties": {
           "data": {
             "type": "object"
           }
         },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/employees/{{employeeId}}",
+        "success": [
+          200,
+          204
+        ],
+        "headers": {
+          "Accept": "application/json",
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "firstName": "{{firstName}}",
+          "lastName": "{{lastName}}",
+          "workEmail": "{{workEmail}}",
+          "jobTitle": "{{jobTitle}}",
+          "status": "{{status}}"
+        }
+      }
+    },
+    "employees.directory": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Employee directory",
+      "description": "List the BambooHR employee directory.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
         "required": [
           "data"
         ],
-        "type": "object"
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
       },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
       "request": {
         "method": "GET",
-        "path": "/api/v1/company_information",
+        "path": "/api/v1/employees/directory",
         "success": [
           200
+        ],
+        "headers": {
+          "Accept": "application/json"
+        }
+      }
+    },
+    "employees.changed": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Changed employees",
+      "description": "List BambooHR employees changed since a timestamp.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "since": {
+            "type": "string",
+            "minLength": 1,
+            "description": "ISO-8601 timestamp."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "since"
         ]
       },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
       "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/employees/changed",
+        "query": {
+          "since": "{{since}}"
+        },
+        "success": [
+          200
+        ],
+        "headers": {
+          "Accept": "application/json"
+        }
+      }
+    },
+    "tables.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
       "sideEffect": "read",
-      "timeoutMs": 5000,
-      "title": "Healthcheck",
-      "validationMode": "strict-generated"
+      "title": "List tables",
+      "description": "List BambooHR tabular data tables.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/meta/tables",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Accept": "application/json"
+        }
+      }
+    },
+    "tables.get": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Get table rows",
+      "description": "Get tabular rows for one BambooHR employee table.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "employeeId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Employee id."
+          },
+          "table": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Table name, for example jobInfo."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "employeeId",
+          "table"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/employees/{{employeeId}}/tables/{{table}}",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Accept": "application/json"
+        }
+      }
+    },
+    "users.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List users",
+      "description": "List BambooHR users.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/meta/users",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Accept": "application/json"
+        }
+      }
+    },
+    "lists.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List field lists",
+      "description": "List BambooHR list fields and their values.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/meta/lists",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Accept": "application/json"
+        }
+      }
+    },
+    "timeOff.types": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List time-off types",
+      "description": "List BambooHR time-off types.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/meta/time_off/types",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Accept": "application/json"
+        }
+      }
+    },
+    "timeOff.policies": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List time-off policies",
+      "description": "List BambooHR time-off policies.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/meta/time_off/policies",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Accept": "application/json"
+        }
+      }
+    },
+    "timeOff.whosOut": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Who's out",
+      "description": "List BambooHR employees and holidays who are out in a date range.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "start": {
+            "type": "string",
+            "description": "Start date (YYYY-MM-DD)."
+          },
+          "end": {
+            "type": "string",
+            "description": "End date (YYYY-MM-DD)."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/time_off/whos_out",
+        "query": {
+          "start": "{{start}}",
+          "end": "{{end}}"
+        },
+        "success": [
+          200
+        ],
+        "headers": {
+          "Accept": "application/json"
+        }
+      }
+    },
+    "timeOff.requests": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List time-off requests",
+      "description": "List BambooHR time-off requests.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "start": {
+            "type": "string",
+            "description": "Start date (YYYY-MM-DD)."
+          },
+          "end": {
+            "type": "string",
+            "description": "End date (YYYY-MM-DD)."
+          },
+          "status": {
+            "type": "string",
+            "description": "approved, denied, or requested."
+          },
+          "employeeId": {
+            "type": "string",
+            "description": "Limit to one employee."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/time_off/requests",
+        "query": {
+          "start": "{{start}}",
+          "end": "{{end}}",
+          "status": "{{status}}",
+          "employeeId": "{{employeeId}}"
+        },
+        "success": [
+          200
+        ],
+        "headers": {
+          "Accept": "application/json"
+        }
+      }
+    },
+    "timeOff.request": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Create time-off request",
+      "description": "Create a BambooHR time-off request for an employee.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "employeeId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Employee id."
+          },
+          "status": {
+            "type": "string",
+            "minLength": 1,
+            "description": "approved, denied, or requested."
+          },
+          "start": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Start date (YYYY-MM-DD)."
+          },
+          "end": {
+            "type": "string",
+            "minLength": 1,
+            "description": "End date (YYYY-MM-DD)."
+          },
+          "timeOffTypeId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Time-off type id."
+          },
+          "amount": {
+            "type": "integer",
+            "description": "Amount in days or hours.",
+            "minimum": 0
+          },
+          "notes": {
+            "type": "string",
+            "description": "Request notes."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "employeeId",
+          "status",
+          "start",
+          "end",
+          "timeOffTypeId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "PUT",
+        "path": "/api/v1/employees/{{employeeId}}/time_off/request",
+        "success": [
+          201,
+          200
+        ],
+        "headers": {
+          "Accept": "application/json",
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "status": "{{status}}",
+          "start": "{{start}}",
+          "end": "{{end}}",
+          "timeOffTypeId": "{{timeOffTypeId}}",
+          "amount": "{{amount}}",
+          "notes": "{{notes}}"
+        }
+      }
+    },
+    "timeOff.changeStatus": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Change time-off status",
+      "description": "Change the status of a BambooHR time-off request.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Time-off request id."
+          },
+          "status": {
+            "type": "string",
+            "minLength": 1,
+            "description": "approved, denied, or canceled."
+          },
+          "note": {
+            "type": "string",
+            "description": "Status note."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "requestId",
+          "status"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "PUT",
+        "path": "/api/v1/time_off/requests/{{requestId}}/status",
+        "success": [
+          200,
+          204
+        ],
+        "headers": {
+          "Accept": "application/json",
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "status": "{{status}}",
+          "note": "{{note}}"
+        }
+      }
+    },
+    "files.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List employee files",
+      "description": "List files and categories for a BambooHR employee.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "employeeId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Employee id."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "employeeId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/employees/{{employeeId}}/files/view",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Accept": "application/json"
+        }
+      }
+    },
+    "company.files": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List company files",
+      "description": "List BambooHR company files and categories.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/files/view",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Accept": "application/json"
+        }
+      }
     }
   },
   "provenance": {
     "source": {
-      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
-      "url": "https://github.com/oomol-lab/open-connector"
+      "url": "https://github.com/oomol-lab/open-connector",
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"
     }
   },
-  "runtime": "bun",
-  "version": "0.1.0",
-  "visibility": "public"
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
+    }
+  }
 }

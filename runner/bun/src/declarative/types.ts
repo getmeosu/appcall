@@ -106,7 +106,9 @@ export type DeclarativeRequest = {
   // continue using the string-template fallback above.
   parameters?: DeclarativeParameter[];
   body?: unknown;
-  bodyEncoding?: "form";
+  // "raw" sends the rendered string unchanged. Dropbox content-upload routes
+  // put JSON arguments in Dropbox-API-Arg and the file bytes in the body.
+  bodyEncoding?: "form" | "raw";
   success?: number[];
   // result maps the provider response onto the operation output. Placeholders
   // resolve against { response, status, headers, input }. Omitted, the parsed
@@ -120,7 +122,8 @@ export type DeclarativeRequest = {
 
 export type DeclarativeOperation = {
   validationMode?: "legacy" | "strict-generated";
-  responseFormat?: "json";
+  // "text" keeps a content-download body as a string. "json" parses it.
+  responseFormat?: "json" | "text";
   kind?: string;
   timeoutMs?: number;
   maxInputBytes?: number;

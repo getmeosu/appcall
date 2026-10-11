@@ -1,16 +1,18 @@
 # WorkOS
 
-Read-only international WorkOS API recipe. Configure a secret API key (`sk_…`) from the WorkOS Dashboard. The runner sends `Authorization: Bearer` plus `Accept: application/json` to `https://api.workos.com`.
+International WorkOS API recipe (v0.2.0). Configure a secret API key (`sk_…`) from the WorkOS Dashboard. The runner sends `Authorization: Bearer` plus `Accept: application/json` to `https://api.workos.com`.
 
 ## Operations
 
 - `healthcheck`: `GET /organizations?limit=1` with empty input (pinned credential validator).
-- `organizations.list`: `GET /organizations` with optional `before`, `after`, `limit` (1–100), `order`, and `search`.
-- `organizations.get`: `GET /organizations/{id}`.
-- `users.list`: `GET /user_management/users` with optional cursor, `limit`, `order`, `organization_id`, and `email`.
-- `users.get`: `GET /user_management/users/{id}`.
+- Organizations: `organizations.list|get|create|update|delete`.
+- Users: `users.list|get|create|update|delete`.
+- Memberships: `memberships.list|get|create|update|delete`.
+- Invitations: `invitations.list|get|create` and `invitations.revoke`.
+- Directories and SSO: `directories.list`, `connections.list`.
+- EventOnly webhooks: `webhook.user_created`, `webhook.organization_created`, `webhook.organization_membership_created`, `webhook.invitation_accepted`.
 
-Writes, memberships, and the `domains` array filter are omitted. Native returns raw WorkOS JSON under `data` instead of unwrapping `{organizations|users, raw}`. Native category is `dev-tools`. The upstream user-agent is not sent.
+Native returns raw WorkOS JSON under `data`. Native category is `dev-tools`. The upstream user-agent is not sent. The `domains` array filter is omitted because native query templates cannot repeat keys.
 
 ## License and evidence
 

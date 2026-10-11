@@ -11,14 +11,46 @@
       "src/providers/cronitor/executors.ts": "a3bd5eb5de497e4da747a73f70a3c2614bd9e15c0d29707ce00cbaec75634f09"
     },
     "spans": {
-      "provider-auth": {"path":"src/providers/cronitor/definition.ts","startLine":7,"endLine":23},
-      "action-list-monitors": {"path":"src/providers/cronitor/actions.ts","startLine":112,"endLine":121},
-      "action-get-monitor": {"path":"src/providers/cronitor/actions.ts","startLine":122,"endLine":133},
-      "handler-list-monitors": {"path":"src/providers/cronitor/executors.ts","startLine":38,"endLine":42},
-      "handler-get-monitor": {"path":"src/providers/cronitor/executors.ts","startLine":43,"endLine":50},
-      "request-auth-headers": {"path":"src/providers/cronitor/executors.ts","startLine":146,"endLine":180},
-      "request-response": {"path":"src/providers/cronitor/executors.ts","startLine":153,"endLine":165},
-      "monitor-key-encoding": {"path":"src/providers/cronitor/executors.ts","startLine":43,"endLine":49}
+      "provider-auth": {
+        "path": "src/providers/cronitor/definition.ts",
+        "startLine": 7,
+        "endLine": 23
+      },
+      "action-list-monitors": {
+        "path": "src/providers/cronitor/actions.ts",
+        "startLine": 112,
+        "endLine": 121
+      },
+      "action-get-monitor": {
+        "path": "src/providers/cronitor/actions.ts",
+        "startLine": 122,
+        "endLine": 133
+      },
+      "handler-list-monitors": {
+        "path": "src/providers/cronitor/executors.ts",
+        "startLine": 38,
+        "endLine": 42
+      },
+      "handler-get-monitor": {
+        "path": "src/providers/cronitor/executors.ts",
+        "startLine": 43,
+        "endLine": 50
+      },
+      "request-auth-headers": {
+        "path": "src/providers/cronitor/executors.ts",
+        "startLine": 146,
+        "endLine": 180
+      },
+      "request-response": {
+        "path": "src/providers/cronitor/executors.ts",
+        "startLine": 153,
+        "endLine": 165
+      },
+      "monitor-key-encoding": {
+        "path": "src/providers/cronitor/executors.ts",
+        "startLine": 43,
+        "endLine": 49
+      }
     }
   },
   "selection": {
@@ -29,7 +61,20 @@
     "operations": [
       "healthcheck",
       "monitors.list",
-      "monitors.get"
+      "monitors.get",
+      "monitors.create",
+      "monitors.update",
+      "monitors.delete",
+      "monitors.pause",
+      "monitors.clone",
+      "issues.list",
+      "issues.get",
+      "issues.create",
+      "issues.update",
+      "issues.delete",
+      "statuspages.list",
+      "groups.list",
+      "environments.list"
     ],
     "upstreamSha": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
     "marketFocus": "international",
@@ -79,7 +124,13 @@
       "https://cronitor.io/docs/security"
     ],
     "searchCoverage": "Bounded dated review on 2026-09-13 covered API/authentication, monitor operations, company identity, security controls, and published InfoSec/incident-response policy materials. No breach-free claim is made; live and independently reported incident status remains unverified.",
-    "incidents": [{"date":"2026-09-13","source":"https://cronitor.io/docs/security","finding":"Published security page documents incident and breach response procedures; no specific incident disclosure was identified in this bounded source review."}],
+    "incidents": [
+      {
+        "date": "2026-09-13",
+        "source": "https://cronitor.io/docs/security",
+        "finding": "Published security page documents incident and breach response procedures; no specific incident disclosure was identified in this bounded source review."
+      }
+    ],
     "remainingGates": [
       "live authentication unverified"
     ],
@@ -145,7 +196,7 @@
   "manifest": {
     "key": "cronitor",
     "name": "cronitor",
-    "version": "0.1.0",
+    "version": "0.2.0",
     "runtime": "bun",
     "visibility": "public",
     "categories": [
@@ -174,7 +225,11 @@
       "account",
       "monitor",
       "uptimeTest",
-      "location"
+      "location",
+      "issue",
+      "statuspage",
+      "group",
+      "environment"
     ],
     "http": {
       "baseUrl": "https://cronitor.io/api",
@@ -202,11 +257,11 @@
     },
     "operations": {
       "healthcheck": {
+        "kind": "action",
+        "sideEffect": "read",
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
         "maxResponseBytes": 5242880,
-        "kind": "action",
-        "sideEffect": "read",
         "title": "healthcheck",
         "description": "Read healthcheck from Cronitor.",
         "inputSchema": {
@@ -242,16 +297,37 @@
         "responseFormat": "json"
       },
       "monitors.list": {
+        "kind": "action",
+        "sideEffect": "read",
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
         "maxResponseBytes": 5242880,
-        "kind": "action",
-        "sideEffect": "read",
         "title": "monitors.list",
-        "description": "Read monitors.list from Cronitor.",
+        "description": "List Cronitor monitors.",
         "inputSchema": {
           "type": "object",
-          "properties": {},
+          "properties": {
+            "type": {
+              "type": "string",
+              "description": "Monitor type filter."
+            },
+            "group": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Group key filter."
+            },
+            "page": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Page number."
+            },
+            "pageSize": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000,
+              "description": "Page size."
+            }
+          },
           "additionalProperties": false
         },
         "outputSchema": {
@@ -275,6 +351,12 @@
           "headers": {
             "Accept": "application/json",
             "Cronitor-Version": "2025-11-28"
+          },
+          "query": {
+            "type": "{{type}}",
+            "group": "{{group}}",
+            "page": "{{page}}",
+            "pageSize": "{{pageSize}}"
           }
         },
         "enforceOutputSchema": true,
@@ -282,19 +364,20 @@
         "responseFormat": "json"
       },
       "monitors.get": {
+        "kind": "action",
+        "sideEffect": "read",
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
         "maxResponseBytes": 5242880,
-        "kind": "action",
-        "sideEffect": "read",
         "title": "monitors.get",
-        "description": "Read monitors.get from Cronitor.",
+        "description": "Get one Cronitor monitor by key.",
         "inputSchema": {
           "type": "object",
           "properties": {
             "key": {
               "type": "string",
-              "minLength": 1
+              "minLength": 1,
+              "description": "Monitor key."
             }
           },
           "additionalProperties": false,
@@ -328,6 +411,777 @@
         "enforceOutputSchema": true,
         "validationMode": "strict-generated",
         "responseFormat": "json"
+      },
+      "monitors.create": {
+        "kind": "action",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "monitors.create",
+        "description": "Create a Cronitor monitor.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "key": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Unique monitor key."
+            },
+            "type": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Monitor type.",
+              "enum": [
+                "job",
+                "check",
+                "heartbeat",
+                "site"
+              ]
+            },
+            "name": {
+              "type": "string",
+              "description": "Display name."
+            },
+            "schedule": {
+              "type": "string",
+              "description": "Schedule expression."
+            },
+            "paused": {
+              "type": "boolean",
+              "description": "Create the monitor paused."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "key",
+            "type"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "POST",
+          "path": "/monitors",
+          "success": [
+            200,
+            201
+          ],
+          "headers": {
+            "Accept": "application/json",
+            "Cronitor-Version": "2025-11-28",
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "key": "{{key}}",
+            "type": "{{type}}",
+            "name": "{{name}}",
+            "schedule": "{{schedule}}",
+            "paused": "{{paused}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "monitors.update": {
+        "kind": "action",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "monitors.update",
+        "description": "Update a Cronitor monitor by key.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "key": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Monitor key."
+            },
+            "name": {
+              "type": "string",
+              "description": "Display name."
+            },
+            "schedule": {
+              "type": "string",
+              "description": "Schedule expression."
+            },
+            "paused": {
+              "type": "boolean",
+              "description": "Pause or resume monitoring."
+            },
+            "note": {
+              "type": "string",
+              "description": "Operator note."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "key"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "PUT",
+          "path": "/monitors/{{key}}",
+          "success": [
+            200
+          ],
+          "headers": {
+            "Accept": "application/json",
+            "Cronitor-Version": "2025-11-28",
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "name": "{{name}}",
+            "schedule": "{{schedule}}",
+            "paused": "{{paused}}",
+            "note": "{{note}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "monitors.delete": {
+        "kind": "action",
+        "sideEffect": "destructive",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "monitors.delete",
+        "description": "Delete a Cronitor monitor by key.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "key": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Monitor key."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "key"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "deleted": {
+              "type": "boolean"
+            },
+            "key": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "deleted",
+            "key"
+          ]
+        },
+        "request": {
+          "method": "DELETE",
+          "path": "/monitors/{{key}}",
+          "success": [
+            204,
+            200
+          ],
+          "headers": {
+            "Accept": "application/json",
+            "Cronitor-Version": "2025-11-28"
+          },
+          "result": {
+            "deleted": true,
+            "key": "{{input.key}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "monitors.pause": {
+        "kind": "action",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "monitors.pause",
+        "description": "Pause a Cronitor monitor for a number of hours, or resume with hours=0.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "key": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Monitor key."
+            },
+            "hours": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Hours to pause; 0 resumes monitoring."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "key",
+            "hours"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/monitors/{{key}}/pause/{{hours}}",
+          "success": [
+            200
+          ],
+          "headers": {
+            "Accept": "application/json",
+            "Cronitor-Version": "2025-11-28"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "monitors.clone": {
+        "kind": "action",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "monitors.clone",
+        "description": "Clone an existing Cronitor monitor.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "key": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Source monitor key."
+            },
+            "name": {
+              "type": "string",
+              "description": "Name for the clone."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "key"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "POST",
+          "path": "/monitors/clone",
+          "success": [
+            200,
+            201
+          ],
+          "headers": {
+            "Accept": "application/json",
+            "Cronitor-Version": "2025-11-28",
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "key": "{{key}}",
+            "name": "{{name}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "issues.list": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "issues.list",
+        "description": "List Cronitor issues.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "state": {
+              "type": "string",
+              "description": "Issue state filter."
+            },
+            "search": {
+              "type": "string",
+              "description": "Search text."
+            },
+            "page": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Page number."
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/issues",
+          "success": [
+            200
+          ],
+          "headers": {
+            "Accept": "application/json",
+            "Cronitor-Version": "2025-11-28"
+          },
+          "query": {
+            "state": "{{state}}",
+            "search": "{{search}}",
+            "page": "{{page}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "issues.get": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "issues.get",
+        "description": "Get one Cronitor issue by key.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "key": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Issue key."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "key"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/issues/{{key}}",
+          "success": [
+            200
+          ],
+          "headers": {
+            "Accept": "application/json",
+            "Cronitor-Version": "2025-11-28"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "issues.create": {
+        "kind": "action",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "issues.create",
+        "description": "Create a Cronitor issue.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Issue name."
+            },
+            "severity": {
+              "type": "string",
+              "description": "Issue severity."
+            },
+            "state": {
+              "type": "string",
+              "description": "Issue state."
+            },
+            "assigned_to": {
+              "type": "string",
+              "description": "Assignee email."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "name"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "POST",
+          "path": "/issues",
+          "success": [
+            200,
+            201
+          ],
+          "headers": {
+            "Accept": "application/json",
+            "Cronitor-Version": "2025-11-28",
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "name": "{{name}}",
+            "severity": "{{severity}}",
+            "state": "{{state}}",
+            "assigned_to": "{{assigned_to}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "issues.update": {
+        "kind": "action",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "issues.update",
+        "description": "Update a Cronitor issue.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "key": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Issue key."
+            },
+            "name": {
+              "type": "string",
+              "description": "Issue name."
+            },
+            "severity": {
+              "type": "string",
+              "description": "Issue severity."
+            },
+            "state": {
+              "type": "string",
+              "description": "Issue state."
+            },
+            "assigned_to": {
+              "type": "string",
+              "description": "Assignee email."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "key"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "PUT",
+          "path": "/issues/{{key}}",
+          "success": [
+            200
+          ],
+          "headers": {
+            "Accept": "application/json",
+            "Cronitor-Version": "2025-11-28",
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "name": "{{name}}",
+            "severity": "{{severity}}",
+            "state": "{{state}}",
+            "assigned_to": "{{assigned_to}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "issues.delete": {
+        "kind": "action",
+        "sideEffect": "destructive",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "issues.delete",
+        "description": "Delete a Cronitor issue.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "key": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Issue key."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "key"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "deleted": {
+              "type": "boolean"
+            },
+            "key": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "deleted",
+            "key"
+          ]
+        },
+        "request": {
+          "method": "DELETE",
+          "path": "/issues/{{key}}",
+          "success": [
+            204,
+            200
+          ],
+          "headers": {
+            "Accept": "application/json",
+            "Cronitor-Version": "2025-11-28"
+          },
+          "result": {
+            "deleted": true,
+            "key": "{{input.key}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "statuspages.list": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "statuspages.list",
+        "description": "List Cronitor status pages.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/statuspages",
+          "success": [
+            200
+          ],
+          "headers": {
+            "Accept": "application/json",
+            "Cronitor-Version": "2025-11-28"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "groups.list": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "groups.list",
+        "description": "List Cronitor monitor groups.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/groups",
+          "success": [
+            200
+          ],
+          "headers": {
+            "Accept": "application/json",
+            "Cronitor-Version": "2025-11-28"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "environments.list": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "environments.list",
+        "description": "List Cronitor environments.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/environments",
+          "success": [
+            200
+          ],
+          "headers": {
+            "Accept": "application/json",
+            "Cronitor-Version": "2025-11-28"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "webhook.alert": {
+        "kind": "webhook",
+        "timeoutMs": 30000,
+        "maxInputBytes": 1048576,
+        "maxResponseBytes": 1048576,
+        "title": "Alert",
+        "description": "Cronitor webhook alert. Fires when a monitor fails an assertion or misses its schedule. Maps type=ALERT.",
+        "sideEffect": "read"
+      },
+      "webhook.recovery": {
+        "kind": "webhook",
+        "timeoutMs": 30000,
+        "maxInputBytes": 1048576,
+        "maxResponseBytes": 1048576,
+        "title": "Recovery",
+        "description": "Cronitor webhook recovery. Fires when a previously alerting monitor recovers. Maps type=RECOVERY.",
+        "sideEffect": "read"
       }
     },
     "provenance": {

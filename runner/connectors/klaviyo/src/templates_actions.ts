@@ -1,4 +1,4 @@
-import { createKlaviyoClient, parseKlaviyoRateLimit, isRecord } from "./http";
+import { createKlaviyoClient, firstString, parseKlaviyoRateLimit, queryPath, isRecord } from "./http";
 import { normalizeTemplate, parseTemplatesResponse } from "./objects";
 import type { NormalizedTemplate } from "./objects";
 
@@ -11,7 +11,7 @@ export function validateListTemplatesInput(input: unknown): Record<string, never
 
 export function validateGetTemplateInput(input: unknown): GetTemplateInput {
   if (!isRecord(input)) throw new Error("input must be an object");
-  return { templateId: requireString(input.templateId, "templateId") };
+  return { templateId: firstString(input, ["templateId", "id"], "templateId") };
 }
 
 export async function listTemplatesFromClient(
@@ -20,7 +20,7 @@ export async function listTemplatesFromClient(
 ): Promise<{ ok: true; templates: NormalizedTemplate[] } | { ok: false; error: { code: string; message: string; retryAfterSeconds?: number } }> {
   validateListTemplatesInput(input);
   const client = createKlaviyoClient({ apiKey: options.apiKey, fetch: options.fetch, operation: "templates.list" });
-  const result = await client.fetchJSON("/templates");
+  const result = await client.fetchJSON(queryPath("/templates", input));
   if (result.status === 200) return { ok: true, templates: parseTemplatesResponse(result.body).templates };
   const rl = parseKlaviyoRateLimit(result.status, result.headers);
   if (rl.limited) return { ok: false, error: { code: "CONNECTOR_RATE_LIMITED", message: "Klaviyo rate limit exceeded.", retryAfterSeconds: rl.retryAfterSeconds } };
@@ -33,7 +33,7 @@ export async function getTemplateFromClient(
 ): Promise<{ ok: true; template: NormalizedTemplate } | { ok: false; error: { code: string; message: string; retryAfterSeconds?: number } }> {
   const payload = validateGetTemplateInput(input);
   const client = createKlaviyoClient({ apiKey: options.apiKey, fetch: options.fetch, operation: "templates.get" });
-  const result = await client.fetchJSON(`/templates/${payload.templateId}`);
+  const result = await client.fetchJSON(queryPath(`/templates/${payload.templateId}`, input));
   if (result.status === 200) {
     const body = result.body as Record<string, unknown>;
     const data = isRecord(body.data) ? body.data : { id: payload.templateId, attributes: {} };

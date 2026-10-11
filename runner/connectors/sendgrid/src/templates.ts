@@ -220,6 +220,7 @@ export function createSuppressionClient(options: { apiKey: string; fetch?: typeo
         path: "/suppression/bounces",
         map: normalizeBounce,
         message: "SendGrid rejected the bounces list request.",
+        includeEmail: true,
       }).then((result) => result.ok ? { ok: true as const, bounces: result.items } : result);
     },
     async listBlocks(input: unknown) {
@@ -230,6 +231,7 @@ export function createSuppressionClient(options: { apiKey: string; fetch?: typeo
         path: "/suppression/blocks",
         map: normalizeBounce,
         message: "SendGrid rejected the blocks list request.",
+        includeEmail: true,
       }).then((result) => result.ok ? { ok: true as const, blocks: result.items } : result);
     },
     async listSpamReports(input: unknown) {
@@ -240,6 +242,7 @@ export function createSuppressionClient(options: { apiKey: string; fetch?: typeo
         path: "/suppression/spam_reports",
         map: normalizeSpamReport,
         message: "SendGrid rejected the spam reports list request.",
+        includeEmail: true,
       }).then((result) => result.ok ? { ok: true as const, spamReports: result.items } : result);
     },
     async listUnsubscribes(input: unknown) {
@@ -261,6 +264,7 @@ export function createSuppressionClient(options: { apiKey: string; fetch?: typeo
         path: "/suppression/invalid_emails",
         map: normalizeInvalidEmail,
         message: "SendGrid rejected the invalid emails list request.",
+        includeEmail: true,
       }).then((result) => result.ok ? { ok: true as const, invalidEmails: result.items } : result);
     },
   };

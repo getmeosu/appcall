@@ -1,20 +1,24 @@
 # Beaconcha.in
 
-Read-only international **Beaconcha.in Ethereum V2 API** recipe. Create an API key at `https://beaconcha.in/user/api-key-management` and store it as `apiKey`. Requests send `Authorization: Bearer` and `Accept: application/json` to `https://beaconcha.in`. All curated operations are POST JSON.
+Read-only international **Beaconcha.in** recipe covering the Composio `BEACONCHAIN` toolkit (37 tools).
+Create an API key at `https://beaconcha.in/user/api-key-management` and store it as `apiKey`.
+Requests send `Authorization: Bearer` to `https://beaconcha.in`. Origin V2 operations remain POST JSON;
+added Composio tools call the documented V1 GET endpoints with `apikey` as a query parameter.
 
 ## Operations
 
-- `healthcheck`: `POST /api/v2/ethereum/queues` with `{"chain":"mainnet"}` (cheap authenticated network-queue read; pinned credential validator).
-- `queues.get`: `POST /api/v2/ethereum/queues` with optional `chain` (`mainnet` or `hoodi`).
-- `performance.get`: `POST /api/v2/ethereum/performance-aggregate` with required `evaluationWindow` (`24h`, `7d`, `30d`, `90d`, `all_time`) as `range.evaluation_window`.
-- `validators.get`: `POST /api/v2/ethereum/validators` with required `validatorIdentifier` (index or public key).
-- `validators.list`: `POST /api/v2/ethereum/validators` with required `validatorIdentifiers` and optional `cursor` / `pageSize` (1–10).
+- `healthcheck`: `POST /api/v2/ethereum/queues` with `{"chain":"mainnet"}` (pinned credential validator).
+- `queues.get`: `POST /api/v2/ethereum/queues` (Composio `BEACONCHAIN_GET_QUEUES`).
+- `performance.get`: `POST /api/v2/ethereum/performance-aggregate` (Composio `BEACONCHAIN_GET_NETWORK_PERFORMANCE`; `evaluationWindow` maps to `range.evaluation_window`).
+- `validators.get`: `POST /api/v2/ethereum/validators` (Composio `BEACONCHAIN_GET_VALIDATOR`).
+- `validators.list`: `POST /api/v2/ethereum/validators` (Composio `BEACONCHAIN_POST_VALIDATORS`).
+- Remaining 33 operations are official V1 GETs listed in `recipe.json` `selection.operations`.
 
-Successful responses are raw provider JSON under AppCall `data`. Writes, premium selectors (`entity`, `deposit_address`, `withdrawal`), and rewards-list are omitted.
+Successful responses are raw provider JSON under AppCall `data`. Chart PNG and explorer health text are returned as strings. Writes and premium V2 selectors are omitted.
 
 ## Adaptations
 
-Pinned source and official V2 docs agree on `https://beaconcha.in` and Bearer auth. Native category is `utility` (source Finance/Data). Native identifier fields are string or non-negative integer because strict schemas cannot express `anyOf`. Native returns raw JSON rather than the source's normalized queue/validator objects.
+Origin V2 ops keep their request shapes. Added tools follow Composio input names against beaconcha.in V1 paths from https://docs.beaconcha.in/api/v1-to-v2-migration. Native category is `utility`.
 
 ## License and evidence
 

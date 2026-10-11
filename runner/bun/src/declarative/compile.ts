@@ -100,13 +100,15 @@ function assertBasicAuthConfiguration(auth: DeclarativeHttp["auth"]): void {
 // to boot rather than shipping that silently.
 function assertTemplatedHostsAreDeclared(manifest: DeclarativeManifest): void {
   const required = new Map<string, boolean>();
-  const declare = (field: DeclarativeSetupField) => required.set(field.key, field.required === true);
+  // `declare` is a TypeScript keyword. Bun 1.3.8 erases a binding with that
+  // name, which drops every setup field and rejects a templated base URL.
+  const rememberField = (field: DeclarativeSetupField) => required.set(field.key, field.required === true);
   for (const field of manifest.auth?.setup?.fields ?? []) {
-    declare(field);
+    rememberField(field);
   }
   for (const route of manifest.auth?.setup?.routes ?? []) {
     for (const field of route.fields ?? []) {
-      declare(field);
+      rememberField(field);
     }
   }
 
@@ -648,6 +650,11 @@ function buildBody(request: DeclarativeRequest, input: Record<string, unknown>):
     return undefined;
   }
   const rendered = renderTemplate(request.body, input);
+  if (request.bodyEncoding === "raw") {
+    if (rendered === undefined || rendered === null) return undefined;
+    if (typeof rendered !== "string") throw new Error("raw body must render to a string");
+    return rendered;
+  }
   if (request.bodyEncoding === "form") {
     if (!isRecord(rendered) || Array.isArray(rendered) || rendered === null) throw new Error("form body must render to a plain object");
     if (isRecord(request.body)) {
@@ -680,14 +687,15 @@ function assertFormScalar(key: string, value: unknown): asserts value is string 
 }
 
 function assertBodyEncodingManifest(manifest: DeclarativeManifest, request: DeclarativeRequest): void {
-  if (request.bodyEncoding !== "form") return;
+  if (request.bodyEncoding !== "form" && request.bodyEncoding !== "raw") return;
+  const expected = request.bodyEncoding === "form" ? "application/x-www-form-urlencoded" : "application/octet-stream";
   const effective = new Map<string, unknown>();
   for (const block of [manifest.http?.headers, request.headers]) {
     if (!isRecord(block)) continue;
     for (const [key, value] of Object.entries(block)) effective.set(key.toLowerCase(), value);
   }
   const contentType = effective.get("content-type");
-  if (typeof contentType !== "string" || contentType.toLowerCase() !== "application/x-www-form-urlencoded") throw new Error(`${manifest.key}: form body requires Content-Type application/x-www-form-urlencoded`);
+  if (typeof contentType !== "string" || contentType.toLowerCase() !== expected) throw new Error(`${manifest.key}: ${request.bodyEncoding} body requires Content-Type ${expected}`);
 }
 
 function upstreamFailure(

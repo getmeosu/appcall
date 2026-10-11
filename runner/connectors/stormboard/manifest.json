@@ -1,1 +1,1113 @@
-{"auth":{"scopes":[],"setup":{"fields":[{"key":"apiKey","label":"Stormboard API key","required":true,"secret":true}],"mode":"api_key"},"type":"api_key"},"categories":["productivity"],"evidence":{"fixture":{"status":"supplied"},"live":{"status":"unverified"}},"http":{"auth":{"field":"apiKey","in":"header","name":"X-API-Key","value":"{{apiKey}}"},"baseUrl":"https://api.stormboard.com","errors":{"defaultRetryAfterSeconds":30,"messagePaths":["message","error","detail"],"rateLimitStatuses":[429],"retryAfterHeader":"retry-after"},"headers":{"Accept":"application/json"}},"key":"stormboard","models":["profile","storm","template"],"name":"Stormboard","network":{"allowedHosts":["api.stormboard.com"]},"operations":{"healthcheck":{"description":"Validate the Stormboard API key with GET /users/profile.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{},"type":"object"},"kind":"action","maxInputBytes":4096,"maxResponseBytes":65536,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/users/profile","success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":5000,"title":"Healthcheck","validationMode":"strict-generated"},"storms.get":{"description":"Get the details and setup for one Stormboard Storm.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{"stormId":{"minimum":1,"type":"integer"}},"required":["stormId"],"type":"object"},"kind":"action","maxInputBytes":65536,"maxResponseBytes":5242880,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/storms/{{stormId}}","success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":15000,"title":"Get storm","validationMode":"strict-generated"},"storms.list":{"description":"List Stormboard Storms visible to the current account.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{"folder":{"minimum":1,"type":"integer"},"needle":{"minLength":1,"type":"string"},"order":{"enum":["activity","alpha","frequency","starred"],"type":"string"},"results":{"maximum":100,"minimum":1,"type":"integer"},"start":{"minimum":0,"type":"integer"},"status":{"enum":["active","open","closed"],"type":"string"},"team":{"minimum":1,"type":"integer"}},"type":"object"},"kind":"action","maxInputBytes":65536,"maxResponseBytes":5242880,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/storms/list","query":{"folder":"{{folder}}","needle":"{{needle}}","order":"{{order}}","results":"{{results}}","start":"{{start}}","status":"{{status}}","team":"{{team}}"},"success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":15000,"title":"List storms","validationMode":"strict-generated"},"templates.categories.list":{"description":"List Stormboard template categories.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{},"type":"object"},"kind":"action","maxInputBytes":65536,"maxResponseBytes":5242880,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/templates/categories","success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":15000,"title":"List template categories","validationMode":"strict-generated"},"templates.list":{"description":"List Stormboard templates.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{},"type":"object"},"kind":"action","maxInputBytes":65536,"maxResponseBytes":5242880,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/templates","success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":15000,"title":"List templates","validationMode":"strict-generated"}},"provenance":{"source":{"revision":"33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a","url":"https://github.com/oomol-lab/open-connector"}},"runtime":"bun","version":"0.1.0","visibility":"public"}
+{
+  "key": "stormboard",
+  "name": "Stormboard",
+  "version": "0.2.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "productivity"
+  ],
+  "auth": {
+    "type": "api_key",
+    "scopes": [],
+    "setup": {
+      "mode": "api_key",
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "Stormboard API key",
+          "required": true,
+          "secret": true
+        }
+      ]
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "api.stormboard.com"
+    ]
+  },
+  "models": [
+    "profile",
+    "storm",
+    "template",
+    "idea",
+    "user",
+    "tag",
+    "connector"
+  ],
+  "http": {
+    "baseUrl": "https://api.stormboard.com",
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "X-API-Key",
+      "value": "{{apiKey}}"
+    },
+    "headers": {
+      "Accept": "application/json"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after",
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "message",
+        "error",
+        "detail"
+      ]
+    }
+  },
+  "operations": {
+    "healthcheck": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 5000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "title": "Healthcheck",
+      "description": "Validate the Stormboard API key with GET /users/profile.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/users/profile",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "storms.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List storms",
+      "description": "List Stormboard Storms visible to the current account.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "team": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "folder": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "needle": {
+            "type": "string",
+            "minLength": 1
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "open",
+              "closed"
+            ]
+          },
+          "start": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "order": {
+            "type": "string",
+            "enum": [
+              "activity",
+              "alpha",
+              "frequency",
+              "starred"
+            ]
+          },
+          "results": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/storms/list",
+        "success": [
+          200
+        ],
+        "query": {
+          "team": "{{team}}",
+          "folder": "{{folder}}",
+          "needle": "{{needle}}",
+          "status": "{{status}}",
+          "start": "{{start}}",
+          "order": "{{order}}",
+          "results": "{{results}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "storms.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get storm",
+      "description": "Get the details and setup for one Stormboard Storm.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "stormId"
+        ],
+        "properties": {
+          "stormId": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/storms/{{stormId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "templates.categories.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List template categories",
+      "description": "List Stormboard template categories.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/templates/categories",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "templates.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List templates",
+      "description": "List Stormboard templates.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/templates",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "users.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List users",
+      "description": "List Stormboard users visible to the API key. Auth docs use GET /users.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/users",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "storms.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create storm",
+      "description": "Create a Stormboard Storm.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Storm title."
+          },
+          "plan": {
+            "type": "string",
+            "enum": [
+              "personal",
+              "student",
+              "educator",
+              "team"
+            ],
+            "description": "Storm type."
+          },
+          "goals": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Storm goals and description."
+          },
+          "teamId": {
+            "type": "integer",
+            "description": "Team id. Required when plan is team.",
+            "minimum": 1
+          },
+          "ideacreator": {
+            "type": "boolean",
+            "description": "Show the idea creator avatar on sticky notes."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "title",
+          "plan"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/storms",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Accept": "application/json",
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "title": "{{title}}",
+          "plan": "{{plan}}",
+          "goals": "{{goals}}",
+          "teamId": "{{teamId}}",
+          "ideacreator": "{{ideacreator}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "storms.access.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get storm access",
+      "description": "Get the current account's access level for one Storm.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "stormId": {
+            "type": "integer",
+            "description": "Stormboard Storm id.",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "stormId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/storms/{{stormId}}/access",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "storms.close": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Close storm",
+      "description": "Close a Stormboard Storm so it becomes read-only.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "stormId": {
+            "type": "integer",
+            "description": "Stormboard Storm id.",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "stormId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/storms/{{stormId}}/close",
+        "success": [
+          200,
+          201,
+          204
+        ],
+        "headers": {
+          "Accept": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "storms.reopen": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Reopen storm",
+      "description": "Reopen a closed Stormboard Storm.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "stormId": {
+            "type": "integer",
+            "description": "Stormboard Storm id.",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "stormId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/storms/{{stormId}}/reopen",
+        "success": [
+          200,
+          201,
+          204
+        ],
+        "headers": {
+          "Accept": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "ideas.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List ideas",
+      "description": "List ideas in one Stormboard Storm.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "stormId": {
+            "type": "integer",
+            "description": "Stormboard Storm id.",
+            "minimum": 1
+          },
+          "lastModifiedMin": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Only return ideas modified since this ISO 8601 timestamp."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "stormId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/storms/{{stormId}}/ideas",
+        "success": [
+          200
+        ],
+        "query": {
+          "lastModifiedMin": "{{lastModifiedMin}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "ideas.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create idea",
+      "description": "Create an idea in an existing Stormboard Storm.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "stormid": {
+            "type": "integer",
+            "description": "Storm id that owns the idea.",
+            "minimum": 1
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "text",
+              "title"
+            ],
+            "description": "Idea type."
+          },
+          "data": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Idea content."
+          },
+          "color": {
+            "type": "string",
+            "enum": [
+              "yellow",
+              "pink",
+              "green",
+              "blue",
+              "purple",
+              "grey",
+              "red",
+              "silver",
+              "orange"
+            ],
+            "description": "Sticky note color."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "stormid",
+          "type",
+          "data",
+          "color"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/ideas",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Accept": "application/json",
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "stormid": "{{stormid}}",
+          "type": "{{type}}",
+          "data": "{{data}}",
+          "color": "{{color}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "ideas.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get idea",
+      "description": "Get one Stormboard idea by id.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "ideaId": {
+            "type": "integer",
+            "description": "Stormboard idea id.",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "ideaId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/ideas/{{ideaId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "storms.users.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List storm participants",
+      "description": "List participants in one Stormboard Storm.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "stormId": {
+            "type": "integer",
+            "description": "Stormboard Storm id.",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "stormId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/storms/{{stormId}}/users",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "storms.connectors.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List storm connectors",
+      "description": "List line connectors in one Stormboard Storm.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "stormId": {
+            "type": "integer",
+            "description": "Stormboard Storm id.",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "stormId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/storms/{{stormId}}/connectors",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "storms.tags.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List storm tags",
+      "description": "List tags created in one Stormboard Storm.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "stormId": {
+            "type": "integer",
+            "description": "Stormboard Storm id.",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "stormId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/storms/{{stormId}}/tags",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "storms.tags.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create storm tag",
+      "description": "Create a tag in a Stormboard Storm.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "stormId": {
+            "type": "integer",
+            "description": "Stormboard Storm id.",
+            "minimum": 1
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Tag name."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "stormId",
+          "name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/storms/{{stormId}}/tags",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Accept": "application/json",
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "name": "{{name}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "storms.star": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Star storm",
+      "description": "Add a favorite star to a Stormboard Storm.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "stormId": {
+            "type": "integer",
+            "description": "Stormboard Storm id.",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "stormId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/storms/{{stormId}}/star",
+        "success": [
+          200,
+          201,
+          204
+        ],
+        "headers": {
+          "Accept": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "storms.unstar": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Unstar storm",
+      "description": "Remove a favorite star from a Stormboard Storm.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "stormId": {
+            "type": "integer",
+            "description": "Stormboard Storm id.",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "stormId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "deleted": {
+            "type": "boolean"
+          },
+          "id": {
+            "type": "integer"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "deleted",
+          "id"
+        ]
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/storms/{{stormId}}/star",
+        "success": [
+          204,
+          200
+        ],
+        "headers": {
+          "Accept": "application/json"
+        },
+        "result": {
+          "deleted": true,
+          "id": "{{input.stormId}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "storms.duplicate": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Duplicate storm",
+      "description": "Duplicate an existing Stormboard Storm.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "stormId": {
+            "type": "integer",
+            "description": "Stormboard Storm id.",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "stormId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/storms/{{stormId}}/duplicate",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Accept": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    }
+  },
+  "provenance": {
+    "source": {
+      "url": "https://github.com/oomol-lab/open-connector",
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"
+    }
+  },
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
+    }
+  }
+}

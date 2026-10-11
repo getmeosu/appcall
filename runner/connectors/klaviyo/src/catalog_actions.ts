@@ -1,4 +1,4 @@
-import { createKlaviyoClient, parseKlaviyoRateLimit, isRecord } from "./http";
+import { createKlaviyoClient, firstString, parseKlaviyoRateLimit, queryPath, isRecord } from "./http";
 import { normalizeCatalogItem, parseCatalogItemsResponse } from "./objects";
 import type { NormalizedCatalogItem } from "./objects";
 
@@ -11,7 +11,7 @@ export function validateListCatalogItemsInput(input: unknown): Record<string, ne
 
 export function validateGetCatalogItemInput(input: unknown): GetCatalogItemInput {
   if (!isRecord(input)) throw new Error("input must be an object");
-  return { itemId: requireString(input.itemId, "itemId") };
+  return { itemId: firstString(input, ["itemId", "id"], "itemId") };
 }
 
 export async function listCatalogItemsFromClient(
@@ -20,7 +20,7 @@ export async function listCatalogItemsFromClient(
 ): Promise<{ ok: true; items: NormalizedCatalogItem[] } | { ok: false; error: { code: string; message: string; retryAfterSeconds?: number } }> {
   validateListCatalogItemsInput(input);
   const client = createKlaviyoClient({ apiKey: options.apiKey, fetch: options.fetch, operation: "catalog.items.list" });
-  const result = await client.fetchJSON("/catalog-items");
+  const result = await client.fetchJSON(queryPath("/catalog-items", input));
   if (result.status === 200) return { ok: true, items: parseCatalogItemsResponse(result.body).items };
   const rl = parseKlaviyoRateLimit(result.status, result.headers);
   if (rl.limited) return { ok: false, error: { code: "CONNECTOR_RATE_LIMITED", message: "Klaviyo rate limit exceeded.", retryAfterSeconds: rl.retryAfterSeconds } };
@@ -33,7 +33,7 @@ export async function getCatalogItemFromClient(
 ): Promise<{ ok: true; item: NormalizedCatalogItem } | { ok: false; error: { code: string; message: string; retryAfterSeconds?: number } }> {
   const payload = validateGetCatalogItemInput(input);
   const client = createKlaviyoClient({ apiKey: options.apiKey, fetch: options.fetch, operation: "catalog.items.get" });
-  const result = await client.fetchJSON(`/catalog-items/${encodeURIComponent(payload.itemId)}`);
+  const result = await client.fetchJSON(queryPath(`/catalog-items/${encodeURIComponent(payload.itemId)}`, input));
   if (result.status === 200) {
     const body = result.body as Record<string, unknown>;
     const data = isRecord(body.data) ? body.data : { id: payload.itemId, attributes: {} };

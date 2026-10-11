@@ -1,4 +1,4 @@
-import { createKlaviyoClient, parseKlaviyoRateLimit, prop, isRecord } from "./http";
+import { createKlaviyoClient, firstString, parseKlaviyoRateLimit, prop, queryPath, isRecord } from "./http";
 
 // ─── segments.get ─────────────────────────────────────────────────────────────
 
@@ -33,7 +33,7 @@ export function normalizeSegment(d: Record<string, unknown>): NormalizedSegment 
 
 export function validateGetSegmentInput(input: unknown): GetSegmentInput {
   if (!isRecord(input)) throw new Error("input must be an object");
-  return { segmentId: requireString(input.segmentId, "segmentId") };
+  return { segmentId: firstString(input, ["segmentId", "id"], "segmentId") };
 }
 
 export async function getSegmentFromClient(
@@ -42,7 +42,7 @@ export async function getSegmentFromClient(
 ): Promise<{ ok: true; segment: NormalizedSegment } | { ok: false; error: { code: string; message: string; retryAfterSeconds?: number } }> {
   const payload = validateGetSegmentInput(input);
   const client = createKlaviyoClient({ apiKey: options.apiKey, fetch: options.fetch, operation: "segments.get" });
-  const result = await client.fetchJSON(`/segments/${payload.segmentId}`);
+  const result = await client.fetchJSON(queryPath(`/segments/${payload.segmentId}`, input));
   if (result.status === 200) {
     const body = result.body as Record<string, unknown>;
     const data = isRecord(body.data) ? body.data : { id: payload.segmentId, attributes: {} };
@@ -65,7 +65,7 @@ export async function listSegmentsFromClient(
 ): Promise<{ ok: true; segments: NormalizedSegment[] } | { ok: false; error: { code: string; message: string; retryAfterSeconds?: number } }> {
   validateListSegmentsInput(input);
   const client = createKlaviyoClient({ apiKey: options.apiKey, fetch: options.fetch, operation: "segments.list" });
-  const result = await client.fetchJSON("/segments");
+  const result = await client.fetchJSON(queryPath("/segments", input));
   if (result.status === 200) {
     const body = result.body as Record<string, unknown>;
     const data = Array.isArray(body.data) ? body.data.filter(isRecord) : [];

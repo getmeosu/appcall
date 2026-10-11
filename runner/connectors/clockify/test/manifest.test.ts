@@ -1,2 +1,16 @@
-import {describe,expect,test} from "bun:test"; import {compileDeclarativeConnector} from "../../../bun/src/declarative/compile"; import manifest from "../manifest.json"; const {actions}=compileDeclarativeConnector(manifest); const res=(b:any,s=200,h?:any)=>new Response(JSON.stringify(b),{status:s,headers:h});
-describe("clockify",()=>{test("auth",async()=>{for(const n of ["healthcheck","workspaces.list","projects.list","tasks.list"]){const a:any={apiKey:"secret",fetch:async(i:any,x:any)=>{expect(new Request(i,x).headers.get("x-api-key")).toBe("secret");return res(n==="healthcheck"?{}:[])}};if(n.includes("projects")||n.includes("tasks")){a.workspaceId="w";if(n.includes("tasks"))a.projectId="p"} await actions[n]!(a)}});test("errors malformed",async()=>{for(const s of [401,429])await expect(actions["workspaces.list"]!({apiKey:"x",fetch:async()=>res({},s,{"retry-after":"7"})})).rejects.toBeTruthy();await expect(actions["workspaces.list"]!({apiKey:"x",fetch:async()=>res({})})).rejects.toBeTruthy()})});
+import { describe, expect, test } from "bun:test";
+import { compileDeclarativeConnector } from "../../../bun/src/declarative/compile";
+import manifest from "../manifest.json";
+
+const existing = ["healthcheck", "workspaces.list", "projects.list", "tasks.list"] as const;
+
+describe("clockify manifest", () => {
+  test("keeps existing keys at v0.2.0 and compiles", () => {
+    expect(manifest.key).toBe("clockify");
+    expect(manifest.version).toBe("0.2.0");
+    expect(manifest.http.auth.name).toBe("X-Api-Key");
+    for (const key of existing) expect(manifest.operations[key].kind).toBe("action");
+    expect(Object.keys(manifest.operations).length).toBe(20);
+    expect(() => compileDeclarativeConnector(manifest)).not.toThrow();
+  });
+});

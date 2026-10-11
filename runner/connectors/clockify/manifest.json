@@ -1,7 +1,7 @@
 {
   "key": "clockify",
   "name": "Clockify",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "runtime": "bun",
   "visibility": "public",
   "categories": [
@@ -32,7 +32,9 @@
     "workspace",
     "project",
     "task",
-    "time_entry"
+    "time_entry",
+    "client",
+    "tag"
   ],
   "http": {
     "baseUrl": "https://api.clockify.me/api/v1",
@@ -257,6 +259,1080 @@
         }
       },
       "enforceOutputSchema": true
+    },
+    "workspaces.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 8192,
+      "maxResponseBytes": 1048576,
+      "title": "Get workspace",
+      "description": "Get a Clockify workspace by id.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "workspaceId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Workspace id."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "workspaceId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "workspace"
+        ],
+        "properties": {
+          "workspace": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/workspaces/{{workspaceId}}",
+        "success": [
+          200
+        ],
+        "result": {
+          "workspace": "{{response}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "projects.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 8192,
+      "maxResponseBytes": 1048576,
+      "title": "Get project",
+      "description": "Get a Clockify project by id.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "workspaceId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Workspace id."
+          },
+          "projectId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Project id."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "workspaceId",
+          "projectId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "project"
+        ],
+        "properties": {
+          "project": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/workspaces/{{workspaceId}}/projects/{{projectId}}",
+        "success": [
+          200
+        ],
+        "result": {
+          "project": "{{response}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "projects.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Create project",
+      "description": "Create a Clockify project in a workspace.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "workspaceId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Workspace id."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Project name."
+          },
+          "clientId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "billable": {
+            "type": "boolean"
+          },
+          "isPublic": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "workspaceId",
+          "name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "project"
+        ],
+        "properties": {
+          "project": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/workspaces/{{workspaceId}}/projects",
+        "success": [
+          201
+        ],
+        "body": {
+          "name": "{{name}}",
+          "clientId": "{{clientId}}",
+          "billable": "{{billable}}",
+          "isPublic": "{{isPublic}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "result": {
+          "project": "{{response}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "projects.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Update project",
+      "description": "Update a Clockify project.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "workspaceId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Workspace id."
+          },
+          "projectId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Project id."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "billable": {
+            "type": "boolean"
+          },
+          "archived": {
+            "type": "boolean"
+          },
+          "isPublic": {
+            "type": "boolean"
+          },
+          "clientId": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "workspaceId",
+          "projectId",
+          "name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "project"
+        ],
+        "properties": {
+          "project": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/workspaces/{{workspaceId}}/projects/{{projectId}}",
+        "success": [
+          200
+        ],
+        "body": {
+          "name": "{{name}}",
+          "billable": "{{billable}}",
+          "archived": "{{archived}}",
+          "isPublic": "{{isPublic}}",
+          "clientId": "{{clientId}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "result": {
+          "project": "{{response}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "tasks.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 8192,
+      "maxResponseBytes": 1048576,
+      "title": "Get task",
+      "description": "Get a Clockify task by id.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "workspaceId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Workspace id."
+          },
+          "projectId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Project id."
+          },
+          "taskId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Task id."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "workspaceId",
+          "projectId",
+          "taskId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "task"
+        ],
+        "properties": {
+          "task": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/workspaces/{{workspaceId}}/projects/{{projectId}}/tasks/{{taskId}}",
+        "success": [
+          200
+        ],
+        "result": {
+          "task": "{{response}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "tasks.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Create task",
+      "description": "Create a task on a Clockify project.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "workspaceId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Workspace id."
+          },
+          "projectId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Project id."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ACTIVE",
+              "DONE"
+            ]
+          },
+          "estimate": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "workspaceId",
+          "projectId",
+          "name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "task"
+        ],
+        "properties": {
+          "task": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/workspaces/{{workspaceId}}/projects/{{projectId}}/tasks",
+        "success": [
+          201
+        ],
+        "body": {
+          "name": "{{name}}",
+          "status": "{{status}}",
+          "estimate": "{{estimate}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "result": {
+          "task": "{{response}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "tasks.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Update task",
+      "description": "Update a Clockify task.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "workspaceId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Workspace id."
+          },
+          "projectId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Project id."
+          },
+          "taskId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Task id."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ACTIVE",
+              "DONE"
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "workspaceId",
+          "projectId",
+          "taskId",
+          "name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "task"
+        ],
+        "properties": {
+          "task": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/workspaces/{{workspaceId}}/projects/{{projectId}}/tasks/{{taskId}}",
+        "success": [
+          200
+        ],
+        "body": {
+          "name": "{{name}}",
+          "status": "{{status}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "result": {
+          "task": "{{response}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "timeEntries.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List time entries",
+      "description": "List Clockify time entries for a workspace user.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "workspaceId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Workspace id."
+          },
+          "userId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "start": {
+            "type": "string",
+            "minLength": 1,
+            "description": "ISO-8601 start bound."
+          },
+          "end": {
+            "type": "string",
+            "minLength": 1,
+            "description": "ISO-8601 end bound."
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "1-based page."
+          },
+          "pageSize": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Page size."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "workspaceId",
+          "userId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "properties": {
+          "items": {
+            "type": "array"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/workspaces/{{workspaceId}}/user/{{userId}}/time-entries",
+        "success": [
+          200
+        ],
+        "query": {
+          "start": "{{start}}",
+          "end": "{{end}}",
+          "page": "{{page}}",
+          "page-size": "{{pageSize}}"
+        },
+        "result": {
+          "items": "{{response}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "timeEntries.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 8192,
+      "maxResponseBytes": 1048576,
+      "title": "Get time entry",
+      "description": "Get a Clockify time entry by id.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "workspaceId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Workspace id."
+          },
+          "id": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "workspaceId",
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "timeEntry"
+        ],
+        "properties": {
+          "timeEntry": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/workspaces/{{workspaceId}}/time-entries/{{id}}",
+        "success": [
+          200
+        ],
+        "result": {
+          "timeEntry": "{{response}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "timeEntries.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Create time entry",
+      "description": "Create a Clockify time entry in a workspace.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "workspaceId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Workspace id."
+          },
+          "start": {
+            "type": "string",
+            "minLength": 1,
+            "description": "ISO-8601 start time."
+          },
+          "end": {
+            "type": "string",
+            "minLength": 1,
+            "description": "ISO-8601 end time."
+          },
+          "description": {
+            "type": "string"
+          },
+          "projectId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "taskId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "billable": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "workspaceId",
+          "start"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "timeEntry"
+        ],
+        "properties": {
+          "timeEntry": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/workspaces/{{workspaceId}}/time-entries",
+        "success": [
+          201
+        ],
+        "body": {
+          "start": "{{start}}",
+          "end": "{{end}}",
+          "description": "{{description}}",
+          "projectId": "{{projectId}}",
+          "taskId": "{{taskId}}",
+          "billable": "{{billable}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "result": {
+          "timeEntry": "{{response}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "timeEntries.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Update time entry",
+      "description": "Update a Clockify time entry.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "workspaceId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Workspace id."
+          },
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "start": {
+            "type": "string",
+            "minLength": 1
+          },
+          "end": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": {
+            "type": "string"
+          },
+          "projectId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "taskId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "billable": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "workspaceId",
+          "id",
+          "start"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "timeEntry"
+        ],
+        "properties": {
+          "timeEntry": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/workspaces/{{workspaceId}}/time-entries/{{id}}",
+        "success": [
+          200
+        ],
+        "body": {
+          "start": "{{start}}",
+          "end": "{{end}}",
+          "description": "{{description}}",
+          "projectId": "{{projectId}}",
+          "taskId": "{{taskId}}",
+          "billable": "{{billable}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "result": {
+          "timeEntry": "{{response}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "timeEntries.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 10000,
+      "maxInputBytes": 8192,
+      "maxResponseBytes": 65536,
+      "title": "Delete time entry",
+      "description": "Delete a Clockify time entry.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "workspaceId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Workspace id."
+          },
+          "id": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "workspaceId",
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "ok"
+        ],
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/workspaces/{{workspaceId}}/time-entries/{{id}}",
+        "success": [
+          204
+        ],
+        "result": {
+          "ok": true
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "clients.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List clients",
+      "description": "List Clockify clients in a workspace.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "workspaceId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Workspace id."
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "1-based page."
+          },
+          "pageSize": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Page size."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "workspaceId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "properties": {
+          "items": {
+            "type": "array"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/workspaces/{{workspaceId}}/clients",
+        "success": [
+          200
+        ],
+        "query": {
+          "page": "{{page}}",
+          "page-size": "{{pageSize}}"
+        },
+        "result": {
+          "items": "{{response}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "clients.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 10000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 1048576,
+      "title": "Create client",
+      "description": "Create a Clockify client in a workspace.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "workspaceId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Workspace id."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "workspaceId",
+          "name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "client"
+        ],
+        "properties": {
+          "client": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/workspaces/{{workspaceId}}/clients",
+        "success": [
+          201
+        ],
+        "body": {
+          "name": "{{name}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "result": {
+          "client": "{{response}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "tags.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List tags",
+      "description": "List Clockify tags in a workspace.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "workspaceId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Workspace id."
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "1-based page."
+          },
+          "pageSize": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Page size."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "workspaceId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "properties": {
+          "items": {
+            "type": "array"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/workspaces/{{workspaceId}}/tags",
+        "success": [
+          200
+        ],
+        "query": {
+          "page": "{{page}}",
+          "page-size": "{{pageSize}}"
+        },
+        "result": {
+          "items": "{{response}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "users.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List users",
+      "description": "List Clockify users in a workspace.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "workspaceId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Workspace id."
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "1-based page."
+          },
+          "pageSize": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Page size."
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ACTIVE",
+              "INACTIVE",
+              "PENDING_EMAIL_VERIFICATION",
+              "ALL"
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "workspaceId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "properties": {
+          "items": {
+            "type": "array"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/workspaces/{{workspaceId}}/users",
+        "success": [
+          200
+        ],
+        "query": {
+          "page": "{{page}}",
+          "page-size": "{{pageSize}}",
+          "status": "{{status}}"
+        },
+        "result": {
+          "items": "{{response}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
     }
   },
   "provenance": {

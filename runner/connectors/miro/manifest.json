@@ -1,16 +1,36 @@
 {
   "key": "miro",
   "name": "Miro",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "runtime": "bun",
   "visibility": "public",
-  "provenance": { "source": { "url": "https://github.com/oomol-lab/open-connector", "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a" } },
-  "evidence": { "fixture": { "status": "supplied" }, "live": { "status": "unverified" } },
-  "categories": ["productivity"],
+  "provenance": {
+    "source": {
+      "url": "https://github.com/oomol-lab/open-connector",
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"
+    }
+  },
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
+    }
+  },
+  "categories": [
+    "productivity"
+  ],
   "auth": {
     "type": "oauth2",
-    "scopes": ["boards:read"],
-    "setup": { "mode": "oauth2", "fields": [] },
+    "scopes": [
+      "boards:read",
+      "boards:write"
+    ],
+    "setup": {
+      "mode": "oauth2",
+      "fields": []
+    },
     "oauth": {
       "authorizeUrl": "https://miro.com/oauth/authorize",
       "tokenUrl": "https://api.miro.com/v1/oauth/token",
@@ -18,19 +38,1068 @@
       "supportsRefresh": true
     }
   },
-  "network": { "allowedHosts": ["api.miro.com", "miro.com"] },
+  "network": {
+    "allowedHosts": [
+      "api.miro.com",
+      "miro.com"
+    ]
+  },
   "http": {
     "baseUrl": "https://api.miro.com/v2",
-    "auth": { "field": "accessToken", "in": "header", "name": "Authorization", "value": "Bearer {{accessToken}}" },
-    "headers": { "Accept": "application/json" },
-    "errors": { "rateLimitStatuses": [429], "retryAfterHeader": "Retry-After", "retryAfterKind": "seconds", "defaultRetryAfterSeconds": 60, "messagePaths": ["message", "error"] }
+    "auth": {
+      "field": "accessToken",
+      "in": "header",
+      "name": "Authorization",
+      "value": "Bearer {{accessToken}}"
+    },
+    "headers": {
+      "Accept": "application/json",
+      "Content-Type": "application/json"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "Retry-After",
+      "retryAfterKind": "seconds",
+      "defaultRetryAfterSeconds": 60,
+      "messagePaths": [
+        "message",
+        "error"
+      ]
+    }
   },
   "operations": {
-    "healthcheck": { "kind": "action", "timeoutMs": 10000, "maxInputBytes": 4096, "maxResponseBytes": 1048576, "sideEffect": "read", "enforceOutputSchema": true, "title": "Healthcheck", "description": "Verify Miro OAuth credentials by listing accessible boards.", "inputSchema": { "type": "object", "properties": {} }, "outputSchema": { "type": "object", "properties": { "status": { "type": "string" }, "boards": { "type": "array", "items": { "type": "object" } } }, "required": ["status", "boards"] }, "request": { "method": "GET", "path": "/boards", "query": { "limit": "1" }, "success": [200], "echo": { "status": "ok" }, "result": { "status": "ok", "boards": "{{response.data}}" } } },
-    "boards.list": { "kind": "action", "timeoutMs": 15000, "maxInputBytes": 65536, "maxResponseBytes": 5242880, "sideEffect": "read", "enforceOutputSchema": true, "title": "List Boards", "description": "List boards accessible to the authenticated Miro user.", "inputSchema": { "type": "object", "properties": { "teamId": { "type": "string", "minLength": 1 }, "projectId": { "type": "string", "minLength": 1 }, "query": { "type": "string", "minLength": 1 }, "owner": { "type": "string", "minLength": 1 }, "limit": { "type": "integer", "minimum": 1, "maximum": 50 }, "offset": { "type": "integer", "minimum": 0 }, "sort": { "type": "string", "enum": ["default", "last_modified", "last_opened", "last_created", "alphabetically"] } } }, "outputSchema": { "type": "object", "properties": { "boards": { "type": "array", "items": { "type": "object" } }, "pagination": { "type": "object" } }, "required": ["boards", "pagination"] }, "request": { "method": "GET", "path": "/boards", "query": { "team_id": "{{teamId}}", "project_id": "{{projectId}}", "query": "{{query}}", "owner": "{{owner}}", "limit": "{{limit}}", "offset": "{{offset}}", "sort": "{{sort}}" }, "success": [200], "result": { "boards": "{{response.data}}", "pagination": { "limit": "{{response.limit}}", "offset": "{{response.offset}}", "size": "{{response.size}}" } } } },
-    "boards.get": { "kind": "action", "timeoutMs": 10000, "maxInputBytes": 4096, "maxResponseBytes": 1048576, "sideEffect": "read", "enforceOutputSchema": true, "title": "Get Board", "description": "Get one Miro board by ID.", "inputSchema": { "type": "object", "properties": { "boardId": { "type": "string", "minLength": 1 } }, "required": ["boardId"] }, "outputSchema": { "type": "object", "properties": { "board": { "type": "object" } }, "required": ["board"] }, "request": { "method": "GET", "path": "/boards/{{boardId}}", "success": [200], "result": { "board": "{{response}}" } } },
-    "items.list": { "kind": "action", "timeoutMs": 15000, "maxInputBytes": 65536, "maxResponseBytes": 5242880, "sideEffect": "read", "enforceOutputSchema": true, "title": "List Board Items", "description": "List items on a Miro board with cursor pagination.", "inputSchema": { "type": "object", "properties": { "boardId": { "type": "string", "minLength": 1 }, "limit": { "type": "integer", "minimum": 10, "maximum": 50 }, "cursor": { "type": "string", "minLength": 1 }, "type": { "type": "string", "minLength": 1 } }, "required": ["boardId"] }, "outputSchema": { "type": "object", "properties": { "items": { "type": "array", "items": { "type": "object" } }, "pagination": { "type": "object" } }, "required": ["items", "pagination"] }, "request": { "method": "GET", "path": "/boards/{{boardId}}/items", "query": { "limit": "{{limit}}", "cursor": "{{cursor}}", "type": "{{type}}" }, "success": [200], "result": { "items": "{{response.data}}", "pagination": { "cursor": "{{response.cursor}}" } } } },
-    "items.get": { "kind": "action", "timeoutMs": 10000, "maxInputBytes": 4096, "maxResponseBytes": 1048576, "sideEffect": "read", "enforceOutputSchema": true, "title": "Get Board Item", "description": "Get one item from a Miro board.", "inputSchema": { "type": "object", "properties": { "boardId": { "type": "string", "minLength": 1 }, "itemId": { "type": "string", "minLength": 1 } }, "required": ["boardId", "itemId"] }, "outputSchema": { "type": "object", "properties": { "item": { "type": "object" } }, "required": ["item"] }, "request": { "method": "GET", "path": "/boards/{{boardId}}/items/{{itemId}}", "success": [200], "result": { "item": "{{response}}" } } }
+    "healthcheck": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "enforceOutputSchema": true,
+      "title": "Healthcheck",
+      "description": "Verify Miro OAuth credentials by listing accessible boards.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string"
+          },
+          "boards": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        },
+        "required": [
+          "status",
+          "boards"
+        ]
+      },
+      "request": {
+        "method": "GET",
+        "path": "/boards",
+        "query": {
+          "limit": "1"
+        },
+        "success": [
+          200
+        ],
+        "echo": {
+          "status": "ok"
+        },
+        "result": {
+          "status": "ok",
+          "boards": "{{response.data}}"
+        }
+      }
+    },
+    "boards.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "enforceOutputSchema": true,
+      "title": "List Boards",
+      "description": "List boards accessible to the authenticated Miro user.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "teamId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "projectId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "query": {
+            "type": "string",
+            "minLength": 1
+          },
+          "owner": {
+            "type": "string",
+            "minLength": 1
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 50
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "sort": {
+            "type": "string",
+            "enum": [
+              "default",
+              "last_modified",
+              "last_opened",
+              "last_created",
+              "alphabetically"
+            ]
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "boards": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "pagination": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "boards",
+          "pagination"
+        ]
+      },
+      "request": {
+        "method": "GET",
+        "path": "/boards",
+        "query": {
+          "team_id": "{{teamId}}",
+          "project_id": "{{projectId}}",
+          "query": "{{query}}",
+          "owner": "{{owner}}",
+          "limit": "{{limit}}",
+          "offset": "{{offset}}",
+          "sort": "{{sort}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "boards": "{{response.data}}",
+          "pagination": {
+            "limit": "{{response.limit}}",
+            "offset": "{{response.offset}}",
+            "size": "{{response.size}}"
+          }
+        }
+      }
+    },
+    "boards.get": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "enforceOutputSchema": true,
+      "title": "Get Board",
+      "description": "Get one Miro board by ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "boardId": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "boardId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "board": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "board"
+        ]
+      },
+      "request": {
+        "method": "GET",
+        "path": "/boards/{{boardId}}",
+        "success": [
+          200
+        ],
+        "result": {
+          "board": "{{response}}"
+        }
+      }
+    },
+    "items.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "enforceOutputSchema": true,
+      "title": "List Board Items",
+      "description": "List items on a Miro board with cursor pagination.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "boardId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 10,
+            "maximum": 50
+          },
+          "cursor": {
+            "type": "string",
+            "minLength": 1
+          },
+          "type": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "boardId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "pagination": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "items",
+          "pagination"
+        ]
+      },
+      "request": {
+        "method": "GET",
+        "path": "/boards/{{boardId}}/items",
+        "query": {
+          "limit": "{{limit}}",
+          "cursor": "{{cursor}}",
+          "type": "{{type}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "items": "{{response.data}}",
+          "pagination": {
+            "cursor": "{{response.cursor}}"
+          }
+        }
+      }
+    },
+    "items.get": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "enforceOutputSchema": true,
+      "title": "Get Board Item",
+      "description": "Get one item from a Miro board.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "boardId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "itemId": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "boardId",
+          "itemId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "item": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "item"
+        ]
+      },
+      "request": {
+        "method": "GET",
+        "path": "/boards/{{boardId}}/items/{{itemId}}",
+        "success": [
+          200
+        ],
+        "result": {
+          "item": "{{response}}"
+        }
+      }
+    },
+    "boards.create": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "write",
+      "enforceOutputSchema": true,
+      "title": "Create Board",
+      "description": "Create a Miro board via POST /v2/boards. Name is required.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Board name."
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Board description."
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "board": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "board"
+        ]
+      },
+      "request": {
+        "method": "POST",
+        "path": "/boards",
+        "success": [
+          201
+        ],
+        "body": {
+          "name": "{{name}}",
+          "description": "{{description}}"
+        },
+        "result": {
+          "board": "{{response}}"
+        }
+      }
+    },
+    "boards.update": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "write",
+      "enforceOutputSchema": true,
+      "title": "Update Board",
+      "description": "Update a Miro board via PATCH /v2/boards/{boardId}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "boardId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Board ID."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Updated board name."
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Updated board description."
+          }
+        },
+        "required": [
+          "boardId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "board": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "board"
+        ]
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/boards/{{boardId}}",
+        "success": [
+          200
+        ],
+        "body": {
+          "name": "{{name}}",
+          "description": "{{description}}"
+        },
+        "result": {
+          "board": "{{response}}"
+        }
+      }
+    },
+    "boards.delete": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "destructive",
+      "enforceOutputSchema": true,
+      "title": "Delete Board",
+      "description": "Delete a Miro board via DELETE /v2/boards/{boardId}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "boardId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Board ID."
+          }
+        },
+        "required": [
+          "boardId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/boards/{{boardId}}",
+        "success": [
+          204
+        ],
+        "result": {
+          "status": "ok"
+        }
+      }
+    },
+    "stickyNotes.create": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "write",
+      "enforceOutputSchema": true,
+      "title": "Create Sticky Note",
+      "description": "Create a sticky note on a Miro board via POST /v2/boards/{boardId}/sticky_notes.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "boardId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Board ID."
+          },
+          "content": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Sticky note text content."
+          },
+          "shape": {
+            "type": "string",
+            "enum": [
+              "square",
+              "rectangle"
+            ],
+            "description": "Sticky note shape."
+          },
+          "x": {
+            "type": "number",
+            "description": "X coordinate on the board."
+          },
+          "y": {
+            "type": "number",
+            "description": "Y coordinate on the board."
+          }
+        },
+        "required": [
+          "boardId",
+          "content"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "item": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "item"
+        ]
+      },
+      "request": {
+        "method": "POST",
+        "path": "/boards/{{boardId}}/sticky_notes",
+        "success": [
+          201
+        ],
+        "body": {
+          "data": {
+            "content": "{{content}}",
+            "shape": "{{shape}}"
+          },
+          "position": {
+            "x": "{{x}}",
+            "y": "{{y}}"
+          }
+        },
+        "result": {
+          "item": "{{response}}"
+        }
+      }
+    },
+    "texts.create": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "write",
+      "enforceOutputSchema": true,
+      "title": "Create Text Item",
+      "description": "Create a text item on a Miro board via POST /v2/boards/{boardId}/texts.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "boardId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Board ID."
+          },
+          "content": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Text item content."
+          },
+          "x": {
+            "type": "number",
+            "description": "X coordinate on the board."
+          },
+          "y": {
+            "type": "number",
+            "description": "Y coordinate on the board."
+          }
+        },
+        "required": [
+          "boardId",
+          "content"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "item": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "item"
+        ]
+      },
+      "request": {
+        "method": "POST",
+        "path": "/boards/{{boardId}}/texts",
+        "success": [
+          201
+        ],
+        "body": {
+          "data": {
+            "content": "{{content}}"
+          },
+          "position": {
+            "x": "{{x}}",
+            "y": "{{y}}"
+          }
+        },
+        "result": {
+          "item": "{{response}}"
+        }
+      }
+    },
+    "items.update": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "write",
+      "enforceOutputSchema": true,
+      "title": "Update Board Item",
+      "description": "Update a Miro board item via PATCH /v2/boards/{boardId}/items/{itemId}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "boardId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Board ID."
+          },
+          "itemId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Item ID."
+          },
+          "content": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Updated item content when the item type supports data.content."
+          }
+        },
+        "required": [
+          "boardId",
+          "itemId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "item": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "item"
+        ]
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/boards/{{boardId}}/items/{{itemId}}",
+        "success": [
+          200
+        ],
+        "body": {
+          "data": {
+            "content": "{{content}}"
+          }
+        },
+        "result": {
+          "item": "{{response}}"
+        }
+      }
+    },
+    "items.delete": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "destructive",
+      "enforceOutputSchema": true,
+      "title": "Delete Board Item",
+      "description": "Delete a Miro board item via DELETE /v2/boards/{boardId}/items/{itemId}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "boardId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Board ID."
+          },
+          "itemId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Item ID."
+          }
+        },
+        "required": [
+          "boardId",
+          "itemId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/boards/{{boardId}}/items/{{itemId}}",
+        "success": [
+          204
+        ],
+        "result": {
+          "status": "ok"
+        }
+      }
+    },
+    "members.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "enforceOutputSchema": true,
+      "title": "List Board Members",
+      "description": "List members of a Miro board via GET /v2/boards/{boardId}/members.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "boardId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Board ID."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 50,
+            "description": "Page size, 1-50."
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Zero-based offset."
+          }
+        },
+        "required": [
+          "boardId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "members": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "pagination": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "members",
+          "pagination"
+        ]
+      },
+      "request": {
+        "method": "GET",
+        "path": "/boards/{{boardId}}/members",
+        "query": {
+          "limit": "{{limit}}",
+          "offset": "{{offset}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "members": "{{response.data}}",
+          "pagination": {
+            "limit": "{{response.limit}}",
+            "offset": "{{response.offset}}",
+            "size": "{{response.size}}"
+          }
+        }
+      }
+    },
+    "members.get": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "enforceOutputSchema": true,
+      "title": "Get Board Member",
+      "description": "Get one Miro board member via GET /v2/boards/{boardId}/members/{memberId}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "boardId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Board ID."
+          },
+          "memberId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Member ID."
+          }
+        },
+        "required": [
+          "boardId",
+          "memberId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "member": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "member"
+        ]
+      },
+      "request": {
+        "method": "GET",
+        "path": "/boards/{{boardId}}/members/{{memberId}}",
+        "success": [
+          200
+        ],
+        "result": {
+          "member": "{{response}}"
+        }
+      }
+    },
+    "members.create": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "write",
+      "enforceOutputSchema": true,
+      "title": "Invite Board Member",
+      "description": "Invite a member to a Miro board via POST /v2/boards/{boardId}/members.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "boardId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Board ID."
+          },
+          "email": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Invitee email address."
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "viewer",
+              "commenter",
+              "editor",
+              "coowner",
+              "owner"
+            ],
+            "description": "Board role."
+          }
+        },
+        "required": [
+          "boardId",
+          "email"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "member": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "member"
+        ]
+      },
+      "request": {
+        "method": "POST",
+        "path": "/boards/{{boardId}}/members",
+        "success": [
+          201
+        ],
+        "body": {
+          "email": "{{email}}",
+          "role": "{{role}}"
+        },
+        "result": {
+          "member": "{{response}}"
+        }
+      }
+    },
+    "tags.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "enforceOutputSchema": true,
+      "title": "List Board Tags",
+      "description": "List tags on a Miro board via GET /v2/boards/{boardId}/tags.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "boardId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Board ID."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 50
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "boardId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "pagination": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "tags",
+          "pagination"
+        ]
+      },
+      "request": {
+        "method": "GET",
+        "path": "/boards/{{boardId}}/tags",
+        "query": {
+          "limit": "{{limit}}",
+          "offset": "{{offset}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "tags": "{{response.data}}",
+          "pagination": {
+            "limit": "{{response.limit}}",
+            "offset": "{{response.offset}}",
+            "size": "{{response.size}}"
+          }
+        }
+      }
+    },
+    "tags.create": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "write",
+      "enforceOutputSchema": true,
+      "title": "Create Board Tag",
+      "description": "Create a tag on a Miro board via POST /v2/boards/{boardId}/tags.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "boardId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Board ID."
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Tag title."
+          },
+          "fillColor": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Tag fill color, e.g. red."
+          }
+        },
+        "required": [
+          "boardId",
+          "title"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "tag": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "tag"
+        ]
+      },
+      "request": {
+        "method": "POST",
+        "path": "/boards/{{boardId}}/tags",
+        "success": [
+          201
+        ],
+        "body": {
+          "title": "{{title}}",
+          "fillColor": "{{fillColor}}"
+        },
+        "result": {
+          "tag": "{{response}}"
+        }
+      }
+    }
   },
-  "models": ["board", "item"]
+  "models": [
+    "board",
+    "item",
+    "member",
+    "tag"
+  ]
 }

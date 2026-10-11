@@ -1,1 +1,1150 @@
-{"key":"salesflare","name":"Salesflare","version":"0.1.0","runtime":"bun","visibility":"public","categories":["crm","productivity"],"auth":{"type":"api_key","scopes":[],"setup":{"mode":"api_key","fields":[{"key":"apiKey","label":"Salesflare API token","required":true,"secret":true}]}},"network":{"allowedHosts":["api.salesflare.com"]},"models":["contact","account","opportunity"],"http":{"baseUrl":"https://api.salesflare.com","auth":{"field":"apiKey","in":"header","name":"Authorization","value":"Bearer {{apiKey}}"},"errors":{"rateLimitStatuses":[429],"retryAfterHeader":"retry-after","defaultRetryAfterSeconds":30,"messagePaths":["message","error"]}},"operations":{"healthcheck":{"kind":"action","sideEffect":"read","timeoutMs":5000,"maxInputBytes":4096,"maxResponseBytes":65536,"title":"Healthcheck","description":"Validate the Salesflare token with GET /me.","inputSchema":{"type":"object","properties":{},"additionalProperties":false},"outputSchema":{"type":"object","required":["account"],"properties":{"account":{"type":"object"}}},"request":{"method":"GET","path":"/me","success":[200],"result":{"account":"{{response}}"}},"enforceOutputSchema":true},"contacts.list":{"kind":"action","sideEffect":"read","timeoutMs":10000,"maxInputBytes":8192,"maxResponseBytes":5242880,"title":"List Contacts","description":"List Salesflare contacts with bounded page pagination.","inputSchema":{"type":"object","properties":{"page":{"type":"integer","minimum":1,"maximum":1000}},"additionalProperties":false},"outputSchema":{"type":"object","required":["contacts"],"properties":{"contacts":{"type":"array","items":{"type":"object"}},"pagination":{"type":["object","null"]}}},"request":{"method":"GET","path":"/contacts","query":{"page":"{{page}}"},"success":[200],"result":{"contacts":"{{response.data}}","pagination":{"nextPage":"{{response.meta.nextPage}}"}}},"enforceOutputSchema":true},"accounts.list":{"kind":"action","sideEffect":"read","timeoutMs":10000,"maxInputBytes":8192,"maxResponseBytes":5242880,"title":"List Accounts","description":"List Salesflare accounts with bounded page pagination.","inputSchema":{"type":"object","properties":{"page":{"type":"integer","minimum":1,"maximum":1000}},"additionalProperties":false},"outputSchema":{"type":"object","required":["accounts"],"properties":{"accounts":{"type":"array","items":{"type":"object"}},"pagination":{"type":["object","null"]}}},"request":{"method":"GET","path":"/accounts","query":{"page":"{{page}}"},"success":[200],"result":{"accounts":"{{response.data}}","pagination":{"nextPage":"{{response.meta.nextPage}}"}}},"enforceOutputSchema":true},"opportunities.list":{"kind":"action","sideEffect":"read","timeoutMs":10000,"maxInputBytes":8192,"maxResponseBytes":5242880,"title":"List Opportunities","description":"List Salesflare opportunities with bounded page pagination.","inputSchema":{"type":"object","properties":{"page":{"type":"integer","minimum":1,"maximum":1000}},"additionalProperties":false},"outputSchema":{"type":"object","required":["opportunities"],"properties":{"opportunities":{"type":"array","items":{"type":"object"}},"pagination":{"type":["object","null"]}}},"request":{"method":"GET","path":"/opportunities","query":{"page":"{{page}}"},"success":[200],"result":{"opportunities":"{{response.data}}","pagination":{"nextPage":"{{response.meta.nextPage}}"}}},"enforceOutputSchema":true}},"provenance":{"source":{"url":"https://github.com/oomol-lab/open-connector","revision":"33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"}},"evidence":{"fixture":{"status":"supplied"},"live":{"status":"unverified"}}}
+{
+  "key": "salesflare",
+  "name": "Salesflare",
+  "version": "0.2.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "crm",
+    "productivity"
+  ],
+  "auth": {
+    "type": "api_key",
+    "scopes": [],
+    "setup": {
+      "mode": "api_key",
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "Salesflare API token",
+          "required": true,
+          "secret": true
+        }
+      ]
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "api.salesflare.com"
+    ]
+  },
+  "models": [
+    "contact",
+    "account",
+    "opportunity",
+    "task",
+    "pipeline",
+    "tag"
+  ],
+  "http": {
+    "baseUrl": "https://api.salesflare.com",
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "Authorization",
+      "value": "Bearer {{apiKey}}"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after",
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "message",
+        "error"
+      ]
+    },
+    "headers": {
+      "Accept": "application/json"
+    }
+  },
+  "operations": {
+    "healthcheck": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 5000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "title": "Healthcheck",
+      "description": "Validate the Salesflare token with GET /me.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/me",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "contacts.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List contacts",
+      "description": "List Salesflare contacts with bounded page pagination.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "1-indexed page number.",
+            "maximum": 1000
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/contacts",
+        "success": [
+          200
+        ],
+        "query": {
+          "page": "{{page}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "contacts.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get contact",
+      "description": "Get one Salesflare contact by ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "contact_id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Contact ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "contact_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/contacts/{{contact_id}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "contacts.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create contact",
+      "description": "Create a Salesflare contact.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Contact email."
+          },
+          "firstname": {
+            "type": "string",
+            "minLength": 1,
+            "description": "First name."
+          },
+          "lastname": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Last name."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Full name."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "email"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/contacts",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "email": "{{email}}",
+          "firstname": "{{firstname}}",
+          "lastname": "{{lastname}}",
+          "name": "{{name}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "contacts.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Update contact",
+      "description": "Update a Salesflare contact by ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "contact_id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Contact ID."
+          },
+          "email": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Contact email."
+          },
+          "firstname": {
+            "type": "string",
+            "minLength": 1,
+            "description": "First name."
+          },
+          "lastname": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Last name."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Full name."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "contact_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/contacts/{{contact_id}}",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "email": "{{email}}",
+          "firstname": "{{firstname}}",
+          "lastname": "{{lastname}}",
+          "name": "{{name}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "contacts.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Delete contact",
+      "description": "Delete a Salesflare contact by ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "contact_id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Contact ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "contact_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/contacts/{{contact_id}}",
+        "success": [
+          200,
+          204
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "accounts.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List accounts",
+      "description": "List Salesflare accounts with bounded page pagination.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "1-indexed page number.",
+            "maximum": 1000
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/accounts",
+        "success": [
+          200
+        ],
+        "query": {
+          "page": "{{page}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "accounts.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get account",
+      "description": "Get one Salesflare account by ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "account_id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Account ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "account_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/accounts/{{account_id}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "accounts.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create account",
+      "description": "Create a Salesflare account.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Account name."
+          },
+          "domain": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Account domain."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/accounts",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "name": "{{name}}",
+          "domain": "{{domain}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "accounts.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Update account",
+      "description": "Update a Salesflare account by ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "account_id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Account ID."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Account name."
+          },
+          "domain": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Account domain."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "account_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/accounts/{{account_id}}",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "name": "{{name}}",
+          "domain": "{{domain}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "accounts.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Delete account",
+      "description": "Delete a Salesflare account by ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "account_id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Account ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "account_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/accounts/{{account_id}}",
+        "success": [
+          200,
+          204
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "opportunities.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List opportunities",
+      "description": "List Salesflare opportunities with bounded page pagination.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "1-indexed page number.",
+            "maximum": 1000
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/opportunities",
+        "success": [
+          200
+        ],
+        "query": {
+          "page": "{{page}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "opportunities.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get opportunity",
+      "description": "Get one Salesflare opportunity by ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "opportunity_id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Opportunity ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "opportunity_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/opportunities/{{opportunity_id}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "opportunities.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create opportunity",
+      "description": "Create a Salesflare opportunity.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Opportunity name."
+          },
+          "account": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Account ID."
+          },
+          "value": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Opportunity value."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/opportunities",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "name": "{{name}}",
+          "account": "{{account}}",
+          "value": "{{value}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "opportunities.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Update opportunity",
+      "description": "Update a Salesflare opportunity by ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "opportunity_id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Opportunity ID."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Opportunity name."
+          },
+          "value": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Opportunity value."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "opportunity_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/opportunities/{{opportunity_id}}",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "name": "{{name}}",
+          "value": "{{value}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "tasks.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List tasks",
+      "description": "List Salesflare tasks with bounded page pagination.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "1-indexed page number.",
+            "maximum": 1000
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/tasks",
+        "success": [
+          200
+        ],
+        "query": {
+          "page": "{{page}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "tasks.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get task",
+      "description": "Get one Salesflare task by ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "task_id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Task ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "task_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/tasks/{{task_id}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "tasks.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create task",
+      "description": "Create a Salesflare task.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Task description."
+          },
+          "account": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Account ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "description"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/tasks",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "description": "{{description}}",
+          "account": "{{account}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "tasks.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Update task",
+      "description": "Update a Salesflare task by ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "task_id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Task ID."
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Task description."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "task_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/tasks/{{task_id}}",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "description": "{{description}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "pipelines.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List pipelines",
+      "description": "List Salesflare pipelines.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/pipelines",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "tags.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List tags",
+      "description": "List Salesflare tags.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/tags",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    }
+  },
+  "provenance": {
+    "source": {
+      "url": "https://github.com/oomol-lab/open-connector",
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"
+    }
+  },
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
+    }
+  }
+}

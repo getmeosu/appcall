@@ -1,1 +1,1478 @@
-{"key":"mixpanel","name":"Mixpanel","version":"0.1.0","runtime":"bun","visibility":"public","categories":["productivity","ads"],"auth":{"type":"api_key","scopes":[],"setup":{"mode":"api_key","fields":[{"key":"serviceAccountSecret","label":"Service account secret","required":true,"secret":true},{"key":"serviceAccountUsername","label":"Service account username","required":true,"secret":false},{"key":"projectId","label":"Project ID","required":true,"secret":false}]}},"network":{"allowedHosts":["mixpanel.com"]},"models":["cohort","funnel","report","service-account"],"http":{"baseUrl":"https://mixpanel.com","auth":{"field":"serviceAccountSecret","in":"header","name":"Authorization","basic":{"username":"{{serviceAccountUsername}}","password":"{{serviceAccountSecret}}"}},"errors":{"rateLimitStatuses":[429],"retryAfterHeader":"Retry-After","retryAfterKind":"seconds","defaultRetryAfterSeconds":30,"messagePaths":["error","message"]}},"operations":{"healthcheck":{"kind":"action","sideEffect":"read","timeoutMs":10000,"maxInputBytes":4096,"maxResponseBytes":1048576,"title":"Healthcheck","description":"Validate Mixpanel service account access for the configured project.","inputSchema":{"type":"object","properties":{},"additionalProperties":false},"outputSchema":{"type":"object","required":["serviceAccounts"],"properties":{"serviceAccounts":{"type":"array","items":{"type":"object"}}}},"request":{"method":"GET","path":"/api/app/projects/{{projectId}}/service-accounts","success":[200],"result":{"serviceAccounts":"{{response}}"}},"enforceOutputSchema":true},"cohorts.list":{"kind":"action","sideEffect":"read","timeoutMs":15000,"maxInputBytes":4096,"maxResponseBytes":5242880,"title":"List Saved Cohorts","description":"List saved cohorts for the configured Mixpanel project.","inputSchema":{"type":"object","properties":{"project_id":{"type":["string","integer"],"minLength":1}},"additionalProperties":false},"outputSchema":{"type":"object","required":["cohorts","raw"],"properties":{"cohorts":{"type":"array","items":{"type":"object"}},"raw":{"type":"array","items":{"type":"object"}}}},"request":{"method":"POST","path":"/api/query/cohorts/list","query":{"project_id":"{{project_id}}"},"success":[200],"result":{"cohorts":"{{response}}","raw":"{{response}}"}},"enforceOutputSchema":true},"funnels.list":{"kind":"action","sideEffect":"read","timeoutMs":15000,"maxInputBytes":4096,"maxResponseBytes":5242880,"title":"List Saved Funnels","description":"List saved funnels for the configured Mixpanel project.","inputSchema":{"type":"object","properties":{"project_id":{"type":["string","integer"],"minLength":1},"workspace_id":{"type":["string","integer"],"minLength":1}},"additionalProperties":false},"outputSchema":{"type":"object","required":["funnels","raw"],"properties":{"funnels":{"type":"array","items":{"type":"object"}},"raw":{"type":"array","items":{"type":"object"}}}},"request":{"method":"GET","path":"/api/query/funnels/list","query":{"project_id":"{{project_id}}","workspace_id":"{{workspace_id}}"},"success":[200],"result":{"funnels":"{{response}}","raw":"{{response}}"}},"enforceOutputSchema":true},"funnel.query":{"kind":"action","sideEffect":"read","timeoutMs":20000,"maxInputBytes":65536,"maxResponseBytes":5242880,"title":"Query Funnel","description":"Query a saved Mixpanel funnel over a bounded date range.","inputSchema":{"type":"object","properties":{"project_id":{"type":["string","integer"],"minLength":1},"funnel_id":{"type":["string","integer"],"minLength":1},"from_date":{"type":"string","minLength":1},"to_date":{"type":"string","minLength":1},"limit":{"type":"integer","minimum":1,"maximum":10000}},"required":["funnel_id","from_date","to_date"],"additionalProperties":false},"outputSchema":{"type":"object","required":["raw"],"properties":{"raw":{"type":"object"}}},"request":{"method":"GET","path":"/api/query/funnels","query":{"project_id":"{{project_id}}","funnel_id":"{{funnel_id}}","from_date":"{{from_date}}","to_date":"{{to_date}}","limit":"{{limit}}"},"success":[200],"result":{"raw":"{{response}}"}},"enforceOutputSchema":true}},"provenance":{"source":{"url":"https://github.com/oomol-lab/open-connector","revision":"33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"}},"evidence":{"fixture":{"status":"supplied"},"live":{"status":"unverified"},"breach":{"status":"confirmed-historical","waiver":"explicit user policy 2026-09-13 for non-China historical incidents"}}}
+{
+  "key": "mixpanel",
+  "name": "Mixpanel",
+  "version": "0.2.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "productivity",
+    "ads"
+  ],
+  "auth": {
+    "type": "api_key",
+    "scopes": [],
+    "setup": {
+      "mode": "api_key",
+      "fields": [
+        {
+          "key": "serviceAccountSecret",
+          "label": "Service account secret",
+          "required": true,
+          "secret": true
+        },
+        {
+          "key": "serviceAccountUsername",
+          "label": "Service account username",
+          "required": true,
+          "secret": false
+        },
+        {
+          "key": "projectId",
+          "label": "Project ID",
+          "required": true,
+          "secret": false
+        }
+      ]
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "mixpanel.com",
+      "api.mixpanel.com"
+    ]
+  },
+  "models": [
+    "cohort",
+    "funnel",
+    "report",
+    "service-account",
+    "insight",
+    "profile",
+    "event",
+    "annotation"
+  ],
+  "http": {
+    "baseUrl": "https://mixpanel.com",
+    "auth": {
+      "field": "serviceAccountSecret",
+      "in": "header",
+      "name": "Authorization",
+      "basic": {
+        "username": "{{serviceAccountUsername}}",
+        "password": "{{serviceAccountSecret}}"
+      }
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "Retry-After",
+      "retryAfterKind": "seconds",
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "error",
+        "message"
+      ]
+    },
+    "headers": {
+      "Accept": "application/json"
+    }
+  },
+  "operations": {
+    "healthcheck": {
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Healthcheck",
+      "description": "Validate Mixpanel service account access for the configured project.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "serviceAccounts"
+        ],
+        "properties": {
+          "serviceAccounts": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/api/app/projects/{{projectId}}/service-accounts",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Accept": "application/json"
+        },
+        "result": {
+          "serviceAccounts": "{{response}}"
+        }
+      }
+    },
+    "cohorts.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List Saved Cohorts",
+      "description": "List saved cohorts for the configured Mixpanel project.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "project_id": {
+            "type": [
+              "string",
+              "integer"
+            ],
+            "minLength": 1,
+            "description": "Mixpanel project id."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "cohorts",
+          "raw"
+        ],
+        "properties": {
+          "cohorts": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "raw": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "POST",
+        "path": "/api/query/cohorts/list",
+        "query": {
+          "project_id": "{{project_id}}"
+        },
+        "success": [
+          200
+        ],
+        "headers": {
+          "Accept": "application/json"
+        },
+        "result": {
+          "cohorts": "{{response}}",
+          "raw": "{{response}}"
+        }
+      }
+    },
+    "funnels.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List Saved Funnels",
+      "description": "List saved funnels for the configured Mixpanel project.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "project_id": {
+            "type": [
+              "string",
+              "integer"
+            ],
+            "minLength": 1,
+            "description": "Mixpanel project id."
+          },
+          "workspace_id": {
+            "type": [
+              "string",
+              "integer"
+            ],
+            "minLength": 1,
+            "description": "Workspace id."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "funnels",
+          "raw"
+        ],
+        "properties": {
+          "funnels": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "raw": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/api/query/funnels/list",
+        "query": {
+          "project_id": "{{project_id}}",
+          "workspace_id": "{{workspace_id}}"
+        },
+        "success": [
+          200
+        ],
+        "headers": {
+          "Accept": "application/json"
+        },
+        "result": {
+          "funnels": "{{response}}",
+          "raw": "{{response}}"
+        }
+      }
+    },
+    "funnel.query": {
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Query Funnel",
+      "description": "Query a saved Mixpanel funnel over a bounded date range.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "project_id": {
+            "type": [
+              "string",
+              "integer"
+            ],
+            "minLength": 1,
+            "description": "Mixpanel project id."
+          },
+          "funnel_id": {
+            "type": [
+              "string",
+              "integer"
+            ],
+            "minLength": 1,
+            "description": "Saved funnel id."
+          },
+          "from_date": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Inclusive start date (YYYY-MM-DD)."
+          },
+          "to_date": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Inclusive end date (YYYY-MM-DD)."
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Maximum property buckets.",
+            "minimum": 1,
+            "maximum": 10000
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "funnel_id",
+          "from_date",
+          "to_date"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "raw"
+        ],
+        "properties": {
+          "raw": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/api/query/funnels",
+        "query": {
+          "project_id": "{{project_id}}",
+          "funnel_id": "{{funnel_id}}",
+          "from_date": "{{from_date}}",
+          "to_date": "{{to_date}}",
+          "limit": "{{limit}}"
+        },
+        "success": [
+          200
+        ],
+        "headers": {
+          "Accept": "application/json"
+        },
+        "result": {
+          "raw": "{{response}}"
+        }
+      }
+    },
+    "insights.query": {
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Query Insights",
+      "description": "Query a saved Mixpanel Insights report by bookmark id.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "bookmark_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Saved Insights bookmark id."
+          },
+          "workspace_id": {
+            "type": "string",
+            "description": "Workspace id."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "bookmark_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "POST",
+        "path": "/api/query/insights",
+        "query": {
+          "project_id": "{{projectId}}",
+          "bookmark_id": "{{bookmark_id}}",
+          "workspace_id": "{{workspace_id}}"
+        },
+        "success": [
+          200
+        ],
+        "headers": {
+          "Accept": "application/json"
+        }
+      }
+    },
+    "retention.query": {
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Query Retention",
+      "description": "Query Mixpanel retention (cohort analysis) over a date range.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "from_date": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Inclusive start date (YYYY-MM-DD)."
+          },
+          "to_date": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Inclusive end date (YYYY-MM-DD)."
+          },
+          "retention_type": {
+            "type": "string",
+            "description": "birth or compounded."
+          },
+          "born_event": {
+            "type": "string",
+            "description": "Born event for birth retention."
+          },
+          "event": {
+            "type": "string",
+            "description": "Returning event."
+          },
+          "unit": {
+            "type": "string",
+            "description": "day, week, or month."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "from_date",
+          "to_date"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/api/query/retention",
+        "query": {
+          "project_id": "{{projectId}}",
+          "from_date": "{{from_date}}",
+          "to_date": "{{to_date}}",
+          "retention_type": "{{retention_type}}",
+          "born_event": "{{born_event}}",
+          "event": "{{event}}",
+          "unit": "{{unit}}"
+        },
+        "success": [
+          200
+        ],
+        "headers": {
+          "Accept": "application/json"
+        }
+      }
+    },
+    "segmentation.query": {
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Query Segmentation",
+      "description": "Query Mixpanel segmentation for a single event over a date range.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "event": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Event name."
+          },
+          "from_date": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Inclusive start date (YYYY-MM-DD)."
+          },
+          "to_date": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Inclusive end date (YYYY-MM-DD)."
+          },
+          "on": {
+            "type": "string",
+            "description": "Property expression to segment on."
+          },
+          "unit": {
+            "type": "string",
+            "description": "minute, hour, day, or month."
+          },
+          "where": {
+            "type": "string",
+            "description": "Filter expression."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "event",
+          "from_date",
+          "to_date"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/api/query/segmentation",
+        "query": {
+          "project_id": "{{projectId}}",
+          "event": "{{event}}",
+          "from_date": "{{from_date}}",
+          "to_date": "{{to_date}}",
+          "on": "{{on}}",
+          "unit": "{{unit}}",
+          "where": "{{where}}"
+        },
+        "success": [
+          200
+        ],
+        "headers": {
+          "Accept": "application/json"
+        }
+      }
+    },
+    "events.query": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Query Events",
+      "description": "Query Mixpanel event counts over a date range.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "event": {
+            "type": "string",
+            "minLength": 1,
+            "description": "JSON array of event names, as Mixpanel expects."
+          },
+          "from_date": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Inclusive start date (YYYY-MM-DD)."
+          },
+          "to_date": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Inclusive end date (YYYY-MM-DD)."
+          },
+          "unit": {
+            "type": "string",
+            "description": "hour, day, or month."
+          },
+          "type": {
+            "type": "string",
+            "description": "general, unique, or average."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "event",
+          "from_date",
+          "to_date"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/api/query/events",
+        "query": {
+          "project_id": "{{projectId}}",
+          "event": "{{event}}",
+          "from_date": "{{from_date}}",
+          "to_date": "{{to_date}}",
+          "unit": "{{unit}}",
+          "type": "{{type}}"
+        },
+        "success": [
+          200
+        ],
+        "headers": {
+          "Accept": "application/json"
+        }
+      }
+    },
+    "events.top": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Top Events",
+      "description": "List the most common Mixpanel events in the project.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "description": "general, unique, or average."
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Maximum events to return.",
+            "minimum": 1,
+            "maximum": 10000
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/api/query/events/top",
+        "query": {
+          "project_id": "{{projectId}}",
+          "type": "{{type}}",
+          "limit": "{{limit}}"
+        },
+        "success": [
+          200
+        ],
+        "headers": {
+          "Accept": "application/json"
+        }
+      }
+    },
+    "events.names": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Event Names",
+      "description": "List Mixpanel event names in the project.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "description": "general, unique, or average."
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Maximum names to return.",
+            "minimum": 1,
+            "maximum": 10000
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/api/query/events/names",
+        "query": {
+          "project_id": "{{projectId}}",
+          "type": "{{type}}",
+          "limit": "{{limit}}"
+        },
+        "success": [
+          200
+        ],
+        "headers": {
+          "Accept": "application/json"
+        }
+      }
+    },
+    "eventProperties.top": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Top Event Properties",
+      "description": "List the most common properties for a Mixpanel event.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "event": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Event name."
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Maximum properties to return.",
+            "minimum": 1,
+            "maximum": 10000
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "event"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/api/query/events/properties/top",
+        "query": {
+          "project_id": "{{projectId}}",
+          "event": "{{event}}",
+          "limit": "{{limit}}"
+        },
+        "success": [
+          200
+        ],
+        "headers": {
+          "Accept": "application/json"
+        }
+      }
+    },
+    "eventProperties.values": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Event Property Values",
+      "description": "List top values for a Mixpanel event property.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "event": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Event name."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Property name."
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Maximum values to return.",
+            "minimum": 1,
+            "maximum": 10000
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "event",
+          "name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/api/query/events/properties/values",
+        "query": {
+          "project_id": "{{projectId}}",
+          "event": "{{event}}",
+          "name": "{{name}}",
+          "limit": "{{limit}}"
+        },
+        "success": [
+          200
+        ],
+        "headers": {
+          "Accept": "application/json"
+        }
+      }
+    },
+    "profiles.query": {
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Query Profiles",
+      "description": "Query Mixpanel user (or group) profiles that match a selector.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "where": {
+            "type": "string",
+            "description": "Profile selector expression."
+          },
+          "filter_by_cohort": {
+            "type": "string",
+            "description": "JSON cohort filter, for example {\"id\":123}."
+          },
+          "page": {
+            "type": "integer",
+            "description": "Page number.",
+            "minimum": 0
+          },
+          "session_id": {
+            "type": "string",
+            "description": "Pagination session id."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "POST",
+        "path": "/api/query/engage",
+        "query": {
+          "project_id": "{{projectId}}"
+        },
+        "success": [
+          200
+        ],
+        "headers": {
+          "Accept": "application/json",
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "where": "{{where}}",
+          "filter_by_cohort": "{{filter_by_cohort}}",
+          "page": "{{page}}",
+          "session_id": "{{session_id}}"
+        }
+      }
+    },
+    "annotations.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List Annotations",
+      "description": "List Mixpanel chart annotations in a date range.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "from_date": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Inclusive start date (YYYY-MM-DD)."
+          },
+          "to_date": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Inclusive end date (YYYY-MM-DD)."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "from_date",
+          "to_date"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/api/query/annotations",
+        "query": {
+          "project_id": "{{projectId}}",
+          "from_date": "{{from_date}}",
+          "to_date": "{{to_date}}"
+        },
+        "success": [
+          200
+        ],
+        "headers": {
+          "Accept": "application/json"
+        }
+      }
+    },
+    "annotations.create": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Create Annotation",
+      "description": "Create a Mixpanel chart annotation.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "date": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Annotation date (YYYY-MM-DD)."
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Annotation text."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "date",
+          "description"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "POST",
+        "path": "/api/query/annotations",
+        "query": {
+          "project_id": "{{projectId}}"
+        },
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Accept": "application/json",
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "date": "{{date}}",
+          "description": "{{description}}"
+        }
+      }
+    },
+    "annotations.delete": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "destructive",
+      "title": "Delete Annotation",
+      "description": "Delete a Mixpanel chart annotation by id.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Annotation id."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "deleted",
+          "id"
+        ],
+        "properties": {
+          "deleted": {
+            "type": "boolean"
+          },
+          "id": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "POST",
+        "path": "/api/query/annotations/delete",
+        "query": {
+          "project_id": "{{projectId}}",
+          "id": "{{id}}"
+        },
+        "success": [
+          200,
+          204
+        ],
+        "headers": {
+          "Accept": "application/json"
+        },
+        "result": {
+          "deleted": true,
+          "id": "{{input.id}}"
+        }
+      }
+    },
+    "activity.stream": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Activity Stream",
+      "description": "Return a Mixpanel user's recent event stream.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "from_date": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Inclusive start date (YYYY-MM-DD)."
+          },
+          "to_date": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Inclusive end date (YYYY-MM-DD)."
+          },
+          "distinct_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Profile distinct id."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "from_date",
+          "to_date",
+          "distinct_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/api/query/stream/query",
+        "query": {
+          "project_id": "{{projectId}}",
+          "from_date": "{{from_date}}",
+          "to_date": "{{to_date}}",
+          "distinct_id": "{{distinct_id}}"
+        },
+        "success": [
+          200
+        ],
+        "headers": {
+          "Accept": "application/json"
+        }
+      }
+    },
+    "jql.query": {
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Run JQL",
+      "description": "Run a Mixpanel JQL script against the project.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "script": {
+            "type": "string",
+            "minLength": 1,
+            "description": "JQL script."
+          },
+          "params": {
+            "type": "object",
+            "description": "Optional JQL params object."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "script"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "POST",
+        "path": "/api/query/jql",
+        "query": {
+          "project_id": "{{projectId}}"
+        },
+        "success": [
+          200
+        ],
+        "headers": {
+          "Accept": "application/json",
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "script": "{{script}}",
+          "params": "{{params}}"
+        }
+      }
+    },
+    "projects.get": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Get Project",
+      "description": "Get the configured Mixpanel project.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/api/app/projects/{{projectId}}",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Accept": "application/json"
+        }
+      }
+    },
+    "events.import": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Import Events",
+      "description": "Import Mixpanel events through the ingestion API.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "events": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object"
+            },
+            "description": "Event objects with event and properties."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "events"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "POST",
+        "baseUrl": "https://api.mixpanel.com",
+        "path": "/import",
+        "query": {
+          "strict": "1",
+          "project_id": "{{projectId}}"
+        },
+        "success": [
+          200
+        ],
+        "headers": {
+          "Accept": "application/json",
+          "Content-Type": "application/json"
+        },
+        "body": "{{events}}"
+      }
+    },
+    "profiles.update": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Update Profiles",
+      "description": "Create or update Mixpanel people profiles through the engage API.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "updates": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object"
+            },
+            "description": "Engage update objects ($set, $distinct_id, $token or project auth)."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "updates"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "POST",
+        "baseUrl": "https://api.mixpanel.com",
+        "path": "/engage",
+        "query": {
+          "verbose": "1"
+        },
+        "success": [
+          200
+        ],
+        "headers": {
+          "Accept": "application/json",
+          "Content-Type": "application/json"
+        },
+        "body": "{{updates}}"
+      }
+    }
+  },
+  "provenance": {
+    "source": {
+      "url": "https://github.com/oomol-lab/open-connector",
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"
+    }
+  },
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
+    },
+    "breach": {
+      "status": "confirmed-historical",
+      "waiver": "explicit user policy 2026-09-13 for non-China historical incidents"
+    }
+  }
+}

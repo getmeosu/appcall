@@ -1,4 +1,4 @@
-import { createKlaviyoClient, parseKlaviyoRateLimit, prop, isRecord } from "./http";
+import { createKlaviyoClient, firstString, parseKlaviyoRateLimit, prop, queryPath, isRecord } from "./http";
 import { normalizeContact, type NormalizedContact } from "./objects";
 
 // ─── profiles.get ─────────────────────────────────────────────────────────────
@@ -7,7 +7,7 @@ export type GetProfileInput = { profileId: string };
 
 export function validateGetProfileInput(input: unknown): GetProfileInput {
   if (!isRecord(input)) throw new Error("input must be an object");
-  return { profileId: requireString(input.profileId, "profileId") };
+  return { profileId: firstString(input, ["profileId", "id"], "profileId") };
 }
 
 export async function getProfileFromClient(
@@ -16,7 +16,7 @@ export async function getProfileFromClient(
 ): Promise<{ ok: true; profile: NormalizedContact } | { ok: false; error: { code: string; message: string; retryAfterSeconds?: number } }> {
   const payload = validateGetProfileInput(input);
   const client = createKlaviyoClient({ apiKey: options.apiKey, fetch: options.fetch, operation: "profiles.get" });
-  const result = await client.fetchJSON(`/profiles/${payload.profileId}`);
+  const result = await client.fetchJSON(queryPath(`/profiles/${payload.profileId}`, input));
   if (result.status === 200) {
     const body = result.body as Record<string, unknown>;
     const data = isRecord(body.data) ? body.data : { id: payload.profileId, attributes: {} };
@@ -42,7 +42,7 @@ export type UpdateProfileInput = {
 export function validateUpdateProfileInput(input: unknown): UpdateProfileInput {
   if (!isRecord(input)) throw new Error("input must be an object");
   return {
-    profileId: requireString(input.profileId, "profileId"),
+    profileId: firstString(input, ["profileId", "id"], "profileId"),
     email: typeof input.email === "string" ? input.email : undefined,
     firstName: typeof input.firstName === "string" ? input.firstName : undefined,
     lastName: typeof input.lastName === "string" ? input.lastName : undefined,
@@ -84,10 +84,11 @@ export type AddProfilesToListInput = { listId: string; profileIds: string[] };
 
 export function validateAddProfilesToListInput(input: unknown): AddProfilesToListInput {
   if (!isRecord(input)) throw new Error("input must be an object");
-  if (!Array.isArray(input.profileIds) || input.profileIds.length === 0) throw new Error("profileIds must be a non-empty array");
+  const rawIds = Array.isArray(input.profileIds) ? input.profileIds : input.profile_ids;
+  if (!Array.isArray(rawIds) || rawIds.length === 0) throw new Error("profileIds must be a non-empty array");
   return {
-    listId: requireString(input.listId, "listId"),
-    profileIds: (input.profileIds as unknown[]).filter((id): id is string => typeof id === "string"),
+    listId: firstString(input, ["listId", "list_id", "id"], "listId"),
+    profileIds: rawIds.filter((id): id is string => typeof id === "string"),
   };
 }
 
@@ -117,10 +118,11 @@ export type RemoveProfilesFromListInput = { listId: string; profileIds: string[]
 
 export function validateRemoveProfilesFromListInput(input: unknown): RemoveProfilesFromListInput {
   if (!isRecord(input)) throw new Error("input must be an object");
-  if (!Array.isArray(input.profileIds) || input.profileIds.length === 0) throw new Error("profileIds must be a non-empty array");
+  const rawIds = Array.isArray(input.profileIds) ? input.profileIds : input.profile_ids;
+  if (!Array.isArray(rawIds) || rawIds.length === 0) throw new Error("profileIds must be a non-empty array");
   return {
-    listId: requireString(input.listId, "listId"),
-    profileIds: (input.profileIds as unknown[]).filter((id): id is string => typeof id === "string"),
+    listId: firstString(input, ["listId", "list_id", "id"], "listId"),
+    profileIds: rawIds.filter((id): id is string => typeof id === "string"),
   };
 }
 
@@ -148,7 +150,7 @@ export type DeleteProfileInput = { profileId: string };
 
 export function validateDeleteProfileInput(input: unknown): DeleteProfileInput {
   if (!isRecord(input)) throw new Error("input must be an object");
-  return { profileId: requireString(input.profileId, "profileId") };
+  return { profileId: firstString(input, ["profileId", "id"], "profileId") };
 }
 
 export async function deleteProfileFromClient(
@@ -179,9 +181,10 @@ export async function subscribeProfilesFromClient(
   options: { apiKey: string; fetch?: typeof fetch },
   input: unknown
 ): Promise<{ ok: true; job: { id: string; status: string } } | { ok: false; error: { code: string; message: string; retryAfterSeconds?: number } }> {
-  const payload = validateSubscribeProfilesInput(input);
+  const rawData = isRecord(input) && isRecord((input as Record<string, unknown>).data) ? (input as Record<string, unknown>).data as Record<string, unknown> : undefined;
+  const payload = rawData ? { email: "", listId: undefined } : validateSubscribeProfilesInput(input);
   const client = createKlaviyoClient({ apiKey: options.apiKey, fetch: options.fetch, operation: "profiles.subscribe" });
-  const body: Record<string, unknown> = {
+  const body: Record<string, unknown> = rawData ? { data: rawData } : {
     data: {
       type: "profile-subscription-bulk-create-job",
       attributes: {

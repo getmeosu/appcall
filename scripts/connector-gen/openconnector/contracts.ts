@@ -100,7 +100,7 @@ export const approvedContracts: Readonly<Record<string, ApprovedContract>> = {
   "featurebase": get("https://do.featurebase.app", "apiKey", "Authorization", "Bearer {{apiKey}}"),
   "shortcut": get("https://api.app.shortcut.com/api/v3", "apiKey", "Shortcut-Token", "{{apiKey}}"),
   "canny": { ...get("https://canny.io/api", "apiKey"), httpAuth: { field: "apiKey", in: "body", name: "apiKey", value: "{{apiKey}}" } },
-  "mixpanel": { ...get("https://mixpanel.com", "serviceAccountSecret"), httpAuth: { field: "serviceAccountSecret", in: "header", name: "Authorization", basic: { username: "{{serviceAccountUsername}}", password: "{{serviceAccountSecret}}" } } },
+  "mixpanel": { ...get("https://mixpanel.com", "serviceAccountSecret"), allowedHosts: ["api.mixpanel.com", "mixpanel.com"], httpAuth: { field: "serviceAccountSecret", in: "header", name: "Authorization", basic: { username: "{{serviceAccountUsername}}", password: "{{serviceAccountSecret}}" } } },
   "toggl": { ...get("https://api.track.toggl.com/api/v9"), httpAuth: { field: "apiKey", in: "header", name: "Authorization", basic: { username: "{{apiKey}}", password: "api_token" } } },
   "harvest": get("https://api.harvestapp.com", "apiKey", "Authorization", "Bearer {{apiKey}}"),
   "miro": { ...get("https://api.miro.com/v2", "accessToken"), authType: "oauth2", setupMode: "oauth2", allowedHosts: ["api.miro.com", "miro.com"], oauth: { authorizeUrl: "https://miro.com/oauth/authorize", tokenUrl: "https://api.miro.com/v1/oauth/token" } },

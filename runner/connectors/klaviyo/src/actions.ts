@@ -31,12 +31,16 @@ export type CreateContactInput = { email: string; firstName?: string; lastName?:
 
 export function createContact(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
   if (isRecord(input) && typeof input.apiKey === "string") {
-    const payload = validateCreateContactInput(input);
+    const rawData = isRecord(input.data) ? input.data : undefined;
+    const payload = rawData ? { email: "", firstName: undefined, lastName: undefined, phone: undefined } : validateCreateContactInput(input);
     const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
+    const body = rawData
+      ? { data: rawData }
+      : { data: { type: "profile", attributes: { email: payload.email, first_name: payload.firstName, last_name: payload.lastName, phone_number: payload.phone } } };
     return createKlaviyoClient({ apiKey: input.apiKey, fetch: fetchFn, operation: "contacts.create" })
       .fetchJSON("/profiles", {
         method: "POST",
-        body: JSON.stringify({ data: { type: "profile", attributes: { email: payload.email, first_name: payload.firstName, last_name: payload.lastName, phone_number: payload.phone } } }),
+        body: JSON.stringify(body),
       })
       .then((result) => {
         if (result.status === 200 || result.status === 201) {

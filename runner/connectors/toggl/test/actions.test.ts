@@ -1,25 +1,63 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, it } from "bun:test";
+import { loadFixtureCases, runCandidateFixtures } from "../../../../scripts/connector-gen/openconnector/recipe-fixtures";
 import { compileDeclarativeConnector } from "../../../bun/src/declarative/compile";
 import manifest from "../manifest.json";
 
+const actionKeys = Object.entries(manifest.operations)
+  .filter(([, operation]) => (operation as { kind?: string }).kind === "action")
+  .map(([key]) => key);
 const { actions } = compileDeclarativeConnector(manifest);
-const mock = (body: unknown, status = 200, headers?: HeadersInit) => { const calls: Request[] = []; const fetch = async (u: RequestInfo | URL, i?: RequestInit) => { calls.push(new Request(u, i)); return new Response(JSON.stringify(body), { status, headers }); }; return { calls, fetch }; };
-describe("Toggl Track declarative contract", () => {
-  test("compiles all reads and uses Basic token auth", async () => {
-    expect(Object.keys(actions).sort()).toEqual(["healthcheck", "projects.list", "tasks.list", "timeEntries.list", "users.me", "workspaces.list"]);
-    const m = mock({ id: 1 }); await actions.healthcheck!({ apiKey: "tok-secret", fetch: m.fetch });
+
+describe("Toggl Track depth fixtures", () => {
+  it("compiles every HTTP action and skips EventOnly webhooks", () => {
+    expect(Object.keys(actions).sort()).toEqual([...actionKeys].sort());
+    for (const key of Object.keys(manifest.operations)) {
+      if (key.startsWith("webhook.")) {
+        expect(actions[key]).toBeUndefined();
+        expect((manifest.operations as Record<string, { kind?: string }>)[key].kind).toBe("webhook");
+      }
+    }
+  });
+
+  it("replays authenticated fixture cases", async () => {
+    const cases = loadFixtureCases(new URL("../fixtures/cases", import.meta.url).pathname);
+    const runs = await runCandidateFixtures(JSON.stringify(manifest), cases);
+    expect(runs.length).toBeGreaterThan(0);
+    for (const run of runs) {
+      if (run.status !== "passed") {
+        throw new Error(`${run.caseId}: ${run.error}`);
+      }
+    }
+  });
+
+  it("covers every declared action with a positive fixture and skips EventOnly webhooks", () => {
+    const cases = loadFixtureCases(new URL("../fixtures/cases", import.meta.url).pathname);
+    const positive = new Set(cases.filter((c) => c.expected.kind === "success").map((c) => c.operation));
+    expect([...positive].sort()).toEqual([...actionKeys].sort());
+    for (const key of Object.keys(manifest.operations)) {
+      if (key.startsWith("webhook.")) {
+        expect(positive.has(key)).toBe(false);
+      }
+    }
+  });
+});
+
+describe("Toggl Track auth contract", () => {
+  const mock = (body: unknown, status = 200, headers?: HeadersInit) => {
+    const calls: Request[] = [];
+    const fetch = async (u: RequestInfo | URL, i?: RequestInit) => {
+      calls.push(new Request(u, i));
+      return new Response(JSON.stringify(body), { status, headers });
+    };
+    return { calls, fetch };
+  };
+  it("uses Basic token auth", async () => {
+    const m = mock({ id: 1 });
+    await actions.healthcheck!({ apiKey: "tok-secret", fetch: m.fetch });
     expect(m.calls[0].url).toBe("https://api.track.toggl.com/api/v9/me");
     expect(m.calls[0].headers.get("authorization")).toBe(`Basic ${Buffer.from("tok-secret:api_token").toString("base64")}`);
   });
-  test("renders paths, queries, and rejects invalid IDs", async () => {
-    const m = mock([]); await actions["projects.list"]!({ apiKey: "x", workspaceId: 12, fetch: m.fetch });
-    expect(m.calls[0].url).toBe("https://api.track.toggl.com/api/v9/workspaces/12/projects");
-    await expect(actions["projects.list"]!({ apiKey: "x", workspaceId: null, fetch: m.fetch })).rejects.toMatchObject({ code: "INVALID_ACTION_INPUT" });
-    await expect(actions["tasks.list"]!({ apiKey: "x", workspaceId: "bad", projectId: 2, fetch: m.fetch })).rejects.toMatchObject({ code: "INVALID_ACTION_INPUT" });
-  });
-  test("maps rate limits and redacts secrets", async () => {
-    const m = mock({ message: "bad tok-secret" }, 429, { "retry-after": "9" });
-    await expect(actions.healthcheck!({ apiKey: "tok-secret", fetch: m.fetch })).rejects.toMatchObject({ code: "CONNECTOR_RATE_LIMITED", retryAfterSeconds: 9 });
-    await expect(actions.healthcheck!({ apiKey: "tok-secret", fetch: async () => new Response(JSON.stringify({ message: "tok-secret" }), { status: 401 }) })).rejects.not.toThrow("tok-secret");
+  it("rejects invalid workspace IDs", async () => {
+    await expect(actions["projects.list"]!({ apiKey: "x", workspaceId: null, fetch: mock([]).fetch })).rejects.toMatchObject({ code: "INVALID_ACTION_INPUT" });
   });
 });

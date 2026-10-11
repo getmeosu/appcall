@@ -1,4 +1,4 @@
-import { createKlaviyoClient, parseKlaviyoRateLimit, prop, isRecord } from "./http";
+import { createKlaviyoClient, firstString, parseKlaviyoRateLimit, prop, queryPath, isRecord } from "./http";
 import { normalizeCampaign, type NormalizedCampaign } from "./objects";
 
 // ─── campaigns.create ─────────────────────────────────────────────────────────
@@ -32,7 +32,8 @@ export async function createCampaignFromClient(
   options: { apiKey: string; fetch?: typeof fetch },
   input: unknown
 ): Promise<{ ok: true; campaign: NormalizedCampaign } | { ok: false; error: { code: string; message: string; retryAfterSeconds?: number } }> {
-  const payload = validateCreateCampaignInput(input);
+  const rawData = isRecord(input) && isRecord(input.data) ? input.data : undefined;
+  const payload = rawData ? { name: "", channel: "email" as const } : validateCreateCampaignInput(input);
   const client = createKlaviyoClient({ apiKey: options.apiKey, fetch: options.fetch, operation: "campaigns.create" });
   const attrs: Record<string, unknown> = {
     name: payload.name,
@@ -52,7 +53,7 @@ export async function createCampaignFromClient(
     relationships.lists = { data: [{ type: "list", id: payload.listId }] };
   }
 
-  const body: Record<string, unknown> = { data: { type: "campaign", attributes: attrs } };
+  const body: Record<string, unknown> = rawData ? { data: rawData } : { data: { type: "campaign", attributes: attrs } };
   if (Object.keys(relationships).length > 0) (body.data as Record<string, unknown>).relationships = relationships;
 
   const result = await client.fetchJSON("/campaigns", {
@@ -75,20 +76,20 @@ export type SendCampaignInput = { campaignId: string };
 
 export function validateGetCampaignInput(input: unknown): GetCampaignInput {
   if (!isRecord(input)) throw new Error("input must be an object");
-  return { campaignId: requireString(input.campaignId, "campaignId") };
+  return { campaignId: firstString(input, ["campaignId", "id"], "campaignId") };
 }
 
 export function validateUpdateCampaignInput(input: unknown): UpdateCampaignInput {
   if (!isRecord(input)) throw new Error("input must be an object");
   return {
-    campaignId: requireString(input.campaignId, "campaignId"),
+    campaignId: firstString(input, ["campaignId", "id"], "campaignId"),
     name: typeof input.name === "string" ? input.name : undefined,
   };
 }
 
 export function validateSendCampaignInput(input: unknown): SendCampaignInput {
   if (!isRecord(input)) throw new Error("input must be an object");
-  return { campaignId: requireString(input.campaignId, "campaignId") };
+  return { campaignId: firstString(input, ["campaignId", "id"], "campaignId") };
 }
 
 export async function getCampaignFromClient(
@@ -97,7 +98,7 @@ export async function getCampaignFromClient(
 ): Promise<{ ok: true; campaign: NormalizedCampaign } | { ok: false; error: { code: string; message: string; retryAfterSeconds?: number } }> {
   const payload = validateGetCampaignInput(input);
   const client = createKlaviyoClient({ apiKey: options.apiKey, fetch: options.fetch, operation: "campaigns.get" });
-  const result = await client.fetchJSON(`/campaigns/${payload.campaignId}`);
+  const result = await client.fetchJSON(queryPath(`/campaigns/${payload.campaignId}`, input));
   if (result.status === 200) {
     const body = result.body as Record<string, unknown>;
     const data = isRecord(body.data) ? body.data : { id: payload.campaignId, attributes: {} };
