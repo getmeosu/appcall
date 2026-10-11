@@ -75,32 +75,47 @@
     "disposition": "APPROVED",
     "edition": "international Tapfiliate REST API 1.6",
     "operations": [
-      "healthcheck",
-      "programs.list",
-      "affiliates.list",
-      "affiliates.get",
-      "commissions.list",
-      "programs.get",
+      "affiliateGroups.create",
+      "affiliateGroups.list",
+      "affiliateGroups.update",
+      "affiliateProspects.create",
+      "affiliateProspects.delete",
+      "affiliateProspects.get",
+      "affiliateProspects.list",
+      "affiliates.balances.get",
       "affiliates.create",
+      "affiliates.customFields.list",
       "affiliates.delete",
+      "affiliates.get",
+      "affiliates.group.delete",
+      "affiliates.group.set",
+      "affiliates.list",
+      "affiliates.meta.delete",
+      "affiliates.meta.get",
+      "affiliates.meta.list",
+      "affiliates.meta.set",
+      "affiliates.meta.setByKey",
+      "affiliates.notes.create",
+      "affiliates.notes.list",
+      "affiliates.parent.set",
+      "affiliates.payments.list",
+      "affiliates.payoutMethods.list",
       "affiliates.programs.list",
-      "commissions.get",
-      "commissions.approve",
-      "commissions.disapprove",
-      "customers.list",
-      "customers.get",
-      "customers.create",
-      "customers.update",
-      "customers.delete",
+      "balances.list",
+      "commissions.list",
       "conversions.list",
-      "conversions.get",
-      "conversions.create",
-      "webhook.affiliate_created",
-      "webhook.conversion_created",
-      "webhook.commission_created",
-      "webhook.commission_updated",
-      "webhook.customer_created",
-      "webhook.payment_created"
+      "customers.list",
+      "healthcheck",
+      "payments.cancel",
+      "payments.create",
+      "payments.get",
+      "payments.list",
+      "programs.affiliates.list",
+      "programs.bonuses.list",
+      "programs.commissionTypes.list",
+      "programs.get",
+      "programs.levels.list",
+      "programs.list"
     ],
     "upstreamSha": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
     "marketFocus": "international",
@@ -158,14 +173,6 @@
   },
   "operationSources": {
     "healthcheck": {
-      "upstreamActionId": "list_programs",
-      "sourceRefs": [
-        "provider-auth",
-        "action-list-programs",
-        "handler-list-programs",
-        "credential-validate",
-        "request-auth"
-      ],
       "documentationUrls": [
         "https://tapfiliate.com/docs/rest/",
         "https://support.tapfiliate.com/en/articles/1441950-your-api-key"
@@ -175,363 +182,441 @@
         "Credential-only healthcheck maps to documented GET /1.6/programs/ used by pinned credential validation.",
         "Native category is ads: Tapfiliate is affiliate tracking. Source Marketing/Data are not in the Rust CATEGORIES allowlist.",
         "Returns raw Tapfiliate JSON under data. The upstream user-agent is not sent. Trailing slashes follow official REST paths."
+      ],
+      "upstreamActionId": "list_programs",
+      "sourceRefs": [
+        "provider-auth",
+        "action-list-programs",
+        "handler-list-programs",
+        "credential-validate",
+        "request-auth"
       ]
     },
     "programs.list": {
-      "upstreamActionId": "list_programs",
-      "sourceRefs": [
-        "action-list-programs",
-        "handler-list-programs",
-        "request-auth"
-      ],
       "documentationUrls": [
         "https://tapfiliate.com/docs/rest/"
       ],
       "responseContract": "appcall-provider-json-v1",
       "adaptations": [
         "Returns raw Tapfiliate JSON array under data. Optional page is 1-based. Link-header next pages are never followed."
+      ],
+      "upstreamActionId": "list_programs",
+      "sourceRefs": [
+        "action-list-programs",
+        "handler-list-programs",
+        "request-auth"
+      ]
+    },
+    "programs.get": {
+      "documentationUrls": [
+        "https://tapfiliate.com/docs/rest/"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Get program: official GET /programs/{{program_id}}/ on Tapfiliate REST API 1.6.",
+        "Returns raw Tapfiliate JSON under data. Trailing slashes follow official REST paths. Link-header pages are never followed."
+      ]
+    },
+    "programs.affiliates.list": {
+      "documentationUrls": [
+        "https://tapfiliate.com/docs/rest/"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "List program affiliates: official GET /programs/{{program_id}}/affiliates/ on Tapfiliate REST API 1.6.",
+        "Returns raw Tapfiliate JSON under data. Trailing slashes follow official REST paths. Link-header pages are never followed."
+      ]
+    },
+    "programs.bonuses.list": {
+      "documentationUrls": [
+        "https://tapfiliate.com/docs/rest/"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "List program bonuses: official GET /programs/{{program_id}}/bonuses/ on Tapfiliate REST API 1.6.",
+        "Returns raw Tapfiliate JSON under data. Trailing slashes follow official REST paths. Link-header pages are never followed."
+      ]
+    },
+    "programs.commissionTypes.list": {
+      "documentationUrls": [
+        "https://tapfiliate.com/docs/rest/"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "List program commission types: official GET /programs/{{program_id}}/commission-types/ on Tapfiliate REST API 1.6.",
+        "Returns raw Tapfiliate JSON under data. Trailing slashes follow official REST paths. Link-header pages are never followed."
+      ]
+    },
+    "programs.levels.list": {
+      "documentationUrls": [
+        "https://tapfiliate.com/docs/rest/"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "List program MLM levels: official GET /programs/{{program_id}}/levels/ on Tapfiliate REST API 1.6.",
+        "Returns raw Tapfiliate JSON under data. Trailing slashes follow official REST paths. Link-header pages are never followed."
       ]
     },
     "affiliates.list": {
-      "upstreamActionId": "list_affiliates",
-      "sourceRefs": [
-        "action-list-affiliates",
-        "handler-list-affiliates",
-        "request-auth"
-      ],
       "documentationUrls": [
         "https://tapfiliate.com/docs/rest/"
       ],
       "responseContract": "appcall-provider-json-v1",
       "adaptations": [
         "Returns raw Tapfiliate JSON array under data. Optional page is 1-based."
+      ],
+      "upstreamActionId": "list_affiliates",
+      "sourceRefs": [
+        "action-list-affiliates",
+        "handler-list-affiliates",
+        "request-auth"
       ]
     },
     "affiliates.get": {
-      "upstreamActionId": "get_affiliate",
-      "sourceRefs": [
-        "action-get-affiliate",
-        "handler-get-affiliate",
-        "request-auth"
-      ],
       "documentationUrls": [
         "https://tapfiliate.com/docs/rest/"
       ],
       "responseContract": "appcall-provider-json-v1",
       "adaptations": [
         "affiliateId is a required path segment on GET /affiliates/{id}/."
+      ],
+      "upstreamActionId": "get_affiliate",
+      "sourceRefs": [
+        "action-get-affiliate",
+        "handler-get-affiliate",
+        "request-auth"
+      ]
+    },
+    "affiliates.create": {
+      "documentationUrls": [
+        "https://tapfiliate.com/docs/rest/"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Create affiliate: official POST /affiliates/ on Tapfiliate REST API 1.6.",
+        "Returns raw Tapfiliate JSON under data. Trailing slashes follow official REST paths. Link-header pages are never followed."
+      ]
+    },
+    "affiliates.delete": {
+      "documentationUrls": [
+        "https://tapfiliate.com/docs/rest/"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Delete affiliate: official DELETE /affiliates/{{affiliate_id}}/ on Tapfiliate REST API 1.6.",
+        "Returns raw Tapfiliate JSON under data. Trailing slashes follow official REST paths. Link-header pages are never followed."
+      ]
+    },
+    "affiliates.balances.get": {
+      "documentationUrls": [
+        "https://tapfiliate.com/docs/rest/"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Get affiliate balances: official GET /affiliates/{{affiliate_id}}/balances/ on Tapfiliate REST API 1.6.",
+        "Returns raw Tapfiliate JSON under data. Trailing slashes follow official REST paths. Link-header pages are never followed."
+      ]
+    },
+    "affiliates.customFields.list": {
+      "documentationUrls": [
+        "https://tapfiliate.com/docs/rest/"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "List affiliate custom fields: official GET /affiliates/custom-fields/ on Tapfiliate REST API 1.6.",
+        "Returns raw Tapfiliate JSON under data. Trailing slashes follow official REST paths. Link-header pages are never followed."
+      ]
+    },
+    "affiliates.group.set": {
+      "documentationUrls": [
+        "https://tapfiliate.com/docs/rest/"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Set affiliate group: official PUT /affiliates/{{affiliate_id}}/group/ on Tapfiliate REST API 1.6.",
+        "Returns raw Tapfiliate JSON under data. Trailing slashes follow official REST paths. Link-header pages are never followed."
+      ]
+    },
+    "affiliates.group.delete": {
+      "documentationUrls": [
+        "https://tapfiliate.com/docs/rest/"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Remove affiliate group: official DELETE /affiliates/{{affiliate_id}}/group/ on Tapfiliate REST API 1.6.",
+        "Returns raw Tapfiliate JSON under data. Trailing slashes follow official REST paths. Link-header pages are never followed."
+      ]
+    },
+    "affiliates.meta.list": {
+      "documentationUrls": [
+        "https://tapfiliate.com/docs/rest/"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "List affiliate metadata: official GET /affiliates/{{affiliate_id}}/meta-data/ on Tapfiliate REST API 1.6.",
+        "Returns raw Tapfiliate JSON under data. Trailing slashes follow official REST paths. Link-header pages are never followed."
+      ]
+    },
+    "affiliates.meta.set": {
+      "documentationUrls": [
+        "https://tapfiliate.com/docs/rest/"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Set affiliate metadata: official PUT /affiliates/{{affiliate_id}}/meta-data/ on Tapfiliate REST API 1.6.",
+        "Returns raw Tapfiliate JSON under data. Trailing slashes follow official REST paths. Link-header pages are never followed."
+      ]
+    },
+    "affiliates.meta.get": {
+      "documentationUrls": [
+        "https://tapfiliate.com/docs/rest/"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Get affiliate metadata by key: official GET /affiliates/{{affiliate_id}}/meta-data/{{key}}/ on Tapfiliate REST API 1.6.",
+        "Returns raw Tapfiliate JSON under data. Trailing slashes follow official REST paths. Link-header pages are never followed."
+      ]
+    },
+    "affiliates.meta.setByKey": {
+      "documentationUrls": [
+        "https://tapfiliate.com/docs/rest/"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Set affiliate metadata by key: official PUT /affiliates/{{affiliate_id}}/meta-data/{{key}}/ on Tapfiliate REST API 1.6.",
+        "Returns raw Tapfiliate JSON under data. Trailing slashes follow official REST paths. Link-header pages are never followed."
+      ]
+    },
+    "affiliates.meta.delete": {
+      "documentationUrls": [
+        "https://tapfiliate.com/docs/rest/"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Delete affiliate metadata: official DELETE /affiliates/{{affiliate_id}}/meta-data/{{key}}/ on Tapfiliate REST API 1.6.",
+        "Returns raw Tapfiliate JSON under data. Trailing slashes follow official REST paths. Link-header pages are never followed."
+      ]
+    },
+    "affiliates.notes.list": {
+      "documentationUrls": [
+        "https://tapfiliate.com/docs/rest/"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "List affiliate notes: official GET /affiliates/{{affiliate_id}}/notes/ on Tapfiliate REST API 1.6.",
+        "Returns raw Tapfiliate JSON under data. Trailing slashes follow official REST paths. Link-header pages are never followed."
+      ]
+    },
+    "affiliates.notes.create": {
+      "documentationUrls": [
+        "https://tapfiliate.com/docs/rest/"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Create affiliate note: official POST /affiliates/{{affiliate_id}}/notes/ on Tapfiliate REST API 1.6.",
+        "Returns raw Tapfiliate JSON under data. Trailing slashes follow official REST paths. Link-header pages are never followed."
+      ]
+    },
+    "affiliates.payments.list": {
+      "documentationUrls": [
+        "https://tapfiliate.com/docs/rest/"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "List affiliate payments: official GET /affiliates/{{affiliate_id}}/payments/ on Tapfiliate REST API 1.6.",
+        "Returns raw Tapfiliate JSON under data. Trailing slashes follow official REST paths. Link-header pages are never followed."
+      ]
+    },
+    "affiliates.payoutMethods.list": {
+      "documentationUrls": [
+        "https://tapfiliate.com/docs/rest/"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "List payout methods: official GET /affiliates/{{affiliate_id}}/payout-methods/ on Tapfiliate REST API 1.6.",
+        "Returns raw Tapfiliate JSON under data. Trailing slashes follow official REST paths. Link-header pages are never followed."
+      ]
+    },
+    "affiliates.programs.list": {
+      "documentationUrls": [
+        "https://tapfiliate.com/docs/rest/"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "List affiliate programs: official GET /affiliates/{{affiliate_id}}/programs/ on Tapfiliate REST API 1.6.",
+        "Returns raw Tapfiliate JSON under data. Trailing slashes follow official REST paths. Link-header pages are never followed."
+      ]
+    },
+    "affiliates.parent.set": {
+      "documentationUrls": [
+        "https://tapfiliate.com/docs/rest/"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Set affiliate parent: official POST /affiliates/{{child_affiliate_id}}/parent/ on Tapfiliate REST API 1.6.",
+        "Returns raw Tapfiliate JSON under data. Trailing slashes follow official REST paths. Link-header pages are never followed."
+      ]
+    },
+    "affiliateGroups.list": {
+      "documentationUrls": [
+        "https://tapfiliate.com/docs/rest/"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "List affiliate groups: official GET /affiliate-groups/ on Tapfiliate REST API 1.6.",
+        "Returns raw Tapfiliate JSON under data. Trailing slashes follow official REST paths. Link-header pages are never followed."
+      ]
+    },
+    "affiliateGroups.create": {
+      "documentationUrls": [
+        "https://tapfiliate.com/docs/rest/"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Create affiliate group: official POST /affiliate-groups/ on Tapfiliate REST API 1.6.",
+        "Returns raw Tapfiliate JSON under data. Trailing slashes follow official REST paths. Link-header pages are never followed."
+      ]
+    },
+    "affiliateGroups.update": {
+      "documentationUrls": [
+        "https://tapfiliate.com/docs/rest/"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Update affiliate group: official PATCH /affiliate-groups/{{affiliate_group_id}}/ on Tapfiliate REST API 1.6.",
+        "Returns raw Tapfiliate JSON under data. Trailing slashes follow official REST paths. Link-header pages are never followed."
+      ]
+    },
+    "affiliateProspects.list": {
+      "documentationUrls": [
+        "https://tapfiliate.com/docs/rest/"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "List affiliate prospects: official GET /affiliate-prospects/ on Tapfiliate REST API 1.6.",
+        "Returns raw Tapfiliate JSON under data. Trailing slashes follow official REST paths. Link-header pages are never followed."
+      ]
+    },
+    "affiliateProspects.create": {
+      "documentationUrls": [
+        "https://tapfiliate.com/docs/rest/"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Create affiliate prospect: official POST /affiliate-prospects/ on Tapfiliate REST API 1.6.",
+        "Returns raw Tapfiliate JSON under data. Trailing slashes follow official REST paths. Link-header pages are never followed."
+      ]
+    },
+    "affiliateProspects.get": {
+      "documentationUrls": [
+        "https://tapfiliate.com/docs/rest/"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Get affiliate prospect: official GET /affiliate-prospects/{{affiliate_prospect_id}}/ on Tapfiliate REST API 1.6.",
+        "Returns raw Tapfiliate JSON under data. Trailing slashes follow official REST paths. Link-header pages are never followed."
+      ]
+    },
+    "affiliateProspects.delete": {
+      "documentationUrls": [
+        "https://tapfiliate.com/docs/rest/"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Delete affiliate prospect: official DELETE /affiliate-prospects/{{affiliate_prospect_id}}/ on Tapfiliate REST API 1.6.",
+        "Returns raw Tapfiliate JSON under data. Trailing slashes follow official REST paths. Link-header pages are never followed."
       ]
     },
     "commissions.list": {
-      "upstreamActionId": "list_commissions",
-      "sourceRefs": [
-        "action-list-commissions",
-        "handler-list-commissions",
-        "request-auth"
-      ],
       "documentationUrls": [
         "https://tapfiliate.com/docs/rest/"
       ],
       "responseContract": "appcall-provider-json-v1",
       "adaptations": [
         "Returns raw Tapfiliate JSON array under data. Optional page is 1-based."
-      ]
-    },
-    "programs.get": {
-      "upstreamActionId": "get_program",
+      ],
+      "upstreamActionId": "list_commissions",
       "sourceRefs": [
-        "request-auth",
-        "action-list-programs"
-      ],
-      "documentationUrls": [
-        "https://tapfiliate.com/docs/rest/"
-      ],
-      "responseContract": "appcall-provider-json-v1",
-      "adaptations": [
-        "Official GET /1.6/programs/{program_id}/."
-      ]
-    },
-    "affiliates.create": {
-      "upstreamActionId": "create_affiliate",
-      "sourceRefs": [
-        "request-auth",
-        "action-list-affiliates"
-      ],
-      "documentationUrls": [
-        "https://tapfiliate.com/docs/rest/"
-      ],
-      "responseContract": "appcall-provider-json-v1",
-      "adaptations": [
-        "Official POST /1.6/affiliates/ with firstname and lastname."
-      ]
-    },
-    "affiliates.delete": {
-      "upstreamActionId": "delete_affiliate",
-      "sourceRefs": [
-        "request-auth",
-        "action-get-affiliate"
-      ],
-      "documentationUrls": [
-        "https://tapfiliate.com/docs/rest/"
-      ],
-      "responseContract": "appcall-provider-json-v1",
-      "adaptations": [
-        "Official DELETE /1.6/affiliates/{id}/ returns 204."
-      ]
-    },
-    "affiliates.programs.list": {
-      "upstreamActionId": "list_affiliate_programs",
-      "sourceRefs": [
-        "request-auth",
-        "action-get-affiliate"
-      ],
-      "documentationUrls": [
-        "https://tapfiliate.com/docs/rest/"
-      ],
-      "responseContract": "appcall-provider-json-v1",
-      "adaptations": [
-        "Official GET /1.6/affiliates/{id}/programs/."
-      ]
-    },
-    "commissions.get": {
-      "upstreamActionId": "get_commission",
-      "sourceRefs": [
-        "request-auth",
-        "action-list-commissions"
-      ],
-      "documentationUrls": [
-        "https://tapfiliate.com/docs/rest/"
-      ],
-      "responseContract": "appcall-provider-json-v1",
-      "adaptations": [
-        "Official GET /1.6/commissions/{id}/."
-      ]
-    },
-    "commissions.approve": {
-      "upstreamActionId": "approve_commission",
-      "sourceRefs": [
-        "request-auth",
-        "action-list-commissions"
-      ],
-      "documentationUrls": [
-        "https://tapfiliate.com/docs/rest/"
-      ],
-      "responseContract": "appcall-provider-json-v1",
-      "adaptations": [
-        "Official PUT /1.6/commissions/{id}/approved/."
-      ]
-    },
-    "commissions.disapprove": {
-      "upstreamActionId": "disapprove_commission",
-      "sourceRefs": [
-        "request-auth",
-        "action-list-commissions"
-      ],
-      "documentationUrls": [
-        "https://tapfiliate.com/docs/rest/"
-      ],
-      "responseContract": "appcall-provider-json-v1",
-      "adaptations": [
-        "Official DELETE /1.6/commissions/{id}/approved/."
-      ]
-    },
-    "customers.list": {
-      "upstreamActionId": "list_customers",
-      "sourceRefs": [
+        "action-list-commissions",
+        "handler-list-commissions",
         "request-auth"
-      ],
-      "documentationUrls": [
-        "https://tapfiliate.com/docs/rest/"
-      ],
-      "responseContract": "appcall-provider-json-v1",
-      "adaptations": [
-        "Official GET /1.6/customers/ with optional filters."
-      ]
-    },
-    "customers.get": {
-      "upstreamActionId": "get_customer",
-      "sourceRefs": [
-        "request-auth"
-      ],
-      "documentationUrls": [
-        "https://tapfiliate.com/docs/rest/"
-      ],
-      "responseContract": "appcall-provider-json-v1",
-      "adaptations": [
-        "Official GET /1.6/customers/{id}/."
-      ]
-    },
-    "customers.create": {
-      "upstreamActionId": "create_customer",
-      "sourceRefs": [
-        "request-auth"
-      ],
-      "documentationUrls": [
-        "https://tapfiliate.com/docs/rest/"
-      ],
-      "responseContract": "appcall-provider-json-v1",
-      "adaptations": [
-        "Official POST /1.6/customers/ requires customer_id plus an attribution handle."
-      ]
-    },
-    "customers.update": {
-      "upstreamActionId": "update_customer",
-      "sourceRefs": [
-        "request-auth"
-      ],
-      "documentationUrls": [
-        "https://tapfiliate.com/docs/rest/"
-      ],
-      "responseContract": "appcall-provider-json-v1",
-      "adaptations": [
-        "Official PATCH /1.6/customers/{id}/."
-      ]
-    },
-    "customers.delete": {
-      "upstreamActionId": "delete_customer",
-      "sourceRefs": [
-        "request-auth"
-      ],
-      "documentationUrls": [
-        "https://tapfiliate.com/docs/rest/"
-      ],
-      "responseContract": "appcall-provider-json-v1",
-      "adaptations": [
-        "Official DELETE /1.6/customers/{id}/ returns 204."
       ]
     },
     "conversions.list": {
-      "upstreamActionId": "list_conversions",
-      "sourceRefs": [
-        "request-auth"
-      ],
       "documentationUrls": [
         "https://tapfiliate.com/docs/rest/"
       ],
       "responseContract": "appcall-provider-json-v1",
       "adaptations": [
-        "Official GET /1.6/conversions/ with optional filters."
+        "List conversions: official GET /conversions/ on Tapfiliate REST API 1.6.",
+        "Returns raw Tapfiliate JSON under data. Trailing slashes follow official REST paths. Link-header pages are never followed."
       ]
     },
-    "conversions.get": {
-      "upstreamActionId": "get_conversion",
-      "sourceRefs": [
-        "request-auth"
-      ],
+    "customers.list": {
       "documentationUrls": [
         "https://tapfiliate.com/docs/rest/"
       ],
       "responseContract": "appcall-provider-json-v1",
       "adaptations": [
-        "Official GET /1.6/conversions/{id}/."
+        "List customers: official GET /customers/ on Tapfiliate REST API 1.6.",
+        "Returns raw Tapfiliate JSON under data. Trailing slashes follow official REST paths. Link-header pages are never followed."
       ]
     },
-    "conversions.create": {
-      "upstreamActionId": "create_conversion",
-      "sourceRefs": [
-        "request-auth"
-      ],
+    "balances.list": {
       "documentationUrls": [
         "https://tapfiliate.com/docs/rest/"
       ],
       "responseContract": "appcall-provider-json-v1",
       "adaptations": [
-        "Official POST /1.6/conversions/ with amount and external_id."
+        "List balances: official GET /balances/ on Tapfiliate REST API 1.6.",
+        "Returns raw Tapfiliate JSON under data. Trailing slashes follow official REST paths. Link-header pages are never followed."
       ]
     },
-    "webhook.affiliate_created": {
-      "upstreamActionId": "affiliate_created_webhook",
-      "sourceRefs": [
-        "request-auth"
-      ],
+    "payments.list": {
       "documentationUrls": [
-        "https://tapfiliate.com/docs/guides/how-to-set-up-trigger-webhooks/"
+        "https://tapfiliate.com/docs/rest/"
       ],
       "responseContract": "appcall-provider-json-v1",
       "adaptations": [
-        "EventOnly inbound affiliate-created trigger. No bun handler."
+        "List payments: official GET /payments/ on Tapfiliate REST API 1.6.",
+        "Returns raw Tapfiliate JSON under data. Trailing slashes follow official REST paths. Link-header pages are never followed."
       ]
     },
-    "webhook.conversion_created": {
-      "upstreamActionId": "conversion_created_webhook",
-      "sourceRefs": [
-        "request-auth"
-      ],
+    "payments.get": {
       "documentationUrls": [
-        "https://tapfiliate.com/docs/guides/how-to-set-up-trigger-webhooks/"
+        "https://tapfiliate.com/docs/rest/"
       ],
       "responseContract": "appcall-provider-json-v1",
       "adaptations": [
-        "EventOnly inbound conversion-created trigger. No bun handler."
+        "Get payment: official GET /payments/{{payment_id}}/ on Tapfiliate REST API 1.6.",
+        "Returns raw Tapfiliate JSON under data. Trailing slashes follow official REST paths. Link-header pages are never followed."
       ]
     },
-    "webhook.commission_created": {
-      "upstreamActionId": "commission_created_webhook",
-      "sourceRefs": [
-        "request-auth"
-      ],
+    "payments.create": {
       "documentationUrls": [
-        "https://tapfiliate.com/docs/guides/how-to-set-up-trigger-webhooks/"
+        "https://tapfiliate.com/docs/rest/"
       ],
       "responseContract": "appcall-provider-json-v1",
       "adaptations": [
-        "EventOnly inbound commission-created trigger. No bun handler."
+        "Create payment: official POST /payments/ on Tapfiliate REST API 1.6.",
+        "Returns raw Tapfiliate JSON under data. Trailing slashes follow official REST paths. Link-header pages are never followed."
       ]
     },
-    "webhook.commission_updated": {
-      "upstreamActionId": "commission_updated_webhook",
-      "sourceRefs": [
-        "request-auth"
-      ],
+    "payments.cancel": {
       "documentationUrls": [
-        "https://tapfiliate.com/docs/guides/how-to-set-up-trigger-webhooks/"
+        "https://tapfiliate.com/docs/rest/"
       ],
       "responseContract": "appcall-provider-json-v1",
       "adaptations": [
-        "EventOnly inbound commission-updated trigger. No bun handler."
-      ]
-    },
-    "webhook.customer_created": {
-      "upstreamActionId": "customer_created_webhook",
-      "sourceRefs": [
-        "request-auth"
-      ],
-      "documentationUrls": [
-        "https://tapfiliate.com/docs/guides/how-to-set-up-trigger-webhooks/"
-      ],
-      "responseContract": "appcall-provider-json-v1",
-      "adaptations": [
-        "EventOnly inbound customer-created trigger. No bun handler."
-      ]
-    },
-    "webhook.payment_created": {
-      "upstreamActionId": "payment_created_webhook",
-      "sourceRefs": [
-        "request-auth"
-      ],
-      "documentationUrls": [
-        "https://tapfiliate.com/docs/guides/how-to-set-up-trigger-webhooks/"
-      ],
-      "responseContract": "appcall-provider-json-v1",
-      "adaptations": [
-        "EventOnly inbound payment-created trigger. No bun handler."
+        "Cancel payment: official DELETE /payments/{{payment_id}}/ on Tapfiliate REST API 1.6.",
+        "Returns raw Tapfiliate JSON under data. Trailing slashes follow official REST paths. Link-header pages are never followed."
       ]
     }
   },
   "manifest": {
-    "key": "tapfiliate",
-    "name": "Tapfiliate",
-    "version": "0.2.0",
-    "runtime": "bun",
-    "visibility": "public",
-    "categories": [
-      "ads"
-    ],
     "auth": {
-      "type": "api_key",
       "scopes": [],
       "setup": {
-        "mode": "api_key",
         "fields": [
           {
             "key": "apiKey",
@@ -539,49 +624,70 @@
             "required": true,
             "secret": true
           }
-        ]
+        ],
+        "mode": "api_key"
+      },
+      "type": "api_key"
+    },
+    "categories": [
+      "ads"
+    ],
+    "evidence": {
+      "fixture": {
+        "status": "supplied"
+      },
+      "live": {
+        "status": "unverified"
       }
     },
-    "network": {
-      "allowedHosts": [
-        "api.tapfiliate.com"
-      ]
-    },
-    "models": [
-      "program",
-      "affiliate",
-      "commission",
-      "customer",
-      "conversion"
-    ],
     "http": {
-      "baseUrl": "https://api.tapfiliate.com/1.6",
       "auth": {
         "field": "apiKey",
         "in": "header",
         "name": "X-Api-Key",
         "value": "{{apiKey}}"
       },
-      "headers": {
-        "Accept": "application/json"
-      },
+      "baseUrl": "https://api.tapfiliate.com/1.6",
       "errors": {
-        "rateLimitStatuses": [
-          429
-        ],
-        "retryAfterHeader": "retry-after",
         "defaultRetryAfterSeconds": 30,
         "messagePaths": [
           "message",
           "error",
           "detail",
           "errors.0"
-        ]
+        ],
+        "rateLimitStatuses": [
+          429
+        ],
+        "retryAfterHeader": "retry-after"
+      },
+      "headers": {
+        "Accept": "application/json"
       }
+    },
+    "key": "tapfiliate",
+    "models": [
+      "program",
+      "affiliate",
+      "commission",
+      "conversion",
+      "customer",
+      "payment",
+      "affiliate-group",
+      "affiliate-prospect",
+      "balance"
+    ],
+    "name": "Tapfiliate",
+    "network": {
+      "allowedHosts": [
+        "api.tapfiliate.com"
+      ]
     },
     "operations": {
       "healthcheck": {
         "kind": "action",
+        "title": "Healthcheck",
+        "description": "Validate the Tapfiliate API key by listing programs.",
         "sideEffect": "read",
         "timeoutMs": 5000,
         "maxInputBytes": 4096,
@@ -589,12 +695,10 @@
         "enforceOutputSchema": true,
         "validationMode": "strict-generated",
         "responseFormat": "json",
-        "title": "Healthcheck",
-        "description": "Validate the Tapfiliate API key by listing programs.",
         "inputSchema": {
           "type": "object",
-          "properties": {},
-          "additionalProperties": false
+          "additionalProperties": false,
+          "properties": {}
         },
         "outputSchema": {
           "type": "object",
@@ -618,6 +722,8 @@
       },
       "programs.list": {
         "kind": "action",
+        "title": "List programs",
+        "description": "List Tapfiliate programs with optional page and asset_id filters.",
         "sideEffect": "read",
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
@@ -625,17 +731,21 @@
         "enforceOutputSchema": true,
         "validationMode": "strict-generated",
         "responseFormat": "json",
-        "title": "List programs",
-        "description": "List Tapfiliate programs with optional page.",
         "inputSchema": {
           "type": "object",
+          "additionalProperties": false,
           "properties": {
             "page": {
               "type": "integer",
+              "description": "1-based page number. Omit to request the first page.",
               "minimum": 1
+            },
+            "asset_id": {
+              "type": "string",
+              "description": "Filter programs by asset id.",
+              "minLength": 1
             }
-          },
-          "additionalProperties": false
+          }
         },
         "outputSchema": {
           "type": "object",
@@ -652,16 +762,19 @@
         "request": {
           "method": "GET",
           "path": "/programs/",
-          "query": {
-            "page": "{{page}}"
-          },
           "success": [
             200
-          ]
+          ],
+          "query": {
+            "page": "{{page}}",
+            "asset_id": "{{asset_id}}"
+          }
         }
       },
-      "affiliates.list": {
+      "programs.get": {
         "kind": "action",
+        "title": "Get program",
+        "description": "Retrieve details of a specific Tapfiliate program.",
         "sideEffect": "read",
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
@@ -669,17 +782,328 @@
         "enforceOutputSchema": true,
         "validationMode": "strict-generated",
         "responseFormat": "json",
-        "title": "List affiliates",
-        "description": "List Tapfiliate affiliates with optional page.",
         "inputSchema": {
           "type": "object",
+          "additionalProperties": false,
           "properties": {
-            "page": {
-              "type": "integer",
-              "minimum": 1
+            "program_id": {
+              "type": "string",
+              "description": "Tapfiliate program id (for example johns-affiliate-program).",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "program_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
             }
           },
           "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/programs/{{program_id}}/",
+          "success": [
+            200
+          ]
+        }
+      },
+      "programs.affiliates.list": {
+        "kind": "action",
+        "title": "List program affiliates",
+        "description": "List affiliates enrolled in a program with optional source, email, parent, and group filters.",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "program_id": {
+              "type": "string",
+              "description": "Tapfiliate program id (for example johns-affiliate-program).",
+              "minLength": 1
+            },
+            "page": {
+              "type": "integer",
+              "description": "1-based page number. Omit to request the first page.",
+              "minimum": 1
+            },
+            "per_page": {
+              "type": "integer",
+              "description": "Number of items per page when the API accepts it.",
+              "minimum": 1
+            },
+            "source_id": {
+              "type": "string",
+              "description": "Filter by source id.",
+              "minLength": 1
+            },
+            "email": {
+              "type": "string",
+              "description": "Filter or identify by email address.",
+              "minLength": 1
+            },
+            "parent_id": {
+              "type": "string",
+              "description": "Filter by parent affiliate id.",
+              "minLength": 1
+            },
+            "affiliate_group_id": {
+              "type": "string",
+              "description": "Tapfiliate affiliate group id (for example ag_eXampl3).",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "program_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "array"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/programs/{{program_id}}/affiliates/",
+          "success": [
+            200
+          ],
+          "query": {
+            "page": "{{page}}",
+            "per_page": "{{per_page}}",
+            "source_id": "{{source_id}}",
+            "email": "{{email}}",
+            "parent_id": "{{parent_id}}",
+            "affiliate_group_id": "{{affiliate_group_id}}"
+          }
+        }
+      },
+      "programs.bonuses.list": {
+        "kind": "action",
+        "title": "List program bonuses",
+        "description": "List performance bonuses configured for a program.",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "program_id": {
+              "type": "string",
+              "description": "Tapfiliate program id (for example johns-affiliate-program).",
+              "minLength": 1
+            },
+            "page": {
+              "type": "integer",
+              "description": "1-based page number. Omit to request the first page.",
+              "minimum": 1
+            },
+            "per_page": {
+              "type": "integer",
+              "description": "Number of items per page when the API accepts it.",
+              "minimum": 1
+            }
+          },
+          "required": [
+            "program_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "array"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/programs/{{program_id}}/bonuses/",
+          "success": [
+            200
+          ],
+          "query": {
+            "page": "{{page}}",
+            "per_page": "{{per_page}}"
+          }
+        }
+      },
+      "programs.commissionTypes.list": {
+        "kind": "action",
+        "title": "List program commission types",
+        "description": "List commission types configured for a program.",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "program_id": {
+              "type": "string",
+              "description": "Tapfiliate program id (for example johns-affiliate-program).",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "program_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "array"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/programs/{{program_id}}/commission-types/",
+          "success": [
+            200
+          ]
+        }
+      },
+      "programs.levels.list": {
+        "kind": "action",
+        "title": "List program MLM levels",
+        "description": "List multi-level marketing commission levels for a program.",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "program_id": {
+              "type": "string",
+              "description": "Tapfiliate program id (for example johns-affiliate-program).",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "program_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "array"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/programs/{{program_id}}/levels/",
+          "success": [
+            200
+          ]
+        }
+      },
+      "affiliates.list": {
+        "kind": "action",
+        "title": "List affiliates",
+        "description": "List Tapfiliate affiliates with optional page, email, click, source, referral, parent, and group filters.",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "page": {
+              "type": "integer",
+              "description": "1-based page number. Omit to request the first page.",
+              "minimum": 1
+            },
+            "per_page": {
+              "type": "integer",
+              "description": "Number of items per page when the API accepts it.",
+              "minimum": 1
+            },
+            "email": {
+              "type": "string",
+              "description": "Filter or identify by email address.",
+              "minLength": 1
+            },
+            "click_id": {
+              "type": "string",
+              "description": "Filter by click id.",
+              "minLength": 1
+            },
+            "source_id": {
+              "type": "string",
+              "description": "Filter by source id.",
+              "minLength": 1
+            },
+            "referral_code": {
+              "type": "string",
+              "description": "Filter by affiliate referral code.",
+              "minLength": 1
+            },
+            "parent_id": {
+              "type": "string",
+              "description": "Filter by parent affiliate id.",
+              "minLength": 1
+            },
+            "affiliate_group_id": {
+              "type": "string",
+              "description": "Tapfiliate affiliate group id (for example ag_eXampl3).",
+              "minLength": 1
+            }
+          }
         },
         "outputSchema": {
           "type": "object",
@@ -696,16 +1120,25 @@
         "request": {
           "method": "GET",
           "path": "/affiliates/",
-          "query": {
-            "page": "{{page}}"
-          },
           "success": [
             200
-          ]
+          ],
+          "query": {
+            "page": "{{page}}",
+            "per_page": "{{per_page}}",
+            "email": "{{email}}",
+            "click_id": "{{click_id}}",
+            "source_id": "{{source_id}}",
+            "referral_code": "{{referral_code}}",
+            "parent_id": "{{parent_id}}",
+            "affiliate_group_id": "{{affiliate_group_id}}"
+          }
         }
       },
       "affiliates.get": {
         "kind": "action",
+        "title": "Get affiliate",
+        "description": "Retrieve one Tapfiliate affiliate by ID.",
         "sideEffect": "read",
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
@@ -713,20 +1146,19 @@
         "enforceOutputSchema": true,
         "validationMode": "strict-generated",
         "responseFormat": "json",
-        "title": "Get affiliate",
-        "description": "Retrieve one Tapfiliate affiliate by ID.",
         "inputSchema": {
           "type": "object",
-          "required": [
-            "affiliateId"
-          ],
+          "additionalProperties": false,
           "properties": {
             "affiliateId": {
               "type": "string",
+              "description": "Unique identifier of the affiliate to retrieve.",
               "minLength": 1
             }
           },
-          "additionalProperties": false
+          "required": [
+            "affiliateId"
+          ]
         },
         "outputSchema": {
           "type": "object",
@@ -748,96 +1180,10 @@
           ]
         }
       },
-      "commissions.list": {
-        "kind": "action",
-        "sideEffect": "read",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
-        "title": "List commissions",
-        "description": "List Tapfiliate commissions with optional page.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "page": {
-              "type": "integer",
-              "minimum": 1
-            }
-          },
-          "additionalProperties": false
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "array"
-            }
-          },
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "GET",
-          "path": "/commissions/",
-          "query": {
-            "page": "{{page}}"
-          },
-          "success": [
-            200
-          ]
-        }
-      },
-      "programs.get": {
-        "kind": "action",
-        "sideEffect": "read",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
-        "title": "Get program",
-        "description": "Retrieve one Tapfiliate program by program ID.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "programId": {
-              "type": "string",
-              "minLength": 1
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "programId"
-          ]
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "GET",
-          "path": "/programs/{{programId}}/",
-          "success": [
-            200
-          ]
-        }
-      },
       "affiliates.create": {
         "kind": "action",
+        "title": "Create affiliate",
+        "description": "Create a Tapfiliate affiliate with contact, company, address, and metadata.",
         "sideEffect": "write",
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
@@ -845,28 +1191,103 @@
         "enforceOutputSchema": true,
         "validationMode": "strict-generated",
         "responseFormat": "json",
-        "title": "Create affiliate",
-        "description": "Create a Tapfiliate affiliate with first name, last name, and optional email.",
         "inputSchema": {
           "type": "object",
+          "additionalProperties": false,
           "properties": {
             "firstname": {
               "type": "string",
+              "description": "Affiliate first name.",
               "minLength": 1
             },
             "lastname": {
               "type": "string",
+              "description": "Affiliate last name.",
               "minLength": 1
             },
             "email": {
               "type": "string",
+              "description": "Affiliate email address.",
               "minLength": 1
+            },
+            "password": {
+              "type": "string",
+              "description": "Optional password. Tapfiliate generates one when omitted.",
+              "minLength": 1
+            },
+            "company": {
+              "type": "object",
+              "description": "Affiliate company object accepted by Tapfiliate REST.",
+              "additionalProperties": true,
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "description": "Company name."
+                },
+                "description": {
+                  "type": "string",
+                  "description": "Company description."
+                }
+              }
+            },
+            "address": {
+              "type": "object",
+              "description": "Affiliate address object accepted by Tapfiliate REST.",
+              "additionalProperties": true,
+              "properties": {
+                "address": {
+                  "type": "string",
+                  "description": "Street address."
+                },
+                "address_two": {
+                  "type": "string",
+                  "description": "Second address line."
+                },
+                "postal_code": {
+                  "type": "string",
+                  "description": "Postal code."
+                },
+                "city": {
+                  "type": "string",
+                  "description": "City."
+                },
+                "state": {
+                  "type": "string",
+                  "description": "State or region."
+                },
+                "country": {
+                  "type": "object",
+                  "description": "Country object.",
+                  "additionalProperties": true,
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "description": "ISO 3166-1 country code.",
+                      "minLength": 1
+                    },
+                    "name": {
+                      "type": "string",
+                      "description": "Country name."
+                    }
+                  }
+                }
+              }
+            },
+            "custom_fields": {
+              "type": "object",
+              "description": "Affiliate custom field values.",
+              "additionalProperties": true
+            },
+            "meta_data": {
+              "type": "object",
+              "description": "Custom metadata key-value pairs.",
+              "additionalProperties": true
             }
           },
-          "additionalProperties": false,
           "required": [
             "firstname",
-            "lastname"
+            "lastname",
+            "email"
           ]
         },
         "outputSchema": {
@@ -887,18 +1308,25 @@
           "success": [
             200
           ],
-          "headers": {
-            "Content-Type": "application/json"
-          },
           "body": {
             "firstname": "{{firstname}}",
             "lastname": "{{lastname}}",
-            "email": "{{email}}"
+            "email": "{{email}}",
+            "password": "{{password}}",
+            "company": "{{company}}",
+            "address": "{{address}}",
+            "custom_fields": "{{custom_fields}}",
+            "meta_data": "{{meta_data}}"
+          },
+          "headers": {
+            "Content-Type": "application/json"
           }
         }
       },
       "affiliates.delete": {
         "kind": "action",
+        "title": "Delete affiliate",
+        "description": "Delete a Tapfiliate affiliate by id.",
         "sideEffect": "destructive",
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
@@ -906,113 +1334,18 @@
         "enforceOutputSchema": true,
         "validationMode": "strict-generated",
         "responseFormat": "json",
-        "title": "Delete affiliate",
-        "description": "Permanently delete one Tapfiliate affiliate by ID.",
         "inputSchema": {
           "type": "object",
+          "additionalProperties": false,
           "properties": {
-            "affiliateId": {
+            "affiliate_id": {
               "type": "string",
+              "description": "Tapfiliate affiliate id (for example janejameson).",
               "minLength": 1
             }
           },
-          "additionalProperties": false,
           "required": [
-            "affiliateId"
-          ]
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": [
-                "object",
-                "null"
-              ]
-            }
-          },
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "DELETE",
-          "path": "/affiliates/{{affiliateId}}/",
-          "success": [
-            204
-          ]
-        }
-      },
-      "affiliates.programs.list": {
-        "kind": "action",
-        "sideEffect": "read",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
-        "title": "List affiliate programs",
-        "description": "List programs an affiliate is enrolled in.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "affiliateId": {
-              "type": "string",
-              "minLength": 1
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "affiliateId"
-          ]
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "array",
-              "items": {
-                "type": "object"
-              }
-            }
-          },
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "GET",
-          "path": "/affiliates/{{affiliateId}}/programs/",
-          "success": [
-            200
-          ]
-        }
-      },
-      "commissions.get": {
-        "kind": "action",
-        "sideEffect": "read",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
-        "title": "Get commission",
-        "description": "Retrieve one Tapfiliate commission by numeric ID.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "commissionId": {
-              "type": "integer",
-              "minimum": 1
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "commissionId"
+            "affiliate_id"
           ]
         },
         "outputSchema": {
@@ -1028,15 +1361,103 @@
           "additionalProperties": false
         },
         "request": {
+          "method": "DELETE",
+          "path": "/affiliates/{{affiliate_id}}/",
+          "success": [
+            204
+          ],
+          "result": {
+            "data": {
+              "ok": true
+            }
+          }
+        }
+      },
+      "affiliates.balances.get": {
+        "kind": "action",
+        "title": "Get affiliate balances",
+        "description": "Retrieve an affiliate's outstanding balances across currencies.",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "affiliate_id": {
+              "type": "string",
+              "description": "Tapfiliate affiliate id (for example janejameson).",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "affiliate_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "array"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
           "method": "GET",
-          "path": "/commissions/{{commissionId}}/",
+          "path": "/affiliates/{{affiliate_id}}/balances/",
           "success": [
             200
           ]
         }
       },
-      "commissions.approve": {
+      "affiliates.customFields.list": {
         "kind": "action",
+        "title": "List affiliate custom fields",
+        "description": "List custom field definitions configured for affiliates.",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {}
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "array"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/affiliates/custom-fields/",
+          "success": [
+            200
+          ]
+        }
+      },
+      "affiliates.group.set": {
+        "kind": "action",
+        "title": "Set affiliate group",
+        "description": "Assign an affiliate to an affiliate group.",
         "sideEffect": "write",
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
@@ -1044,19 +1465,24 @@
         "enforceOutputSchema": true,
         "validationMode": "strict-generated",
         "responseFormat": "json",
-        "title": "Approve commission",
-        "description": "Approve a pending Tapfiliate commission.",
         "inputSchema": {
           "type": "object",
+          "additionalProperties": false,
           "properties": {
-            "commissionId": {
-              "type": "integer",
-              "minimum": 1
+            "affiliate_id": {
+              "type": "string",
+              "description": "Tapfiliate affiliate id (for example janejameson).",
+              "minLength": 1
+            },
+            "group_id": {
+              "type": "string",
+              "description": "Tapfiliate affiliate group id (for example ag_eXampl3).",
+              "minLength": 1
             }
           },
-          "additionalProperties": false,
           "required": [
-            "commissionId"
+            "affiliate_id",
+            "group_id"
           ]
         },
         "outputSchema": {
@@ -1073,34 +1499,41 @@
         },
         "request": {
           "method": "PUT",
-          "path": "/commissions/{{commissionId}}/approved/",
+          "path": "/affiliates/{{affiliate_id}}/group/",
           "success": [
             200
-          ]
+          ],
+          "body": {
+            "group_id": "{{group_id}}"
+          },
+          "headers": {
+            "Content-Type": "application/json"
+          }
         }
       },
-      "commissions.disapprove": {
+      "affiliates.group.delete": {
         "kind": "action",
-        "sideEffect": "write",
+        "title": "Remove affiliate group",
+        "description": "Remove the current affiliate group assignment from an affiliate.",
+        "sideEffect": "destructive",
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
         "maxResponseBytes": 5242880,
         "enforceOutputSchema": true,
         "validationMode": "strict-generated",
         "responseFormat": "json",
-        "title": "Disapprove commission",
-        "description": "Disapprove a Tapfiliate commission.",
         "inputSchema": {
           "type": "object",
+          "additionalProperties": false,
           "properties": {
-            "commissionId": {
-              "type": "integer",
-              "minimum": 1
+            "affiliate_id": {
+              "type": "string",
+              "description": "Tapfiliate affiliate id (for example janejameson).",
+              "minLength": 1
             }
           },
-          "additionalProperties": false,
           "required": [
-            "commissionId"
+            "affiliate_id"
           ]
         },
         "outputSchema": {
@@ -1117,76 +1550,21 @@
         },
         "request": {
           "method": "DELETE",
-          "path": "/commissions/{{commissionId}}/approved/",
+          "path": "/affiliates/{{affiliate_id}}/group/",
           "success": [
-            200
-          ]
-        }
-      },
-      "customers.list": {
-        "kind": "action",
-        "sideEffect": "read",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
-        "title": "List customers",
-        "description": "List Tapfiliate customers with optional program, affiliate, and page filters.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "program_id": {
-              "type": "string",
-              "minLength": 1
-            },
-            "affiliate_id": {
-              "type": "string",
-              "minLength": 1
-            },
-            "customer_id": {
-              "type": "string",
-              "minLength": 1
-            },
-            "page": {
-              "type": "integer",
-              "minimum": 1
-            }
-          },
-          "additionalProperties": false
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
+            204
           ],
-          "properties": {
+          "result": {
             "data": {
-              "type": "array",
-              "items": {
-                "type": "object"
-              }
+              "ok": true
             }
-          },
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "GET",
-          "path": "/customers/",
-          "success": [
-            200
-          ],
-          "query": {
-            "program_id": "{{program_id}}",
-            "affiliate_id": "{{affiliate_id}}",
-            "customer_id": "{{customer_id}}",
-            "page": "{{page}}"
           }
         }
       },
-      "customers.get": {
+      "affiliates.meta.list": {
         "kind": "action",
+        "title": "List affiliate metadata",
+        "description": "Retrieve all custom metadata for an affiliate.",
         "sideEffect": "read",
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
@@ -1194,19 +1572,18 @@
         "enforceOutputSchema": true,
         "validationMode": "strict-generated",
         "responseFormat": "json",
-        "title": "Get customer",
-        "description": "Retrieve one Tapfiliate customer by Tapfiliate-generated ID.",
         "inputSchema": {
           "type": "object",
+          "additionalProperties": false,
           "properties": {
-            "customerId": {
+            "affiliate_id": {
               "type": "string",
+              "description": "Tapfiliate affiliate id (for example janejameson).",
               "minLength": 1
             }
           },
-          "additionalProperties": false,
           "required": [
-            "customerId"
+            "affiliate_id"
           ]
         },
         "outputSchema": {
@@ -1223,14 +1600,16 @@
         },
         "request": {
           "method": "GET",
-          "path": "/customers/{{customerId}}/",
+          "path": "/affiliates/{{affiliate_id}}/meta-data/",
           "success": [
             200
           ]
         }
       },
-      "customers.create": {
+      "affiliates.meta.set": {
         "kind": "action",
+        "title": "Set affiliate metadata",
+        "description": "Replace all custom metadata for an affiliate.",
         "sideEffect": "write",
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
@@ -1238,31 +1617,308 @@
         "enforceOutputSchema": true,
         "validationMode": "strict-generated",
         "responseFormat": "json",
-        "title": "Create customer",
-        "description": "Create a Tapfiliate customer attributed by click ID, referral code, or coupon.",
         "inputSchema": {
           "type": "object",
+          "additionalProperties": false,
           "properties": {
-            "customer_id": {
+            "affiliate_id": {
               "type": "string",
+              "description": "Tapfiliate affiliate id (for example janejameson).",
               "minLength": 1
             },
-            "click_id": {
+            "meta_data": {
+              "type": "object",
+              "description": "Custom metadata key-value pairs.",
+              "additionalProperties": true
+            }
+          },
+          "required": [
+            "affiliate_id",
+            "meta_data"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "PUT",
+          "path": "/affiliates/{{affiliate_id}}/meta-data/",
+          "success": [
+            200
+          ],
+          "body": "{{meta_data}}",
+          "headers": {
+            "Content-Type": "application/json"
+          }
+        }
+      },
+      "affiliates.meta.get": {
+        "kind": "action",
+        "title": "Get affiliate metadata by key",
+        "description": "Retrieve a single affiliate metadata value by key.",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "affiliate_id": {
               "type": "string",
+              "description": "Tapfiliate affiliate id (for example janejameson).",
               "minLength": 1
             },
-            "referral_code": {
+            "key": {
               "type": "string",
-              "minLength": 1
-            },
-            "status": {
-              "type": "string",
+              "description": "Affiliate metadata key.",
               "minLength": 1
             }
           },
-          "additionalProperties": false,
           "required": [
-            "customer_id"
+            "affiliate_id",
+            "key"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/affiliates/{{affiliate_id}}/meta-data/{{key}}/",
+          "success": [
+            200
+          ]
+        }
+      },
+      "affiliates.meta.setByKey": {
+        "kind": "action",
+        "title": "Set affiliate metadata by key",
+        "description": "Set or update a single affiliate metadata field by key.",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "affiliate_id": {
+              "type": "string",
+              "description": "Tapfiliate affiliate id (for example janejameson).",
+              "minLength": 1
+            },
+            "key": {
+              "type": "string",
+              "description": "Affiliate metadata key.",
+              "minLength": 1
+            },
+            "value": {
+              "type": "string",
+              "description": "Metadata value to store.",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "affiliate_id",
+            "key",
+            "value"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "PUT",
+          "path": "/affiliates/{{affiliate_id}}/meta-data/{{key}}/",
+          "success": [
+            200
+          ],
+          "body": {
+            "value": "{{value}}"
+          },
+          "headers": {
+            "Content-Type": "application/json"
+          }
+        }
+      },
+      "affiliates.meta.delete": {
+        "kind": "action",
+        "title": "Delete affiliate metadata",
+        "description": "Delete a single affiliate metadata field by key.",
+        "sideEffect": "destructive",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "affiliate_id": {
+              "type": "string",
+              "description": "Tapfiliate affiliate id (for example janejameson).",
+              "minLength": 1
+            },
+            "key": {
+              "type": "string",
+              "description": "Affiliate metadata key.",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "affiliate_id",
+            "key"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "DELETE",
+          "path": "/affiliates/{{affiliate_id}}/meta-data/{{key}}/",
+          "success": [
+            204
+          ],
+          "result": {
+            "data": {
+              "ok": true
+            }
+          }
+        }
+      },
+      "affiliates.notes.list": {
+        "kind": "action",
+        "title": "List affiliate notes",
+        "description": "List notes attached to an affiliate.",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "affiliate_id": {
+              "type": "string",
+              "description": "Tapfiliate affiliate id (for example janejameson).",
+              "minLength": 1
+            },
+            "page": {
+              "type": "integer",
+              "description": "1-based page number. Omit to request the first page.",
+              "minimum": 1
+            },
+            "per_page": {
+              "type": "integer",
+              "description": "Number of items per page when the API accepts it.",
+              "minimum": 1
+            }
+          },
+          "required": [
+            "affiliate_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "array"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/affiliates/{{affiliate_id}}/notes/",
+          "success": [
+            200
+          ],
+          "query": {
+            "page": "{{page}}",
+            "per_page": "{{per_page}}"
+          }
+        }
+      },
+      "affiliates.notes.create": {
+        "kind": "action",
+        "title": "Create affiliate note",
+        "description": "Create a note on an affiliate profile.",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "affiliate_id": {
+              "type": "string",
+              "description": "Tapfiliate affiliate id (for example janejameson).",
+              "minLength": 1
+            },
+            "message": {
+              "type": "string",
+              "description": "Note text.",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "affiliate_id",
+            "message"
           ]
         },
         "outputSchema": {
@@ -1279,23 +1935,171 @@
         },
         "request": {
           "method": "POST",
-          "path": "/customers/",
+          "path": "/affiliates/{{affiliate_id}}/notes/",
           "success": [
             200
           ],
+          "body": {
+            "message": "{{message}}"
+          },
           "headers": {
             "Content-Type": "application/json"
-          },
-          "body": {
-            "customer_id": "{{customer_id}}",
-            "click_id": "{{click_id}}",
-            "referral_code": "{{referral_code}}",
-            "status": "{{status}}"
           }
         }
       },
-      "customers.update": {
+      "affiliates.payments.list": {
         "kind": "action",
+        "title": "List affiliate payments",
+        "description": "List payments for a specific affiliate.",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "affiliate_id": {
+              "type": "string",
+              "description": "Tapfiliate affiliate id (for example janejameson).",
+              "minLength": 1
+            },
+            "page": {
+              "type": "integer",
+              "description": "1-based page number. Omit to request the first page.",
+              "minimum": 1
+            },
+            "per_page": {
+              "type": "integer",
+              "description": "Number of items per page when the API accepts it.",
+              "minimum": 1
+            }
+          },
+          "required": [
+            "affiliate_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "array"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/affiliates/{{affiliate_id}}/payments/",
+          "success": [
+            200
+          ],
+          "query": {
+            "page": "{{page}}",
+            "per_page": "{{per_page}}"
+          }
+        }
+      },
+      "affiliates.payoutMethods.list": {
+        "kind": "action",
+        "title": "List payout methods",
+        "description": "List payout methods configured for an affiliate.",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "affiliate_id": {
+              "type": "string",
+              "description": "Tapfiliate affiliate id (for example janejameson).",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "affiliate_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "array"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/affiliates/{{affiliate_id}}/payout-methods/",
+          "success": [
+            200
+          ]
+        }
+      },
+      "affiliates.programs.list": {
+        "kind": "action",
+        "title": "List affiliate programs",
+        "description": "List programs (affiliations) an affiliate is enrolled in.",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "affiliate_id": {
+              "type": "string",
+              "description": "Tapfiliate affiliate id (for example janejameson).",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "affiliate_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "array"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/affiliates/{{affiliate_id}}/programs/",
+          "success": [
+            200
+          ]
+        }
+      },
+      "affiliates.parent.set": {
+        "kind": "action",
+        "title": "Set affiliate parent",
+        "description": "Set the parent affiliate for a child affiliate (MLM).",
         "sideEffect": "write",
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
@@ -1303,23 +2107,183 @@
         "enforceOutputSchema": true,
         "validationMode": "strict-generated",
         "responseFormat": "json",
-        "title": "Update customer",
-        "description": "Update a Tapfiliate customer's external customer_id.",
         "inputSchema": {
           "type": "object",
+          "additionalProperties": false,
           "properties": {
-            "customerId": {
+            "child_affiliate_id": {
               "type": "string",
+              "description": "Child affiliate id whose parent is being set.",
               "minLength": 1
             },
-            "customer_id": {
+            "affiliate_id": {
               "type": "string",
+              "description": "Parent affiliate id.",
               "minLength": 1
             }
           },
-          "additionalProperties": false,
           "required": [
-            "customerId"
+            "child_affiliate_id",
+            "affiliate_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "POST",
+          "path": "/affiliates/{{child_affiliate_id}}/parent/",
+          "success": [
+            200
+          ],
+          "body": {
+            "affiliate_id": "{{affiliate_id}}"
+          },
+          "headers": {
+            "Content-Type": "application/json"
+          }
+        }
+      },
+      "affiliateGroups.list": {
+        "kind": "action",
+        "title": "List affiliate groups",
+        "description": "List all affiliate groups in the Tapfiliate account.",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "page": {
+              "type": "integer",
+              "description": "1-based page number. Omit to request the first page.",
+              "minimum": 1
+            },
+            "per_page": {
+              "type": "integer",
+              "description": "Number of items per page when the API accepts it.",
+              "minimum": 1
+            }
+          }
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "array"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/affiliate-groups/",
+          "success": [
+            200
+          ],
+          "query": {
+            "page": "{{page}}",
+            "per_page": "{{per_page}}"
+          }
+        }
+      },
+      "affiliateGroups.create": {
+        "kind": "action",
+        "title": "Create affiliate group",
+        "description": "Create a new affiliate group.",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "title": {
+              "type": "string",
+              "description": "Affiliate group title.",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "title"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "POST",
+          "path": "/affiliate-groups/",
+          "success": [
+            200
+          ],
+          "body": {
+            "title": "{{title}}"
+          },
+          "headers": {
+            "Content-Type": "application/json"
+          }
+        }
+      },
+      "affiliateGroups.update": {
+        "kind": "action",
+        "title": "Update affiliate group",
+        "description": "Update an affiliate group's title.",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "affiliate_group_id": {
+              "type": "string",
+              "description": "Tapfiliate affiliate group id (for example ag_eXampl3).",
+              "minLength": 1
+            },
+            "title": {
+              "type": "string",
+              "description": "Affiliate group title.",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "affiliate_group_id",
+            "title"
           ]
         },
         "outputSchema": {
@@ -1336,67 +2300,22 @@
         },
         "request": {
           "method": "PATCH",
-          "path": "/customers/{{customerId}}/",
+          "path": "/affiliate-groups/{{affiliate_group_id}}/",
           "success": [
             200
           ],
+          "body": {
+            "title": "{{title}}"
+          },
           "headers": {
             "Content-Type": "application/json"
-          },
-          "body": {
-            "customer_id": "{{customer_id}}"
           }
         }
       },
-      "customers.delete": {
+      "affiliateProspects.list": {
         "kind": "action",
-        "sideEffect": "destructive",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
-        "title": "Delete customer",
-        "description": "Permanently delete one Tapfiliate customer by ID.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "customerId": {
-              "type": "string",
-              "minLength": 1
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "customerId"
-          ]
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": [
-                "object",
-                "null"
-              ]
-            }
-          },
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "DELETE",
-          "path": "/customers/{{customerId}}/",
-          "success": [
-            204
-          ]
-        }
-      },
-      "conversions.list": {
-        "kind": "action",
+        "title": "List affiliate prospects",
+        "description": "List affiliate prospects with optional email, referral, program, and group filters.",
         "sideEffect": "read",
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
@@ -1404,29 +2323,41 @@
         "enforceOutputSchema": true,
         "validationMode": "strict-generated",
         "responseFormat": "json",
-        "title": "List conversions",
-        "description": "List Tapfiliate conversions with optional program, affiliate, and page filters.",
         "inputSchema": {
           "type": "object",
+          "additionalProperties": false,
           "properties": {
-            "program_id": {
-              "type": "string",
-              "minLength": 1
-            },
-            "affiliate_id": {
-              "type": "string",
-              "minLength": 1
-            },
-            "external_id": {
-              "type": "string",
-              "minLength": 1
-            },
             "page": {
               "type": "integer",
+              "description": "1-based page number. Omit to request the first page.",
               "minimum": 1
+            },
+            "per_page": {
+              "type": "integer",
+              "description": "Number of items per page when the API accepts it.",
+              "minimum": 1
+            },
+            "email": {
+              "type": "string",
+              "description": "Filter or identify by email address.",
+              "minLength": 1
+            },
+            "referral_code": {
+              "type": "string",
+              "description": "Filter by prospect referral code.",
+              "minLength": 1
+            },
+            "program_id": {
+              "type": "string",
+              "description": "Tapfiliate program id (for example johns-affiliate-program).",
+              "minLength": 1
+            },
+            "group_id": {
+              "type": "string",
+              "description": "Tapfiliate affiliate group id (for example ag_eXampl3).",
+              "minLength": 1
             }
-          },
-          "additionalProperties": false
+          }
         },
         "outputSchema": {
           "type": "object",
@@ -1435,74 +2366,31 @@
           ],
           "properties": {
             "data": {
-              "type": "array",
-              "items": {
-                "type": "object"
-              }
+              "type": "array"
             }
           },
           "additionalProperties": false
         },
         "request": {
           "method": "GET",
-          "path": "/conversions/",
+          "path": "/affiliate-prospects/",
           "success": [
             200
           ],
           "query": {
+            "page": "{{page}}",
+            "per_page": "{{per_page}}",
+            "email": "{{email}}",
+            "referral_code": "{{referral_code}}",
             "program_id": "{{program_id}}",
-            "affiliate_id": "{{affiliate_id}}",
-            "external_id": "{{external_id}}",
-            "page": "{{page}}"
+            "group_id": "{{group_id}}"
           }
         }
       },
-      "conversions.get": {
+      "affiliateProspects.create": {
         "kind": "action",
-        "sideEffect": "read",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
-        "title": "Get conversion",
-        "description": "Retrieve one Tapfiliate conversion by numeric ID.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "conversionId": {
-              "type": "integer",
-              "minimum": 1
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "conversionId"
-          ]
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "GET",
-          "path": "/conversions/{{conversionId}}/",
-          "success": [
-            200
-          ]
-        }
-      },
-      "conversions.create": {
-        "kind": "action",
+        "title": "Create affiliate prospect",
+        "description": "Create an affiliate prospect with contact, company, and address data.",
         "sideEffect": "write",
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
@@ -1510,31 +2398,88 @@
         "enforceOutputSchema": true,
         "validationMode": "strict-generated",
         "responseFormat": "json",
-        "title": "Create conversion",
-        "description": "Create a Tapfiliate conversion for a customer or click, including amount and external ID.",
         "inputSchema": {
           "type": "object",
+          "additionalProperties": false,
           "properties": {
-            "customer_id": {
+            "firstname": {
               "type": "string",
+              "description": "Prospect first name.",
               "minLength": 1
             },
-            "click_id": {
+            "lastname": {
               "type": "string",
+              "description": "Prospect last name.",
               "minLength": 1
             },
-            "external_id": {
+            "email": {
               "type": "string",
+              "description": "Prospect email address.",
               "minLength": 1
             },
-            "amount": {
-              "type": "number"
+            "company": {
+              "type": "object",
+              "description": "Affiliate company object accepted by Tapfiliate REST.",
+              "additionalProperties": true,
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "description": "Company name."
+                },
+                "description": {
+                  "type": "string",
+                  "description": "Company description."
+                }
+              }
+            },
+            "address": {
+              "type": "object",
+              "description": "Affiliate address object accepted by Tapfiliate REST.",
+              "additionalProperties": true,
+              "properties": {
+                "address": {
+                  "type": "string",
+                  "description": "Street address."
+                },
+                "address_two": {
+                  "type": "string",
+                  "description": "Second address line."
+                },
+                "postal_code": {
+                  "type": "string",
+                  "description": "Postal code."
+                },
+                "city": {
+                  "type": "string",
+                  "description": "City."
+                },
+                "state": {
+                  "type": "string",
+                  "description": "State or region."
+                },
+                "country": {
+                  "type": "object",
+                  "description": "Country object.",
+                  "additionalProperties": true,
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "description": "ISO 3166-1 country code.",
+                      "minLength": 1
+                    },
+                    "name": {
+                      "type": "string",
+                      "description": "Country name."
+                    }
+                  }
+                }
+              }
             }
           },
-          "additionalProperties": false,
           "required": [
-            "external_id",
-            "amount"
+            "firstname",
+            "lastname",
+            "email"
           ]
         },
         "outputSchema": {
@@ -1551,35 +2496,644 @@
         },
         "request": {
           "method": "POST",
+          "path": "/affiliate-prospects/",
+          "success": [
+            200
+          ],
+          "body": {
+            "firstname": "{{firstname}}",
+            "lastname": "{{lastname}}",
+            "email": "{{email}}",
+            "company": "{{company}}",
+            "address": "{{address}}"
+          },
+          "headers": {
+            "Content-Type": "application/json"
+          }
+        }
+      },
+      "affiliateProspects.get": {
+        "kind": "action",
+        "title": "Get affiliate prospect",
+        "description": "Retrieve a specific affiliate prospect.",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "affiliate_prospect_id": {
+              "type": "string",
+              "description": "Tapfiliate affiliate prospect id.",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "affiliate_prospect_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/affiliate-prospects/{{affiliate_prospect_id}}/",
+          "success": [
+            200
+          ]
+        }
+      },
+      "affiliateProspects.delete": {
+        "kind": "action",
+        "title": "Delete affiliate prospect",
+        "description": "Delete an affiliate prospect.",
+        "sideEffect": "destructive",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "affiliate_prospect_id": {
+              "type": "string",
+              "description": "Tapfiliate affiliate prospect id.",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "affiliate_prospect_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "DELETE",
+          "path": "/affiliate-prospects/{{affiliate_prospect_id}}/",
+          "success": [
+            204
+          ],
+          "result": {
+            "data": {
+              "ok": true
+            }
+          }
+        }
+      },
+      "commissions.list": {
+        "kind": "action",
+        "title": "List commissions",
+        "description": "List Tapfiliate commissions with optional page, status, affiliate, program, conversion, and date filters.",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "page": {
+              "type": "integer",
+              "description": "1-based page number. Omit to request the first page.",
+              "minimum": 1
+            },
+            "per_page": {
+              "type": "integer",
+              "description": "Number of items per page when the API accepts it.",
+              "minimum": 1
+            },
+            "status": {
+              "type": "string",
+              "description": "Filter by approval status.",
+              "enum": [
+                "approved",
+                "disapproved",
+                "pending"
+              ]
+            },
+            "affiliate_id": {
+              "type": "string",
+              "description": "Tapfiliate affiliate id (for example janejameson).",
+              "minLength": 1
+            },
+            "program_id": {
+              "type": "string",
+              "description": "Tapfiliate program id (for example johns-affiliate-program).",
+              "minLength": 1
+            },
+            "conversion_id": {
+              "type": "string",
+              "description": "Only return commissions for this conversion.",
+              "minLength": 1
+            },
+            "created_at_from": {
+              "type": "string",
+              "description": "Include commissions created at or after this timestamp.",
+              "minLength": 1
+            },
+            "created_at_to": {
+              "type": "string",
+              "description": "Include commissions created at or before this timestamp.",
+              "minLength": 1
+            },
+            "paid": {
+              "type": "boolean",
+              "description": "When true, only include paid commissions."
+            }
+          }
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "array"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/commissions/",
+          "success": [
+            200
+          ],
+          "query": {
+            "page": "{{page}}",
+            "per_page": "{{per_page}}",
+            "status": "{{status}}",
+            "affiliate_id": "{{affiliate_id}}",
+            "program_id": "{{program_id}}",
+            "conversion_id": "{{conversion_id}}",
+            "created_at_from": "{{created_at_from}}",
+            "created_at_to": "{{created_at_to}}",
+            "paid": "{{paid}}"
+          }
+        }
+      },
+      "conversions.list": {
+        "kind": "action",
+        "title": "List conversions",
+        "description": "List conversions with optional program, affiliate, external id, pending, and date filters.",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "page": {
+              "type": "integer",
+              "description": "1-based page number. Omit to request the first page.",
+              "minimum": 1
+            },
+            "program_id": {
+              "type": "string",
+              "description": "Tapfiliate program id (for example johns-affiliate-program).",
+              "minLength": 1
+            },
+            "external_id": {
+              "type": "string",
+              "description": "Merchant order / external conversion id.",
+              "minLength": 1
+            },
+            "affiliate_id": {
+              "type": "string",
+              "description": "Tapfiliate affiliate id (for example janejameson).",
+              "minLength": 1
+            },
+            "pending": {
+              "type": "boolean",
+              "description": "Only include conversions with pending commissions."
+            },
+            "date_from": {
+              "type": "string",
+              "description": "Filter conversions from this date (YYYY-MM-DD or ISO 8601).",
+              "minLength": 1
+            },
+            "date_to": {
+              "type": "string",
+              "description": "Filter conversions up to this date (YYYY-MM-DD or ISO 8601).",
+              "minLength": 1
+            },
+            "use_profile_timezone": {
+              "type": "boolean",
+              "description": "Use the Tapfiliate profile timezone for date filters."
+            }
+          }
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "array"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
           "path": "/conversions/",
           "success": [
             200
           ],
+          "query": {
+            "page": "{{page}}",
+            "program_id": "{{program_id}}",
+            "external_id": "{{external_id}}",
+            "affiliate_id": "{{affiliate_id}}",
+            "pending": "{{pending}}",
+            "date_from": "{{date_from}}",
+            "date_to": "{{date_to}}",
+            "use_profile_timezone": "{{use_profile_timezone}}"
+          }
+        }
+      },
+      "customers.list": {
+        "kind": "action",
+        "title": "List customers",
+        "description": "List customers with optional program, customer, affiliate, and date filters.",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "page": {
+              "type": "integer",
+              "description": "1-based page number. Omit to request the first page.",
+              "minimum": 1
+            },
+            "per_page": {
+              "type": "integer",
+              "description": "Number of items per page when the API accepts it.",
+              "minimum": 1
+            },
+            "program_id": {
+              "type": "string",
+              "description": "Tapfiliate program id (for example johns-affiliate-program).",
+              "minLength": 1
+            },
+            "customer_id": {
+              "type": "string",
+              "description": "Filter by merchant customer id.",
+              "minLength": 1
+            },
+            "affiliate_id": {
+              "type": "string",
+              "description": "Tapfiliate affiliate id (for example janejameson).",
+              "minLength": 1
+            },
+            "date_from": {
+              "type": "string",
+              "description": "Filter by start date (YYYY-MM-DD).",
+              "minLength": 1
+            },
+            "date_to": {
+              "type": "string",
+              "description": "Filter by end date (YYYY-MM-DD).",
+              "minLength": 1
+            }
+          }
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "array"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/customers/",
+          "success": [
+            200
+          ],
+          "query": {
+            "page": "{{page}}",
+            "per_page": "{{per_page}}",
+            "program_id": "{{program_id}}",
+            "customer_id": "{{customer_id}}",
+            "affiliate_id": "{{affiliate_id}}",
+            "date_from": "{{date_from}}",
+            "date_to": "{{date_to}}"
+          }
+        }
+      },
+      "balances.list": {
+        "kind": "action",
+        "title": "List balances",
+        "description": "List outstanding non-zero affiliate balances. Officially non-paginated; page is accepted when provided.",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "page": {
+              "type": "integer",
+              "description": "1-based page number. Omit to request the first page.",
+              "minimum": 1
+            }
+          }
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "array"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/balances/",
+          "success": [
+            200
+          ],
+          "query": {
+            "page": "{{page}}"
+          }
+        }
+      },
+      "payments.list": {
+        "kind": "action",
+        "title": "List payments",
+        "description": "List Tapfiliate payments with optional pagination.",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "page": {
+              "type": "integer",
+              "description": "1-based page number. Omit to request the first page.",
+              "minimum": 1
+            },
+            "per_page": {
+              "type": "integer",
+              "description": "Number of items per page when the API accepts it.",
+              "minimum": 1
+            }
+          }
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "array"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/payments/",
+          "success": [
+            200
+          ],
+          "query": {
+            "page": "{{page}}",
+            "per_page": "{{per_page}}"
+          }
+        }
+      },
+      "payments.get": {
+        "kind": "action",
+        "title": "Get payment",
+        "description": "Retrieve a specific Tapfiliate payment.",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "payment_id": {
+              "type": "string",
+              "description": "Tapfiliate payment id (for example pa_eXampl3).",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "payment_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/payments/{{payment_id}}/",
+          "success": [
+            200
+          ]
+        }
+      },
+      "payments.create": {
+        "kind": "action",
+        "title": "Create payment",
+        "description": "Create a payment that credits an affiliate balance.",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "affiliate_id": {
+              "type": "string",
+              "description": "Tapfiliate affiliate id (for example janejameson).",
+              "minLength": 1
+            },
+            "amount": {
+              "type": "number",
+              "description": "Payment amount. Must be greater than 0.",
+              "minimum": 0
+            },
+            "currency": {
+              "type": "string",
+              "description": "ISO 4217 currency code.",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "affiliate_id",
+            "amount",
+            "currency"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "POST",
+          "path": "/payments/",
+          "success": [
+            200
+          ],
+          "body": {
+            "affiliate_id": "{{affiliate_id}}",
+            "amount": "{{amount}}",
+            "currency": "{{currency}}"
+          },
           "headers": {
             "Content-Type": "application/json"
+          }
+        }
+      },
+      "payments.cancel": {
+        "kind": "action",
+        "title": "Cancel payment",
+        "description": "Cancel a pending payment and return the amount to the affiliate balance.",
+        "sideEffect": "destructive",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "payment_id": {
+              "type": "string",
+              "description": "Tapfiliate payment id (for example pa_eXampl3).",
+              "minLength": 1
+            }
           },
-          "body": {
-            "customer_id": "{{customer_id}}",
-            "click_id": "{{click_id}}",
-            "external_id": "{{external_id}}",
-            "amount": "{{amount}}"
+          "required": [
+            "payment_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "DELETE",
+          "path": "/payments/{{payment_id}}/",
+          "success": [
+            204
+          ],
+          "result": {
+            "data": {
+              "ok": true
+            }
           }
         }
       }
     },
     "provenance": {
       "source": {
-        "url": "https://github.com/oomol-lab/open-connector",
-        "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"
+        "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
+        "url": "https://github.com/oomol-lab/open-connector"
       }
     },
-    "evidence": {
-      "fixture": {
-        "status": "supplied"
-      },
-      "live": {
-        "status": "unverified"
-      }
-    }
+    "runtime": "bun",
+    "version": "0.2.0",
+    "visibility": "public"
   }
 }

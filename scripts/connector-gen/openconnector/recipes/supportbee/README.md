@@ -1,20 +1,57 @@
 # SupportBee
 
-Read-only international SupportBee REST API recipe. Copy the API token from your SupportBee desk (profile picture → API Token) and set `company` to the desk subdomain from `https://<company>.supportbee.com`. The runner sends `Authorization: Bearer` and `Accept: application/json` to `https://<company>.supportbee.com`. Self-hosted or caller-supplied hosts are not admitted; the host is the stored company subdomain plus the bounded `*.supportbee.com` wildcard.
+International SupportBee REST API recipe. Copy the API token from your SupportBee desk (profile picture → API Token) and set `company` to the desk subdomain from `https://<company>.supportbee.com`. The runner sends `Authorization: Bearer` and `Accept: application/json` to `https://<company>.supportbee.com`. Self-hosted or caller-supplied hosts are not admitted; the host is the stored company subdomain plus the bounded `*.supportbee.com` wildcard.
 
 ## Operations
 
-- `healthcheck`: `GET /users` with empty input (pinned credential validator).
-- `tickets.list`: `GET /tickets` with optional `per_page` (1–99), `page`, `archived` (`true` / `false` / `any`), `spam`, `trash`, `replies`, `max_replies`, `assigned_user`, `assigned_team`, `label`, `since`, `until`, `sort_by`, and `total_only`.
-- `tickets.get`: `GET /tickets/{id}`.
-- `labels.list`: `GET /labels`.
-- `teams.list`: `GET /teams` with optional `with_users` and `user=me`.
+- `healthcheck`
+- `labels.list`
+- `teams.list`
+- `tickets.get`
+- `tickets.list`
+- `tickets.create`
+- `tickets.search`
+- `tickets.archive`
+- `tickets.unarchive`
+- `tickets.answered`
+- `tickets.unanswered`
+- `tickets.spam`
+- `tickets.unspam`
+- `tickets.trash`
+- `tickets.untrash`
+- `tickets.delete`
+- `tickets.assign.team`
+- `tickets.unassign.team`
+- `tickets.unassign.user`
+- `tickets.labels.add`
+- `tickets.labels.remove`
+- `replies.list`
+- `replies.create`
+- `replies.get`
+- `comments.list`
+- `comments.create`
+- `users.list`
+- `users.get`
+- `users.create`
+- `users.update`
+- `snippets.list`
+- `snippets.create`
+- `snippets.update`
+- `snippets.delete`
+- `emails.list`
+- `emails.create`
+- `rules.create`
+- `consequences.create`
+- `filters.create`
+- `reports.avg_first_response_time`
+- `reports.tickets_count`
+- `reports.replies_count`
 
-Writes, replies, comments, ticket search, and `requester_emails` (source comma-join) are omitted. Native returns raw SupportBee JSON under `data`. Native category is `productivity` (source Communication is not in the Rust CATEGORIES allowlist).
+All 41 Composio SUPPORTBEE_* HTTP tools are mapped. `healthcheck` is retained from origin/main. Native returns raw SupportBee JSON under `data`. 204 No Content routes return `{ data: { ok: true } }`. Native category is `productivity`.
 
 ## Adaptations
 
-Pinned source and official docs agree on Bearer auth and `https://{company}.supportbee.com`. Required stored `company` interpolates that host with allowlisted `*.supportbee.com` (Algolia/Grafana-style). The upstream user-agent is not sent.
+Pinned source and official docs agree on Bearer auth and `https://{company}.supportbee.com`. Filter rules use the official POST /rules fields (`requester_email`, `delivered_to`, `subject`, `body`) rather than Composio's invented `conditions`/`actions` arrays. Ticket create uses official `requester_email` / `requester_name` rather than a nested requester object.
 
 ## License and evidence
 
