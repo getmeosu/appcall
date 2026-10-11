@@ -11,6 +11,8 @@ on:
 
 permissions:
   contents: read
+  # Cargo and image-layer caches, plus the image archive smoke downloads.
+  actions: write
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -36,7 +38,14 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y pkg-config libssl-dev cmake
       - name: Rust toolchain
         run: rustup toolchain install 1.94.0 --profile minimal && rustup default 1.94.0
-      - run: make build
+      - uses: Swatinem/rust-cache@v2
+        with:
+          prefix-key: v1-rust-release-check
+          shared-key: release-check
+      # The image job links the release bins. This job only typechecks that
+      # profile, so a pull request does not pay a second release codegen.
+      - name: locked release check
+        run: cargo check --locked --release -p appcall-api -p appcall-worker -p appcall-cli --bins
 
   runner-tests:
     name: runner tests
@@ -102,11 +111,20 @@ jobs:
           echo "$postgres_bin" >> "$GITHUB_PATH"
       - name: Rust toolchain
         run: rustup toolchain install 1.94.0 --profile minimal --component rustfmt --component clippy && rustup default 1.94.0
+      - uses: Swatinem/rust-cache@v2
+        with:
+          prefix-key: v1-rust-dev
+          shared-key: dev
       - run: make check-rust test-rust
       - name: Rust dependency audit
         run: |
-          cargo install cargo-audit --version 0.22.1 --locked
-          make audit-rust
+          curl -fsSL https://github.com/rustsec/rustsec/releases/download/cargo-audit/v0.22.1/cargo-audit-x86_64-unknown-linux-gnu-v0.22.1.tgz -o /tmp/cargo-audit.tgz
+          echo "1890badd5f15831a9af4b074399fcd21e6f7c0fe42c84e9254cdffc9f813765c  /tmp/cargo-audit.tgz" | sha256sum -c -
+          tar -xzf /tmp/cargo-audit.tgz -C /tmp
+          mkdir -p /tmp/bin
+          install -m 755 /tmp/cargo-audit-x86_64-unknown-linux-gnu-v0.22.1/cargo-audit /tmp/bin/cargo-audit
+          export PATH="/tmp/bin:$PATH"
+          cargo audit
       - name: PostgreSQL, concurrency and subprocess contracts
         run: make test-integration
 
@@ -130,22 +148,56 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
       - name: API image
-        run: docker build -f Dockerfile.api -t appcall-api:ci .
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile.api
+          tags: appcall-api:ci
+          load: true
+          cache-from: type=gha,scope=appcall-api
+          cache-to: type=gha,scope=appcall-api,mode=max
       - name: runner image
-        run: docker build -f Dockerfile.runner -t appcall-runner:ci .
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile.runner
+          tags: appcall-runner:ci
+          load: true
+          cache-from: type=gha,scope=appcall-runner
+          cache-to: type=gha,scope=appcall-runner,mode=max
+      # Smoke boots these tags. The archive is already compressed; the
+      # artifact action must not gzip it again.
+      - name: Export images for smoke
+        run: docker save appcall-api:ci appcall-runner:ci | gzip -1 > /tmp/ci-images.tar.gz
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ci-images
+          path: /tmp/ci-images.tar.gz
+          retention-days: 1
+          compression-level: 0
 
   smoke-prod:
     name: production topology smoke
     runs-on: ubuntu-latest
+    needs: images
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
       - name: smoke safety fixture
         run: scripts/test-smoke-prod.sh
+      - uses: actions/download-artifact@v4
+        with:
+          name: ci-images
+          path: /tmp
+      - name: Load images built once by the image job
+        run: gzip -dc /tmp/ci-images.tar.gz | docker load
       - name: production topology smoke
         env:
           APPCALL_SMOKE_PORT: "0"
+          APPCALL_SMOKE_API_IMAGE: appcall-api:ci
+          APPCALL_SMOKE_RUNNER_IMAGE: appcall-runner:ci
           APPCALL_SMOKE_START_TIMEOUT_SECONDS: "900"
           APPCALL_SMOKE_COMMAND_TIMEOUT_SECONDS: "120"
           APPCALL_SMOKE_CLEANUP_TIMEOUT_SECONDS: "60"
