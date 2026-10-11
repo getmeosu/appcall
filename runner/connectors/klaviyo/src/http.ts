@@ -1,7 +1,6 @@
 import { createConnectorHttpClient } from "../../../bun/src/http";
 import manifest from "../manifest.json";
-
-const REVISION = "2024-10-15";
+import { REVISION } from "./revision";
 
 export function parseKlaviyoRateLimit(status: number, _headers: Record<string, string>): { limited: boolean; retryAfterSeconds: number } {
   if (status === 429) { return { limited: true, retryAfterSeconds: 30 }; }
