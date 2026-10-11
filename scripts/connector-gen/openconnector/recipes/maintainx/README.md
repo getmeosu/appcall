@@ -1,21 +1,22 @@
 # MaintainX
 
-Read-only international **MaintainX REST API v1** recipe. Generate an API key under Settings > Integrations > API Keys. Store it as `apiKey`. The runner sends `Authorization: Bearer` to `https://api.getmaintainx.com/v1`, plus `Accept: application/json`.
+International **MaintainX REST API v1** recipe covering the origin healthcheck plus every Composio `MAINTAINX_*` HTTP tool (30 tools, 32 operations including origin `healthcheck` and `users.list`).
+
+## Setup
+
+Generate an API key under Settings > Integrations > API Keys. Store it as `apiKey`. The runner sends `Authorization: Bearer` and `Accept: application/json` to `https://api.getmaintainx.com/v1`.
 
 ## Operations
 
-- `healthcheck`: `GET /locations?limit=1` with empty input (cheap authenticated locations probe; pinned credential validator).
-- `locations.list`: `GET /locations` with optional `cursor` and `limit` (1–200).
-- `locations.get`: `GET /locations/{id}`; `id` is a required positive integer.
-- `work-orders.list`: `GET /workorders` with optional `cursor` and `limit` (1–200).
-- `users.list`: `GET /users` with optional `cursor` and `limit` (1–200).
+- Origin reads: `healthcheck` (`GET /locations?limit=1`), `locations.list` / `locations.get`, `work-orders.list`, `users.list`.
+- Categories, locations, procedure templates, work orders, work-order comments, work requests, and work-request portals (create/list/get/update as Composio lists them).
+- Assets and categories delete (`DELETE` 204 → `{success: true}`).
+- Lists: asset criticalities, assets, meters, parts, procedure templates, teams, work requests, work-request portals.
+- Gets: user, vendor, work-order costs.
+- `entities.find` is `GET /{entity_type}` for workorders, users, locations, assets, or teams.
+- Vendor attachment upload is `PUT /vendors/{id}/attachments/{filename}` as `application/octet-stream`.
+- Work-order status is `PATCH /workorders/{id}/status`.
 
-Successful responses are raw provider JSON under AppCall `data`. Writes and multi-organization `x-organization-id` headers are omitted (single-org tokens). Provider next-page URLs are returned as data and never followed.
+Composio snake_case fields map to official camelCase JSON/query names (`asset_id` → `assetId`, `not_assets` → `notAssets`). Official `show_upcoming` is already snake_case. `user_ids` / `team_ids` are accepted on create; send official `assignees` `[{type,id}]` to assign. `search_query` on find is accepted; filter names differ by collection so only cursor/limit are forwarded unless title/name/email/sort are supplied. Successful JSON responses are raw provider JSON under AppCall `data`.
 
-## Adaptations
-
-Native category is `productivity` (CMMS/work orders; no maintenance CATEGORIES value). Optional filter arrays on work-order list are omitted. The upstream user-agent is not sent.
-
-## License and evidence
-
-Upstream definitions are attributed to [oomol-lab/open-connector](https://github.com/oomol-lab/open-connector) (Apache-2.0) at `33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a`. Fixtures are independently derived from official docs plus pinned source and are fixture-only; live smoke is unverified.
+Source attribution: oomol-lab/open-connector at `33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a`. Official docs: https://api.getmaintainx.com/latest/docs. Live authentication is unverified.
