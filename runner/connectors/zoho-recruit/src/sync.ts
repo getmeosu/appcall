@@ -29,8 +29,17 @@ import {
 
 export interface ZohoRecruitAuthInput {
   accessToken: string;
+  /** Connect-time data centre (com, eu, in, com.au, jp, ca, sa, com.cn); absent → com. */
+  dataCenter?: string;
+  /** Zoho token-response api_domain, when the stored credentials carry it (verified, never routed to). */
+  api_domain?: string;
+  apiDomain?: string;
   /** Injected by tests; production leaves it unset. */
   fetch?: typeof fetch;
+}
+
+function dataCenterOf(input: ZohoRecruitAuthInput): { dataCenter: unknown; apiDomains: unknown[] } {
+  return { dataCenter: input.dataCenter, apiDomains: [input.api_domain, input.apiDomain] };
 }
 
 function buildQuery(params: Record<string, string | undefined>): string {
@@ -65,6 +74,7 @@ export async function executeJobsListSync(
 ): Promise<ExecuteJobsListSyncOutput> {
   const client = createClient({
     accessToken: input.accessToken,
+    ...dataCenterOf(input),
     fetch: input.fetch,
     operation: "jobs.list",
   });
@@ -112,6 +122,7 @@ export async function executeCandidatesListSync(
 ): Promise<ExecuteCandidatesListSyncOutput> {
   const client = createClient({
     accessToken: input.accessToken,
+    ...dataCenterOf(input),
     fetch: input.fetch,
     operation: "candidates.list",
   });
@@ -162,6 +173,7 @@ export async function executeJobOpeningsListSync(
 ): Promise<ExecuteJobOpeningsListSyncOutput> {
   const client = createClient({
     accessToken: input.accessToken,
+    ...dataCenterOf(input),
     fetch: input.fetch,
     operation: "job_openings.list",
   });
@@ -212,6 +224,7 @@ export async function executeApplicationsListSync(
 ): Promise<ExecuteApplicationsListSyncOutput> {
   const client = createClient({
     accessToken: input.accessToken,
+    ...dataCenterOf(input),
     fetch: input.fetch,
     operation: "applications.list",
   });
@@ -259,6 +272,7 @@ export async function executeCandidatesGetSync(
   const id = assertSafePathSegment(input.id, "id");
   const client = createClient({
     accessToken: input.accessToken,
+    ...dataCenterOf(input),
     fetch: input.fetch,
     operation: "candidates.get",
   });
@@ -306,6 +320,7 @@ export async function executeCandidatesSearchSync(
 ): Promise<ExecuteCandidatesSearchSyncOutput> {
   const client = createClient({
     accessToken: input.accessToken,
+    ...dataCenterOf(input),
     fetch: input.fetch,
     operation: "candidates.search",
   });
@@ -358,6 +373,7 @@ export async function executeInterviewsListSync(
 ): Promise<ExecuteInterviewsListSyncOutput> {
   const client = createClient({
     accessToken: input.accessToken,
+    ...dataCenterOf(input),
     fetch: input.fetch,
     operation: "interviews.list",
   });

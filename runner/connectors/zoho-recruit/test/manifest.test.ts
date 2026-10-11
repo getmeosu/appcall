@@ -6,8 +6,8 @@ describe("Zoho Recruit manifest", () => {
     expect(manifest.key).toBe("zoho-recruit");
   });
 
-  it("has version 0.3.0", () => {
-    expect(manifest.version).toBe("0.3.0");
+  it("has version 0.3.1", () => {
+    expect(manifest.version).toBe("0.3.1");
   });
 
   it("uses bun runtime", () => {
@@ -18,8 +18,24 @@ describe("Zoho Recruit manifest", () => {
     expect(manifest.auth.type).toBe("oauth2");
   });
 
-  it("allows only recruit.zoho.com", () => {
-    expect(manifest.network.allowedHosts).toEqual(["recruit.zoho.com"]);
+  it("allows only recruit.zoho.com plus the allowlisted non-US Recruit API hosts (ZR-0)", () => {
+    expect(manifest.network.allowedHosts).toEqual([
+      "recruit.zoho.com",
+      "www.zohoapis.eu",
+      "www.zohoapis.in",
+      "www.zohoapis.com.au",
+      "www.zohoapis.jp",
+      "www.zohoapis.ca",
+      "www.zohoapis.sa",
+      "www.zohoapis.com.cn",
+    ]);
+  });
+
+  it("declares one optional, non-secret dataCenter setup field and no host/baseUrl field", () => {
+    expect(manifest.auth.setup.mode).toBe("oauth2");
+    expect(manifest.auth.setup.fields.map((f: { key: string }) => f.key)).toEqual(["dataCenter"]);
+    expect(manifest.auth.setup.fields[0]).toMatchObject({ key: "dataCenter", required: false, secret: false });
+    expect(JSON.stringify(manifest.auth)).not.toMatch(/baseUrl|"host"|apiDomain|api_domain/);
   });
 
   it("declares P0 list syncs and P1 get/search/interviews", () => {

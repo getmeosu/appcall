@@ -5,11 +5,14 @@
  * outbound controls: the manifest host allowlist, blocked redirects, a bounded
  * response size and a request deadline. Auth header is Zoho-oauthtoken.
  *
- * Soft residual: multi-DC hosts (recruit.zoho.eu, …) are not expanded here —
- * allowedHosts stays recruit.zoho.com unless a later slice adds DC routing.
+ * Data centre (ZR-0): the base URL comes only from the allowlisted table in
+ * ./datacenter (connect-time `dataCenter`, default "com" = recruit.zoho.com,
+ * unchanged). A token-response api_domain, when present, must match that data
+ * centre before any request is built; it is never used as a request host.
  */
 import { createJobBoardClient, type JobBoardClient } from "../../_shared/jobboard";
 import manifest from "../manifest.json";
+import { assertApiDomainMatches, dataCenterConfig, resolveDataCenter } from "./datacenter";
 
 export interface ZohoRecruitClientConfig {
   accessToken: string;
@@ -17,6 +20,10 @@ export interface ZohoRecruitClientConfig {
   fetch?: typeof fetch;
   /** Manifest operation key used for timeout / response-size bounds. */
   operation?: string;
+  /** Connect-time data centre (allowlisted key); absent → "com". */
+  dataCenter?: unknown;
+  /** api_domain values from Zoho's token response, if the stored credentials carry them. */
+  apiDomains?: unknown[];
 }
 
 type OperationBounds = { maxResponseBytes: number; timeoutMs: number };
@@ -33,9 +40,11 @@ function operationBounds(operation: string | undefined, fallback: string): Opera
 
 export function createClient(config: ZohoRecruitClientConfig): JobBoardClient {
   const bounds = operationBounds(config.operation, "jobs.list");
+  const dc = resolveDataCenter(config.dataCenter);
+  for (const apiDomain of config.apiDomains ?? []) assertApiDomainMatches(dc, apiDomain);
   return createJobBoardClient({
     provider: "Zoho Recruit",
-    baseUrl: "https://recruit.zoho.com/recruit/v2",
+    baseUrl: dataCenterConfig(dc).apiBaseUrl,
     allowedHosts: manifest.network.allowedHosts,
     maxResponseBytes: bounds.maxResponseBytes,
     timeoutMs: bounds.timeoutMs,
