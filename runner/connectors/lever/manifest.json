@@ -1,7 +1,7 @@
 {
   "key": "lever",
   "name": "Lever",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "runtime": "bun",
   "categories": [
     "ats-recruitment"
@@ -2875,6 +2875,305 @@
       "request": {
         "method": "GET",
         "path": "/opportunities/{{opportunityId}}/files/{{fileId}}",
+        "success": [
+          200
+        ]
+      }
+    },
+    "forms.list": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "responseFormat": "json",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "sideEffect": "read",
+      "title": "List profile forms",
+      "description": "List profile forms on an opportunity via authenticated GET /v1/opportunities/{opportunityId}/forms (limit/offset pagination). Region-aware (co/eu).",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "opportunityId"
+        ],
+        "properties": {
+          "opportunityId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Lever opportunity UID."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Page size (1-100)."
+          },
+          "offset": {
+            "type": "string",
+            "description": "Opaque pagination offset token."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/opportunities/{{opportunityId}}/forms",
+        "query": {
+          "limit": "{{limit}}",
+          "offset": "{{offset}}"
+        },
+        "success": [
+          200
+        ]
+      }
+    },
+    "forms.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "responseFormat": "json",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "sideEffect": "read",
+      "title": "Get profile form",
+      "description": "Fetch a single profile form via authenticated GET /v1/opportunities/{opportunityId}/forms/{formId}. Returns baseTemplateId, fields with values, user, stage, createdAt, completedAt and deletedAt.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "opportunityId",
+          "formId"
+        ],
+        "properties": {
+          "opportunityId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Lever opportunity UID."
+          },
+          "formId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Lever profile form UID."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/opportunities/{{opportunityId}}/forms/{{formId}}",
+        "success": [
+          200
+        ]
+      }
+    },
+    "forms.create": {
+      "kind": "action",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "responseFormat": "json",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "sideEffect": "write",
+      "title": "Create profile form",
+      "description": "Create a completed profile form on an opportunity via authenticated POST /v1/opportunities/{opportunityId}/forms?perform_as= (201). fields must include every field of the base template (null allowed for non-required). No EffectPolicy (create omits effect keys).",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "opportunityId",
+          "baseTemplateId",
+          "fields"
+        ],
+        "properties": {
+          "opportunityId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Lever opportunity UID."
+          },
+          "baseTemplateId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Profile form template UID the form is based on (see form_templates.list)."
+          },
+          "fields": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": true
+            },
+            "minItems": 1,
+            "description": "Non-empty field objects conforming to the base template (type, text, value, ...)."
+          },
+          "secret": {
+            "type": "boolean",
+            "description": "Restrict visibility to Sensitive Information Privilege users."
+          },
+          "performAs": {
+            "type": "string",
+            "minLength": 1,
+            "description": "User UID to perform_as (query; optional per Lever)."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/opportunities/{{opportunityId}}/forms",
+        "query": {
+          "perform_as": "{{performAs}}"
+        },
+        "body": {
+          "baseTemplateId": "{{baseTemplateId}}",
+          "fields": "{{fields}}",
+          "secret": "{{secret}}"
+        },
+        "success": [
+          200,
+          201
+        ]
+      }
+    },
+    "form_templates.list": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "responseFormat": "json",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "sideEffect": "read",
+      "title": "List profile form templates",
+      "description": "List active profile form templates via authenticated GET /v1/form_templates. include limits the attributes returned (repeated include= query).",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "include": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "text",
+                "group",
+                "fields"
+              ]
+            },
+            "minItems": 1,
+            "description": "Attributes to include (text, group, fields); sent as repeated include= params."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Page size (1-100)."
+          },
+          "offset": {
+            "type": "string",
+            "description": "Opaque pagination offset token."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/form_templates",
+        "query": {
+          "include": "{{include}}",
+          "limit": "{{limit}}",
+          "offset": "{{offset}}"
+        },
+        "success": [
+          200
+        ]
+      }
+    },
+    "form_templates.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "responseFormat": "json",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "sideEffect": "read",
+      "title": "Get profile form template",
+      "description": "Fetch a single profile form template via authenticated GET /v1/form_templates/{formTemplateId}. Use it as the reference for forms.create fields.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "formTemplateId"
+        ],
+        "properties": {
+          "formTemplateId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Lever profile form template UID."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/form_templates/{{formTemplateId}}",
         "success": [
           200
         ]
