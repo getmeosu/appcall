@@ -71,6 +71,8 @@ export type GqlRequestOptions = {
   requiredScopes?: readonly string[];
   /** Op id used in the CAPABILITY_MISSING message. */
   operation?: string;
+  /** FIX-G13C graphql.query: selects one operation of a multi-operation document. */
+  operationName?: string;
 };
 
 export async function gqlRequest(
@@ -79,7 +81,10 @@ export async function gqlRequest(
   variables: Record<string, unknown> = {},
   opts: GqlRequestOptions = {},
 ): Promise<GraphqlResult | { ok: true; data: Record<string, unknown>; notFound: true }> {
-  const response = await client.graphql(document, variables);
+  const response =
+    opts.operationName === undefined
+      ? await client.graphql(document, variables)
+      : await client.graphql(document, variables, opts.operationName);
   const headers = lowerHeaders(response.headers);
 
   const rate = rateLimitFromResponse(response.status, headers);
