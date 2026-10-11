@@ -31,15 +31,44 @@ export type NormalizedCampaign = {
   createdAt: string;
   modelVersion: "2026-05-16"; raw: Record<string, unknown>;
 };
-export function normalizeCampaign(d: Record<string, unknown>): NormalizedCampaign {
+// KV-1: Klaviyo campaigns carry no `channel`/`created` attributes (any revision;
+// arch notes TF:198-199/214-215/224-225). createdAt comes from `created_at`
+// (TF:200/216/226); the channel lives on the campaign-message resource at
+// `attributes.definition.channel` (get_campaign 2026-07-15,
+// CampaignMessageResponseObjectResource), reachable through
+// `relationships.campaign-messages` + the compound document's `included`.
+// When neither is present the channel is returned empty.
+export function campaignChannelFromIncluded(d: Record<string, unknown>, included: unknown): string {
+  if (!Array.isArray(included)) return "";
+  const messages = included.filter((r): r is Record<string, unknown> => isRecord(r) && r.type === "campaign-message");
+  if (!messages.length) return "";
+  const rels = isRecord(d.relationships) ? d.relationships : {};
+  const rel = isRecord(rels["campaign-messages"]) ? rels["campaign-messages"] : {};
+  const ids = Array.isArray(rel.data) ? rel.data.filter(isRecord).map((r) => prop(r, "id")).filter((id) => id.length > 0) : [];
+  const campaignId = prop(d, "id");
+  const owned = messages.filter((m) => {
+    if (ids.includes(prop(m, "id"))) return true;
+    const mrels = isRecord(m.relationships) ? m.relationships : {};
+    const parent = isRecord(mrels.campaign) && isRecord(mrels.campaign.data) ? mrels.campaign.data : {};
+    return campaignId.length > 0 && prop(parent, "id") === campaignId;
+  });
+  for (const m of owned) {
+    const attrs = isRecord(m.attributes) ? m.attributes : {};
+    const definition = isRecord(attrs.definition) ? attrs.definition : {};
+    const channel = prop(definition, "channel");
+    if (channel) return channel;
+  }
+  return "";
+}
+export function normalizeCampaign(d: Record<string, unknown>, included?: unknown): NormalizedCampaign {
   const attrs = isRecord(d.attributes) ? d.attributes : {};
   return {
     id: `kl-campaign:${prop(d, "id")}`, provider: "klaviyo", providerCampaignId: prop(d, "id"),
-    name: prop(attrs, "name"), status: prop(attrs, "status"), channelId: prop(attrs, "channel"),
+    name: prop(attrs, "name"), status: prop(attrs, "status"), channelId: campaignChannelFromIncluded(d, included),
     sentCount: typeof attrs.sent === "number" ? attrs.sent : 0,
     openCount: typeof attrs.opens === "number" ? attrs.opens : 0,
     clickCount: typeof attrs.clicks === "number" ? attrs.clicks : 0,
-    createdAt: prop(attrs, "created"), modelVersion: "2026-05-16", raw: d,
+    createdAt: prop(attrs, "created_at"), modelVersion: "2026-05-16", raw: d,
   };
 }
 export function parseCampaignsResponse(response: unknown): { campaigns: NormalizedCampaign[]; nextPageToken: string | null } {
@@ -47,7 +76,8 @@ export function parseCampaignsResponse(response: unknown): { campaigns: Normaliz
   const data = response.data;
   if (!Array.isArray(data)) return { campaigns: [], nextPageToken: null };
   const nextUrl = parseNextCursor(response);
-  return { campaigns: data.filter(isRecord).map(normalizeCampaign), nextPageToken: nextUrl ? extractCursorFromUrl(nextUrl) : null };
+  const included = response.included;
+  return { campaigns: data.filter(isRecord).map((d) => normalizeCampaign(d, included)), nextPageToken: nextUrl ? extractCursorFromUrl(nextUrl) : null };
 }
 
 export type NormalizedList = {

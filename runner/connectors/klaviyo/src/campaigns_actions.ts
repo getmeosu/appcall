@@ -11,21 +11,31 @@ export type CreateCampaignInput = {
   fromEmail?: string;
   fromLabel?: string;
   subject?: string;
+  body?: string;
 };
 
 export function validateCreateCampaignInput(input: unknown): CreateCampaignInput {
   if (!isRecord(input)) throw new Error("input must be an object");
   const channel = typeof input.channel === "string" ? input.channel : "email";
   if (channel !== "email" && channel !== "sms") throw new Error("channel must be 'email' or 'sms'");
-  return {
+  const out: CreateCampaignInput = {
     name: requireString(input.name, "name"),
     channel: channel as "email" | "sms",
-    listId: typeof input.listId === "string" ? input.listId : undefined,
+    listId: typeof input.listId === "string" && input.listId.length > 0 ? input.listId : undefined,
     sendTime: typeof input.sendTime === "string" ? input.sendTime : undefined,
     fromEmail: typeof input.fromEmail === "string" ? input.fromEmail : undefined,
     fromLabel: typeof input.fromLabel === "string" ? input.fromLabel : undefined,
     subject: typeof input.subject === "string" ? input.subject : undefined,
+    body: typeof input.body === "string" && input.body.length > 0 ? input.body : undefined,
   };
+  // KV-1: audiences (with audiences.included) is REQUIRED for campaign create
+  // (arch notes TF:183, TF:205 NEW-REQUIRED audiences.included); listId stays
+  // optional in the manifest schema and is enforced here, before any HTTP call.
+  if (out.listId === undefined) throw new Error("listId is required: Klaviyo campaigns need an audience (audiences.included)");
+  // KV-1: SMS definitions need content.body (revision 2026-07-15 NEW-REQUIRED
+  // definition.content.body, arch notes TF:205); fail before any HTTP call.
+  if (out.channel === "sms" && out.body === undefined) throw new Error("body is required when channel is 'sms'");
+  return out;
 }
 
 export async function createCampaignFromClient(
@@ -41,13 +51,14 @@ export async function createCampaignFromClient(
   // goes in a static `send_strategy`. The caller contract (inputs/outputs) is
   // unchanged; only the upstream body shape moved.
   const attrs: Record<string, unknown> = { name: payload.name };
-  if (payload.listId) attrs.audiences = { included: [payload.listId] };
+  if ("listId" in payload && payload.listId) attrs.audiences = { included: [payload.listId] };
   if (payload.sendTime) attrs.send_strategy = { method: "static", datetime: payload.sendTime };
 
   const content: Record<string, unknown> = {};
   if (payload.subject) content.subject = payload.subject;
   if (payload.fromEmail) content.from_email = payload.fromEmail;
   if (payload.fromLabel) content.from_label = payload.fromLabel;
+  if (payload.channel === "sms" && "body" in payload && payload.body) content.body = payload.body;
   attrs["campaign-messages"] = { data: [{ type: "campaign-message", attributes: { definition: { channel: payload.channel, content } } }] };
 
   const body: Record<string, unknown> = rawData ? { data: rawData } : { data: { type: "campaign", attributes: attrs } };
@@ -57,9 +68,13 @@ export async function createCampaignFromClient(
     body: JSON.stringify(body),
   });
   if (result.status === 201 || result.status === 200) {
-    const respBody = result.body as Record<string, unknown>;
-    const data = isRecord(respBody.data) ? respBody.data : { id: "", attributes: { name: payload.name, channel: payload.channel, status: "draft" } };
-    return { ok: true, campaign: normalizeCampaign(data) };
+    const respBody = isRecord(result.body) ? result.body : {};
+    const data = isRecord(respBody.data) ? respBody.data : { id: "", attributes: { name: payload.name, status: "draft" } };
+    const campaign = normalizeCampaign(data, respBody.included);
+    // The response may omit `included`; the channel is then the one Klaviyo
+    // just accepted in definition.channel (not for raw `data` passthrough).
+    if (!campaign.channelId && !rawData) campaign.channelId = payload.channel;
+    return { ok: true, campaign };
   }
   const rl = parseKlaviyoRateLimit(result.status, result.headers);
   if (rl.limited) return { ok: false, error: { code: "CONNECTOR_RATE_LIMITED", message: "Klaviyo rate limit exceeded.", retryAfterSeconds: rl.retryAfterSeconds } };
@@ -94,11 +109,11 @@ export async function getCampaignFromClient(
 ): Promise<{ ok: true; campaign: NormalizedCampaign } | { ok: false; error: { code: string; message: string; retryAfterSeconds?: number } }> {
   const payload = validateGetCampaignInput(input);
   const client = createKlaviyoClient({ apiKey: options.apiKey, fetch: options.fetch, operation: "campaigns.get" });
-  const result = await client.fetchJSON(queryPath(`/campaigns/${payload.campaignId}`, input));
+  const result = await client.fetchJSON(queryPath(`/campaigns/${payload.campaignId}`, withCampaignMessages(input)));
   if (result.status === 200) {
-    const body = result.body as Record<string, unknown>;
+    const body = isRecord(result.body) ? result.body : {};
     const data = isRecord(body.data) ? body.data : { id: payload.campaignId, attributes: {} };
-    return { ok: true, campaign: normalizeCampaign(data) };
+    return { ok: true, campaign: normalizeCampaign(data, body.included) };
   }
   const rl = parseKlaviyoRateLimit(result.status, result.headers);
   if (rl.limited) return { ok: false, error: { code: "CONNECTOR_RATE_LIMITED", message: "Klaviyo rate limit exceeded.", retryAfterSeconds: rl.retryAfterSeconds } };
@@ -119,9 +134,9 @@ export async function updateCampaignFromClient(
     body: JSON.stringify({ data: { type: "campaign", id: payload.campaignId, attributes: attrs } }),
   });
   if (result.status === 200) {
-    const body = result.body as Record<string, unknown>;
+    const body = isRecord(result.body) ? result.body : {};
     const data = isRecord(body.data) ? body.data : { id: payload.campaignId, attributes: attrs };
-    return { ok: true, campaign: normalizeCampaign(data) };
+    return { ok: true, campaign: normalizeCampaign(data, body.included) };
   }
   const rl = parseKlaviyoRateLimit(result.status, result.headers);
   if (rl.limited) return { ok: false, error: { code: "CONNECTOR_RATE_LIMITED", message: "Klaviyo rate limit exceeded.", retryAfterSeconds: rl.retryAfterSeconds } };
@@ -149,6 +164,18 @@ export async function sendCampaignFromClient(
   if (rl.limited) return { ok: false, error: { code: "CONNECTOR_RATE_LIMITED", message: "Klaviyo rate limit exceeded.", retryAfterSeconds: rl.retryAfterSeconds } };
   if (result.status === 404) return { ok: false, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Campaign not found." } };
   return { ok: false, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Klaviyo rejected the send campaign request." } };
+}
+
+// KV-1: the channel lives on the campaign message (definition.channel), so
+// campaigns.get asks for include=campaign-messages with a sparse fieldset of
+// just definition.channel, unless the caller already set include.
+function withCampaignMessages(input: unknown): Record<string, unknown> {
+  const base: Record<string, unknown> = isRecord(input) ? { ...input } : {};
+  const existing = typeof base.include === "string" ? base.include.split(",") : Array.isArray(base.include) ? base.include.filter((x): x is string => typeof x === "string") : [];
+  if (existing.includes("campaign-messages")) return base;
+  base.include = [...existing, "campaign-messages"];
+  if (base["fields[campaign-message]"] === undefined) base["fields[campaign-message]"] = "definition.channel";
+  return base;
 }
 
 function requireString(v: unknown, f: string): string {
