@@ -1,7 +1,7 @@
 {
   "key": "github",
   "name": "GitHub",
-  "version": "0.80.1",
+  "version": "0.80.2",
   "runtime": "bun",
   "categories": [
     "dev-tools"
@@ -42999,43 +42999,37 @@
       "maxInputBytes": 1048576,
       "maxResponseBytes": 1048576,
       "sideEffect": "write",
+      "requiredScopes": [
+        "user"
+      ],
       "title": "Create a user list",
-      "description": "POST /graphql - Create a user list. Public GitHub GraphQL. Composio: GITHUB_CREATE_USER_LIST.",
+      "description": "POST /graphql mutation createUserList(input: {name, description, isPrivate}). Returns list {id name slug description isPrivate createdAt updatedAt lastAddedAt}. No effectPolicy (create). Never retried. Per-op scope: OAuth and personal access tokens (classic) need the user scope (not part of the default connect scopes; re-consent on first use). Runs through the shared GraphQL transport: GraphQL errors on HTTP 200 map to CONNECTOR_UPSTREAM_ERROR, RATE_LIMITED to CONNECTOR_RATE_LIMITED, and a missing per-op scope (INSUFFICIENT_SCOPES, or X-Accepted-OAuth-Scopes vs X-OAuth-Scopes on 403/404) maps to CONNECTOR_CAPABILITY_MISSING with missingScopes and reconsentRequired.",
       "inputSchema": {
         "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "name"
+        ],
         "properties": {
           "name": {
             "type": "string",
-            "description": "name"
+            "description": "List name."
+          },
+          "description": {
+            "type": "string",
+            "description": "List description."
+          },
+          "isPrivate": {
+            "type": "boolean",
+            "description": "Private list (default false)."
           }
-        },
-        "required": [
-          "name"
-        ]
+        }
       },
       "outputSchema": {
         "type": "object",
-        "additionalProperties": true
-      },
-      "request": {
-        "method": "POST",
-        "baseUrl": "https://api.github.com",
-        "path": "/graphql",
-        "headers": {
-          "Accept": "application/vnd.github+json",
-          "X-GitHub-Api-Version": "2022-11-28",
-          "Authorization": "Bearer {{accessToken}}",
-          "Content-Type": "application/json"
-        },
-        "success": [
-          200
-        ],
-        "body": {
-          "query": "mutation($input: CreateUserListInput!) { createUserList(input: $input) { clientMutationId } }",
-          "variables": {
-            "input": {
-              "name": "{{name}}"
-            }
+        "properties": {
+          "list": {
+            "type": "object"
           }
         }
       }
@@ -43285,43 +43279,38 @@
       "maxInputBytes": 1048576,
       "maxResponseBytes": 1048576,
       "sideEffect": "write",
+      "requiredScopes": [
+        "user"
+      ],
       "title": "Delete a user list",
-      "description": "POST /graphql - Delete a user list. Public GitHub GraphQL. Composio: GITHUB_DELETE_USER_LIST.",
+      "description": "POST /graphql mutation deleteUserList(input: {listId}). Returns deleted:true, listId and user {id login}. No effectPolicy (deletes omit). A NOT_FOUND on repeat is an upstream error, not a second success. Never retried. Per-op scope: OAuth and personal access tokens (classic) need the user scope (not part of the default connect scopes; re-consent on first use). Runs through the shared GraphQL transport: GraphQL errors on HTTP 200 map to CONNECTOR_UPSTREAM_ERROR, RATE_LIMITED to CONNECTOR_RATE_LIMITED, and a missing per-op scope (INSUFFICIENT_SCOPES, or X-Accepted-OAuth-Scopes vs X-OAuth-Scopes on 403/404) maps to CONNECTOR_CAPABILITY_MISSING with missingScopes and reconsentRequired.",
       "inputSchema": {
         "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "listId"
+        ],
         "properties": {
           "listId": {
             "type": "string",
-            "description": "listId"
+            "description": "UserList node id."
           }
-        },
-        "required": [
-          "listId"
-        ]
+        }
       },
       "outputSchema": {
         "type": "object",
-        "additionalProperties": true
-      },
-      "request": {
-        "method": "POST",
-        "baseUrl": "https://api.github.com",
-        "path": "/graphql",
-        "headers": {
-          "Accept": "application/vnd.github+json",
-          "X-GitHub-Api-Version": "2022-11-28",
-          "Authorization": "Bearer {{accessToken}}",
-          "Content-Type": "application/json"
-        },
-        "success": [
-          200
-        ],
-        "body": {
-          "query": "mutation($input: DeleteUserListInput!) { deleteUserList(input: $input) { clientMutationId } }",
-          "variables": {
-            "input": {
-              "listId": "{{listId}}"
-            }
+        "properties": {
+          "deleted": {
+            "type": "boolean"
+          },
+          "listId": {
+            "type": "string"
+          },
+          "user": {
+            "type": [
+              "object",
+              "null"
+            ]
           }
         }
       }
@@ -43332,43 +43321,37 @@
       "maxInputBytes": 1048576,
       "maxResponseBytes": 1048576,
       "sideEffect": "write",
+      "effectPolicy": "Reconcile",
+      "reconcile": "graphql.node.get",
+      "reconcileInput": {
+        "id": "organizationId"
+      },
+      "requiredScopes": [
+        "user"
+      ],
       "title": "Follow an organization",
-      "description": "POST /graphql - Follow an organization. Public GitHub GraphQL. Composio: GITHUB_FOLLOW_ORGANIZATION_GRAPHQL.",
+      "description": "POST /graphql mutation followOrganization(input: {organizationId}). Returns organization {id login viewerIsFollowing}. EffectPolicy Reconcile: observes graphql.node.get(id = organizationId), exact on Organization.viewerIsFollowing = true. Never retried. Per-op scope: user (user:follow is enough for follow/unfollow; not part of the default connect scopes; re-consent on first use). Runs through the shared GraphQL transport: GraphQL errors on HTTP 200 map to CONNECTOR_UPSTREAM_ERROR, RATE_LIMITED to CONNECTOR_RATE_LIMITED, and a missing per-op scope (INSUFFICIENT_SCOPES, or X-Accepted-OAuth-Scopes vs X-OAuth-Scopes on 403/404) maps to CONNECTOR_CAPABILITY_MISSING with missingScopes and reconsentRequired.",
       "inputSchema": {
         "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "organizationId"
+        ],
         "properties": {
           "organizationId": {
             "type": "string",
-            "description": "organizationId"
+            "description": "Organization node id."
           }
-        },
-        "required": [
-          "organizationId"
-        ]
+        }
       },
       "outputSchema": {
         "type": "object",
-        "additionalProperties": true
-      },
-      "request": {
-        "method": "POST",
-        "baseUrl": "https://api.github.com",
-        "path": "/graphql",
-        "headers": {
-          "Accept": "application/vnd.github+json",
-          "X-GitHub-Api-Version": "2022-11-28",
-          "Authorization": "Bearer {{accessToken}}",
-          "Content-Type": "application/json"
-        },
-        "success": [
-          200
-        ],
-        "body": {
-          "query": "mutation($input: FollowOrganizationInput!) { followOrganization(input: $input) { clientMutationId } }",
-          "variables": {
-            "input": {
-              "organizationId": "{{organizationId}}"
-            }
+        "properties": {
+          "organization": {
+            "type": [
+              "object",
+              "null"
+            ]
           }
         }
       }
@@ -43459,48 +43442,41 @@
       "timeoutMs": 30000,
       "maxInputBytes": 1048576,
       "maxResponseBytes": 1048576,
-      "sideEffect": "write",
+      "sideEffect": "read",
+      "requiredScopes": [
+        "read:enterprise"
+      ],
       "title": "Get an enterprise member invitation",
-      "description": "POST /graphql - Get an enterprise member invitation. Public GitHub GraphQL. Composio: GITHUB_GET_ENTERPRISE_MEMBER_INVITATION.",
+      "description": "POST /graphql query enterpriseMemberInvitation(enterpriseSlug:, userLogin:). Returns the invitation (id, createdAt, email, enterprise {id slug name}, invitee, inviter); found:false when GitHub answers NOT_FOUND or null. Read only. No effectPolicy. Per-op scope: read:enterprise (not part of the default connect scopes; re-consent on first use). Runs through the shared GraphQL transport: GraphQL errors on HTTP 200 map to CONNECTOR_UPSTREAM_ERROR, RATE_LIMITED to CONNECTOR_RATE_LIMITED, and a missing per-op scope (INSUFFICIENT_SCOPES, or X-Accepted-OAuth-Scopes vs X-OAuth-Scopes on 403/404) maps to CONNECTOR_CAPABILITY_MISSING with missingScopes and reconsentRequired.",
       "inputSchema": {
         "type": "object",
-        "properties": {
-          "enterpriseSlug": {
-            "type": "string",
-            "description": "enterpriseSlug"
-          },
-          "userLogin": {
-            "type": "string",
-            "description": "userLogin"
-          }
-        },
+        "additionalProperties": false,
         "required": [
           "enterpriseSlug",
           "userLogin"
-        ]
+        ],
+        "properties": {
+          "enterpriseSlug": {
+            "type": "string",
+            "description": "Enterprise slug."
+          },
+          "userLogin": {
+            "type": "string",
+            "description": "Login of the invited user."
+          }
+        }
       },
       "outputSchema": {
         "type": "object",
-        "additionalProperties": true
-      },
-      "request": {
-        "method": "POST",
-        "baseUrl": "https://api.github.com",
-        "path": "/graphql",
-        "headers": {
-          "Accept": "application/vnd.github+json",
-          "X-GitHub-Api-Version": "2022-11-28",
-          "Authorization": "Bearer {{accessToken}}",
-          "Content-Type": "application/json"
-        },
-        "success": [
-          200
-        ],
-        "body": {
-          "query": "query($enterpriseSlug: String!, $userLogin: String!) { enterpriseMemberInvitation(enterpriseSlug: $enterpriseSlug, userLogin: $userLogin) { id } }",
-          "variables": {
-            "enterpriseSlug": "{{enterpriseSlug}}",
-            "userLogin": "{{userLogin}}"
+        "properties": {
+          "found": {
+            "type": "boolean"
+          },
+          "invitation": {
+            "type": [
+              "object",
+              "null"
+            ]
           }
         }
       }
@@ -44181,33 +44157,71 @@
       "timeoutMs": 30000,
       "maxInputBytes": 1048576,
       "maxResponseBytes": 1048576,
-      "sideEffect": "write",
+      "sideEffect": "read",
       "title": "List sponsorable users and organizations",
-      "description": "POST /graphql - List sponsorable users and organizations. Public GitHub GraphQL. Composio: GITHUB_LIST_SPONSORABLES.",
+      "description": "POST /graphql query sponsorables(first:, after:, orderBy: {LOGIN, direction}, onlyDependencies:, orgLoginForDependencies:, ecosystem:). Returns User/Organization items (login, name, url, hasSponsorsListing, viewerCanSponsor, viewerIsSponsoring), pageInfo and totalCount. Read only. No effectPolicy. Runs through the shared GraphQL transport: GraphQL errors on HTTP 200 map to CONNECTOR_UPSTREAM_ERROR, RATE_LIMITED to CONNECTOR_RATE_LIMITED, and INSUFFICIENT_SCOPES to CONNECTOR_UPSTREAM_ERROR.",
       "inputSchema": {
         "type": "object",
-        "properties": {},
-        "required": []
+        "additionalProperties": false,
+        "required": [],
+        "properties": {
+          "first": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Page size (1-100, default 10)."
+          },
+          "after": {
+            "type": "string",
+            "description": "Cursor from pageInfo.endCursor of the previous page."
+          },
+          "orderDirection": {
+            "type": "string",
+            "description": "Order by login.",
+            "enum": [
+              "ASC",
+              "DESC"
+            ]
+          },
+          "onlyDependencies": {
+            "type": "boolean",
+            "description": "Only accounts that maintain dependencies of the viewer (or of orgLoginForDependencies)."
+          },
+          "orgLoginForDependencies": {
+            "type": "string",
+            "description": "Organization whose dependencies to use with onlyDependencies."
+          },
+          "ecosystem": {
+            "type": "string",
+            "description": "Dependency graph ecosystem filter.",
+            "enum": [
+              "ACTIONS",
+              "COMPOSER",
+              "GO",
+              "MAVEN",
+              "NPM",
+              "NUGET",
+              "PIP",
+              "PUB",
+              "RUBYGEMS",
+              "RUST",
+              "SWIFT"
+            ]
+          }
+        }
       },
       "outputSchema": {
         "type": "object",
-        "additionalProperties": true
-      },
-      "request": {
-        "method": "POST",
-        "baseUrl": "https://api.github.com",
-        "path": "/graphql",
-        "headers": {
-          "Accept": "application/vnd.github+json",
-          "X-GitHub-Api-Version": "2022-11-28",
-          "Authorization": "Bearer {{accessToken}}",
-          "Content-Type": "application/json"
-        },
-        "success": [
-          200
-        ],
-        "body": {
-          "query": "query { sponsorables(first: 10) { nodes { __typename } } }"
+        "properties": {
+          "items": {
+            "type": "array"
+          },
+          "pageInfo": {
+            "type": "object"
+          },
+          "totalCount": {
+            "type": "integer"
+          }
         }
       }
     },
@@ -44216,54 +44230,51 @@
       "timeoutMs": 30000,
       "maxInputBytes": 1048576,
       "maxResponseBytes": 1048576,
-      "sideEffect": "write",
+      "sideEffect": "read",
+      "requiredScopes": [
+        "read:enterprise"
+      ],
       "title": "Look up an enterprise administrator invitation",
-      "description": "POST /graphql - Look up an enterprise administrator invitation. Public GitHub GraphQL. Composio: GITHUB_LOOKUP_ENTERPRISE_ADMINISTRATOR_INVITATION.",
+      "description": "POST /graphql query enterpriseAdministratorInvitation(enterpriseSlug:, role:, userLogin:). Returns the invitation (id, createdAt, email, role, enterprise {id slug name}, invitee, inviter); found:false when GitHub answers NOT_FOUND or null. Read only. No effectPolicy. Per-op scope: read:enterprise (not part of the default connect scopes; re-consent on first use). Runs through the shared GraphQL transport: GraphQL errors on HTTP 200 map to CONNECTOR_UPSTREAM_ERROR, RATE_LIMITED to CONNECTOR_RATE_LIMITED, and a missing per-op scope (INSUFFICIENT_SCOPES, or X-Accepted-OAuth-Scopes vs X-OAuth-Scopes on 403/404) maps to CONNECTOR_CAPABILITY_MISSING with missingScopes and reconsentRequired.",
       "inputSchema": {
         "type": "object",
-        "properties": {
-          "enterpriseSlug": {
-            "type": "string",
-            "description": "enterpriseSlug"
-          },
-          "role": {
-            "type": "string",
-            "description": "role"
-          },
-          "userLogin": {
-            "type": "string",
-            "description": "userLogin"
-          }
-        },
+        "additionalProperties": false,
         "required": [
           "enterpriseSlug",
           "role",
           "userLogin"
-        ]
+        ],
+        "properties": {
+          "enterpriseSlug": {
+            "type": "string",
+            "description": "Enterprise slug."
+          },
+          "role": {
+            "type": "string",
+            "description": "Administrator role.",
+            "enum": [
+              "BILLING_MANAGER",
+              "OWNER",
+              "UNAFFILIATED"
+            ]
+          },
+          "userLogin": {
+            "type": "string",
+            "description": "Login of the invited user."
+          }
+        }
       },
       "outputSchema": {
         "type": "object",
-        "additionalProperties": true
-      },
-      "request": {
-        "method": "POST",
-        "baseUrl": "https://api.github.com",
-        "path": "/graphql",
-        "headers": {
-          "Accept": "application/vnd.github+json",
-          "X-GitHub-Api-Version": "2022-11-28",
-          "Authorization": "Bearer {{accessToken}}",
-          "Content-Type": "application/json"
-        },
-        "success": [
-          200
-        ],
-        "body": {
-          "query": "query($enterpriseSlug: String!, $role: EnterpriseAdministratorRole!, $userLogin: String!) { enterpriseAdministratorInvitation(enterpriseSlug: $enterpriseSlug, role: $role, userLogin: $userLogin) { id } }",
-          "variables": {
-            "enterpriseSlug": "{{enterpriseSlug}}",
-            "role": "{{role}}",
-            "userLogin": "{{userLogin}}"
+        "properties": {
+          "found": {
+            "type": "boolean"
+          },
+          "invitation": {
+            "type": [
+              "object",
+              "null"
+            ]
           }
         }
       }
@@ -44699,48 +44710,66 @@
       "timeoutMs": 30000,
       "maxInputBytes": 1048576,
       "maxResponseBytes": 1048576,
-      "sideEffect": "write",
+      "sideEffect": "read",
       "title": "Search GitHub via GraphQL",
-      "description": "POST /graphql - Search GitHub via GraphQL. Public GitHub GraphQL. Composio: GITHUB_SEARCH_GITHUB_GRAPHQL.",
+      "description": "POST /graphql query search(query:, type:, first:, after:). Returns items (Repository, Issue, PullRequest, Discussion, User, Organization, App, MarketplaceListing fragments), pageInfo for cursor paging, and the issue/repository/user/discussion counts. Read only. No effectPolicy. Runs through the shared GraphQL transport: GraphQL errors on HTTP 200 map to CONNECTOR_UPSTREAM_ERROR, RATE_LIMITED to CONNECTOR_RATE_LIMITED, and INSUFFICIENT_SCOPES to CONNECTOR_UPSTREAM_ERROR.",
       "inputSchema": {
         "type": "object",
-        "properties": {
-          "query": {
-            "type": "string",
-            "description": "query"
-          },
-          "type": {
-            "type": "string",
-            "description": "type"
-          }
-        },
+        "additionalProperties": false,
         "required": [
           "query",
           "type"
-        ]
+        ],
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "GitHub search query string."
+          },
+          "type": {
+            "type": "string",
+            "description": "Search type.",
+            "enum": [
+              "DISCUSSION",
+              "ISSUE",
+              "ISSUE_ADVANCED",
+              "ISSUE_HYBRID",
+              "ISSUE_SEMANTIC",
+              "REPOSITORY",
+              "USER"
+            ]
+          },
+          "first": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Page size (1-100, default 10)."
+          },
+          "after": {
+            "type": "string",
+            "description": "Cursor from pageInfo.endCursor of the previous page."
+          }
+        }
       },
       "outputSchema": {
         "type": "object",
-        "additionalProperties": true
-      },
-      "request": {
-        "method": "POST",
-        "baseUrl": "https://api.github.com",
-        "path": "/graphql",
-        "headers": {
-          "Accept": "application/vnd.github+json",
-          "X-GitHub-Api-Version": "2022-11-28",
-          "Authorization": "Bearer {{accessToken}}",
-          "Content-Type": "application/json"
-        },
-        "success": [
-          200
-        ],
-        "body": {
-          "query": "query($query: String!, $type: SearchType!) { search(query: $query, type: $type, first: 10) { issueCount } }",
-          "variables": {
-            "query": "{{query}}",
-            "type": "{{type}}"
+        "properties": {
+          "items": {
+            "type": "array"
+          },
+          "pageInfo": {
+            "type": "object"
+          },
+          "issueCount": {
+            "type": "integer"
+          },
+          "repositoryCount": {
+            "type": "integer"
+          },
+          "userCount": {
+            "type": "integer"
+          },
+          "discussionCount": {
+            "type": "integer"
           }
         }
       }
@@ -44751,49 +44780,60 @@
       "maxInputBytes": 1048576,
       "maxResponseBytes": 1048576,
       "sideEffect": "write",
+      "requiredScopes": [
+        "user"
+      ],
       "title": "Set a user interaction limit",
-      "description": "POST /graphql - Set a user interaction limit. Public GitHub GraphQL. Composio: GITHUB_SET_USER_INTERACTION_LIMIT_GRAPH_QL.",
+      "description": "POST /graphql mutation setUserInteractionLimit(input: {userId, limit, expiry}). Applies to the repositories owned by the user (the viewer). Returns user {id login} and limit (interactionAbility {limit expiresAt origin}). No effectPolicy. Never retried. Per-op scope: OAuth and personal access tokens (classic) need the user scope (not part of the default connect scopes; re-consent on first use). Runs through the shared GraphQL transport: GraphQL errors on HTTP 200 map to CONNECTOR_UPSTREAM_ERROR, RATE_LIMITED to CONNECTOR_RATE_LIMITED, and a missing per-op scope (INSUFFICIENT_SCOPES, or X-Accepted-OAuth-Scopes vs X-OAuth-Scopes on 403/404) maps to CONNECTOR_CAPABILITY_MISSING with missingScopes and reconsentRequired.",
       "inputSchema": {
         "type": "object",
-        "properties": {
-          "userId": {
-            "type": "string",
-            "description": "userId"
-          },
-          "limit": {
-            "type": "string",
-            "description": "limit"
-          }
-        },
+        "additionalProperties": false,
         "required": [
           "userId",
           "limit"
-        ]
+        ],
+        "properties": {
+          "userId": {
+            "type": "string",
+            "description": "Node id of the user (the viewer)."
+          },
+          "limit": {
+            "type": "string",
+            "description": "Interaction limit.",
+            "enum": [
+              "COLLABORATORS_ONLY",
+              "CONTRIBUTORS_ONLY",
+              "EXISTING_USERS",
+              "NO_LIMIT"
+            ]
+          },
+          "expiry": {
+            "type": "string",
+            "description": "How long the limit lasts.",
+            "enum": [
+              "ONE_DAY",
+              "THREE_DAYS",
+              "ONE_WEEK",
+              "ONE_MONTH",
+              "SIX_MONTHS"
+            ]
+          }
+        }
       },
       "outputSchema": {
         "type": "object",
-        "additionalProperties": true
-      },
-      "request": {
-        "method": "POST",
-        "baseUrl": "https://api.github.com",
-        "path": "/graphql",
-        "headers": {
-          "Accept": "application/vnd.github+json",
-          "X-GitHub-Api-Version": "2022-11-28",
-          "Authorization": "Bearer {{accessToken}}",
-          "Content-Type": "application/json"
-        },
-        "success": [
-          200
-        ],
-        "body": {
-          "query": "mutation($input: SetUserInteractionLimitInput!) { setUserInteractionLimit(input: $input) { clientMutationId } }",
-          "variables": {
-            "input": {
-              "userId": "{{userId}}",
-              "limit": "{{limit}}"
-            }
+        "properties": {
+          "user": {
+            "type": [
+              "object",
+              "null"
+            ]
+          },
+          "limit": {
+            "type": [
+              "object",
+              "null"
+            ]
           }
         }
       }
@@ -44804,43 +44844,37 @@
       "maxInputBytes": 1048576,
       "maxResponseBytes": 1048576,
       "sideEffect": "write",
+      "effectPolicy": "Reconcile",
+      "reconcile": "graphql.node.get",
+      "reconcileInput": {
+        "id": "organizationId"
+      },
+      "requiredScopes": [
+        "user"
+      ],
       "title": "Unfollow an organization",
-      "description": "POST /graphql - Unfollow an organization. Public GitHub GraphQL. Composio: GITHUB_UNFOLLOW_ORGANIZATION.",
+      "description": "POST /graphql mutation unfollowOrganization(input: {organizationId}). Returns organization {id login viewerIsFollowing}. EffectPolicy Reconcile: observes graphql.node.get(id = organizationId), exact on Organization.viewerIsFollowing = false. Never retried. Per-op scope: user (user:follow is enough for follow/unfollow; not part of the default connect scopes; re-consent on first use). Runs through the shared GraphQL transport: GraphQL errors on HTTP 200 map to CONNECTOR_UPSTREAM_ERROR, RATE_LIMITED to CONNECTOR_RATE_LIMITED, and a missing per-op scope (INSUFFICIENT_SCOPES, or X-Accepted-OAuth-Scopes vs X-OAuth-Scopes on 403/404) maps to CONNECTOR_CAPABILITY_MISSING with missingScopes and reconsentRequired.",
       "inputSchema": {
         "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "organizationId"
+        ],
         "properties": {
           "organizationId": {
             "type": "string",
-            "description": "organizationId"
+            "description": "Organization node id."
           }
-        },
-        "required": [
-          "organizationId"
-        ]
+        }
       },
       "outputSchema": {
         "type": "object",
-        "additionalProperties": true
-      },
-      "request": {
-        "method": "POST",
-        "baseUrl": "https://api.github.com",
-        "path": "/graphql",
-        "headers": {
-          "Accept": "application/vnd.github+json",
-          "X-GitHub-Api-Version": "2022-11-28",
-          "Authorization": "Bearer {{accessToken}}",
-          "Content-Type": "application/json"
-        },
-        "success": [
-          200
-        ],
-        "body": {
-          "query": "mutation($input: UnfollowOrganizationInput!) { unfollowOrganization(input: $input) { clientMutationId } }",
-          "variables": {
-            "input": {
-              "organizationId": "{{organizationId}}"
-            }
+        "properties": {
+          "organization": {
+            "type": [
+              "object",
+              "null"
+            ]
           }
         }
       }
@@ -45103,43 +45137,41 @@
       "maxInputBytes": 1048576,
       "maxResponseBytes": 1048576,
       "sideEffect": "write",
+      "requiredScopes": [
+        "user"
+      ],
       "title": "Update a user list",
-      "description": "POST /graphql - Update a user list. Public GitHub GraphQL. Composio: GITHUB_UPDATE_USER_LIST.",
+      "description": "POST /graphql mutation updateUserList(input: {listId, name, description, isPrivate}); at least one of name, description, isPrivate is required. Returns list {id name slug description isPrivate createdAt updatedAt lastAddedAt}. No effectPolicy. Never retried. Per-op scope: OAuth and personal access tokens (classic) need the user scope (not part of the default connect scopes; re-consent on first use). Runs through the shared GraphQL transport: GraphQL errors on HTTP 200 map to CONNECTOR_UPSTREAM_ERROR, RATE_LIMITED to CONNECTOR_RATE_LIMITED, and a missing per-op scope (INSUFFICIENT_SCOPES, or X-Accepted-OAuth-Scopes vs X-OAuth-Scopes on 403/404) maps to CONNECTOR_CAPABILITY_MISSING with missingScopes and reconsentRequired.",
       "inputSchema": {
         "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "listId"
+        ],
         "properties": {
           "listId": {
             "type": "string",
-            "description": "listId"
+            "description": "UserList node id."
+          },
+          "name": {
+            "type": "string",
+            "description": "New list name."
+          },
+          "description": {
+            "type": "string",
+            "description": "New description."
+          },
+          "isPrivate": {
+            "type": "boolean",
+            "description": "Private list."
           }
-        },
-        "required": [
-          "listId"
-        ]
+        }
       },
       "outputSchema": {
         "type": "object",
-        "additionalProperties": true
-      },
-      "request": {
-        "method": "POST",
-        "baseUrl": "https://api.github.com",
-        "path": "/graphql",
-        "headers": {
-          "Accept": "application/vnd.github+json",
-          "X-GitHub-Api-Version": "2022-11-28",
-          "Authorization": "Bearer {{accessToken}}",
-          "Content-Type": "application/json"
-        },
-        "success": [
-          200
-        ],
-        "body": {
-          "query": "mutation($input: UpdateUserListInput!) { updateUserList(input: $input) { clientMutationId } }",
-          "variables": {
-            "input": {
-              "listId": "{{listId}}"
-            }
+        "properties": {
+          "list": {
+            "type": "object"
           }
         }
       }
@@ -45150,52 +45182,52 @@
       "maxInputBytes": 1048576,
       "maxResponseBytes": 1048576,
       "sideEffect": "write",
+      "requiredScopes": [
+        "user"
+      ],
       "title": "Update user lists for an item",
-      "description": "POST /graphql - Update user lists for an item. Public GitHub GraphQL. Composio: GITHUB_UPDATE_USER_LISTS_FOR_ITEM.",
+      "description": "POST /graphql mutation updateUserListsForItem(input: {itemId, listIds, suggestedListIds}). Sets the full set of the viewer's lists that contain the repository (listIds [] removes it from every list). Returns lists [{id name slug ...}] and item {id nameWithOwner url}. No effectPolicy. Never retried. Per-op scope: OAuth and personal access tokens (classic) need the user scope (not part of the default connect scopes; re-consent on first use). Runs through the shared GraphQL transport: GraphQL errors on HTTP 200 map to CONNECTOR_UPSTREAM_ERROR, RATE_LIMITED to CONNECTOR_RATE_LIMITED, and a missing per-op scope (INSUFFICIENT_SCOPES, or X-Accepted-OAuth-Scopes vs X-OAuth-Scopes on 403/404) maps to CONNECTOR_CAPABILITY_MISSING with missingScopes and reconsentRequired.",
       "inputSchema": {
         "type": "object",
-        "properties": {
-          "itemId": {
-            "type": "string",
-            "description": "itemId"
-          },
-          "listIds": {
-            "type": "array",
-            "description": "listIds",
-            "items": {
-              "type": "string"
-            }
-          }
-        },
+        "additionalProperties": false,
         "required": [
           "itemId",
           "listIds"
-        ]
+        ],
+        "properties": {
+          "itemId": {
+            "type": "string",
+            "description": "Repository node id."
+          },
+          "listIds": {
+            "type": "array",
+            "maxItems": 100,
+            "items": {
+              "type": "string"
+            },
+            "description": "UserList node ids that should contain the item."
+          },
+          "suggestedListIds": {
+            "type": "array",
+            "maxItems": 100,
+            "items": {
+              "type": "string"
+            },
+            "description": "UserListSuggestion ids to create and add the item to."
+          }
+        }
       },
       "outputSchema": {
         "type": "object",
-        "additionalProperties": true
-      },
-      "request": {
-        "method": "POST",
-        "baseUrl": "https://api.github.com",
-        "path": "/graphql",
-        "headers": {
-          "Accept": "application/vnd.github+json",
-          "X-GitHub-Api-Version": "2022-11-28",
-          "Authorization": "Bearer {{accessToken}}",
-          "Content-Type": "application/json"
-        },
-        "success": [
-          200
-        ],
-        "body": {
-          "query": "mutation($input: UpdateUserListsForItemInput!) { updateUserListsForItem(input: $input) { clientMutationId } }",
-          "variables": {
-            "input": {
-              "itemId": "{{itemId}}",
-              "listIds": "{{listIds}}"
-            }
+        "properties": {
+          "lists": {
+            "type": "array"
+          },
+          "item": {
+            "type": [
+              "object",
+              "null"
+            ]
           }
         }
       }
@@ -45206,43 +45238,51 @@
       "maxInputBytes": 1048576,
       "maxResponseBytes": 1048576,
       "sideEffect": "write",
+      "effectPolicy": "Reconcile",
+      "reconcile": "graphql.viewer.get",
+      "requiredScopes": [
+        "user"
+      ],
       "title": "Change user status",
-      "description": "POST /graphql - Change user status. Public GitHub GraphQL. Composio: GITHUB_UPDATE_USER_STATUS.",
+      "description": "POST /graphql mutation changeUserStatus(input: {message, emoji, expiresAt, limitedAvailability, organizationId}). Returns status {emoji message expiresAt indicatesLimitedAvailability organization {id}}. EffectPolicy Reconcile: observes graphql.viewer.get, exact on viewer.status (emoji, message, expiresAt, indicatesLimitedAvailability <- limitedAvailability, organization.id <- organizationId). Never retried. Per-op scope: OAuth and personal access tokens (classic) need the user scope (not part of the default connect scopes; re-consent on first use). Runs through the shared GraphQL transport: GraphQL errors on HTTP 200 map to CONNECTOR_UPSTREAM_ERROR, RATE_LIMITED to CONNECTOR_RATE_LIMITED, and a missing per-op scope (INSUFFICIENT_SCOPES, or X-Accepted-OAuth-Scopes vs X-OAuth-Scopes on 403/404) maps to CONNECTOR_CAPABILITY_MISSING with missingScopes and reconsentRequired.",
       "inputSchema": {
         "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "message"
+        ],
         "properties": {
           "message": {
             "type": "string",
-            "description": "message"
+            "description": "Status message."
+          },
+          "emoji": {
+            "type": "string",
+            "description": "Emoji shortcode, e.g. :coffee:."
+          },
+          "expiresAt": {
+            "type": "string",
+            "description": "ISO 8601 date-time with zone when the status expires.",
+            "format": "date-time"
+          },
+          "limitedAvailability": {
+            "type": "boolean",
+            "description": "Mark the viewer as having limited availability."
+          },
+          "organizationId": {
+            "type": "string",
+            "description": "Organization node id to scope the status visibility to."
           }
-        },
-        "required": [
-          "message"
-        ]
+        }
       },
       "outputSchema": {
         "type": "object",
-        "additionalProperties": true
-      },
-      "request": {
-        "method": "POST",
-        "baseUrl": "https://api.github.com",
-        "path": "/graphql",
-        "headers": {
-          "Accept": "application/vnd.github+json",
-          "X-GitHub-Api-Version": "2022-11-28",
-          "Authorization": "Bearer {{accessToken}}",
-          "Content-Type": "application/json"
-        },
-        "success": [
-          200
-        ],
-        "body": {
-          "query": "mutation($input: ChangeUserStatusInput!) { changeUserStatus(input: $input) { clientMutationId } }",
-          "variables": {
-            "input": {
-              "message": "{{message}}"
-            }
+        "properties": {
+          "status": {
+            "type": [
+              "object",
+              "null"
+            ]
           }
         }
       }

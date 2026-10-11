@@ -1,18 +1,93 @@
 {
   "operation": "graphql.search",
   "input": {
-    "query": "sample",
-    "type": "sample"
+    "query": "hello in:name",
+    "type": "REPOSITORY",
+    "first": 2,
+    "after": "Y3Vyc29yOjA="
   },
   "request": {
     "method": "POST",
     "url": "https://api.github.com/graphql",
-    "body": "{\"query\":\"query($query: String!, $type: SearchType!) { search(query: $query, type: $type, first: 10) { issueCount } }\",\"variables\":{\"query\":\"sample\",\"type\":\"sample\"}}"
+    "root": "search",
+    "headers": {
+      "X-Github-Next-Global-ID": "1"
+    }
   },
   "response": {
     "status": 200,
     "body": {
-      "ok": true
+      "data": {
+        "search": {
+          "issueCount": 0,
+          "repositoryCount": 1234,
+          "userCount": 0,
+          "discussionCount": 0,
+          "pageInfo": {
+            "hasNextPage": true,
+            "endCursor": "Y3Vyc29yOjI=",
+            "hasPreviousPage": false,
+            "startCursor": "Y3Vyc29yOjE="
+          },
+          "nodes": [
+            {
+              "__typename": "Repository",
+              "id": "R_kgDOA",
+              "name": "Hello-World",
+              "nameWithOwner": "octocat/Hello-World",
+              "url": "https://github.com/octocat/Hello-World",
+              "description": "My first repo",
+              "isPrivate": false,
+              "stargazerCount": 42
+            }
+          ]
+        }
+      }
+    }
+  },
+  "expected": {
+    "items": [
+      {
+        "__typename": "Repository",
+        "id": "R_kgDOA",
+        "name": "Hello-World",
+        "nameWithOwner": "octocat/Hello-World",
+        "url": "https://github.com/octocat/Hello-World",
+        "description": "My first repo",
+        "isPrivate": false,
+        "stargazerCount": 42
+      }
+    ],
+    "pageInfo": {
+      "hasNextPage": true,
+      "endCursor": "Y3Vyc29yOjI=",
+      "hasPreviousPage": false,
+      "startCursor": "Y3Vyc29yOjE="
+    },
+    "repositoryCount": 1234,
+    "issueCount": 0
+  },
+  "errorsOn200": {
+    "response": {
+      "status": 200,
+      "body": {
+        "data": {
+          "search": null
+        },
+        "errors": [
+          {
+            "type": "INVALID_ARGUMENTS",
+            "path": [
+              "search"
+            ],
+            "message": "search rejected by GitHub"
+          }
+        ]
+      }
+    },
+    "expectedError": {
+      "code": "CONNECTOR_UPSTREAM_ERROR",
+      "message": "search rejected by GitHub"
     }
   }
 }
