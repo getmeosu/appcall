@@ -9,7 +9,7 @@ describe("monday manifest", () => {
     expect(manifest.runtime).toBe("bun");
     expect(manifest.categories).toEqual(["productivity"]);
     expect(manifest.models.length).toBeGreaterThan(0);
-    expect(manifest.version).toBe("0.2.0");
+    expect(manifest.version).toBe("0.3.0");
   });
 
   it("declares api_key setup for the personal API token, agreeing with http.auth.field", () => {
@@ -29,32 +29,35 @@ describe("monday manifest", () => {
     expect(manifest.network.allowedHosts).not.toContain("auth.monday.com");
   });
 
-  it("declares the original 13 operations plus the depth slice and EventOnly webhooks", () => {
-    expect(Object.keys(operations).sort()).toEqual(
-      [
-        "healthcheck",
-        "item.create",
-        "item.createSubitem",
-        "item.updateColumnValues",
-        "item.get",
-        "item.listByBoard",
-        "item.nextPage",
-        "update.create",
-        "update.list",
-        "board.create",
-        "board.list",
-        "group.create",
-        "group.list",
-        "boards.get",
-        "items.update",
-        "items.delete",
-        "items.duplicate",
-        "columns.change_value",
-        "webhook.item_created",
-        "webhook.item_updated",
-        "webhook.board_created",
-      ].sort(),
-    );
+  it("keeps the original operations and EventOnly webhooks while adding Composio-aligned GraphQL tools", () => {
+    const original = [
+      "healthcheck",
+      "item.create",
+      "item.createSubitem",
+      "item.updateColumnValues",
+      "item.get",
+      "item.listByBoard",
+      "item.nextPage",
+      "update.create",
+      "update.list",
+      "board.create",
+      "board.list",
+      "group.create",
+      "group.list",
+      "boards.get",
+      "items.update",
+      "items.delete",
+      "items.duplicate",
+      "columns.change_value",
+      "webhook.item_created",
+      "webhook.item_updated",
+      "webhook.board_created",
+    ];
+    for (const key of original) {
+      expect(operations[key], key).toBeDefined();
+    }
+    const actionCount = Object.values(operations).filter((operation) => operation.kind === "action").length;
+    expect(actionCount).toBeGreaterThan(100);
   });
 
   it("does not add an item.rename operation — renaming goes through updateColumnValues", () => {
@@ -324,8 +327,8 @@ describe("monday manifest", () => {
     for (const [key, operation] of Object.entries(operations)) {
       if (operation.kind === "webhook") continue;
       const body = (operation.request as Record<string, unknown>).body as Record<string, unknown>;
-      if (key === "healthcheck") {
-        expect(body.variables).toBeUndefined();
+      if (key === "healthcheck" || !String(body.query).includes("$")) {
+        expect(body.variables ?? {}).toEqual({});
         continue;
       }
       const query = String(body.query);
