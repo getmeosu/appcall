@@ -6,8 +6,8 @@ describe("Ashby manifest", () => {
     expect(manifest.key).toBe("ashby");
   });
 
-  it("has version 0.6.1", () => {
-    expect(manifest.version).toBe("0.6.1");
+  it("has version 0.7.0", () => {
+    expect(manifest.version).toBe("0.7.0");
   });
 
   it("uses bun runtime", () => {
@@ -35,20 +35,34 @@ describe("Ashby manifest", () => {
 
   it("declares P0+P1 reads plus write ops", () => {
     expect(Object.keys(manifest.operations).sort()).toEqual([
+      "application_feedback.list",
+      "application_feedback.submit",
+      "applications.change_source",
       "applications.create",
       "applications.get",
       "applications.hire",
       "applications.list",
+      "applications.list_history",
       "applications.move",
       "applications.reject",
+      "applications.transfer",
+      "applications.update",
       "archive_reasons.list",
+      "candidate_tags.create",
+      "candidate_tags.list",
+      "candidates.add_tag",
       "candidates.create",
+      "candidates.create_note",
       "candidates.get",
       "candidates.list",
+      "candidates.list_notes",
       "candidates.search",
       "candidates.update",
       "departments.list",
       "healthcheck",
+      "hiring_team.add_member",
+      "hiring_team.remove_member",
+      "hiring_team_roles.list",
       "interview_schedules.list",
       "interview_stages.list",
       "interviews.cancel",
@@ -60,6 +74,7 @@ describe("Ashby manifest", () => {
       "offers.list",
       "openings.list",
       "sources.list",
+      "users.get",
       "users.list",
       "webhook.application_submitted",
       "webhook.candidate_updated",
@@ -154,10 +169,9 @@ describe("Ashby manifest", () => {
     expect(update.reconcile).toBe("candidates.get");
   });
 
-  it("declares 30 operations and no interview_schedules.get (Ashby-0 cite-drop)", () => {
-    expect(Object.keys(manifest.operations)).toHaveLength(30);
-    expect(Object.prototype.hasOwnProperty.call(manifest.operations, "interview_schedules.get")).toBe(false);
-    expect(JSON.stringify(manifest)).not.toContain("interviewSchedule.info");
+    it("declares 45 operations (G1 +15) and no interview_schedules.get (Ashby-0 cite-drop)", () => {
+    expect(Object.keys(manifest.operations)).toHaveLength(45);
+    expect(manifest.operations["interview_schedules.get"]).toBeUndefined();
   });
 
   it("documents candidates.update id -> candidateId and required interviewPlanId", () => {
@@ -176,4 +190,53 @@ describe("Ashby manifest", () => {
       expect(manifest.operations[key].kind).toBe("webhook");
     }
   });
+
+  it("wires applications.transfer EffectPolicy Reconcile to applications.get", () => {
+    const transfer = manifest.operations["applications.transfer"] as {
+      kind: string;
+      sideEffect: string;
+      effectPolicy: string;
+      reconcile: string;
+    };
+    expect(transfer.kind).toBe("action");
+    expect(transfer.sideEffect).toBe("write");
+    expect(transfer.effectPolicy).toBe("Reconcile");
+    expect(transfer.reconcile).toBe("applications.get");
+  });
+
+  it("omits effect keys on G1 creates/one-shots without exact observe", () => {
+    for (const key of [
+      "candidates.create_note",
+      "candidates.add_tag",
+      "candidate_tags.create",
+      "applications.change_source",
+      "applications.update",
+      "application_feedback.submit",
+      "hiring_team.add_member",
+      "hiring_team.remove_member",
+    ] as const) {
+      const op = manifest.operations[key] as Record<string, unknown>;
+      expect(op.effectPolicy).toBeUndefined();
+      expect(op.reconcile).toBeUndefined();
+      expect(op.observe).toBeUndefined();
+      expect(op.kind).toBe("action");
+      expect(op.sideEffect).toBe("write");
+    }
+  });
+
+  it("marks G1 reads as agent-tool actions", () => {
+    for (const key of [
+      "candidates.list_notes",
+      "candidate_tags.list",
+      "applications.list_history",
+      "application_feedback.list",
+      "hiring_team_roles.list",
+      "users.get",
+    ] as const) {
+      const op = manifest.operations[key] as { kind: string; sideEffect: string };
+      expect(op.kind).toBe("action");
+      expect(op.sideEffect).toBe("read");
+    }
+  });
+
 });
