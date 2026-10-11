@@ -66,7 +66,7 @@ function empty(status: number) {
 
 describe("github gap G1 users, account, and meta reads", () => {
   test("version is 0.79.0 at 852 ops with the read/write breakdown", () => {
-    expect(manifest.version).toBe("0.80.2");
+    expect(manifest.version).toBe("0.80.3");
     const ops = manifest.operations as Record<string, Record<string, unknown>>;
     expect(Object.keys(ops)).toHaveLength(910);
     const kinds = { action: 0, sync: 0, webhook: 0 };
@@ -80,7 +80,7 @@ describe("github gap G1 users, account, and meta reads", () => {
       }
     }
     expect(kinds).toEqual({ action: 860, sync: 4, webhook: 46 });
-    expect(side).toEqual({ read: 450, write: 395, absent: 15 });
+    expect(side).toEqual({ read: 451, write: 394, absent: 15 });
   });
 
   test("the thirteen G1 ops are present, omit all three effect keys, and document their paths", () => {

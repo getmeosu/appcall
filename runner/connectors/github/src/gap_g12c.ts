@@ -63,17 +63,30 @@ export const INTERACTION_LIMIT_EXPIRIES = [
 
 const PAGE_INFO = "pageInfo { hasNextPage endCursor hasPreviousPage startCursor }";
 
+// Fields that share a response key across fragments must have identical types under strict
+// GraphQL validation (OverlappingFieldsCanBeMerged): name is String! on Repository/App/
+// MarketplaceListing but String on User/Organization, and state is IssueState! vs
+// PullRequestState!. Those are aliased per fragment and folded back by normalizeSearchNode,
+// so the normalized output keeps name/state.
 const SEARCH_NODE_FIELDS = `
   __typename
   ... on Repository { id name nameWithOwner url description isPrivate stargazerCount }
-  ... on Issue { id number title url state createdAt repository { nameWithOwner } }
-  ... on PullRequest { id number title url state createdAt repository { nameWithOwner } }
+  ... on Issue { id number title url issueState: state createdAt repository { nameWithOwner } }
+  ... on PullRequest { id number title url pullRequestState: state createdAt repository { nameWithOwner } }
   ... on Discussion { id number title url createdAt repository { nameWithOwner } }
-  ... on User { id login name url }
-  ... on Organization { id login name url }
+  ... on User { id login profileName: name url }
+  ... on Organization { id login profileName: name url }
   ... on App { id slug name url }
   ... on MarketplaceListing { id slug name }
 `;
+
+const SEARCH_ALIASES: Record<string, string> = { issueState: "state", pullRequestState: "state", profileName: "name" };
+
+export function normalizeSearchNode(node: Record<string, unknown>): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(node)) out[SEARCH_ALIASES[key] ?? key] = value;
+  return out;
+}
 
 const SPONSORABLE_FIELDS = `
   __typename
@@ -304,7 +317,7 @@ export function createGapG12cClient(options: { accessToken: string; fetch?: type
       if (!result.ok) return result;
       const raw = recordAt(result.data, "search");
       if (!raw) return upstream("GitHub returned no search connection.");
-      const conn = connection(raw, (node) => node);
+      const conn = connection(raw, normalizeSearchNode);
       const counts: Record<string, number> = {};
       for (const key of ["issueCount", "repositoryCount", "userCount", "discussionCount"]) {
         if (typeof raw[key] === "number") counts[key] = raw[key] as number;

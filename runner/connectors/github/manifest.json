@@ -1,7 +1,7 @@
 {
   "key": "github",
   "name": "GitHub",
-  "version": "0.80.2",
+  "version": "0.80.3",
   "runtime": "bun",
   "categories": [
     "dev-tools"
@@ -42374,43 +42374,31 @@
       "maxInputBytes": 1048576,
       "maxResponseBytes": 1048576,
       "sideEffect": "write",
+      "requiredScopes": [
+        "repo",
+        "admin:org",
+        "workflow"
+      ],
       "title": "Abort a repository migration",
-      "description": "POST /graphql - Abort a repository migration. Public GitHub GraphQL. Composio: GITHUB_ABORT_REPOSITORY_MIGRATION.",
+      "description": "POST /graphql mutation abortRepositoryMigration(input: {migrationId}). Returns success. No effectPolicy. Never retried. Per-op scopes: repo + admin:org (read:org where the docs accept it) + workflow (not part of the default connect scopes; re-consent on first use). Classic-PAT caveat: GitHub Enterprise Importer requires a personal access token (classic) with repo, admin:org/read:org and workflow; fine-grained PATs are not supported (https://docs.github.com/en/migrations/using-github-enterprise-importer/migrating-between-github-products/managing-access-for-a-migration-between-github-products). Runs through the shared GraphQL transport: GraphQL errors on HTTP 200 map to CONNECTOR_UPSTREAM_ERROR, RATE_LIMITED to CONNECTOR_RATE_LIMITED, and a missing per-op scope (INSUFFICIENT_SCOPES, or X-Accepted-OAuth-Scopes vs X-OAuth-Scopes on 403/404) maps to CONNECTOR_CAPABILITY_MISSING with missingScopes and reconsentRequired.",
       "inputSchema": {
         "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "migrationId"
+        ],
         "properties": {
           "migrationId": {
             "type": "string",
-            "description": "migrationId"
+            "description": "RepositoryMigration node id."
           }
-        },
-        "required": [
-          "migrationId"
-        ]
+        }
       },
       "outputSchema": {
         "type": "object",
-        "additionalProperties": true
-      },
-      "request": {
-        "method": "POST",
-        "baseUrl": "https://api.github.com",
-        "path": "/graphql",
-        "headers": {
-          "Accept": "application/vnd.github+json",
-          "X-GitHub-Api-Version": "2022-11-28",
-          "Authorization": "Bearer {{accessToken}}",
-          "Content-Type": "application/json"
-        },
-        "success": [
-          200
-        ],
-        "body": {
-          "query": "mutation($input: AbortRepositoryMigrationInput!) { abortRepositoryMigration(input: $input) { clientMutationId } }",
-          "variables": {
-            "input": {
-              "migrationId": "{{migrationId}}"
-            }
+        "properties": {
+          "success": {
+            "type": "boolean"
           }
         }
       }
@@ -42459,49 +42447,40 @@
       "maxInputBytes": 1048576,
       "maxResponseBytes": 1048576,
       "sideEffect": "write",
+      "requiredScopes": [
+        "user"
+      ],
       "title": "Cancel a sponsorship",
-      "description": "POST /graphql - Cancel a sponsorship. Public GitHub GraphQL. Composio: GITHUB_CANCEL_SPONSORSHIP.",
+      "description": "POST /graphql mutation cancelSponsorship(input: {sponsorLogin, sponsorableLogin}). Returns cancelled:true and sponsorsTier {id name monthlyPriceInDollars ...} (GitHub's CancelSponsorshipPayload carries the tier, not the sponsorship). No effectPolicy. Never retried. Per-op scope: OAuth and personal access tokens (classic) need the user scope (not part of the default connect scopes; re-consent on first use). Runs through the shared GraphQL transport: GraphQL errors on HTTP 200 map to CONNECTOR_UPSTREAM_ERROR, RATE_LIMITED to CONNECTOR_RATE_LIMITED, and a missing per-op scope (INSUFFICIENT_SCOPES, or X-Accepted-OAuth-Scopes vs X-OAuth-Scopes on 403/404) maps to CONNECTOR_CAPABILITY_MISSING with missingScopes and reconsentRequired.",
       "inputSchema": {
         "type": "object",
-        "properties": {
-          "sponsorLogin": {
-            "type": "string",
-            "description": "sponsorLogin"
-          },
-          "sponsorableLogin": {
-            "type": "string",
-            "description": "sponsorableLogin"
-          }
-        },
+        "additionalProperties": false,
         "required": [
           "sponsorLogin",
           "sponsorableLogin"
-        ]
+        ],
+        "properties": {
+          "sponsorLogin": {
+            "type": "string",
+            "description": "Sponsor login (the viewer or an organization it administers)."
+          },
+          "sponsorableLogin": {
+            "type": "string",
+            "description": "Login of the sponsored user or organization."
+          }
+        }
       },
       "outputSchema": {
         "type": "object",
-        "additionalProperties": true
-      },
-      "request": {
-        "method": "POST",
-        "baseUrl": "https://api.github.com",
-        "path": "/graphql",
-        "headers": {
-          "Accept": "application/vnd.github+json",
-          "X-GitHub-Api-Version": "2022-11-28",
-          "Authorization": "Bearer {{accessToken}}",
-          "Content-Type": "application/json"
-        },
-        "success": [
-          200
-        ],
-        "body": {
-          "query": "mutation($input: CancelSponsorshipInput!) { cancelSponsorship(input: $input) { clientMutationId } }",
-          "variables": {
-            "input": {
-              "sponsorLogin": "{{sponsorLogin}}",
-              "sponsorableLogin": "{{sponsorableLogin}}"
-            }
+        "properties": {
+          "cancelled": {
+            "type": "boolean"
+          },
+          "sponsorsTier": {
+            "type": [
+              "object",
+              "null"
+            ]
           }
         }
       }
@@ -42563,55 +42542,42 @@
       "maxInputBytes": 1048576,
       "maxResponseBytes": 1048576,
       "sideEffect": "write",
+      "requiredScopes": [
+        "project"
+      ],
       "title": "Clear a Projects v2 item field value",
-      "description": "POST /graphql - Clear a Projects v2 item field value. Public GitHub GraphQL. Composio: GITHUB_CLEAR_PROJECT_V2_ITEM_FIELD_VALUE.",
+      "description": "POST /graphql mutation clearProjectV2ItemFieldValue(input: {projectId, itemId, fieldId}). Returns item {id type isArchived updatedAt}. No effectPolicy. Never retried. Per-op scope: project (not part of the default connect scopes; re-consent on first use). Runs through the shared GraphQL transport: GraphQL errors on HTTP 200 map to CONNECTOR_UPSTREAM_ERROR, RATE_LIMITED to CONNECTOR_RATE_LIMITED, and a missing per-op scope (INSUFFICIENT_SCOPES, or X-Accepted-OAuth-Scopes vs X-OAuth-Scopes on 403/404) maps to CONNECTOR_CAPABILITY_MISSING with missingScopes and reconsentRequired.",
       "inputSchema": {
         "type": "object",
-        "properties": {
-          "projectId": {
-            "type": "string",
-            "description": "projectId"
-          },
-          "itemId": {
-            "type": "string",
-            "description": "itemId"
-          },
-          "fieldId": {
-            "type": "string",
-            "description": "fieldId"
-          }
-        },
+        "additionalProperties": false,
         "required": [
           "projectId",
           "itemId",
           "fieldId"
-        ]
+        ],
+        "properties": {
+          "projectId": {
+            "type": "string",
+            "description": "ProjectV2 node id."
+          },
+          "itemId": {
+            "type": "string",
+            "description": "ProjectV2Item node id."
+          },
+          "fieldId": {
+            "type": "string",
+            "description": "Project field node id."
+          }
+        }
       },
       "outputSchema": {
         "type": "object",
-        "additionalProperties": true
-      },
-      "request": {
-        "method": "POST",
-        "baseUrl": "https://api.github.com",
-        "path": "/graphql",
-        "headers": {
-          "Accept": "application/vnd.github+json",
-          "X-GitHub-Api-Version": "2022-11-28",
-          "Authorization": "Bearer {{accessToken}}",
-          "Content-Type": "application/json"
-        },
-        "success": [
-          200
-        ],
-        "body": {
-          "query": "mutation($input: ClearProjectV2ItemFieldValueInput!) { clearProjectV2ItemFieldValue(input: $input) { clientMutationId } }",
-          "variables": {
-            "input": {
-              "projectId": "{{projectId}}",
-              "itemId": "{{itemId}}",
-              "fieldId": "{{fieldId}}"
-            }
+        "properties": {
+          "item": {
+            "type": [
+              "object",
+              "null"
+            ]
           }
         }
       }
@@ -42758,49 +42724,42 @@
       "maxInputBytes": 1048576,
       "maxResponseBytes": 1048576,
       "sideEffect": "write",
+      "requiredScopes": [
+        "project"
+      ],
       "title": "Create a Projects v2 project",
-      "description": "POST /graphql - Create a Projects v2 project. Public GitHub GraphQL. Composio: GITHUB_CREATE_A_USER_PROJECT.",
+      "description": "POST /graphql mutation createProjectV2(input: {ownerId, title, repositoryId, teamId}). Returns projectV2 {id number url title}. No effectPolicy (create). Never retried. Per-op scope: project (not part of the default connect scopes; re-consent on first use). Runs through the shared GraphQL transport: GraphQL errors on HTTP 200 map to CONNECTOR_UPSTREAM_ERROR, RATE_LIMITED to CONNECTOR_RATE_LIMITED, and a missing per-op scope (INSUFFICIENT_SCOPES, or X-Accepted-OAuth-Scopes vs X-OAuth-Scopes on 403/404) maps to CONNECTOR_CAPABILITY_MISSING with missingScopes and reconsentRequired.",
       "inputSchema": {
         "type": "object",
-        "properties": {
-          "ownerId": {
-            "type": "string",
-            "description": "ownerId"
-          },
-          "title": {
-            "type": "string",
-            "description": "title"
-          }
-        },
+        "additionalProperties": false,
         "required": [
           "ownerId",
           "title"
-        ]
+        ],
+        "properties": {
+          "ownerId": {
+            "type": "string",
+            "description": "Node id of the owning user or organization."
+          },
+          "title": {
+            "type": "string",
+            "description": "Project title."
+          },
+          "repositoryId": {
+            "type": "string",
+            "description": "Repository node id to link."
+          },
+          "teamId": {
+            "type": "string",
+            "description": "Team node id to link."
+          }
+        }
       },
       "outputSchema": {
         "type": "object",
-        "additionalProperties": true
-      },
-      "request": {
-        "method": "POST",
-        "baseUrl": "https://api.github.com",
-        "path": "/graphql",
-        "headers": {
-          "Accept": "application/vnd.github+json",
-          "X-GitHub-Api-Version": "2022-11-28",
-          "Authorization": "Bearer {{accessToken}}",
-          "Content-Type": "application/json"
-        },
-        "success": [
-          200
-        ],
-        "body": {
-          "query": "mutation($input: CreateProjectV2Input!) { createProjectV2(input: $input) { clientMutationId } }",
-          "variables": {
-            "input": {
-              "ownerId": "{{ownerId}}",
-              "title": "{{title}}"
-            }
+        "properties": {
+          "projectV2": {
+            "type": "object"
           }
         }
       }
@@ -42893,49 +42852,59 @@
       "maxInputBytes": 1048576,
       "maxResponseBytes": 1048576,
       "sideEffect": "write",
+      "requiredScopes": [
+        "user"
+      ],
       "title": "Create a sponsorship",
-      "description": "POST /graphql - Create a sponsorship. Public GitHub GraphQL. Composio: GITHUB_CREATE_SPONSORSHIP.",
+      "description": "Charges the connected account. POST /graphql mutation createSponsorship(input: {sponsorableLogin, amount | tierId, isRecurring, sponsorLogin, privacyLevel, receiveEmails}). Give exactly one of amount (whole US dollars, 1-12000; never inferred) or tierId; isRecurring is required with amount and rejected with tierId (the tier decides). Returns sponsorship {id createdAt isActive isOneTimePayment privacyLevel tier sponsorable sponsorEntity}. No effectPolicy (money move). Never retried, including on rate limits or timeouts. Per-op scope: OAuth and personal access tokens (classic) need the user scope (not part of the default connect scopes; re-consent on first use). Runs through the shared GraphQL transport: GraphQL errors on HTTP 200 map to CONNECTOR_UPSTREAM_ERROR, RATE_LIMITED to CONNECTOR_RATE_LIMITED, and a missing per-op scope (INSUFFICIENT_SCOPES, or X-Accepted-OAuth-Scopes vs X-OAuth-Scopes on 403/404) maps to CONNECTOR_CAPABILITY_MISSING with missingScopes and reconsentRequired.",
       "inputSchema": {
         "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "sponsorableLogin"
+        ],
         "properties": {
           "sponsorableLogin": {
             "type": "string",
-            "description": "sponsorableLogin"
+            "description": "Login of the user or organization to sponsor."
+          },
+          "amount": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 12000,
+            "description": "Amount in whole US dollars (not cents). Exactly one of amount or tierId."
           },
           "tierId": {
             "type": "string",
-            "description": "tierId"
+            "description": "SponsorsTier node id. Exactly one of amount or tierId."
+          },
+          "isRecurring": {
+            "type": "boolean",
+            "description": "Monthly recurring (true) or one-time (false). Required with amount; not allowed with tierId."
+          },
+          "sponsorLogin": {
+            "type": "string",
+            "description": "Sponsor as this organization login instead of the viewer."
+          },
+          "privacyLevel": {
+            "type": "string",
+            "description": "Sponsorship visibility.",
+            "enum": [
+              "PUBLIC",
+              "PRIVATE"
+            ]
+          },
+          "receiveEmails": {
+            "type": "boolean",
+            "description": "Receive email updates from the sponsorable."
           }
-        },
-        "required": [
-          "sponsorableLogin",
-          "tierId"
-        ]
+        }
       },
       "outputSchema": {
         "type": "object",
-        "additionalProperties": true
-      },
-      "request": {
-        "method": "POST",
-        "baseUrl": "https://api.github.com",
-        "path": "/graphql",
-        "headers": {
-          "Accept": "application/vnd.github+json",
-          "X-GitHub-Api-Version": "2022-11-28",
-          "Authorization": "Bearer {{accessToken}}",
-          "Content-Type": "application/json"
-        },
-        "success": [
-          200
-        ],
-        "body": {
-          "query": "mutation($input: CreateSponsorshipInput!) { createSponsorship(input: $input) { clientMutationId } }",
-          "variables": {
-            "input": {
-              "sponsorableLogin": "{{sponsorableLogin}}",
-              "tierId": "{{tierId}}"
-            }
+        "properties": {
+          "sponsorship": {
+            "type": "object"
           }
         }
       }
@@ -42946,49 +42915,63 @@
       "maxInputBytes": 1048576,
       "maxResponseBytes": 1048576,
       "sideEffect": "write",
+      "requiredScopes": [
+        "user"
+      ],
       "title": "Create a Sponsors tier",
-      "description": "POST /graphql - Create a Sponsors tier. Public GitHub GraphQL. Composio: GITHUB_CREATE_SPONSORS_TIER.",
+      "description": "POST /graphql mutation createSponsorsTier(input: {amount, description, isRecurring, publish, sponsorableLogin, repositoryOwnerLogin + repositoryName, welcomeMessage}). amount is in whole US dollars (not cents), 1-12000. Returns tierId and tier {id name description monthlyPriceInDollars isOneTime isCustomAmount createdAt updatedAt}. No effectPolicy (create). Never retried. Per-op scope: OAuth and personal access tokens (classic) need the user scope (not part of the default connect scopes; re-consent on first use). Runs through the shared GraphQL transport: GraphQL errors on HTTP 200 map to CONNECTOR_UPSTREAM_ERROR, RATE_LIMITED to CONNECTOR_RATE_LIMITED, and a missing per-op scope (INSUFFICIENT_SCOPES, or X-Accepted-OAuth-Scopes vs X-OAuth-Scopes on 403/404) maps to CONNECTOR_CAPABILITY_MISSING with missingScopes and reconsentRequired.",
       "inputSchema": {
         "type": "object",
-        "properties": {
-          "amount": {
-            "type": "integer",
-            "description": "amount"
-          },
-          "description": {
-            "type": "string",
-            "description": "description"
-          }
-        },
+        "additionalProperties": false,
         "required": [
           "amount",
           "description"
-        ]
+        ],
+        "properties": {
+          "amount": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 12000,
+            "description": "Tier price in whole US dollars (not cents)."
+          },
+          "description": {
+            "type": "string",
+            "description": "Tier description."
+          },
+          "isRecurring": {
+            "type": "boolean",
+            "description": "Monthly tier (default true) or one-time."
+          },
+          "publish": {
+            "type": "boolean",
+            "description": "Publish immediately (default false: draft)."
+          },
+          "sponsorableLogin": {
+            "type": "string",
+            "description": "User or organization that owns the tier (default: viewer)."
+          },
+          "repositoryOwnerLogin": {
+            "type": "string",
+            "description": "Owner of a repository to grant sponsors access to (with repositoryName)."
+          },
+          "repositoryName": {
+            "type": "string",
+            "description": "Repository to grant sponsors access to (with repositoryOwnerLogin)."
+          },
+          "welcomeMessage": {
+            "type": "string",
+            "description": "Message shown to new sponsors of this tier."
+          }
+        }
       },
       "outputSchema": {
         "type": "object",
-        "additionalProperties": true
-      },
-      "request": {
-        "method": "POST",
-        "baseUrl": "https://api.github.com",
-        "path": "/graphql",
-        "headers": {
-          "Accept": "application/vnd.github+json",
-          "X-GitHub-Api-Version": "2022-11-28",
-          "Authorization": "Bearer {{accessToken}}",
-          "Content-Type": "application/json"
-        },
-        "success": [
-          200
-        ],
-        "body": {
-          "query": "mutation($input: CreateSponsorsTierInput!) { createSponsorsTier(input: $input) { clientMutationId } }",
-          "variables": {
-            "input": {
-              "amount": "{{amount}}",
-              "description": "{{description}}"
-            }
+        "properties": {
+          "tierId": {
+            "type": "string"
+          },
+          "tier": {
+            "type": "object"
           }
         }
       }
@@ -44397,43 +44380,32 @@
       "maxInputBytes": 1048576,
       "maxResponseBytes": 1048576,
       "sideEffect": "write",
+      "requiredScopes": [
+        "user"
+      ],
       "title": "Publish a Sponsors tier",
-      "description": "POST /graphql - Publish a Sponsors tier. Public GitHub GraphQL. Composio: GITHUB_PUBLISH_SPONSORS_TIER_GRAPH_QL.",
+      "description": "POST /graphql mutation publishSponsorsTier(input: {tierId}). Publishes a draft tier. Returns tier {id name monthlyPriceInDollars ...}. No effectPolicy. Never retried. Per-op scope: OAuth and personal access tokens (classic) need the user scope (not part of the default connect scopes; re-consent on first use). Runs through the shared GraphQL transport: GraphQL errors on HTTP 200 map to CONNECTOR_UPSTREAM_ERROR, RATE_LIMITED to CONNECTOR_RATE_LIMITED, and a missing per-op scope (INSUFFICIENT_SCOPES, or X-Accepted-OAuth-Scopes vs X-OAuth-Scopes on 403/404) maps to CONNECTOR_CAPABILITY_MISSING with missingScopes and reconsentRequired.",
       "inputSchema": {
         "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "tierId"
+        ],
         "properties": {
           "tierId": {
             "type": "string",
-            "description": "tierId"
+            "description": "SponsorsTier node id."
           }
-        },
-        "required": [
-          "tierId"
-        ]
+        }
       },
       "outputSchema": {
         "type": "object",
-        "additionalProperties": true
-      },
-      "request": {
-        "method": "POST",
-        "baseUrl": "https://api.github.com",
-        "path": "/graphql",
-        "headers": {
-          "Accept": "application/vnd.github+json",
-          "X-GitHub-Api-Version": "2022-11-28",
-          "Authorization": "Bearer {{accessToken}}",
-          "Content-Type": "application/json"
-        },
-        "success": [
-          200
-        ],
-        "body": {
-          "query": "mutation($input: PublishSponsorsTierInput!) { publishSponsorsTier(input: $input) { clientMutationId } }",
-          "variables": {
-            "input": {
-              "tierId": "{{tierId}}"
-            }
+        "properties": {
+          "tier": {
+            "type": [
+              "object",
+              "null"
+            ]
           }
         }
       }
@@ -44495,43 +44467,32 @@
       "maxInputBytes": 1048576,
       "maxResponseBytes": 1048576,
       "sideEffect": "write",
+      "requiredScopes": [
+        "user"
+      ],
       "title": "Retire a Sponsors tier",
-      "description": "POST /graphql - Retire a Sponsors tier. Public GitHub GraphQL. Composio: GITHUB_RETIRE_SPONSORS_TIER.",
+      "description": "POST /graphql mutation retireSponsorsTier(input: {tierId}). Retires a published tier (existing sponsors keep it). Returns tier {id name monthlyPriceInDollars ...}. No effectPolicy. Never retried. Per-op scope: OAuth and personal access tokens (classic) need the user scope (not part of the default connect scopes; re-consent on first use). Runs through the shared GraphQL transport: GraphQL errors on HTTP 200 map to CONNECTOR_UPSTREAM_ERROR, RATE_LIMITED to CONNECTOR_RATE_LIMITED, and a missing per-op scope (INSUFFICIENT_SCOPES, or X-Accepted-OAuth-Scopes vs X-OAuth-Scopes on 403/404) maps to CONNECTOR_CAPABILITY_MISSING with missingScopes and reconsentRequired.",
       "inputSchema": {
         "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "tierId"
+        ],
         "properties": {
           "tierId": {
             "type": "string",
-            "description": "tierId"
+            "description": "SponsorsTier node id."
           }
-        },
-        "required": [
-          "tierId"
-        ]
+        }
       },
       "outputSchema": {
         "type": "object",
-        "additionalProperties": true
-      },
-      "request": {
-        "method": "POST",
-        "baseUrl": "https://api.github.com",
-        "path": "/graphql",
-        "headers": {
-          "Accept": "application/vnd.github+json",
-          "X-GitHub-Api-Version": "2022-11-28",
-          "Authorization": "Bearer {{accessToken}}",
-          "Content-Type": "application/json"
-        },
-        "success": [
-          200
-        ],
-        "body": {
-          "query": "mutation($input: RetireSponsorsTierInput!) { retireSponsorsTier(input: $input) { clientMutationId } }",
-          "variables": {
-            "input": {
-              "tierId": "{{tierId}}"
-            }
+        "properties": {
+          "tier": {
+            "type": [
+              "object",
+              "null"
+            ]
           }
         }
       }
@@ -44669,40 +44630,48 @@
       "timeoutMs": 30000,
       "maxInputBytes": 1048576,
       "maxResponseBytes": 1048576,
-      "sideEffect": "write",
+      "sideEffect": "read",
       "title": "Run a GitHub GraphQL query",
-      "description": "POST /graphql - Run a GitHub GraphQL query. Public GitHub GraphQL. Composio: GITHUB_RUN_GRAPH_QL_QUERY, GITHUB_RUN_GRAPH_QL_RELAY_QUERY.",
+      "description": "POST /graphql with a caller-supplied read-only document. The document is parsed before any request: mutation and subscription operations are rejected with a validation error, including when mixed into a multi-operation document (fragments allowed; operationName selects an operation). Top-level strings and block strings (descriptions) are rejected: they are not valid in executable documents. Returns data. Read only. No effectPolicy. Scopes depend on the fields queried (connect scopes apply). Composio: GITHUB_RUN_GRAPH_QL_QUERY. Runs through the shared GraphQL transport: GraphQL errors on HTTP 200 map to CONNECTOR_UPSTREAM_ERROR, RATE_LIMITED to CONNECTOR_RATE_LIMITED, and INSUFFICIENT_SCOPES to CONNECTOR_UPSTREAM_ERROR.",
       "inputSchema": {
         "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "body"
+        ],
         "properties": {
           "body": {
             "type": "object",
-            "description": "GraphQL JSON body with query and optional variables.",
-            "additionalProperties": true
+            "additionalProperties": false,
+            "required": [
+              "query"
+            ],
+            "description": "GraphQL request body.",
+            "properties": {
+              "query": {
+                "type": "string",
+                "description": "GraphQL document containing only query operations (and fragments)."
+              },
+              "variables": {
+                "type": "object",
+                "additionalProperties": true,
+                "description": "Variables for the document."
+              },
+              "operationName": {
+                "type": "string",
+                "description": "Operation to run when the document has several."
+              }
+            }
           }
-        },
-        "required": [
-          "body"
-        ]
+        }
       },
       "outputSchema": {
         "type": "object",
-        "additionalProperties": true
-      },
-      "request": {
-        "method": "POST",
-        "baseUrl": "https://api.github.com",
-        "path": "/graphql",
-        "headers": {
-          "Accept": "application/vnd.github+json",
-          "X-GitHub-Api-Version": "2022-11-28",
-          "Authorization": "Bearer {{accessToken}}",
-          "Content-Type": "application/json"
-        },
-        "success": [
-          200
-        ],
-        "body": "{{body}}"
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
       }
     },
     "graphql.search": {
@@ -45033,49 +45002,44 @@
       "maxInputBytes": 1048576,
       "maxResponseBytes": 1048576,
       "sideEffect": "write",
+      "effectPolicy": "Reconcile",
+      "reconcile": "graphql.node.get",
+      "reconcileInput": {
+        "id": "subscribableId"
+      },
       "title": "Update a subscription",
-      "description": "POST /graphql - Update a subscription. Public GitHub GraphQL. Composio: GITHUB_UPDATE_SUBSCRIPTION.",
+      "description": "POST /graphql mutation updateSubscription(input: {subscribableId, state}). Returns subscribable {__typename id viewerSubscription}. EffectPolicy Reconcile: observes graphql.node.get(id = subscribableId), exact on Subscribable.viewerSubscription = state. Team subscribables are rejected before any request (GitHub removed Team subscriptions on 2026-07-01). Never retried. Scopes: the existing repo / notifications connect scopes. Runs through the shared GraphQL transport: GraphQL errors on HTTP 200 map to CONNECTOR_UPSTREAM_ERROR, RATE_LIMITED to CONNECTOR_RATE_LIMITED, and INSUFFICIENT_SCOPES to CONNECTOR_UPSTREAM_ERROR.",
       "inputSchema": {
         "type": "object",
-        "properties": {
-          "subscribableId": {
-            "type": "string",
-            "description": "subscribableId"
-          },
-          "state": {
-            "type": "string",
-            "description": "state"
-          }
-        },
+        "additionalProperties": false,
         "required": [
           "subscribableId",
           "state"
-        ]
+        ],
+        "properties": {
+          "subscribableId": {
+            "type": "string",
+            "description": "Node id of a Commit, Discussion, Issue, PullRequest or Repository (not Team)."
+          },
+          "state": {
+            "type": "string",
+            "description": "Subscription state.",
+            "enum": [
+              "IGNORED",
+              "SUBSCRIBED",
+              "UNSUBSCRIBED"
+            ]
+          }
+        }
       },
       "outputSchema": {
         "type": "object",
-        "additionalProperties": true
-      },
-      "request": {
-        "method": "POST",
-        "baseUrl": "https://api.github.com",
-        "path": "/graphql",
-        "headers": {
-          "Accept": "application/vnd.github+json",
-          "X-GitHub-Api-Version": "2022-11-28",
-          "Authorization": "Bearer {{accessToken}}",
-          "Content-Type": "application/json"
-        },
-        "success": [
-          200
-        ],
-        "body": {
-          "query": "mutation($input: UpdateSubscriptionInput!) { updateSubscription(input: $input) { clientMutationId } }",
-          "variables": {
-            "input": {
-              "subscribableId": "{{subscribableId}}",
-              "state": "{{state}}"
-            }
+        "properties": {
+          "subscribable": {
+            "type": [
+              "object",
+              "null"
+            ]
           }
         }
       }

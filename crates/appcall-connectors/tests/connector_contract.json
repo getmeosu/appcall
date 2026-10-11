@@ -494012,7 +494012,7 @@
     "public": true
   },
   {
-    "digest": "1aa5fd9847f36d6639c4ca91e88eb2ab7ec297e8e4a5dac1cec08291eacb996a",
+    "digest": "df86878c3d4d74dcb03f5dd7ad5a872bfc5574187b917ab22bc125ee2b251003",
     "egress": true,
     "key": "github",
     "operations": [
@@ -507473,9 +507473,10 @@
       {
         "destructive": false,
         "inputSchema": {
+          "additionalProperties": false,
           "properties": {
             "migrationId": {
-              "description": "migrationId",
+              "description": "RepositoryMigration node id.",
               "type": "string"
             }
           },
@@ -507489,7 +507490,11 @@
         "maxInputBytes": 1048576,
         "maxResponseBytes": 1048576,
         "outputSchema": {
-          "additionalProperties": true,
+          "properties": {
+            "success": {
+              "type": "boolean"
+            }
+          },
           "type": "object"
         },
         "read": false,
@@ -507671,13 +507676,22 @@
       {
         "destructive": false,
         "inputSchema": {
+          "additionalProperties": false,
           "properties": {
             "ownerId": {
-              "description": "ownerId",
+              "description": "Node id of the owning user or organization.",
+              "type": "string"
+            },
+            "repositoryId": {
+              "description": "Repository node id to link.",
+              "type": "string"
+            },
+            "teamId": {
+              "description": "Team node id to link.",
               "type": "string"
             },
             "title": {
-              "description": "title",
+              "description": "Project title.",
               "type": "string"
             }
           },
@@ -507692,7 +507706,11 @@
         "maxInputBytes": 1048576,
         "maxResponseBytes": 1048576,
         "outputSchema": {
-          "additionalProperties": true,
+          "properties": {
+            "projectV2": {
+              "type": "object"
+            }
+          },
           "type": "object"
         },
         "read": false,
@@ -507702,17 +507720,18 @@
       {
         "destructive": false,
         "inputSchema": {
+          "additionalProperties": false,
           "properties": {
             "fieldId": {
-              "description": "fieldId",
+              "description": "Project field node id.",
               "type": "string"
             },
             "itemId": {
-              "description": "itemId",
+              "description": "ProjectV2Item node id.",
               "type": "string"
             },
             "projectId": {
-              "description": "projectId",
+              "description": "ProjectV2 node id.",
               "type": "string"
             }
           },
@@ -507728,7 +507747,14 @@
         "maxInputBytes": 1048576,
         "maxResponseBytes": 1048576,
         "outputSchema": {
-          "additionalProperties": true,
+          "properties": {
+            "item": {
+              "type": [
+                "object",
+                "null"
+              ]
+            }
+          },
           "type": "object"
         },
         "read": false,
@@ -507738,10 +507764,29 @@
       {
         "destructive": false,
         "inputSchema": {
+          "additionalProperties": false,
           "properties": {
             "body": {
-              "additionalProperties": true,
-              "description": "GraphQL JSON body with query and optional variables.",
+              "additionalProperties": false,
+              "description": "GraphQL request body.",
+              "properties": {
+                "operationName": {
+                  "description": "Operation to run when the document has several.",
+                  "type": "string"
+                },
+                "query": {
+                  "description": "GraphQL document containing only query operations (and fragments).",
+                  "type": "string"
+                },
+                "variables": {
+                  "additionalProperties": true,
+                  "description": "Variables for the document.",
+                  "type": "object"
+                }
+              },
+              "required": [
+                "query"
+              ],
               "type": "object"
             }
           },
@@ -507755,10 +507800,14 @@
         "maxInputBytes": 1048576,
         "maxResponseBytes": 1048576,
         "outputSchema": {
-          "additionalProperties": true,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
           "type": "object"
         },
-        "read": false,
+        "read": true,
         "timeoutMs": 30000,
         "tool": true
       },
@@ -508198,13 +508247,40 @@
       {
         "destructive": false,
         "inputSchema": {
+          "additionalProperties": false,
           "properties": {
             "amount": {
-              "description": "amount",
+              "description": "Tier price in whole US dollars (not cents).",
+              "maximum": 12000,
+              "minimum": 1,
               "type": "integer"
             },
             "description": {
-              "description": "description",
+              "description": "Tier description.",
+              "type": "string"
+            },
+            "isRecurring": {
+              "description": "Monthly tier (default true) or one-time.",
+              "type": "boolean"
+            },
+            "publish": {
+              "description": "Publish immediately (default false: draft).",
+              "type": "boolean"
+            },
+            "repositoryName": {
+              "description": "Repository to grant sponsors access to (with repositoryOwnerLogin).",
+              "type": "string"
+            },
+            "repositoryOwnerLogin": {
+              "description": "Owner of a repository to grant sponsors access to (with repositoryName).",
+              "type": "string"
+            },
+            "sponsorableLogin": {
+              "description": "User or organization that owns the tier (default: viewer).",
+              "type": "string"
+            },
+            "welcomeMessage": {
+              "description": "Message shown to new sponsors of this tier.",
               "type": "string"
             }
           },
@@ -508219,7 +508295,14 @@
         "maxInputBytes": 1048576,
         "maxResponseBytes": 1048576,
         "outputSchema": {
-          "additionalProperties": true,
+          "properties": {
+            "tier": {
+              "type": "object"
+            },
+            "tierId": {
+              "type": "string"
+            }
+          },
           "type": "object"
         },
         "read": false,
@@ -508229,9 +508312,10 @@
       {
         "destructive": false,
         "inputSchema": {
+          "additionalProperties": false,
           "properties": {
             "tierId": {
-              "description": "tierId",
+              "description": "SponsorsTier node id.",
               "type": "string"
             }
           },
@@ -508245,7 +508329,14 @@
         "maxInputBytes": 1048576,
         "maxResponseBytes": 1048576,
         "outputSchema": {
-          "additionalProperties": true,
+          "properties": {
+            "tier": {
+              "type": [
+                "object",
+                "null"
+              ]
+            }
+          },
           "type": "object"
         },
         "read": false,
@@ -508255,9 +508346,10 @@
       {
         "destructive": false,
         "inputSchema": {
+          "additionalProperties": false,
           "properties": {
             "tierId": {
-              "description": "tierId",
+              "description": "SponsorsTier node id.",
               "type": "string"
             }
           },
@@ -508271,7 +508363,14 @@
         "maxInputBytes": 1048576,
         "maxResponseBytes": 1048576,
         "outputSchema": {
-          "additionalProperties": true,
+          "properties": {
+            "tier": {
+              "type": [
+                "object",
+                "null"
+              ]
+            }
+          },
           "type": "object"
         },
         "read": false,
@@ -508281,13 +508380,14 @@
       {
         "destructive": false,
         "inputSchema": {
+          "additionalProperties": false,
           "properties": {
             "sponsorLogin": {
-              "description": "sponsorLogin",
+              "description": "Sponsor login (the viewer or an organization it administers).",
               "type": "string"
             },
             "sponsorableLogin": {
-              "description": "sponsorableLogin",
+              "description": "Login of the sponsored user or organization.",
               "type": "string"
             }
           },
@@ -508302,7 +508402,17 @@
         "maxInputBytes": 1048576,
         "maxResponseBytes": 1048576,
         "outputSchema": {
-          "additionalProperties": true,
+          "properties": {
+            "cancelled": {
+              "type": "boolean"
+            },
+            "sponsorsTier": {
+              "type": [
+                "object",
+                "null"
+              ]
+            }
+          },
           "type": "object"
         },
         "read": false,
@@ -508312,19 +508422,45 @@
       {
         "destructive": false,
         "inputSchema": {
+          "additionalProperties": false,
           "properties": {
+            "amount": {
+              "description": "Amount in whole US dollars (not cents). Exactly one of amount or tierId.",
+              "maximum": 12000,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "isRecurring": {
+              "description": "Monthly recurring (true) or one-time (false). Required with amount; not allowed with tierId.",
+              "type": "boolean"
+            },
+            "privacyLevel": {
+              "description": "Sponsorship visibility.",
+              "enum": [
+                "PUBLIC",
+                "PRIVATE"
+              ],
+              "type": "string"
+            },
+            "receiveEmails": {
+              "description": "Receive email updates from the sponsorable.",
+              "type": "boolean"
+            },
+            "sponsorLogin": {
+              "description": "Sponsor as this organization login instead of the viewer.",
+              "type": "string"
+            },
             "sponsorableLogin": {
-              "description": "sponsorableLogin",
+              "description": "Login of the user or organization to sponsor.",
               "type": "string"
             },
             "tierId": {
-              "description": "tierId",
+              "description": "SponsorsTier node id. Exactly one of amount or tierId.",
               "type": "string"
             }
           },
           "required": [
-            "sponsorableLogin",
-            "tierId"
+            "sponsorableLogin"
           ],
           "type": "object"
         },
@@ -508333,7 +508469,11 @@
         "maxInputBytes": 1048576,
         "maxResponseBytes": 1048576,
         "outputSchema": {
-          "additionalProperties": true,
+          "properties": {
+            "sponsorship": {
+              "type": "object"
+            }
+          },
           "type": "object"
         },
         "read": false,
@@ -508343,13 +508483,19 @@
       {
         "destructive": false,
         "inputSchema": {
+          "additionalProperties": false,
           "properties": {
             "state": {
-              "description": "state",
+              "description": "Subscription state.",
+              "enum": [
+                "IGNORED",
+                "SUBSCRIBED",
+                "UNSUBSCRIBED"
+              ],
               "type": "string"
             },
             "subscribableId": {
-              "description": "subscribableId",
+              "description": "Node id of a Commit, Discussion, Issue, PullRequest or Repository (not Team).",
               "type": "string"
             }
           },
@@ -508364,7 +508510,14 @@
         "maxInputBytes": 1048576,
         "maxResponseBytes": 1048576,
         "outputSchema": {
-          "additionalProperties": true,
+          "properties": {
+            "subscribable": {
+              "type": [
+                "object",
+                "null"
+              ]
+            }
+          },
           "type": "object"
         },
         "read": false,
