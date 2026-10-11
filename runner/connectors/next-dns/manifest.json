@@ -1,17 +1,7 @@
 {
-  "key": "next-dns",
-  "name": "NextDNS",
-  "version": "0.2.0",
-  "runtime": "bun",
-  "visibility": "public",
-  "categories": [
-    "utility"
-  ],
   "auth": {
-    "type": "api_key",
     "scopes": [],
     "setup": {
-      "mode": "api_key",
       "fields": [
         {
           "key": "apiKey",
@@ -19,43 +9,34 @@
           "required": true,
           "secret": true
         }
-      ]
-    }
+      ],
+      "mode": "api_key"
+    },
+    "type": "api_key"
   },
-  "provenance": {
-    "source": {
-      "url": "https://github.com/oomol-lab/open-connector",
-      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"
-    }
-  },
-  "network": {
-    "allowedHosts": [
-      "api.nextdns.io"
-    ]
-  },
-  "models": [
-    "profile",
-    "log",
-    "analytics",
-    "denylist",
-    "allowlist"
+  "categories": [
+    "utility"
   ],
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
+    }
+  },
   "http": {
-    "baseUrl": "https://api.nextdns.io",
     "auth": {
       "field": "apiKey",
       "in": "header",
       "name": "X-Api-Key",
       "value": "{{apiKey}}"
     },
-    "headers": {
-      "Accept": "application/json"
-    },
+    "baseUrl": "https://api.nextdns.io",
     "errors": {
-      "rateLimitStatuses": [
-        429
+      "bodyErrorPaths": [
+        "errors"
       ],
-      "retryAfterHeader": "retry-after",
       "defaultRetryAfterSeconds": 30,
       "messagePaths": [
         "errors.0.detail",
@@ -63,116 +44,352 @@
         "error.message",
         "message"
       ],
-      "bodyErrorPaths": [
-        "errors"
-      ]
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after"
+    },
+    "headers": {
+      "Accept": "application/json"
     }
   },
+  "key": "next-dns",
+  "models": [
+    "profile",
+    "log",
+    "analytics",
+    "allowlist",
+    "denylist",
+    "rewrite",
+    "privacy",
+    "security",
+    "parentalControl",
+    "settings"
+  ],
+  "name": "NextDNS",
+  "network": {
+    "allowedHosts": [
+      "api.nextdns.io"
+    ]
+  },
   "operations": {
-    "healthcheck": {
-      "kind": "action",
-      "sideEffect": "read",
-      "timeoutMs": 5000,
-      "maxInputBytes": 4096,
-      "maxResponseBytes": 65536,
-      "title": "Healthcheck",
-      "description": "Validate the NextDNS API key with GET /profiles.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {},
-        "additionalProperties": false
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "GET",
-        "path": "/profiles",
-        "success": [
-          200
-        ]
-      },
+    "analytics.status": {
+      "description": "List DNS query counts grouped by status for a NextDNS profile.",
       "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "profiles.list": {
-      "kind": "action",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "title": "List profiles",
-      "description": "List NextDNS profiles available to the API key.",
       "inputSchema": {
-        "type": "object",
-        "properties": {},
-        "additionalProperties": false
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "GET",
-        "path": "/profiles",
-        "success": [
-          200
-        ]
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "profiles.get": {
-      "kind": "action",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "title": "Get profile",
-      "description": "Get one NextDNS profile and its settings.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "profileId": {
-            "type": "string",
-            "minLength": 1
-          }
-        },
         "additionalProperties": false,
+        "properties": {
+          "cursor": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "device": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "from": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "limit": {
+            "maximum": 500,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "profileId": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "to": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "profile": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "profile_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "config": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "config_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "from_date": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Inclusive start date (Composio alias of from)."
+          },
+          "to_date": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Exclusive end date (Composio alias of to)."
+          }
+        },
         "required": [
           "profileId"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
         ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "additionalProperties": false
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/profiles/{{profileId}}/analytics/status",
+        "query": {
+          "cursor": "{{cursor}}",
+          "device": "{{device}}",
+          "from": "{{from}}",
+          "limit": "{{limit}}",
+          "to": "{{to}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get status analytics",
+      "validationMode": "strict-generated"
+    },
+    "healthcheck": {
+      "description": "Validate the NextDNS API key with GET /profiles.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {},
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/profiles",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 5000,
+      "title": "Healthcheck",
+      "validationMode": "strict-generated"
+    },
+    "logs.list": {
+      "description": "List DNS query logs for a NextDNS profile.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "cursor": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "device": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "from": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "limit": {
+            "maximum": 1000,
+            "minimum": 10,
+            "type": "integer"
+          },
+          "profileId": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "raw": {
+            "type": "boolean"
+          },
+          "search": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "sort": {
+            "enum": [
+              "asc",
+              "desc"
+            ],
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "default",
+              "error",
+              "blocked",
+              "allowed"
+            ],
+            "type": "string"
+          },
+          "to": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "profile": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "profile_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "config": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "config_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "from_date": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Inclusive start date (Composio alias of from)."
+          },
+          "to_date": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Exclusive end date (Composio alias of to)."
+          }
+        },
+        "required": [
+          "profileId"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/profiles/{{profileId}}/logs",
+        "query": {
+          "cursor": "{{cursor}}",
+          "device": "{{device}}",
+          "from": "{{from}}",
+          "limit": "{{limit}}",
+          "raw": "{{raw}}",
+          "search": "{{search}}",
+          "sort": "{{sort}}",
+          "status": "{{status}}",
+          "to": "{{to}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List logs",
+      "validationMode": "strict-generated"
+    },
+    "profiles.get": {
+      "description": "Get one NextDNS profile and its settings.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "profileId": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "profile": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "profile_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "config": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "config_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          }
+        },
+        "required": [
+          "profileId"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
       },
       "request": {
         "method": "GET",
@@ -181,180 +398,47 @@
           200
         ]
       },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "logs.list": {
-      "kind": "action",
+      "responseFormat": "json",
       "sideEffect": "read",
       "timeoutMs": 15000,
+      "title": "Get profile",
+      "validationMode": "strict-generated"
+    },
+    "profiles.list": {
+      "description": "List NextDNS profiles available to the API key.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {},
+        "type": "object"
+      },
+      "kind": "action",
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
-      "title": "List logs",
-      "description": "List DNS query logs for a NextDNS profile.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "profileId": {
-            "type": "string",
-            "minLength": 1
-          },
-          "from": {
-            "type": "string",
-            "minLength": 1
-          },
-          "to": {
-            "type": "string",
-            "minLength": 1
-          },
-          "limit": {
-            "type": "integer",
-            "minimum": 10,
-            "maximum": 1000
-          },
-          "cursor": {
-            "type": "string",
-            "minLength": 1
-          },
-          "device": {
-            "type": "string",
-            "minLength": 1
-          },
-          "search": {
-            "type": "string",
-            "minLength": 1
-          },
-          "status": {
-            "type": "string",
-            "enum": [
-              "default",
-              "error",
-              "blocked",
-              "allowed"
-            ]
-          },
-          "sort": {
-            "type": "string",
-            "enum": [
-              "asc",
-              "desc"
-            ]
-          },
-          "raw": {
-            "type": "boolean"
-          }
-        },
-        "additionalProperties": false,
-        "required": [
-          "profileId"
-        ]
-      },
       "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
+        "additionalProperties": false,
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "GET",
-        "path": "/profiles/{{profileId}}/logs",
-        "success": [
-          200
-        ],
-        "query": {
-          "from": "{{from}}",
-          "to": "{{to}}",
-          "limit": "{{limit}}",
-          "cursor": "{{cursor}}",
-          "device": "{{device}}",
-          "search": "{{search}}",
-          "status": "{{status}}",
-          "sort": "{{sort}}",
-          "raw": "{{raw}}"
-        }
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "analytics.status": {
-      "kind": "action",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "title": "Get status analytics",
-      "description": "List DNS query counts grouped by status for a NextDNS profile.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "profileId": {
-            "type": "string",
-            "minLength": 1
-          },
-          "from": {
-            "type": "string",
-            "minLength": 1
-          },
-          "to": {
-            "type": "string",
-            "minLength": 1
-          },
-          "limit": {
-            "type": "integer",
-            "minimum": 1,
-            "maximum": 500
-          },
-          "cursor": {
-            "type": "string",
-            "minLength": 1
-          },
-          "device": {
-            "type": "string",
-            "minLength": 1
-          }
-        },
-        "additionalProperties": false,
-        "required": [
-          "profileId"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
         "required": [
           "data"
         ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
+        "type": "object"
       },
       "request": {
         "method": "GET",
-        "path": "/profiles/{{profileId}}/analytics/status",
+        "path": "/profiles",
         "success": [
           200
-        ],
-        "query": {
-          "from": "{{from}}",
-          "to": "{{to}}",
-          "limit": "{{limit}}",
-          "cursor": "{{cursor}}",
-          "device": "{{device}}"
-        }
+        ]
       },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List profiles",
+      "validationMode": "strict-generated"
     },
     "profiles.create": {
       "kind": "action",
@@ -363,14 +447,44 @@
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
       "title": "Create profile",
-      "description": "Create a NextDNS profile.",
+      "description": "Create a NextDNS profile with optional security, privacy, parental control, lists, and settings.",
       "inputSchema": {
         "type": "object",
         "properties": {
           "name": {
             "type": "string",
             "minLength": 1,
-            "description": "Profile display name."
+            "description": "Name of the new profile."
+          },
+          "privacy": {
+            "type": "object",
+            "description": "Privacy settings for the profile."
+          },
+          "denylist": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            },
+            "description": "Domains to denylist."
+          },
+          "security": {
+            "type": "object",
+            "description": "Security settings for the profile."
+          },
+          "settings": {
+            "type": "object",
+            "description": "General settings for the profile."
+          },
+          "allowlist": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            },
+            "description": "Domains to allowlist."
+          },
+          "parentalControl": {
+            "type": "object",
+            "description": "Parental control settings for the profile."
           }
         },
         "additionalProperties": false,
@@ -384,7 +498,9 @@
           "data"
         ],
         "properties": {
-          "data": {}
+          "data": {
+            "type": "object"
+          }
         },
         "additionalProperties": false
       },
@@ -392,64 +508,17 @@
         "method": "POST",
         "path": "/profiles",
         "success": [
-          200
+          200,
+          201
         ],
         "body": {
-          "name": "{{name}}"
-        },
-        "headers": {
-          "Content-Type": "application/json"
-        }
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "profiles.update": {
-      "kind": "action",
-      "sideEffect": "write",
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "title": "Update profile",
-      "description": "Patch a NextDNS profile by id.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "profileId": {
-            "type": "string",
-            "minLength": 1,
-            "description": "NextDNS profile id."
-          },
-          "name": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Profile display name."
-          }
-        },
-        "additionalProperties": false,
-        "required": [
-          "profileId"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {}
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "PATCH",
-        "path": "/profiles/{{profileId}}",
-        "success": [
-          200
-        ],
-        "body": {
-          "name": "{{name}}"
+          "name": "{{name}}",
+          "privacy": "{{privacy}}",
+          "denylist": "{{denylist}}",
+          "security": "{{security}}",
+          "settings": "{{settings}}",
+          "allowlist": "{{allowlist}}",
+          "parentalControl": "{{parentalControl}}"
         },
         "headers": {
           "Content-Type": "application/json"
@@ -466,14 +535,34 @@
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
       "title": "Delete profile",
-      "description": "Delete a NextDNS profile by id.",
+      "description": "Delete a NextDNS configuration profile by ID.",
       "inputSchema": {
         "type": "object",
         "properties": {
           "profileId": {
             "type": "string",
             "minLength": 1,
-            "description": "NextDNS profile id."
+            "description": "NextDNS profile ID."
+          },
+          "profile": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "profile_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "config": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "config_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
           }
         },
         "additionalProperties": false,
@@ -484,24 +573,11 @@
       "outputSchema": {
         "type": "object",
         "required": [
-          "deleted"
+          "data"
         ],
         "properties": {
-          "deleted": {
-            "type": "boolean"
-          },
-          "id": {},
-          "key": {
-            "type": "string"
-          },
-          "name": {
-            "type": "string"
-          },
-          "domain": {
-            "type": "string"
-          },
-          "profileId": {
-            "type": "string"
+          "data": {
+            "type": "object"
           }
         },
         "additionalProperties": false
@@ -510,12 +586,98 @@
         "method": "DELETE",
         "path": "/profiles/{{profileId}}",
         "success": [
-          204,
-          200
+          200,
+          201,
+          204
         ],
         "result": {
-          "deleted": true,
-          "profileId": "{{input.profileId}}"
+          "data": {
+            "ok": true
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "profiles.rename": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Rename profile",
+      "description": "Rename a NextDNS configuration (profile).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "profileId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID."
+          },
+          "profile": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "profile_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "config": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "config_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "New profile name, at most 100 characters."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "profileId",
+          "name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/profiles/{{profileId}}",
+        "success": [
+          200,
+          201,
+          204
+        ],
+        "body": {
+          "name": "{{name}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "result": {
+          "data": {
+            "ok": true
+          }
         }
       },
       "enforceOutputSchema": true,
@@ -529,103 +691,34 @@
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
       "title": "Clear logs",
-      "description": "Delete stored DNS query logs for a NextDNS profile.",
+      "description": "Delete all DNS query logs for a NextDNS profile. This cannot be undone.",
       "inputSchema": {
         "type": "object",
         "properties": {
           "profileId": {
             "type": "string",
             "minLength": 1,
-            "description": "NextDNS profile id."
-          }
-        },
-        "additionalProperties": false,
-        "required": [
-          "profileId"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "deleted"
-        ],
-        "properties": {
-          "deleted": {
-            "type": "boolean"
+            "description": "NextDNS profile ID."
           },
-          "id": {},
-          "key": {
-            "type": "string"
-          },
-          "name": {
-            "type": "string"
-          },
-          "domain": {
-            "type": "string"
-          },
-          "profileId": {
-            "type": "string"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "DELETE",
-        "path": "/profiles/{{profileId}}/logs",
-        "success": [
-          204,
-          200
-        ],
-        "result": {
-          "deleted": true,
-          "profileId": "{{input.profileId}}"
-        }
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "analytics.domains": {
-      "kind": "action",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "title": "Domain analytics",
-      "description": "List DNS query counts grouped by domain for a NextDNS profile.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "profileId": {
+          "profile": {
             "type": "string",
             "minLength": 1,
-            "description": "NextDNS profile id."
+            "description": "NextDNS profile ID (Composio alias)."
           },
-          "from": {
+          "profile_id": {
             "type": "string",
             "minLength": 1,
-            "description": "Inclusive start date."
+            "description": "NextDNS profile ID (Composio alias)."
           },
-          "to": {
+          "config": {
             "type": "string",
             "minLength": 1,
-            "description": "Exclusive end date."
+            "description": "NextDNS profile ID (Composio alias)."
           },
-          "limit": {
-            "type": "integer",
-            "minimum": 1,
-            "description": "Result limit.",
-            "maximum": 500
-          },
-          "cursor": {
+          "config_id": {
             "type": "string",
             "minLength": 1,
-            "description": "Pagination cursor."
-          },
-          "device": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Device id filter."
+            "description": "NextDNS profile ID (Composio alias)."
           }
         },
         "additionalProperties": false,
@@ -639,13 +732,204 @@
           "data"
         ],
         "properties": {
-          "data": {}
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/profiles/{{profileId}}/logs",
+        "success": [
+          200,
+          201,
+          204
+        ],
+        "result": {
+          "data": {
+            "ok": true
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "logs.download": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Download logs",
+      "description": "Get a time-limited URL for exported DNS query logs (CSV). Always requests redirect=0 so the JSON URL is returned; outbound 302s are blocked.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "profileId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID."
+          },
+          "profile": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "profile_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "config": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "config_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "redirect": {
+            "type": "boolean",
+            "description": "Ignored; the connector always sends redirect=0 to avoid a blocked 302."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "profileId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
         },
         "additionalProperties": false
       },
       "request": {
         "method": "GET",
-        "path": "/profiles/{{profileId}}/analytics/domains",
+        "path": "/profiles/{{profileId}}/logs/download",
+        "success": [
+          200
+        ],
+        "query": {
+          "redirect": "0"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "analytics.destinations": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get destination analytics",
+      "description": "List query destinations by country or GAFAM company.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "profileId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID."
+          },
+          "profile": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "profile_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "config": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "config_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "from": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Inclusive start date (ISO8601, unix, or relative like -7d)."
+          },
+          "to": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Exclusive end date (ISO8601, unix, or relative like now)."
+          },
+          "from_date": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Inclusive start date (Composio alias of from)."
+          },
+          "to_date": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Exclusive end date (Composio alias of to)."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 500,
+            "description": "Limit results per page (1-500)."
+          },
+          "cursor": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Opaque pagination cursor."
+          },
+          "device": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Device ID, or __UNIDENTIFIED__."
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "countries",
+              "gafam"
+            ],
+            "description": "Destination grouping."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "profileId",
+          "type"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/profiles/{{profileId}}/analytics/destinations",
         "success": [
           200
         ],
@@ -654,7 +938,8 @@
           "to": "{{to}}",
           "limit": "{{limit}}",
           "cursor": "{{cursor}}",
-          "device": "{{device}}"
+          "device": "{{device}}",
+          "type": "{{type}}"
         }
       },
       "enforceOutputSchema": true,
@@ -667,41 +952,71 @@
       "timeoutMs": 15000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
-      "title": "Device analytics",
-      "description": "List DNS query counts grouped by device for a NextDNS profile.",
+      "title": "Get device analytics",
+      "description": "List per-device DNS query counts, names, and models.",
       "inputSchema": {
         "type": "object",
         "properties": {
           "profileId": {
             "type": "string",
             "minLength": 1,
-            "description": "NextDNS profile id."
+            "description": "NextDNS profile ID."
+          },
+          "profile": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "profile_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "config": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "config_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
           },
           "from": {
             "type": "string",
             "minLength": 1,
-            "description": "Inclusive start date."
+            "description": "Inclusive start date (ISO8601, unix, or relative like -7d)."
           },
           "to": {
             "type": "string",
             "minLength": 1,
-            "description": "Exclusive end date."
+            "description": "Exclusive end date (ISO8601, unix, or relative like now)."
+          },
+          "from_date": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Inclusive start date (Composio alias of from)."
+          },
+          "to_date": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Exclusive end date (Composio alias of to)."
           },
           "limit": {
             "type": "integer",
             "minimum": 1,
-            "description": "Result limit.",
-            "maximum": 500
+            "maximum": 500,
+            "description": "Limit results per page (1-500)."
           },
           "cursor": {
             "type": "string",
             "minLength": 1,
-            "description": "Pagination cursor."
+            "description": "Opaque pagination cursor."
           },
           "device": {
             "type": "string",
             "minLength": 1,
-            "description": "Device id filter."
+            "description": "Device ID, or __UNIDENTIFIED__."
           }
         },
         "additionalProperties": false,
@@ -715,7 +1030,9 @@
           "data"
         ],
         "properties": {
-          "data": {}
+          "data": {
+            "type": "object"
+          }
         },
         "additionalProperties": false
       },
@@ -737,47 +1054,77 @@
       "validationMode": "strict-generated",
       "responseFormat": "json"
     },
-    "analytics.protocols": {
+    "analytics.dnssec": {
       "kind": "action",
       "sideEffect": "read",
       "timeoutMs": 15000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
-      "title": "Protocol analytics",
-      "description": "List DNS query counts grouped by protocol for a NextDNS profile.",
+      "title": "Get DNSSEC analytics",
+      "description": "List DNSSEC validated vs non-validated query counts.",
       "inputSchema": {
         "type": "object",
         "properties": {
           "profileId": {
             "type": "string",
             "minLength": 1,
-            "description": "NextDNS profile id."
+            "description": "NextDNS profile ID."
+          },
+          "profile": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "profile_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "config": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "config_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
           },
           "from": {
             "type": "string",
             "minLength": 1,
-            "description": "Inclusive start date."
+            "description": "Inclusive start date (ISO8601, unix, or relative like -7d)."
           },
           "to": {
             "type": "string",
             "minLength": 1,
-            "description": "Exclusive end date."
+            "description": "Exclusive end date (ISO8601, unix, or relative like now)."
+          },
+          "from_date": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Inclusive start date (Composio alias of from)."
+          },
+          "to_date": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Exclusive end date (Composio alias of to)."
           },
           "limit": {
             "type": "integer",
             "minimum": 1,
-            "description": "Result limit.",
-            "maximum": 500
+            "maximum": 500,
+            "description": "Limit results per page (1-500)."
           },
           "cursor": {
             "type": "string",
             "minLength": 1,
-            "description": "Pagination cursor."
+            "description": "Opaque pagination cursor."
           },
           "device": {
             "type": "string",
             "minLength": 1,
-            "description": "Device id filter."
+            "description": "Device ID, or __UNIDENTIFIED__."
           }
         },
         "additionalProperties": false,
@@ -791,7 +1138,564 @@
           "data"
         ],
         "properties": {
-          "data": {}
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/profiles/{{profileId}}/analytics/dnssec",
+        "success": [
+          200
+        ],
+        "query": {
+          "from": "{{from}}",
+          "to": "{{to}}",
+          "limit": "{{limit}}",
+          "cursor": "{{cursor}}",
+          "device": "{{device}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "analytics.domains": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get domain analytics",
+      "description": "List per-domain DNS query analytics.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "profileId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID."
+          },
+          "profile": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "profile_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "config": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "config_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "from": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Inclusive start date (ISO8601, unix, or relative like -7d)."
+          },
+          "to": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Exclusive end date (ISO8601, unix, or relative like now)."
+          },
+          "from_date": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Inclusive start date (Composio alias of from)."
+          },
+          "to_date": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Exclusive end date (Composio alias of to)."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 500,
+            "description": "Limit results per page (1-500)."
+          },
+          "cursor": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Opaque pagination cursor."
+          },
+          "device": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Device ID, or __UNIDENTIFIED__."
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "default",
+              "blocked",
+              "allowed"
+            ],
+            "description": "Filter by resolution status."
+          },
+          "root": {
+            "type": "boolean",
+            "description": "Aggregate by root domain."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "profileId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/profiles/{{profileId}}/analytics/domains",
+        "success": [
+          200
+        ],
+        "query": {
+          "from": "{{from}}",
+          "to": "{{to}}",
+          "limit": "{{limit}}",
+          "cursor": "{{cursor}}",
+          "device": "{{device}}",
+          "status": "{{status}}",
+          "root": "{{root}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "analytics.encryption": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get encryption analytics",
+      "description": "List encrypted vs unencrypted DNS query counts.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "profileId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID."
+          },
+          "profile": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "profile_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "config": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "config_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "from": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Inclusive start date (ISO8601, unix, or relative like -7d)."
+          },
+          "to": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Exclusive end date (ISO8601, unix, or relative like now)."
+          },
+          "from_date": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Inclusive start date (Composio alias of from)."
+          },
+          "to_date": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Exclusive end date (Composio alias of to)."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 500,
+            "description": "Limit results per page (1-500)."
+          },
+          "cursor": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Opaque pagination cursor."
+          },
+          "device": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Device ID, or __UNIDENTIFIED__."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "profileId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/profiles/{{profileId}}/analytics/encryption",
+        "success": [
+          200
+        ],
+        "query": {
+          "from": "{{from}}",
+          "to": "{{to}}",
+          "limit": "{{limit}}",
+          "cursor": "{{cursor}}",
+          "device": "{{device}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "analytics.ips": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get IP analytics",
+      "description": "List DNS query counts grouped by client IP.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "profileId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID."
+          },
+          "profile": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "profile_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "config": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "config_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "from": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Inclusive start date (ISO8601, unix, or relative like -7d)."
+          },
+          "to": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Exclusive end date (ISO8601, unix, or relative like now)."
+          },
+          "from_date": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Inclusive start date (Composio alias of from)."
+          },
+          "to_date": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Exclusive end date (Composio alias of to)."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 500,
+            "description": "Limit results per page (1-500)."
+          },
+          "cursor": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Opaque pagination cursor."
+          },
+          "device": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Device ID, or __UNIDENTIFIED__."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "profileId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/profiles/{{profileId}}/analytics/ips",
+        "success": [
+          200
+        ],
+        "query": {
+          "from": "{{from}}",
+          "to": "{{to}}",
+          "limit": "{{limit}}",
+          "cursor": "{{cursor}}",
+          "device": "{{device}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "analytics.ip_versions": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get IP version analytics",
+      "description": "List IPv4 vs IPv6 DNS query counts.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "profileId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID."
+          },
+          "profile": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "profile_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "config": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "config_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "from": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Inclusive start date (ISO8601, unix, or relative like -7d)."
+          },
+          "to": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Exclusive end date (ISO8601, unix, or relative like now)."
+          },
+          "from_date": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Inclusive start date (Composio alias of from)."
+          },
+          "to_date": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Exclusive end date (Composio alias of to)."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 500,
+            "description": "Limit results per page (1-500)."
+          },
+          "cursor": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Opaque pagination cursor."
+          },
+          "device": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Device ID, or __UNIDENTIFIED__."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "profileId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/profiles/{{profileId}}/analytics/ipVersions",
+        "success": [
+          200
+        ],
+        "query": {
+          "from": "{{from}}",
+          "to": "{{to}}",
+          "limit": "{{limit}}",
+          "cursor": "{{cursor}}",
+          "device": "{{device}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "analytics.protocols": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get protocol analytics",
+      "description": "List DNS protocol distribution (DoH, DoT, UDP, \u2026).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "profileId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID."
+          },
+          "profile": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "profile_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "config": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "config_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "from": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Inclusive start date (ISO8601, unix, or relative like -7d)."
+          },
+          "to": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Exclusive end date (ISO8601, unix, or relative like now)."
+          },
+          "from_date": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Inclusive start date (Composio alias of from)."
+          },
+          "to_date": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Exclusive end date (Composio alias of to)."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 500,
+            "description": "Limit results per page (1-500)."
+          },
+          "cursor": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Opaque pagination cursor."
+          },
+          "device": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Device ID, or __UNIDENTIFIED__."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "profileId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
         },
         "additionalProperties": false
       },
@@ -813,47 +1717,77 @@
       "validationMode": "strict-generated",
       "responseFormat": "json"
     },
-    "analytics.reasons": {
+    "analytics.query_types": {
       "kind": "action",
       "sideEffect": "read",
       "timeoutMs": 15000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
-      "title": "Reason analytics",
-      "description": "List DNS query counts grouped by block/allow reason for a NextDNS profile.",
+      "title": "Get query type analytics",
+      "description": "List DNS query counts grouped by query type.",
       "inputSchema": {
         "type": "object",
         "properties": {
           "profileId": {
             "type": "string",
             "minLength": 1,
-            "description": "NextDNS profile id."
+            "description": "NextDNS profile ID."
+          },
+          "profile": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "profile_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "config": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "config_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
           },
           "from": {
             "type": "string",
             "minLength": 1,
-            "description": "Inclusive start date."
+            "description": "Inclusive start date (ISO8601, unix, or relative like -7d)."
           },
           "to": {
             "type": "string",
             "minLength": 1,
-            "description": "Exclusive end date."
+            "description": "Exclusive end date (ISO8601, unix, or relative like now)."
+          },
+          "from_date": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Inclusive start date (Composio alias of from)."
+          },
+          "to_date": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Exclusive end date (Composio alias of to)."
           },
           "limit": {
             "type": "integer",
             "minimum": 1,
-            "description": "Result limit.",
-            "maximum": 500
+            "maximum": 500,
+            "description": "Limit results per page (1-500)."
           },
           "cursor": {
             "type": "string",
             "minLength": 1,
-            "description": "Pagination cursor."
+            "description": "Opaque pagination cursor."
           },
           "device": {
             "type": "string",
             "minLength": 1,
-            "description": "Device id filter."
+            "description": "Device ID, or __UNIDENTIFIED__."
           }
         },
         "additionalProperties": false,
@@ -867,83 +1801,9 @@
           "data"
         ],
         "properties": {
-          "data": {}
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "GET",
-        "path": "/profiles/{{profileId}}/analytics/reasons",
-        "success": [
-          200
-        ],
-        "query": {
-          "from": "{{from}}",
-          "to": "{{to}}",
-          "limit": "{{limit}}",
-          "cursor": "{{cursor}}",
-          "device": "{{device}}"
-        }
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "analytics.queryTypes": {
-      "kind": "action",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "title": "Query type analytics",
-      "description": "List DNS query counts grouped by DNS query type for a NextDNS profile.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "profileId": {
-            "type": "string",
-            "minLength": 1,
-            "description": "NextDNS profile id."
-          },
-          "from": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Inclusive start date."
-          },
-          "to": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Exclusive end date."
-          },
-          "limit": {
-            "type": "integer",
-            "minimum": 1,
-            "description": "Result limit.",
-            "maximum": 500
-          },
-          "cursor": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Pagination cursor."
-          },
-          "device": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Device id filter."
+          "data": {
+            "type": "object"
           }
-        },
-        "additionalProperties": false,
-        "required": [
-          "profileId"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {}
         },
         "additionalProperties": false
       },
@@ -965,21 +1825,77 @@
       "validationMode": "strict-generated",
       "responseFormat": "json"
     },
-    "denylist.list": {
+    "analytics.reasons": {
       "kind": "action",
       "sideEffect": "read",
       "timeoutMs": 15000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
-      "title": "List denylist",
-      "description": "List denylist domains for a NextDNS profile.",
+      "title": "Get blocking-reason analytics",
+      "description": "List blocked-query counts grouped by reason.",
       "inputSchema": {
         "type": "object",
         "properties": {
           "profileId": {
             "type": "string",
             "minLength": 1,
-            "description": "NextDNS profile id."
+            "description": "NextDNS profile ID."
+          },
+          "profile": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "profile_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "config": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "config_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "from": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Inclusive start date (ISO8601, unix, or relative like -7d)."
+          },
+          "to": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Exclusive end date (ISO8601, unix, or relative like now)."
+          },
+          "from_date": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Inclusive start date (Composio alias of from)."
+          },
+          "to_date": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Exclusive end date (Composio alias of to)."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 500,
+            "description": "Limit results per page (1-500)."
+          },
+          "cursor": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Opaque pagination cursor."
+          },
+          "device": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Device ID, or __UNIDENTIFIED__."
           }
         },
         "additionalProperties": false,
@@ -993,7 +1909,486 @@
           "data"
         ],
         "properties": {
-          "data": {}
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/profiles/{{profileId}}/analytics/reasons",
+        "success": [
+          200
+        ],
+        "query": {
+          "from": "{{from}}",
+          "to": "{{to}}",
+          "limit": "{{limit}}",
+          "cursor": "{{cursor}}",
+          "device": "{{device}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "allowlist.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get allowlist",
+      "description": "List allowed domains for a NextDNS profile.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "profileId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID."
+          },
+          "profile": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "profile_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "config": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "config_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "profileId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/profiles/{{profileId}}/allowlist",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "allowlist.add": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Add allowlist entry",
+      "description": "Add a domain to a NextDNS profile allowlist.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "profileId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID."
+          },
+          "profile": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "profile_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "config": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "config_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "domain": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Domain to allow."
+          },
+          "active": {
+            "type": "boolean",
+            "description": "Whether the entry is active. Defaults to true."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "profileId",
+          "domain"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/profiles/{{profileId}}/allowlist",
+        "success": [
+          200,
+          201,
+          204
+        ],
+        "body": {
+          "id": "{{domain}}",
+          "active": "{{active}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "result": {
+          "data": {
+            "ok": true
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "allowlist.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Delete allowlist entry",
+      "description": "Remove a domain from a NextDNS profile allowlist.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "profileId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID."
+          },
+          "profile": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "profile_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "config": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "config_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "domain": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Domain to remove from the allowlist."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "profileId",
+          "domain"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/profiles/{{profileId}}/allowlist/{{domain}}",
+        "success": [
+          200,
+          201,
+          204
+        ],
+        "result": {
+          "data": {
+            "ok": true
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "allowlist.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Update allowlist entry",
+      "description": "Toggle the active status of an allowlist domain.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "profileId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID."
+          },
+          "profile": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "profile_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "config": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "config_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "domain": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Allowlist domain to update."
+          },
+          "active": {
+            "type": "boolean",
+            "description": "Whether the entry should be active."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "profileId",
+          "domain",
+          "active"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/profiles/{{profileId}}/allowlist/{{domain}}",
+        "success": [
+          200,
+          201,
+          204
+        ],
+        "body": {
+          "active": "{{active}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "result": {
+          "data": {
+            "ok": true
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "allowlist.replace": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Replace allowlist",
+      "description": "Replace the entire allowlist for a NextDNS profile. Pass [] to clear it.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "profileId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID."
+          },
+          "profile": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "profile_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "config": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "config_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "allowlist": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            },
+            "description": "Complete allowlist. Each entry has id (domain) and active."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "profileId",
+          "allowlist"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/profiles/{{profileId}}/allowlist",
+        "success": [
+          200,
+          201,
+          204
+        ],
+        "body": "{{allowlist}}",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "result": {
+          "data": {
+            "ok": true
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "denylist.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List denylist domains",
+      "description": "List blocked domains for a NextDNS profile.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "profileId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID."
+          },
+          "profile": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "profile_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "config": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "config_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "profileId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
         },
         "additionalProperties": false
       },
@@ -1022,72 +2417,36 @@
           "profileId": {
             "type": "string",
             "minLength": 1,
-            "description": "NextDNS profile id."
+            "description": "NextDNS profile ID."
           },
-          "id": {
+          "profile": {
             "type": "string",
             "minLength": 1,
-            "description": "Domain to deny."
+            "description": "NextDNS profile ID (Composio alias)."
           },
-          "active": {
-            "type": "boolean",
-            "description": "Whether the denylist entry is active."
-          }
-        },
-        "additionalProperties": false,
-        "required": [
-          "profileId",
-          "id"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {}
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "POST",
-        "path": "/profiles/{{profileId}}/denylist",
-        "success": [
-          200
-        ],
-        "body": {
-          "id": "{{id}}",
-          "active": "{{active}}"
-        },
-        "headers": {
-          "Content-Type": "application/json"
-        }
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "denylist.delete": {
-      "kind": "action",
-      "sideEffect": "destructive",
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "title": "Delete denylist domain",
-      "description": "Remove a domain from a NextDNS profile denylist.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "profileId": {
+          "profile_id": {
             "type": "string",
             "minLength": 1,
-            "description": "NextDNS profile id."
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "config": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "config_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
           },
           "domain": {
             "type": "string",
             "minLength": 1,
-            "description": "Domain to remove."
+            "description": "Domain to block."
+          },
+          "active": {
+            "type": "boolean",
+            "description": "Whether the entry is active. Defaults to true."
           }
         },
         "additionalProperties": false,
@@ -1099,24 +2458,96 @@
       "outputSchema": {
         "type": "object",
         "required": [
-          "deleted"
+          "data"
         ],
         "properties": {
-          "deleted": {
-            "type": "boolean"
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/profiles/{{profileId}}/denylist",
+        "success": [
+          200,
+          201,
+          204
+        ],
+        "body": {
+          "id": "{{domain}}",
+          "active": "{{active}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "result": {
+          "data": {
+            "ok": true
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "denylist.remove": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Remove denylist domain",
+      "description": "Remove a domain from a NextDNS profile denylist.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "profileId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID."
           },
-          "id": {},
-          "key": {
-            "type": "string"
+          "profile": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
           },
-          "name": {
-            "type": "string"
+          "profile_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "config": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "config_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
           },
           "domain": {
-            "type": "string"
-          },
-          "profileId": {
-            "type": "string"
+            "type": "string",
+            "minLength": 1,
+            "description": "Domain to remove from the denylist."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "profileId",
+          "domain"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
           }
         },
         "additionalProperties": false
@@ -1125,33 +2556,228 @@
         "method": "DELETE",
         "path": "/profiles/{{profileId}}/denylist/{{domain}}",
         "success": [
-          204,
-          200
+          200,
+          201,
+          204
         ],
         "result": {
-          "deleted": true,
-          "domain": "{{input.domain}}"
+          "data": {
+            "ok": true
+          }
         }
       },
       "enforceOutputSchema": true,
       "validationMode": "strict-generated",
       "responseFormat": "json"
     },
-    "allowlist.list": {
+    "denylist.update": {
       "kind": "action",
-      "sideEffect": "read",
+      "sideEffect": "write",
       "timeoutMs": 15000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
-      "title": "List allowlist",
-      "description": "List allowlist domains for a NextDNS profile.",
+      "title": "Update denylist entry",
+      "description": "Toggle the active status of a denylist domain without removing it.",
       "inputSchema": {
         "type": "object",
         "properties": {
           "profileId": {
             "type": "string",
             "minLength": 1,
-            "description": "NextDNS profile id."
+            "description": "NextDNS profile ID."
+          },
+          "profile": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "profile_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "config": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "config_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "domain": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Denylist domain to update."
+          },
+          "active": {
+            "type": "boolean",
+            "description": "Whether the entry should be active."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "profileId",
+          "domain",
+          "active"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/profiles/{{profileId}}/denylist/{{domain}}",
+        "success": [
+          200,
+          201,
+          204
+        ],
+        "body": {
+          "active": "{{active}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "result": {
+          "data": {
+            "ok": true
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "denylist.replace": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Replace denylist",
+      "description": "Replace the entire denylist for a NextDNS profile. Pass [] to clear it.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "profileId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID."
+          },
+          "profile": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "profile_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "config": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "config_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "denylist": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            },
+            "description": "Complete denylist. Each entry has id (domain) and active."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "profileId",
+          "denylist"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/profiles/{{profileId}}/denylist",
+        "success": [
+          200,
+          201,
+          204
+        ],
+        "body": "{{denylist}}",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "result": {
+          "data": {
+            "ok": true
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "rewrites.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get DNS rewrites",
+      "description": "List custom DNS rewrite rules for a NextDNS profile.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "profileId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID."
+          },
+          "profile": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "profile_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "config": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "config_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
           }
         },
         "additionalProperties": false,
@@ -1165,13 +2791,15 @@
           "data"
         ],
         "properties": {
-          "data": {}
+          "data": {
+            "type": "object"
+          }
         },
         "additionalProperties": false
       },
       "request": {
         "method": "GET",
-        "path": "/profiles/{{profileId}}/allowlist",
+        "path": "/profiles/{{profileId}}/rewrites",
         "success": [
           200
         ]
@@ -1180,30 +2808,840 @@
       "validationMode": "strict-generated",
       "responseFormat": "json"
     },
-    "allowlist.add": {
+    "rewrites.add": {
       "kind": "action",
       "sideEffect": "write",
       "timeoutMs": 15000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
-      "title": "Add allowlist domain",
-      "description": "Add a domain to a NextDNS profile allowlist.",
+      "title": "Add DNS rewrite",
+      "description": "Add a DNS rewrite rule (name -> content) to a NextDNS profile.",
       "inputSchema": {
         "type": "object",
         "properties": {
           "profileId": {
             "type": "string",
             "minLength": 1,
-            "description": "NextDNS profile id."
+            "description": "NextDNS profile ID."
+          },
+          "profile": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "profile_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "config": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "config_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Domain name to rewrite."
+          },
+          "content": {
+            "type": "string",
+            "minLength": 1,
+            "description": "IP address or hostname to rewrite to."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "profileId",
+          "name",
+          "content"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/profiles/{{profileId}}/rewrites",
+        "success": [
+          200,
+          201
+        ],
+        "body": {
+          "name": "{{name}}",
+          "content": "{{content}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "rewrites.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Delete DNS rewrite",
+      "description": "Delete a DNS rewrite rule by ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "profileId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID."
+          },
+          "profile": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "profile_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "config": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "config_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "rewrite_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Rewrite rule ID to delete."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "profileId",
+          "rewrite_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/profiles/{{profileId}}/rewrites/{{rewrite_id}}",
+        "success": [
+          200,
+          201,
+          204
+        ],
+        "result": {
+          "data": {
+            "ok": true
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "parental_control.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get parental control",
+      "description": "Get parental control settings (services, categories, safe search, YouTube, bypass).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "profileId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID."
+          },
+          "profile": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "profile_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "config": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "config_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "profileId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/profiles/{{profileId}}/parentalControl",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "parental_control.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Update parental control",
+      "description": "Update safe search, YouTube restricted mode, or bypass blocking.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "profileId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID."
+          },
+          "profile": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "profile_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "config": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "config_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "safeSearch": {
+            "type": "boolean",
+            "description": "Enable safe search on Google, Bing, DuckDuckGo, etc."
+          },
+          "blockBypass": {
+            "type": "boolean",
+            "description": "Block VPNs, proxies, and Tor used to bypass controls."
+          },
+          "youtubeRestrictedMode": {
+            "type": "boolean",
+            "description": "Enable YouTube Restricted Mode."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "profileId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/profiles/{{profileId}}/parentalControl",
+        "success": [
+          200,
+          201,
+          204
+        ],
+        "body": {
+          "safeSearch": "{{safeSearch}}",
+          "blockBypass": "{{blockBypass}}",
+          "youtubeRestrictedMode": "{{youtubeRestrictedMode}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "result": {
+          "data": {
+            "ok": true
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "parental_control.categories.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get parental control categories",
+      "description": "List blocked or allowed parental-control content categories.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "profileId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID."
+          },
+          "profile": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "profile_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "config": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "config_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "profileId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/profiles/{{profileId}}/parentalControl/categories",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "parental_control.categories.add": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Add parental control category",
+      "description": "Add a content category to parental control (porn, gambling, social-networks, \u2026).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "profileId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID."
+          },
+          "profile": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "profile_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "config": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "config_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "category_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Category id, e.g. porn or gambling."
+          },
+          "active": {
+            "type": "boolean",
+            "description": "true to block, false to add unblocked."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "profileId",
+          "category_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/profiles/{{profileId}}/parentalControl/categories",
+        "success": [
+          200,
+          201,
+          204
+        ],
+        "body": {
+          "id": "{{category_id}}",
+          "active": "{{active}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "result": {
+          "data": {
+            "ok": true
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "parental_control.categories.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Delete parental control category",
+      "description": "Remove a category from parental control.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "profileId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID."
+          },
+          "profile": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "profile_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "config": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "config_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "category_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Category id to remove."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "profileId",
+          "category_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/profiles/{{profileId}}/parentalControl/categories/{{category_id}}",
+        "success": [
+          200,
+          201,
+          204
+        ],
+        "result": {
+          "data": {
+            "ok": true
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "parental_control.categories.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Update parental control category",
+      "description": "Enable or disable blocking for one parental-control category.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "profileId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID."
+          },
+          "profile": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "profile_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "config": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "config_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "category_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Category id to update."
+          },
+          "active": {
+            "type": "boolean",
+            "description": "true to block, false to unblock."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "profileId",
+          "category_id",
+          "active"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/profiles/{{profileId}}/parentalControl/categories/{{category_id}}",
+        "success": [
+          200,
+          201,
+          204
+        ],
+        "body": {
+          "active": "{{active}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "result": {
+          "data": {
+            "ok": true
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "parental_control.categories.replace": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Replace parental control categories",
+      "description": "Replace the entire parental-control categories list. Pass [] to clear it.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "profileId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID."
+          },
+          "profile": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "profile_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "config": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "config_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "categories": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            },
+            "description": "Complete category list. Each entry has id and active."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "profileId",
+          "categories"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/profiles/{{profileId}}/parentalControl/categories",
+        "success": [
+          200,
+          201,
+          204
+        ],
+        "body": "{{categories}}",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "result": {
+          "data": {
+            "ok": true
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "parental_control.services.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get parental control services",
+      "description": "List blocked or allowed parental-control services.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "profileId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID."
+          },
+          "profile": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "profile_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "config": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "config_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "profileId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/profiles/{{profileId}}/parentalControl/services",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "parental_control.services.add": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Add parental control service",
+      "description": "Add a service (tiktok, facebook, instagram, \u2026) to parental control.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "profileId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID."
+          },
+          "profile": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "profile_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "config": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "config_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
           },
           "id": {
             "type": "string",
             "minLength": 1,
-            "description": "Domain to allow."
+            "description": "Service id to add."
           },
           "active": {
             "type": "boolean",
-            "description": "Whether the allowlist entry is active."
+            "description": "true to block, false to allow. Defaults to true."
           }
         },
         "additionalProperties": false,
@@ -1218,15 +3656,19 @@
           "data"
         ],
         "properties": {
-          "data": {}
+          "data": {
+            "type": "object"
+          }
         },
         "additionalProperties": false
       },
       "request": {
         "method": "POST",
-        "path": "/profiles/{{profileId}}/allowlist",
+        "path": "/profiles/{{profileId}}/parentalControl/services",
         "success": [
-          200
+          200,
+          201,
+          204
         ],
         "body": {
           "id": "{{id}}",
@@ -1234,32 +3676,63 @@
         },
         "headers": {
           "Content-Type": "application/json"
+        },
+        "result": {
+          "data": {
+            "ok": true
+          }
         }
       },
       "enforceOutputSchema": true,
       "validationMode": "strict-generated",
       "responseFormat": "json"
     },
-    "security.get": {
+    "parental_control.services.delete": {
       "kind": "action",
-      "sideEffect": "read",
+      "sideEffect": "destructive",
       "timeoutMs": 15000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
-      "title": "Get security settings",
-      "description": "Get NextDNS security settings for a profile.",
+      "title": "Delete parental control service",
+      "description": "Remove a service from parental control.",
       "inputSchema": {
         "type": "object",
         "properties": {
           "profileId": {
             "type": "string",
             "minLength": 1,
-            "description": "NextDNS profile id."
+            "description": "NextDNS profile ID."
+          },
+          "profile": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "profile_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "config": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "config_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "service_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Service id to remove."
           }
         },
         "additionalProperties": false,
         "required": [
-          "profileId"
+          "profileId",
+          "service_id"
         ]
       },
       "outputSchema": {
@@ -1268,16 +3741,198 @@
           "data"
         ],
         "properties": {
-          "data": {}
+          "data": {
+            "type": "object"
+          }
         },
         "additionalProperties": false
       },
       "request": {
-        "method": "GET",
-        "path": "/profiles/{{profileId}}/security",
+        "method": "DELETE",
+        "path": "/profiles/{{profileId}}/parentalControl/services/{{service_id}}",
         "success": [
-          200
+          200,
+          201,
+          204
+        ],
+        "result": {
+          "data": {
+            "ok": true
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "parental_control.services.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Update parental control service",
+      "description": "Toggle blocking for one parental-control service.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "profileId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID."
+          },
+          "profile": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "profile_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "config": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "config_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "service_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Service id to update."
+          },
+          "active": {
+            "type": "boolean",
+            "description": "true to block, false to allow."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "profileId",
+          "service_id",
+          "active"
         ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/profiles/{{profileId}}/parentalControl/services/{{service_id}}",
+        "success": [
+          200,
+          201,
+          204
+        ],
+        "body": {
+          "active": "{{active}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "result": {
+          "data": {
+            "ok": true
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "parental_control.services.replace": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Replace parental control services",
+      "description": "Replace the entire parental-control services list. Pass [] to clear it.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "profileId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID."
+          },
+          "profile": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "profile_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "config": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "config_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "services": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            },
+            "description": "Complete service list. Each entry has id and active."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "profileId",
+          "services"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/profiles/{{profileId}}/parentalControl/services",
+        "success": [
+          200,
+          201,
+          204
+        ],
+        "body": "{{services}}",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "result": {
+          "data": {
+            "ok": true
+          }
+        }
       },
       "enforceOutputSchema": true,
       "validationMode": "strict-generated",
@@ -1290,14 +3945,34 @@
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
       "title": "Get privacy settings",
-      "description": "Get NextDNS privacy settings for a profile.",
+      "description": "Get privacy settings (blocklists, natives, disguised trackers, affiliates).",
       "inputSchema": {
         "type": "object",
         "properties": {
           "profileId": {
             "type": "string",
             "minLength": 1,
-            "description": "NextDNS profile id."
+            "description": "NextDNS profile ID."
+          },
+          "profile": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "profile_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "config": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "config_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
           }
         },
         "additionalProperties": false,
@@ -1311,7 +3986,9 @@
           "data"
         ],
         "properties": {
-          "data": {}
+          "data": {
+            "type": "object"
+          }
         },
         "additionalProperties": false
       },
@@ -1326,21 +4003,63 @@
       "validationMode": "strict-generated",
       "responseFormat": "json"
     },
-    "settings.get": {
+    "privacy.update": {
       "kind": "action",
-      "sideEffect": "read",
+      "sideEffect": "write",
       "timeoutMs": 15000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
-      "title": "Get profile settings",
-      "description": "Get NextDNS settings for a profile.",
+      "title": "Update privacy settings",
+      "description": "Patch privacy settings. Providing blocklists or natives replaces that entire list.",
       "inputSchema": {
         "type": "object",
         "properties": {
           "profileId": {
             "type": "string",
             "minLength": 1,
-            "description": "NextDNS profile id."
+            "description": "NextDNS profile ID."
+          },
+          "profile": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "profile_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "config": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "config_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "natives": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            },
+            "description": "Native trackers to block. Replaces the existing list."
+          },
+          "blocklists": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            },
+            "description": "Blocklists to enable. Replaces the existing list."
+          },
+          "allowAffiliate": {
+            "type": "boolean",
+            "description": "Allow affiliate links while preserving privacy."
+          },
+          "disguisedTrackers": {
+            "type": "boolean",
+            "description": "Block disguised third-party trackers (CNAME cloaking)."
           }
         },
         "additionalProperties": false,
@@ -1354,7 +4073,1095 @@
           "data"
         ],
         "properties": {
-          "data": {}
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/profiles/{{profileId}}/privacy",
+        "success": [
+          200,
+          201,
+          204
+        ],
+        "body": {
+          "natives": "{{natives}}",
+          "blocklists": "{{blocklists}}",
+          "allowAffiliate": "{{allowAffiliate}}",
+          "disguisedTrackers": "{{disguisedTrackers}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "result": {
+          "data": {
+            "ok": true
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "privacy.blocklists.add": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Add privacy blocklist",
+      "description": "Add a privacy blocklist (nextdns-recommended, oisd, easylist, \u2026).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "profileId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID."
+          },
+          "profile": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "profile_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "config": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "config_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Blocklist id to add."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "profileId",
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/profiles/{{profileId}}/privacy/blocklists",
+        "success": [
+          200,
+          201,
+          204
+        ],
+        "body": {
+          "id": "{{id}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "result": {
+          "data": {
+            "ok": true
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "privacy.blocklists.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Delete privacy blocklist",
+      "description": "Remove a privacy blocklist from a profile.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "profileId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID."
+          },
+          "profile": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "profile_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "config": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "config_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "blocklist_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Blocklist id to remove."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "profileId",
+          "blocklist_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/profiles/{{profileId}}/privacy/blocklists/{{blocklist_id}}",
+        "success": [
+          200,
+          201,
+          204
+        ],
+        "result": {
+          "data": {
+            "ok": true
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "privacy.blocklists.replace": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Replace privacy blocklists",
+      "description": "Replace the entire privacy blocklist set. Pass [] to clear it.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "profileId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID."
+          },
+          "profile": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "profile_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "config": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "config_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "blocklists": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            },
+            "description": "Complete blocklist array. Each entry has id."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "profileId",
+          "blocklists"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/profiles/{{profileId}}/privacy/blocklists",
+        "success": [
+          200,
+          201,
+          204
+        ],
+        "body": "{{blocklists}}",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "result": {
+          "data": {
+            "ok": true
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "privacy.natives.add": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Add native tracker",
+      "description": "Block a native tracking service (apple, samsung, xiaomi, \u2026).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "profileId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID."
+          },
+          "profile": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "profile_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "config": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "config_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Native tracker id to block."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "profileId",
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/profiles/{{profileId}}/privacy/natives",
+        "success": [
+          200,
+          201,
+          204
+        ],
+        "body": {
+          "id": "{{id}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "result": {
+          "data": {
+            "ok": true
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "privacy.natives.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Delete native tracker",
+      "description": "Stop blocking a native tracking service.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "profileId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID."
+          },
+          "profile": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "profile_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "config": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "config_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "native_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Native tracker id to remove."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "profileId",
+          "native_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/profiles/{{profileId}}/privacy/natives/{{native_id}}",
+        "success": [
+          200,
+          201,
+          204
+        ],
+        "result": {
+          "data": {
+            "ok": true
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "privacy.natives.replace": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Replace native trackers",
+      "description": "Replace the entire native-tracker block list. Pass [] to clear it.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "profileId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID."
+          },
+          "profile": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "profile_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "config": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "config_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "natives": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            },
+            "description": "Complete native-tracker array. Each entry has id."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "profileId",
+          "natives"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/profiles/{{profileId}}/privacy/natives",
+        "success": [
+          200,
+          201,
+          204
+        ],
+        "body": "{{natives}}",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "result": {
+          "data": {
+            "ok": true
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "security.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List security settings",
+      "description": "Get security options for a NextDNS profile.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "profileId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID."
+          },
+          "profile": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "profile_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "config": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "config_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "profileId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/profiles/{{profileId}}/security",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "security.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Update security settings",
+      "description": "Patch threat intelligence, AI detection, Safe Browsing, and related protections.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "profileId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID."
+          },
+          "profile": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "profile_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "config": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "config_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "dga": {
+            "type": "boolean",
+            "description": "Block DGA domains."
+          },
+          "nrd": {
+            "type": "boolean",
+            "description": "Block newly registered domains."
+          },
+          "csam": {
+            "type": "boolean",
+            "description": "Block CSAM-associated domains."
+          },
+          "ddns": {
+            "type": "boolean",
+            "description": "Block dynamic DNS domains."
+          },
+          "parking": {
+            "type": "boolean",
+            "description": "Block parked domains."
+          },
+          "dnsRebinding": {
+            "type": "boolean",
+            "description": "Enable DNS rebinding protection."
+          },
+          "cryptojacking": {
+            "type": "boolean",
+            "description": "Block cryptojacking domains."
+          },
+          "idnHomographs": {
+            "type": "boolean",
+            "description": "Protect against IDN homograph attacks."
+          },
+          "typosquatting": {
+            "type": "boolean",
+            "description": "Protect against typosquatting domains."
+          },
+          "aiThreatDetection": {
+            "type": "boolean",
+            "description": "Enable AI threat detection."
+          },
+          "googleSafeBrowsing": {
+            "type": "boolean",
+            "description": "Enable Google Safe Browsing."
+          },
+          "threatIntelligenceFeeds": {
+            "type": "boolean",
+            "description": "Enable threat intelligence feeds."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "profileId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/profiles/{{profileId}}/security",
+        "success": [
+          200,
+          201,
+          204
+        ],
+        "body": {
+          "dga": "{{dga}}",
+          "nrd": "{{nrd}}",
+          "csam": "{{csam}}",
+          "ddns": "{{ddns}}",
+          "parking": "{{parking}}",
+          "dnsRebinding": "{{dnsRebinding}}",
+          "cryptojacking": "{{cryptojacking}}",
+          "idnHomographs": "{{idnHomographs}}",
+          "typosquatting": "{{typosquatting}}",
+          "aiThreatDetection": "{{aiThreatDetection}}",
+          "googleSafeBrowsing": "{{googleSafeBrowsing}}",
+          "threatIntelligenceFeeds": "{{threatIntelligenceFeeds}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "result": {
+          "data": {
+            "ok": true
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "security.tlds.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get blocked TLDs",
+      "description": "List blocked top-level domains for a profile.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "profileId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID."
+          },
+          "profile": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "profile_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "config": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "config_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "profileId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/profiles/{{profileId}}/security/tlds",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "security.tlds.add": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Add blocked TLD",
+      "description": "Add a TLD to the security blocklist (without a leading dot).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "profileId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID."
+          },
+          "profile": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "profile_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "config": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "config_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "tld": {
+            "type": "string",
+            "minLength": 1,
+            "description": "TLD to block, e.g. io or xyz."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "profileId",
+          "tld"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/profiles/{{profileId}}/security/tlds",
+        "success": [
+          200,
+          201,
+          204
+        ],
+        "body": {
+          "id": "{{tld}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "result": {
+          "data": {
+            "ok": true
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "security.tlds.remove": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Remove blocked TLD",
+      "description": "Remove a TLD from the security blocklist.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "profileId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID."
+          },
+          "profile": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "profile_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "config": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "config_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "tld": {
+            "type": "string",
+            "minLength": 1,
+            "description": "TLD to unblock, without a leading dot."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "profileId",
+          "tld"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/profiles/{{profileId}}/security/tlds/{{tld}}",
+        "success": [
+          200,
+          201,
+          204
+        ],
+        "result": {
+          "data": {
+            "ok": true
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "security.tlds.replace": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Replace blocked TLDs",
+      "description": "Replace the entire blocked TLD list. Pass [] to clear it.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "profileId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID."
+          },
+          "profile": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "profile_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "config": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "config_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "tlds": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            },
+            "description": "Complete TLD array. Each entry has id."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "profileId",
+          "tlds"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/profiles/{{profileId}}/security/tlds",
+        "success": [
+          200,
+          201,
+          204
+        ],
+        "body": "{{tlds}}",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "result": {
+          "data": {
+            "ok": true
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "settings.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get settings",
+      "description": "Get profile settings (logs, block page, performance, web3).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "profileId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID."
+          },
+          "profile": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "profile_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "config": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "config_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "profileId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
         },
         "additionalProperties": false
       },
@@ -1368,14 +5175,735 @@
       "enforceOutputSchema": true,
       "validationMode": "strict-generated",
       "responseFormat": "json"
+    },
+    "settings.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Update settings",
+      "description": "Patch logs, block page, performance, and web3 settings in one call.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "profileId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID."
+          },
+          "profile": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "profile_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "config": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "config_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "logs": {
+            "type": "object",
+            "description": "Log configuration (enabled, drop, retention, location)."
+          },
+          "web3": {
+            "type": "boolean",
+            "description": "Enable Web3 domain resolution."
+          },
+          "blockPage": {
+            "type": "object",
+            "description": "Block page display settings."
+          },
+          "performance": {
+            "type": "object",
+            "description": "Performance optimization settings."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "profileId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/profiles/{{profileId}}/settings",
+        "success": [
+          200,
+          201,
+          204
+        ],
+        "body": {
+          "logs": "{{logs}}",
+          "web3": "{{web3}}",
+          "blockPage": "{{blockPage}}",
+          "performance": "{{performance}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "result": {
+          "data": {
+            "ok": true
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "settings.blockpage.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get block page settings",
+      "description": "Get whether the branded block page is enabled.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "profileId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID."
+          },
+          "profile": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "profile_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "config": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "config_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "profileId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/profiles/{{profileId}}/settings/blockPage",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "settings.blockpage.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Update block page settings",
+      "description": "Enable or disable the branded block page.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "profileId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID."
+          },
+          "profile": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "profile_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "config": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "config_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "enabled": {
+            "type": "boolean",
+            "description": "true to show the block page, false for NXDOMAIN."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "profileId",
+          "enabled"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/profiles/{{profileId}}/settings/blockPage",
+        "success": [
+          200,
+          201,
+          204
+        ],
+        "body": {
+          "enabled": "{{enabled}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "result": {
+          "data": {
+            "ok": true
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "settings.logs.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get logging settings",
+      "description": "Get logging status, retention, location, and privacy drop options.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "profileId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID."
+          },
+          "profile": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "profile_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "config": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "config_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "profileId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/profiles/{{profileId}}/settings/logs",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "settings.logs.client_ips": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Log client IPs",
+      "description": "Enable or disable logging of client IPs. enable=true stores IPs (drop.ip=false).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "profileId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID."
+          },
+          "profile": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "profile_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "config": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "config_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "enable": {
+            "type": "boolean",
+            "description": "true to log client IPs, false to drop them."
+          },
+          "drop_ip": {
+            "type": "boolean",
+            "description": "Wire value for settings.logs.drop.ip; filled from enable when omitted."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "profileId",
+          "enable"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/profiles/{{profileId}}/settings/logs",
+        "success": [
+          200,
+          201,
+          204
+        ],
+        "body": {
+          "drop": {
+            "ip": "{{drop_ip}}"
+          }
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "result": {
+          "data": {
+            "ok": true
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "settings.logs.domains": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Log domains",
+      "description": "Enable or disable logging of domains. enabled=true stores domains (drop.domain=false).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "profileId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID."
+          },
+          "profile": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "profile_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "config": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "config_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "enabled": {
+            "type": "boolean",
+            "description": "true to log domains, false to drop them."
+          },
+          "drop_domain": {
+            "type": "boolean",
+            "description": "Wire value for settings.logs.drop.domain; filled from enabled when omitted."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "profileId",
+          "enabled"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/profiles/{{profileId}}/settings/logs",
+        "success": [
+          200,
+          201,
+          204
+        ],
+        "body": {
+          "drop": {
+            "domain": "{{drop_domain}}"
+          }
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "result": {
+          "data": {
+            "ok": true
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "settings.performance.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get performance settings",
+      "description": "Get ECS, cache boost, and CNAME flattening settings.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "profileId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID."
+          },
+          "profile": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "profile_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "config": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "config_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "profileId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/profiles/{{profileId}}/settings/performance",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "settings.performance.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Update performance settings",
+      "description": "Set ECS, cache boost, and CNAME flattening.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "profileId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID."
+          },
+          "profile": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "profile_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "config": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "config_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "ecs": {
+            "type": "boolean",
+            "description": "Enable EDNS Client Subnet."
+          },
+          "cacheBoost": {
+            "type": "boolean",
+            "description": "Enable cache boost."
+          },
+          "cnameFlattening": {
+            "type": "boolean",
+            "description": "Enable CNAME flattening."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "profileId",
+          "ecs",
+          "cacheBoost",
+          "cnameFlattening"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/profiles/{{profileId}}/settings/performance",
+        "success": [
+          200,
+          201,
+          204
+        ],
+        "body": {
+          "ecs": "{{ecs}}",
+          "cacheBoost": "{{cacheBoost}}",
+          "cnameFlattening": "{{cnameFlattening}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "result": {
+          "data": {
+            "ok": true
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "setup.linked_ip.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Update linked IP",
+      "description": "Update the profile linked IP to the current caller address via PATCH /setup/linkedip.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "profileId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID."
+          },
+          "profile": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "profile_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "config": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          },
+          "config_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "NextDNS profile ID (Composio alias)."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "profileId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/profiles/{{profileId}}/setup/linkedip",
+        "success": [
+          200,
+          201,
+          204
+        ],
+        "result": {
+          "data": {
+            "ok": true
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
     }
   },
-  "evidence": {
-    "fixture": {
-      "status": "supplied"
-    },
-    "live": {
-      "status": "unverified"
+  "provenance": {
+    "source": {
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
+      "url": "https://github.com/oomol-lab/open-connector"
     }
-  }
+  },
+  "runtime": "bun",
+  "version": "0.2.0",
+  "visibility": "public"
 }
