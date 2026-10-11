@@ -6,8 +6,8 @@ describe("Ashby manifest", () => {
     expect(manifest.key).toBe("ashby");
   });
 
-  it("has version 0.9.0", () => {
-    expect(manifest.version).toBe("0.9.0");
+  it("has version 0.9.1", () => {
+    expect(manifest.version).toBe("0.9.1");
   });
 
   it("uses bun runtime", () => {

@@ -223,7 +223,7 @@ describe("Ashby openings.list", () => {
   test("POSTs /opening.list", async () => {
     const { impl } = stubFetch(JSON.stringify(openingsFixture));
     const result = await executeOpeningsListSync({ ...auth, fetch: impl });
-    expect(result.openings[0].id).toBe("ash-opening:open-1");
+    expect(result.openings[0].id).toBe("ash-opening:3f1c2a4b-5d6e-4f70-8a91-b2c3d4e5f601");
     expect(result.openings[0].isOpen).toBe(true);
     expect(result.openings[1].isOpen).toBe(false);
   });
