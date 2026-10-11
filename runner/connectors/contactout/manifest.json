@@ -1,17 +1,7 @@
 {
-  "key": "contactout",
-  "name": "ContactOut",
-  "version": "0.2.0",
-  "runtime": "bun",
-  "visibility": "public",
-  "categories": [
-    "crm"
-  ],
   "auth": {
-    "type": "api_key",
     "scopes": [],
     "setup": {
-      "mode": "api_key",
       "fields": [
         {
           "key": "apiKey",
@@ -19,160 +9,1724 @@
           "required": true,
           "secret": true
         }
-      ]
+      ],
+      "mode": "api_key"
+    },
+    "type": "api_key"
+  },
+  "categories": [
+    "crm"
+  ],
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
     }
   },
-  "network": {
-    "allowedHosts": [
-      "api.contactout.com"
-    ]
-  },
-  "models": [
-    "usage",
-    "profile",
-    "company",
-    "campaign",
-    "email"
-  ],
   "http": {
-    "baseUrl": "https://api.contactout.com",
     "auth": {
       "field": "apiKey",
       "in": "header",
       "name": "token",
       "value": "{{apiKey}}"
     },
-    "headers": {
-      "Accept": "application/json",
-      "authorization": "basic"
-    },
+    "baseUrl": "https://api.contactout.com",
     "errors": {
-      "rateLimitStatuses": [
-        429
-      ],
-      "retryAfterHeader": "retry-after",
       "defaultRetryAfterSeconds": 30,
       "messagePaths": [
         "error",
         "message",
         "status_message",
         "detail"
-      ]
+      ],
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after"
+    },
+    "headers": {
+      "Accept": "application/json",
+      "authorization": "basic"
     }
   },
+  "key": "contactout",
+  "models": [
+    "usage",
+    "profile"
+  ],
+  "name": "ContactOut",
+  "network": {
+    "allowedHosts": [
+      "api.contactout.com"
+    ]
+  },
   "operations": {
+    "campaigns.get": {
+      "description": "Return one campaign's sequence steps and optionally its performance statistics.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "campaign_id": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "include_stats": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "campaign_id"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/campaigns/{{campaign_id}}",
+        "query": {
+          "include_stats": "{{include_stats}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get campaign",
+      "validationMode": "strict-generated"
+    },
+    "campaigns.list": {
+      "description": "Return one page of email campaigns and their lifecycle statuses.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "page": {
+            "minimum": 1,
+            "type": "integer"
+          },
+          "page_size": {
+            "maximum": 50,
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/campaigns",
+        "query": {
+          "page": "{{page}}",
+          "page_size": "{{page_size}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List campaigns",
+      "validationMode": "strict-generated"
+    },
+    "campaigns.recipients.add": {
+      "description": "Add 1-100 recipients to an existing campaign. A successful request can still contain failed recipients.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "campaign_id": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "recipients": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "company": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "email": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "first_name": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "last_name": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "phone": {
+                  "minLength": 1,
+                  "type": "string"
+                }
+              },
+              "type": "object"
+            },
+            "minItems": 1,
+            "type": "array"
+          }
+        },
+        "required": [
+          "campaign_id",
+          "recipients"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "body": {
+          "recipients": "{{recipients}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "method": "POST",
+        "path": "/v1/campaigns/{{campaign_id}}/recipients",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Add campaign recipients",
+      "validationMode": "strict-generated"
+    },
+    "campaigns.recipients.remove": {
+      "description": "Destructively remove 1-100 recipients from an existing campaign by email.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "campaign_id": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "recipients": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "email": {
+                  "minLength": 1,
+                  "type": "string"
+                }
+              },
+              "required": [
+                "email"
+              ],
+              "type": "object"
+            },
+            "minItems": 1,
+            "type": "array"
+          }
+        },
+        "required": [
+          "campaign_id",
+          "recipients"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "body": {
+          "recipients": "{{recipients}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "method": "DELETE",
+        "path": "/v1/campaigns/{{campaign_id}}/recipients",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "title": "Remove campaign recipients",
+      "validationMode": "strict-generated"
+    },
+    "campaigns.start": {
+      "description": "Start a draft ContactOut campaign or resume a stopped campaign.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "campaign_id": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "campaign_id"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/campaigns/{{campaign_id}}/start",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Start campaign",
+      "validationMode": "strict-generated"
+    },
+    "campaigns.stop": {
+      "description": "Stop a running ContactOut campaign, interrupting its outreach.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "campaign_id": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "campaign_id"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/campaigns/{{campaign_id}}/stop",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Stop campaign",
+      "validationMode": "strict-generated"
+    },
+    "companies.domain.enrich": {
+      "description": "Return company profiles for 1-30 domains. Each found company consumes a search credit.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "domains": {
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "minItems": 1,
+            "type": "array"
+          }
+        },
+        "required": [
+          "domains"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "body": {
+          "domains": "{{domains}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "method": "POST",
+        "path": "/v1/domain/enrich",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Enrich companies by domain",
+      "validationMode": "strict-generated"
+    },
+    "companies.search": {
+      "description": "Return one page of companies matching identity, size, location, industry, technology, revenue, or founding-year filters.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "domain": {
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "hq_only": {
+            "type": "boolean"
+          },
+          "industry": {
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "linkedin_url": {
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "location": {
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "max_revenue": {
+            "type": "integer"
+          },
+          "min_revenue": {
+            "type": "integer"
+          },
+          "name": {
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "page": {
+            "minimum": 1,
+            "type": "integer"
+          },
+          "size": {
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "technologies": {
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "year_founded_from": {
+            "minimum": 1985,
+            "type": "integer"
+          },
+          "year_founded_to": {
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "body": {
+          "domain": "{{domain}}",
+          "hq_only": "{{hq_only}}",
+          "industry": "{{industry}}",
+          "linkedin_url": "{{linkedin_url}}",
+          "location": "{{location}}",
+          "max_revenue": "{{max_revenue}}",
+          "min_revenue": "{{min_revenue}}",
+          "name": "{{name}}",
+          "page": "{{page}}",
+          "size": "{{size}}",
+          "technologies": "{{technologies}}",
+          "year_founded_from": "{{year_founded_from}}",
+          "year_founded_to": "{{year_founded_to}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "method": "POST",
+        "path": "/v1/company/search",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Search companies",
+      "validationMode": "strict-generated"
+    },
+    "email.enrich": {
+      "description": "Return a professional profile matched from an email address, optionally requesting real-time work-email verification.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "email": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "include": {
+            "enum": [
+              "work_email"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "email"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/email/enrich",
+        "query": {
+          "email": "{{email}}",
+          "include": "{{include}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Enrich person by email",
+      "validationMode": "strict-generated"
+    },
+    "email.verify": {
+      "description": "Check one email address for valid, invalid, accept-all, disposable, or unknown deliverability.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "email": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "email"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/email/verify",
+        "query": {
+          "email": "{{email}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Verify email",
+      "validationMode": "strict-generated"
+    },
+    "email.verify.batch.create": {
+      "description": "Queue asynchronous deliverability verification for 1-100 email addresses, optionally delivering results to a callback URL.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "callback_url": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "emails": {
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "minItems": 1,
+            "type": "array"
+          }
+        },
+        "required": [
+          "emails"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "body": {
+          "callback_url": "{{callback_url}}",
+          "emails": "{{emails}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "method": "POST",
+        "path": "/v1/email/verify/batch",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Create bulk email verification job",
+      "validationMode": "strict-generated"
+    },
+    "email.verify.batch.get": {
+      "description": "Get the status and available per-email results of an asynchronous bulk email-verification job.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "job_id": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "job_id"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/email/verify/batch/{{job_id}}",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get bulk email verification job",
+      "validationMode": "strict-generated"
+    },
     "healthcheck": {
-      "timeoutMs": 5000,
+      "description": "Validate the ContactOut API token with GET /v1/stats.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {},
+        "type": "object"
+      },
+      "kind": "action",
       "maxInputBytes": 4096,
       "maxResponseBytes": 65536,
-      "kind": "action",
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/stats",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
       "sideEffect": "read",
+      "timeoutMs": 5000,
       "title": "Healthcheck",
-      "description": "Validate the ContactOut API token with GET /v1/stats.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {},
-        "additionalProperties": false
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "GET",
-        "path": "/v1/stats",
-        "success": [
-          200
-        ]
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
+      "validationMode": "strict-generated"
     },
-    "stats.get": {
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "kind": "action",
-      "sideEffect": "read",
-      "title": "Get usage stats",
-      "description": "Read ContactOut API usage statistics for an optional YYYY-MM period.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "period": {
-            "type": "string",
-            "minLength": 1
-          }
-        },
-        "additionalProperties": false
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "GET",
-        "path": "/v1/stats",
-        "query": {
-          "period": "{{period}}"
-        },
-        "success": [
-          200
-        ]
-      },
+    "linkedin.enrich": {
+      "description": "Return a professional profile for a regular LinkedIn profile URL, optionally including contact data.",
       "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "people.linkedin.personal-email-status": {
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "kind": "action",
-      "sideEffect": "read",
-      "title": "Check personal email availability",
-      "description": "Check whether ContactOut has a personal email for a LinkedIn profile.",
       "inputSchema": {
-        "type": "object",
+        "additionalProperties": false,
         "properties": {
           "profile": {
-            "type": "string",
-            "minLength": 1
+            "minLength": 1,
+            "type": "string"
+          },
+          "profile_only": {
+            "type": "boolean"
           }
         },
         "required": [
           "profile"
         ],
-        "additionalProperties": false
+        "type": "object"
       },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
       "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
+        "additionalProperties": false,
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "additionalProperties": false
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/linkedin/enrich",
+        "query": {
+          "profile": "{{profile}}",
+          "profile_only": "{{profile_only}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Enrich LinkedIn profile",
+      "validationMode": "strict-generated"
+    },
+    "people.count": {
+      "description": "Estimate matching people and available personal emails, work emails, and phones from People Search filters without consuming credits.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "company": {
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "company_filter": {
+            "enum": [
+              "current",
+              "past",
+              "past_only",
+              "both"
+            ],
+            "type": "string"
+          },
+          "company_size": {
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "current_company_only": {
+            "type": "boolean"
+          },
+          "current_titles_only": {
+            "type": "boolean"
+          },
+          "current_work_location": {
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "domain": {
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "education": {
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "educations": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "field_of_study": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "location": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "school_name": {
+                  "minLength": 1,
+                  "type": "string"
+                }
+              },
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "exclude_companies": {
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "exclude_companies_filter": {
+            "enum": [
+              "current",
+              "past",
+              "both"
+            ],
+            "type": "string"
+          },
+          "exclude_job_titles": {
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "include_related_job_titles": {
+            "type": "boolean"
+          },
+          "industry": {
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "is_currently_working": {
+            "type": "boolean"
+          },
+          "job_function": {
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "job_title": {
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "keyword": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "languages": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "language": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "proficiency": {
+                  "items": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "type": "array"
+                }
+              },
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "location": {
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "location_radius": {
+            "minimum": 1,
+            "type": "integer"
+          },
+          "match_experience": {
+            "enum": [
+              "current",
+              "past",
+              "both"
+            ],
+            "type": "string"
+          },
+          "name": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "past_company": {
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "past_job_title": {
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "past_work_location": {
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "recently_changed_jobs": {
+            "type": "boolean"
+          },
+          "seniority": {
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "skills": {
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "years_in_current_role": {
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "years_of_experience": {
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "body": {
+          "company": "{{company}}",
+          "company_filter": "{{company_filter}}",
+          "company_size": "{{company_size}}",
+          "current_company_only": "{{current_company_only}}",
+          "current_titles_only": "{{current_titles_only}}",
+          "current_work_location": "{{current_work_location}}",
+          "domain": "{{domain}}",
+          "education": "{{education}}",
+          "educations": "{{educations}}",
+          "exclude_companies": "{{exclude_companies}}",
+          "exclude_companies_filter": "{{exclude_companies_filter}}",
+          "exclude_job_titles": "{{exclude_job_titles}}",
+          "include_related_job_titles": "{{include_related_job_titles}}",
+          "industry": "{{industry}}",
+          "is_currently_working": "{{is_currently_working}}",
+          "job_function": "{{job_function}}",
+          "job_title": "{{job_title}}",
+          "keyword": "{{keyword}}",
+          "languages": "{{languages}}",
+          "location": "{{location}}",
+          "location_radius": "{{location_radius}}",
+          "match_experience": "{{match_experience}}",
+          "name": "{{name}}",
+          "past_company": "{{past_company}}",
+          "past_job_title": "{{past_job_title}}",
+          "past_work_location": "{{past_work_location}}",
+          "recently_changed_jobs": "{{recently_changed_jobs}}",
+          "seniority": "{{seniority}}",
+          "skills": "{{skills}}",
+          "years_in_current_role": "{{years_in_current_role}}",
+          "years_of_experience": "{{years_of_experience}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "method": "POST",
+        "path": "/v1/people/count",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Count people",
+      "validationMode": "strict-generated"
+    },
+    "people.decision-makers": {
+      "description": "Return one page of key decision makers for the best-matching company identified by LinkedIn URL, domain, or name.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "domain": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "linkedin_url": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "name": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "page": {
+            "minimum": 1,
+            "type": "integer"
+          },
+          "reveal_info": {
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/people/decision-makers",
+        "query": {
+          "domain": "{{domain}}",
+          "linkedin_url": "{{linkedin_url}}",
+          "name": "{{name}}",
+          "page": "{{page}}",
+          "reveal_info": "{{reveal_info}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List decision makers",
+      "validationMode": "strict-generated"
+    },
+    "people.enrich": {
+      "description": "Find and enrich one person using a LinkedIn URL, email, or phone; alternatively provide a name plus employer, education, location, or job-title evidence.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "company": {
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "company_domain": {
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "education": {
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "email": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "first_name": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "full_name": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "include": {
+            "items": {
+              "enum": [
+                "work_email",
+                "personal_email",
+                "phone"
+              ],
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "job_title": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "last_name": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "linkedin_url": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "location": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "phone": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "body": {
+          "company": "{{company}}",
+          "company_domain": "{{company_domain}}",
+          "education": "{{education}}",
+          "email": "{{email}}",
+          "first_name": "{{first_name}}",
+          "full_name": "{{full_name}}",
+          "include": "{{include}}",
+          "job_title": "{{job_title}}",
+          "last_name": "{{last_name}}",
+          "linkedin_url": "{{linkedin_url}}",
+          "location": "{{location}}",
+          "phone": "{{phone}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "method": "POST",
+        "path": "/v1/people/enrich",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Enrich person",
+      "validationMode": "strict-generated"
+    },
+    "people.identifiers": {
+      "description": "Return unordered SHA-256 hashes of normalized personal emails found for 5-100 distinct LinkedIn profiles.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "profiles": {
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "minItems": 5,
+            "type": "array"
+          }
+        },
+        "required": [
+          "profiles"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "body": {
+          "profiles": "{{profiles}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "method": "POST",
+        "path": "/v1/people/identifiers",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get hashed email identifiers",
+      "validationMode": "strict-generated"
+    },
+    "people.linkedin.batch": {
+      "description": "Synchronously reveal contact information for 1-100 LinkedIn profiles.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "email_type": {
+            "enum": [
+              "personal",
+              "work",
+              "personal,work"
+            ],
+            "type": "string"
+          },
+          "include_phone": {
+            "type": "boolean"
+          },
+          "profiles": {
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "minItems": 1,
+            "type": "array"
+          }
+        },
+        "required": [
+          "profiles"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "body": {
+          "email_type": "{{email_type}}",
+          "include_phone": "{{include_phone}}",
+          "profiles": "{{profiles}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "method": "POST",
+        "path": "/v1/people/linkedin/batch",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get LinkedIn contact info batch",
+      "validationMode": "strict-generated"
+    },
+    "people.linkedin.batch.create": {
+      "description": "Queue asynchronous contact discovery for 1-1000 LinkedIn profiles, optionally delivering results to a callback URL.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "callback_url": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "email_type": {
+            "enum": [
+              "personal",
+              "work",
+              "personal,work",
+              "none"
+            ],
+            "type": "string"
+          },
+          "include_phone": {
+            "type": "boolean"
+          },
+          "profiles": {
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "minItems": 1,
+            "type": "array"
+          }
+        },
+        "required": [
+          "profiles"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "body": {
+          "callback_url": "{{callback_url}}",
+          "email_type": "{{email_type}}",
+          "include_phone": "{{include_phone}}",
+          "profiles": "{{profiles}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "method": "POST",
+        "path": "/v2/people/linkedin/batch",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Create LinkedIn contact info batch job",
+      "validationMode": "strict-generated"
+    },
+    "people.linkedin.batch.job.get": {
+      "description": "Get the status and available results of an asynchronous LinkedIn contact-info batch job.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "job_id": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "job_id"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/people/linkedin/batch/{{job_id}}",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get LinkedIn contact info batch job",
+      "validationMode": "strict-generated"
+    },
+    "people.linkedin.contact-availability": {
+      "description": "Check whether a LinkedIn profile has a personal email, work email, or phone without revealing it or consuming credits.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "contact_type": {
+            "enum": [
+              "personal_email",
+              "work_email",
+              "phone"
+            ],
+            "type": "string"
+          },
+          "profile": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "contact_type",
+          "profile"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/people/linkedin/{{contact_type}}_status",
+        "query": {
+          "profile": "{{profile}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Check LinkedIn contact availability",
+      "validationMode": "strict-generated"
+    },
+    "people.linkedin.get": {
+      "description": "Reveal email and optionally phone contact information for one regular LinkedIn profile URL.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "email_type": {
+            "enum": [
+              "personal",
+              "work",
+              "personal,work",
+              "none"
+            ],
+            "type": "string"
+          },
+          "include_phone": {
+            "type": "boolean"
+          },
+          "profile": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "profile"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/people/linkedin",
+        "query": {
+          "email_type": "{{email_type}}",
+          "include_phone": "{{include_phone}}",
+          "profile": "{{profile}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get LinkedIn contact info",
+      "validationMode": "strict-generated"
+    },
+    "people.linkedin.personal-email-status": {
+      "description": "Check whether ContactOut has a personal email for a LinkedIn profile.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "profile": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "profile"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
       },
       "request": {
         "method": "GET",
@@ -184,89 +1738,42 @@
           200
         ]
       },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "people.linkedin.work-email-status": {
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "kind": "action",
+      "responseFormat": "json",
       "sideEffect": "read",
-      "title": "Check work email availability",
-      "description": "Check whether ContactOut has a work email for a LinkedIn profile.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "profile": {
-            "type": "string",
-            "minLength": 1
-          }
-        },
-        "required": [
-          "profile"
-        ],
-        "additionalProperties": false
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "GET",
-        "path": "/v1/people/linkedin/work_email_status",
-        "query": {
-          "profile": "{{profile}}"
-        },
-        "success": [
-          200
-        ]
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
+      "timeoutMs": 15000,
+      "title": "Check personal email availability",
+      "validationMode": "strict-generated"
     },
     "people.linkedin.phone-status": {
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "kind": "action",
-      "sideEffect": "read",
-      "title": "Check phone availability",
       "description": "Check whether ContactOut has a phone number for a LinkedIn profile.",
+      "enforceOutputSchema": true,
       "inputSchema": {
-        "type": "object",
+        "additionalProperties": false,
         "properties": {
           "profile": {
-            "type": "string",
-            "minLength": 1
+            "minLength": 1,
+            "type": "string"
           }
         },
         "required": [
           "profile"
         ],
-        "additionalProperties": false
+        "type": "object"
       },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
       "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
+        "additionalProperties": false,
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "additionalProperties": false
+        "required": [
+          "data"
+        ],
+        "type": "object"
       },
       "request": {
         "method": "GET",
@@ -278,872 +1785,493 @@
           200
         ]
       },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "linkedin.enrich": {
-      "kind": "action",
+      "responseFormat": "json",
       "sideEffect": "read",
       "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "title": "Enrich LinkedIn profile",
-      "description": "Get profile details for a LinkedIn URL via GET /v1/linkedin/enrich.",
+      "title": "Check phone availability",
+      "validationMode": "strict-generated"
+    },
+    "people.linkedin.work-email-status": {
+      "description": "Check whether ContactOut has a work email for a LinkedIn profile.",
+      "enforceOutputSchema": true,
       "inputSchema": {
-        "type": "object",
+        "additionalProperties": false,
         "properties": {
           "profile": {
-            "type": "string",
-            "minLength": 1
-          },
-          "profileOnly": {
-            "type": "boolean"
+            "minLength": 1,
+            "type": "string"
           }
         },
-        "additionalProperties": false,
         "required": [
           "profile"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
         ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "additionalProperties": false
+        "required": [
+          "data"
+        ],
+        "type": "object"
       },
       "request": {
         "method": "GET",
-        "path": "/v1/linkedin/enrich",
+        "path": "/v1/people/linkedin/work_email_status",
+        "query": {
+          "profile": "{{profile}}"
+        },
         "success": [
           200
-        ],
-        "query": {
-          "profile": "{{profile}}",
-          "profile_only": "{{profileOnly}}"
-        }
+        ]
       },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "email.enrich": {
-      "kind": "action",
+      "responseFormat": "json",
       "sideEffect": "read",
       "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "title": "Enrich email address",
-      "description": "Get profile details for an email address via GET /v1/email/enrich.",
+      "title": "Check work email availability",
+      "validationMode": "strict-generated"
+    },
+    "people.person.get": {
+      "description": "Resolve an email address to its matching LinkedIn profile URL.",
+      "enforceOutputSchema": true,
       "inputSchema": {
-        "type": "object",
+        "additionalProperties": false,
         "properties": {
           "email": {
-            "type": "string",
-            "minLength": 1
+            "minLength": 1,
+            "type": "string"
           }
         },
-        "additionalProperties": false,
         "required": [
           "email"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
         ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
+        "type": "object"
       },
-      "request": {
-        "method": "GET",
-        "path": "/v1/email/enrich",
-        "success": [
-          200
-        ],
-        "query": {
-          "email": "{{email}}"
-        }
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "people.enrich": {
       "kind": "action",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
-      "title": "Enrich a person",
-      "description": "Enrich a person from name, email, LinkedIn URL, or company via POST /v1/people/enrich.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "fullName": {
-            "type": "string",
-            "minLength": 1
-          },
-          "email": {
-            "type": "string",
-            "minLength": 1
-          },
-          "linkedinUrl": {
-            "type": "string",
-            "minLength": 1
-          },
-          "company": {
-            "type": "array",
-            "items": {
-              "type": "string",
-              "minLength": 1
-            }
-          },
-          "include": {
-            "type": "array",
-            "items": {
-              "type": "string",
-              "minLength": 1
-            }
-          }
-        },
-        "additionalProperties": false
-      },
       "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "POST",
-        "path": "/v1/people/enrich",
-        "success": [
-          200
-        ],
-        "body": {
-          "full_name": "{{fullName}}",
-          "email": "{{email}}",
-          "linkedin_url": "{{linkedinUrl}}",
-          "company": "{{company}}",
-          "include": "{{include}}"
-        },
-        "headers": {
-          "Content-Type": "application/json"
-        }
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "people.linkedin": {
-      "kind": "action",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "title": "Get LinkedIn contact info",
-      "description": "Get emails and optional phone numbers for a LinkedIn profile via GET /v1/people/linkedin.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "profile": {
-            "type": "string",
-            "minLength": 1
-          },
-          "includePhone": {
-            "type": "boolean"
-          }
-        },
         "additionalProperties": false,
-        "required": [
-          "profile"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "GET",
-        "path": "/v1/people/linkedin",
-        "success": [
-          200
-        ],
-        "query": {
-          "profile": "{{profile}}",
-          "include_phone": "{{includePhone}}"
-        }
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "people.search": {
-      "kind": "action",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "title": "Search people",
-      "description": "Search ContactOut people profiles via POST /v1/people/search.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "name": {
-            "type": "string",
-            "minLength": 1
-          },
-          "page": {
-            "type": "integer",
-            "minimum": 1
-          },
-          "pageSize": {
-            "type": "integer",
-            "minimum": 1
-          },
-          "jobTitle": {
-            "type": "array",
-            "items": {
-              "type": "string",
-              "minLength": 1
-            }
-          }
-        },
-        "additionalProperties": false
-      },
-      "outputSchema": {
-        "type": "object",
         "required": [
           "data"
         ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "POST",
-        "path": "/v1/people/search",
-        "success": [
-          200
-        ],
-        "body": {
-          "name": "{{name}}",
-          "page": "{{page}}",
-          "page_size": "{{pageSize}}",
-          "job_title": "{{jobTitle}}"
-        },
-        "headers": {
-          "Content-Type": "application/json"
-        }
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "people.count": {
-      "kind": "action",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "title": "Count people",
-      "description": "Count ContactOut people matching search criteria via POST /v1/people/count.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "name": {
-            "type": "string",
-            "minLength": 1
-          },
-          "jobTitle": {
-            "type": "array",
-            "items": {
-              "type": "string",
-              "minLength": 1
-            }
-          },
-          "company": {
-            "type": "array",
-            "items": {
-              "type": "string",
-              "minLength": 1
-            }
-          }
-        },
-        "additionalProperties": false
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "POST",
-        "path": "/v1/people/count",
-        "success": [
-          200
-        ],
-        "body": {
-          "name": "{{name}}",
-          "job_title": "{{jobTitle}}",
-          "company": "{{company}}"
-        },
-        "headers": {
-          "Content-Type": "application/json"
-        }
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "people.decision-makers": {
-      "kind": "action",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "title": "List decision makers",
-      "description": "List decision makers at a company via GET /v1/people/decision-makers.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "domain": {
-            "type": "string",
-            "minLength": 1
-          },
-          "name": {
-            "type": "string",
-            "minLength": 1
-          },
-          "linkedinUrl": {
-            "type": "string",
-            "minLength": 1
-          },
-          "revealInfo": {
-            "type": "boolean"
-          }
-        },
-        "additionalProperties": false
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "GET",
-        "path": "/v1/people/decision-makers",
-        "success": [
-          200
-        ],
-        "query": {
-          "domain": "{{domain}}",
-          "name": "{{name}}",
-          "linkedin_url": "{{linkedinUrl}}",
-          "reveal_info": "{{revealInfo}}"
-        }
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "company.search": {
-      "kind": "action",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "title": "Search companies",
-      "description": "Search ContactOut company profiles via POST /v1/company/search.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "name": {
-            "type": "string",
-            "minLength": 1
-          },
-          "domain": {
-            "type": "string",
-            "minLength": 1
-          },
-          "page": {
-            "type": "integer",
-            "minimum": 1
-          }
-        },
-        "additionalProperties": false
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "POST",
-        "path": "/v1/company/search",
-        "success": [
-          200
-        ],
-        "body": {
-          "name": "{{name}}",
-          "domain": "{{domain}}",
-          "page": "{{page}}"
-        },
-        "headers": {
-          "Content-Type": "application/json"
-        }
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "domain.enrich": {
-      "kind": "action",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "title": "Enrich company domain",
-      "description": "Get company information from a domain via POST /v1/domain/enrich.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "domain": {
-            "type": "string",
-            "minLength": 1
-          }
-        },
-        "additionalProperties": false,
-        "required": [
-          "domain"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "POST",
-        "path": "/v1/domain/enrich",
-        "success": [
-          200
-        ],
-        "body": {
-          "domain": "{{domain}}"
-        },
-        "headers": {
-          "Content-Type": "application/json"
-        }
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "people.email": {
-      "kind": "action",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "title": "Email to LinkedIn",
-      "description": "Resolve a LinkedIn profile URL from an email via GET /v1/people/person.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "email": {
-            "type": "string",
-            "minLength": 1
-          }
-        },
-        "additionalProperties": false,
-        "required": [
-          "email"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
+        "type": "object"
       },
       "request": {
         "method": "GET",
         "path": "/v1/people/person",
-        "success": [
-          200
-        ],
         "query": {
           "email": "{{email}}"
-        }
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "email.verify": {
-      "kind": "action",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "title": "Verify email",
-      "description": "Verify whether an email address is valid via GET /v1/email/verify.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "email": {
-            "type": "string",
-            "minLength": 1
-          }
         },
-        "additionalProperties": false,
-        "required": [
-          "email"
+        "success": [
+          200
         ]
       },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "GET",
-        "path": "/v1/email/verify",
-        "success": [
-          200
-        ],
-        "query": {
-          "email": "{{email}}"
-        }
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "people.identifiers": {
-      "kind": "action",
+      "responseFormat": "json",
       "sideEffect": "read",
       "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "title": "Look up hashed emails",
-      "description": "Resolve hashed email identifiers via POST /v1/people/identifiers.",
+      "title": "Find LinkedIn profile by email",
+      "validationMode": "strict-generated"
+    },
+    "people.search": {
+      "description": "Return one page of professional profiles matching person, role, employer, education, location, and contact-availability filters.",
+      "enforceOutputSchema": true,
       "inputSchema": {
-        "type": "object",
+        "additionalProperties": false,
         "properties": {
-          "emails": {
-            "type": "array",
+          "company": {
             "items": {
-              "type": "string",
-              "minLength": 1
-            }
+              "minLength": 1,
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "company_filter": {
+            "enum": [
+              "current",
+              "past",
+              "past_only",
+              "both"
+            ],
+            "type": "string"
+          },
+          "company_size": {
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "current_company_only": {
+            "type": "boolean"
+          },
+          "current_titles_only": {
+            "type": "boolean"
+          },
+          "current_work_location": {
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "data_types": {
+            "items": {
+              "enum": [
+                "personal_email",
+                "work_email",
+                "phone"
+              ],
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "detailed_education": {
+            "type": "boolean"
+          },
+          "detailed_experience": {
+            "type": "boolean"
+          },
+          "domain": {
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "education": {
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "educations": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "field_of_study": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "location": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "school_name": {
+                  "minLength": 1,
+                  "type": "string"
+                }
+              },
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "exclude_companies": {
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "exclude_companies_filter": {
+            "enum": [
+              "current",
+              "past",
+              "both"
+            ],
+            "type": "string"
+          },
+          "exclude_job_titles": {
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "include_related_job_titles": {
+            "type": "boolean"
+          },
+          "industry": {
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "is_currently_working": {
+            "type": "boolean"
+          },
+          "job_function": {
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "job_title": {
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "keyword": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "languages": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "language": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "proficiency": {
+                  "items": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "type": "array"
+                }
+              },
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "location": {
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "location_radius": {
+            "minimum": 1,
+            "type": "integer"
+          },
+          "match_experience": {
+            "enum": [
+              "current",
+              "past",
+              "both"
+            ],
+            "type": "string"
+          },
+          "name": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "output_fields": {
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "page": {
+            "minimum": 1,
+            "type": "integer"
+          },
+          "page_size": {
+            "maximum": 25,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "past_company": {
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "past_job_title": {
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "past_work_location": {
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "recently_changed_jobs": {
+            "type": "boolean"
+          },
+          "reveal_info": {
+            "type": "boolean"
+          },
+          "seniority": {
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "skills": {
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "years_in_current_role": {
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "years_of_experience": {
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "type": "array"
           }
         },
-        "additionalProperties": false,
-        "required": [
-          "emails"
-        ]
+        "type": "object"
       },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
       "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
+        "additionalProperties": false,
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "additionalProperties": false
+        "required": [
+          "data"
+        ],
+        "type": "object"
       },
       "request": {
-        "method": "POST",
-        "path": "/v1/people/identifiers",
-        "success": [
-          200
-        ],
         "body": {
-          "emails": "{{emails}}"
+          "company": "{{company}}",
+          "company_filter": "{{company_filter}}",
+          "company_size": "{{company_size}}",
+          "current_company_only": "{{current_company_only}}",
+          "current_titles_only": "{{current_titles_only}}",
+          "current_work_location": "{{current_work_location}}",
+          "data_types": "{{data_types}}",
+          "detailed_education": "{{detailed_education}}",
+          "detailed_experience": "{{detailed_experience}}",
+          "domain": "{{domain}}",
+          "education": "{{education}}",
+          "educations": "{{educations}}",
+          "exclude_companies": "{{exclude_companies}}",
+          "exclude_companies_filter": "{{exclude_companies_filter}}",
+          "exclude_job_titles": "{{exclude_job_titles}}",
+          "include_related_job_titles": "{{include_related_job_titles}}",
+          "industry": "{{industry}}",
+          "is_currently_working": "{{is_currently_working}}",
+          "job_function": "{{job_function}}",
+          "job_title": "{{job_title}}",
+          "keyword": "{{keyword}}",
+          "languages": "{{languages}}",
+          "location": "{{location}}",
+          "location_radius": "{{location_radius}}",
+          "match_experience": "{{match_experience}}",
+          "name": "{{name}}",
+          "output_fields": "{{output_fields}}",
+          "page": "{{page}}",
+          "page_size": "{{page_size}}",
+          "past_company": "{{past_company}}",
+          "past_job_title": "{{past_job_title}}",
+          "past_work_location": "{{past_work_location}}",
+          "recently_changed_jobs": "{{recently_changed_jobs}}",
+          "reveal_info": "{{reveal_info}}",
+          "seniority": "{{seniority}}",
+          "skills": "{{skills}}",
+          "years_in_current_role": "{{years_in_current_role}}",
+          "years_of_experience": "{{years_of_experience}}"
         },
         "headers": {
           "Content-Type": "application/json"
-        }
+        },
+        "method": "POST",
+        "path": "/v1/people/search",
+        "success": [
+          200
+        ]
       },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "campaigns.list": {
-      "kind": "action",
+      "responseFormat": "json",
       "sideEffect": "read",
       "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "title": "List campaigns",
-      "description": "List ContactOut outreach campaigns via GET /v1/campaigns.",
+      "title": "Search people",
+      "validationMode": "strict-generated"
+    },
+    "stats.get": {
+      "description": "Read ContactOut API usage statistics for an optional YYYY-MM period.",
+      "enforceOutputSchema": true,
       "inputSchema": {
-        "type": "object",
+        "additionalProperties": false,
         "properties": {
-          "page": {
-            "type": "integer",
-            "minimum": 1
-          },
-          "pageSize": {
-            "type": "integer",
-            "minimum": 1
+          "period": {
+            "minLength": 1,
+            "type": "string"
           }
         },
-        "additionalProperties": false
+        "type": "object"
       },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
       "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
+        "additionalProperties": false,
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "additionalProperties": false
+        "required": [
+          "data"
+        ],
+        "type": "object"
       },
       "request": {
         "method": "GET",
-        "path": "/v1/campaigns",
+        "path": "/v1/stats",
+        "query": {
+          "period": "{{period}}"
+        },
         "success": [
           200
-        ],
-        "query": {
-          "page": "{{page}}",
-          "page_size": "{{pageSize}}"
-        }
+        ]
       },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "campaigns.get": {
-      "kind": "action",
+      "responseFormat": "json",
       "sideEffect": "read",
       "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "title": "Get campaign",
-      "description": "Retrieve one ContactOut campaign via GET /v1/campaigns/{campaignId}.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "campaignId": {
-            "type": "string",
-            "minLength": 1
-          },
-          "includeStats": {
-            "type": "boolean"
-          }
-        },
-        "additionalProperties": false,
-        "required": [
-          "campaignId"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "GET",
-        "path": "/v1/campaigns/{{campaignId}}",
-        "success": [
-          200
-        ],
-        "query": {
-          "include_stats": "{{includeStats}}"
-        }
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "campaigns.start": {
-      "kind": "action",
-      "sideEffect": "write",
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "title": "Start campaign",
-      "description": "Start a ContactOut outreach campaign via POST /v1/campaigns/{campaignId}/start.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "campaignId": {
-            "type": "string",
-            "minLength": 1
-          }
-        },
-        "additionalProperties": false,
-        "required": [
-          "campaignId"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "POST",
-        "path": "/v1/campaigns/{{campaignId}}/start",
-        "success": [
-          200
-        ]
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "campaigns.stop": {
-      "kind": "action",
-      "sideEffect": "write",
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "title": "Stop campaign",
-      "description": "Stop a ContactOut outreach campaign via POST /v1/campaigns/{campaignId}/stop.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "campaignId": {
-            "type": "string",
-            "minLength": 1
-          }
-        },
-        "additionalProperties": false,
-        "required": [
-          "campaignId"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "POST",
-        "path": "/v1/campaigns/{{campaignId}}/stop",
-        "success": [
-          200
-        ]
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
+      "title": "Get usage stats",
+      "validationMode": "strict-generated"
     }
   },
   "provenance": {
     "source": {
-      "url": "https://github.com/oomol-lab/open-connector",
-      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
+      "url": "https://github.com/oomol-lab/open-connector"
     }
   },
-  "evidence": {
-    "fixture": {
-      "status": "supplied"
-    },
-    "live": {
-      "status": "unverified"
-    }
-  }
+  "runtime": "bun",
+  "version": "0.2.0",
+  "visibility": "public"
 }
