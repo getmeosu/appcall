@@ -17,7 +17,6 @@ import opportunitiesGetFixture from "../fixtures/opportunities_get.json";
 import interviewsFixture from "../fixtures/opportunities_interviews_list.json";
 import interviewGetFixture from "../fixtures/interview_get.json";
 import offersFixture from "../fixtures/offers_list.json";
-import offerGetFixture from "../fixtures/offer_get.json";
 import postingsFixture from "../fixtures/postings_list.json";
 import postingGetFixture from "../fixtures/posting_get.json";
 import notesFixture from "../fixtures/notes_list.json";
@@ -37,8 +36,22 @@ function stubFetch(body: string, init: { status?: number; headers?: Record<strin
 const auth = { apiKey: "fixturekey", region: "co" };
 
 describe("Lever opportunities.update (write; runner owns Reconcile)", () => {
-  test("PUTs /v1/opportunities/{id} without in-handler GET", async () => {
-    const { calls, impl } = stubFetch(JSON.stringify(opportunitiesGetFixture));
+  test("GETs opportunity then PUTs /v1/contacts/{contactId} for contact fields", async () => {
+    const responses = [
+      new Response(JSON.stringify(opportunitiesGetFixture), { status: 200 }),
+      new Response(JSON.stringify({ data: { id: "c38e60e9-5992-45e5-8f81-d4b2d65c95b1" } }), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      }),
+    ];
+    const calls: Request[] = [];
+    const impl = (async (input: string | URL | Request, requestInit?: RequestInit) => {
+      calls.push(new Request(input as string, requestInit));
+      const next = responses.shift();
+      if (!next) throw new Error("unexpected extra fetch");
+      return next;
+    }) as unknown as typeof fetch;
+
     const result = await executeOpportunitiesUpdateSync({
       ...auth,
       id: "3410c8b9-5c31-4bab-b7e9-9f710206d647",
@@ -46,20 +59,48 @@ describe("Lever opportunities.update (write; runner owns Reconcile)", () => {
       location: "Remote",
       fetch: impl,
     });
-    expect(calls).toHaveLength(1);
-    expect(calls[0].method).toBe("PUT");
+    expect(calls).toHaveLength(2);
+    expect(calls[0].method).toBe("GET");
     expect(new URL(calls[0].url).pathname).toBe(
       "/v1/opportunities/3410c8b9-5c31-4bab-b7e9-9f710206d647",
     );
-    expect(JSON.parse(await calls[0].text())).toEqual({
+    expect(calls[1].method).toBe("PUT");
+    expect(new URL(calls[1].url).pathname).toBe(
+      "/v1/contacts/c38e60e9-5992-45e5-8f81-d4b2d65c95b1",
+    );
+    expect(JSON.parse(await calls[1].text())).toEqual({
       headline: "Staff Engineer",
       location: "Remote",
     });
     expect(result.opportunity).toBeNull();
   });
 
-  test("forwards performAs query", async () => {
-    const { calls, impl } = stubFetch(JSON.stringify(opportunitiesGetFixture));
+  test("POSTs /v1/opportunities/{id}/addTags for tags", async () => {
+    const { calls, impl } = stubFetch(JSON.stringify({ data: { id: "x", tags: ["engineer"] } }));
+    await executeOpportunitiesUpdateSync({
+      ...auth,
+      id: "3410c8b9-5c31-4bab-b7e9-9f710206d647",
+      tags: ["engineer", "referral"],
+      fetch: impl,
+    });
+    expect(calls).toHaveLength(1);
+    expect(calls[0].method).toBe("POST");
+    expect(new URL(calls[0].url).pathname).toBe(
+      "/v1/opportunities/3410c8b9-5c31-4bab-b7e9-9f710206d647/addTags",
+    );
+    expect(JSON.parse(await calls[0].text())).toEqual({ tags: ["engineer", "referral"] });
+  });
+
+  test("forwards performAs on contact PUT", async () => {
+    const responses = [
+      new Response(JSON.stringify(opportunitiesGetFixture), { status: 200 }),
+      new Response("{}", { status: 200, headers: { "content-type": "application/json" } }),
+    ];
+    const calls: Request[] = [];
+    const impl = (async (input: string | URL | Request, requestInit?: RequestInit) => {
+      calls.push(new Request(input as string, requestInit));
+      return responses.shift()!;
+    }) as unknown as typeof fetch;
     await executeOpportunitiesUpdateSync({
       ...auth,
       id: "3410c8b9-5c31-4bab-b7e9-9f710206d647",
@@ -67,7 +108,7 @@ describe("Lever opportunities.update (write; runner owns Reconcile)", () => {
       performAs: "8d49b010-cc6a-4f40-ace5-e86061c677ed",
       fetch: impl,
     });
-    expect(new URL(calls[0].url).searchParams.get("perform_as")).toBe(
+    expect(new URL(calls[1].url).searchParams.get("perform_as")).toBe(
       "8d49b010-cc6a-4f40-ace5-e86061c677ed",
     );
   });
@@ -142,15 +183,33 @@ describe("Lever offers.list / get", () => {
     expect(result.offers[0].status).toBe("sent");
   });
 
-  test("GETs /v1/opportunities/{id}/offers/{offerId}", async () => {
-    const { impl } = stubFetch(JSON.stringify(offerGetFixture));
+  test("lists /v1/opportunities/{id}/offers and filters by offerId", async () => {
+    const { calls, impl } = stubFetch(JSON.stringify(offersFixture));
     const result = await executeOffersGetSync({
       ...auth,
       opportunityId: "3410c8b9-5c31-4bab-b7e9-9f710206d647",
       offerId: "off-aaa111",
       fetch: impl,
     });
+    expect(calls).toHaveLength(1);
+    expect(calls[0].method).toBe("GET");
+    expect(new URL(calls[0].url).pathname).toBe(
+      "/v1/opportunities/3410c8b9-5c31-4bab-b7e9-9f710206d647/offers",
+    );
+    expect(result.offer?.id).toBe("lev-offer:off-aaa111");
     expect(result.offer?.creatorId).toBe("8d49b010-cc6a-4f40-ace5-e86061c677ed");
+    expect(result.offer?.status).toBe("sent");
+  });
+
+  test("returns null when offerId is absent from the list", async () => {
+    const { impl } = stubFetch(JSON.stringify(offersFixture));
+    const result = await executeOffersGetSync({
+      ...auth,
+      opportunityId: "3410c8b9-5c31-4bab-b7e9-9f710206d647",
+      offerId: "off-missing",
+      fetch: impl,
+    });
+    expect(result.offer).toBeNull();
   });
 });
 

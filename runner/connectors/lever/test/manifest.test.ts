@@ -6,8 +6,8 @@ describe("Lever manifest", () => {
     expect(manifest.key).toBe("lever");
   });
 
-  it("has version 0.5.0", () => {
-    expect(manifest.version).toBe("0.5.0");
+  it("has version 0.5.1", () => {
+    expect(manifest.version).toBe("0.5.1");
   });
 
   it("uses bun runtime", () => {
@@ -21,12 +21,13 @@ describe("Lever manifest", () => {
   });
 
   it("allows expected hosts", () => {
-    expect(manifest.network.allowedHosts).toEqual(["api.lever.co", "api.lever.eu"]);
+    expect(manifest.network.allowedHosts).toEqual(["api.lever.co", "api.eu.lever.co"]);
   });
 
   it("requires region for US/EU host selection", () => {
     expect(manifest.auth.setup.fields.some((field: { key: string }) => field.key === "region")).toBe(true);
-    expect(manifest.http.baseUrl).toContain("{{region}}");
+    // Declarative default is the US root; custom handlers map region=eu → api.eu.lever.co.
+    expect(manifest.http.baseUrl).toBe("https://api.lever.co/v1");
     expect(manifest.http.auth.basic).toEqual({ username: "{{apiKey}}", password: "" });
   });
 

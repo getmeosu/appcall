@@ -10,6 +10,12 @@
  *                                 (runner EffectPolicy Reconcile → opportunities.get)
  * opportunities.archive         → authenticated PUT /v1/opportunities/{id}/archived
  *                                 (runner EffectPolicy Reconcile → opportunities.get)
+ * opportunities.update          → resolve contact via GET opportunity, then
+ *                                 PUT /v1/contacts/{contactId} (+ POST addTags);
+ *                                 no generic PUT /opportunities/{id} exists.
+ *                                 (runner EffectPolicy Reconcile → opportunities.get)
+ * offers.get                    → GET /v1/opportunities/{id}/offers + client filter
+ *                                 (no single-offer GET in the Offers reference)
  * archive_reasons.list          → authenticated GET /v1/archive_reasons
  * stages.list                   → authenticated GET /v1/stages
  * users.list                    → authenticated GET /v1/users
@@ -31,7 +37,6 @@ import {
   parseUserGetResponse,
   parseCandidateGetResponse,
   parseOffersResponse,
-  parseOfferGetResponse,
   parsePostingsResponse,
   parsePostingGetResponse,
   parseNotesResponse,
@@ -461,21 +466,36 @@ export async function executeOpportunitiesUpdateSync(
     fetch: input.fetch,
     operation: "opportunities.update",
   });
-  const path =
-    `/opportunities/${id}` +
-    buildQuery({
-      perform_as: input.performAs,
-    });
-  await client.putJSON(
-    path,
-    compactBody({
-      name: input.name,
-      headline: input.headline,
-      location: input.location,
-      emails: input.emails,
-      tags: input.tags,
-    }),
-  );
+  const contactBody = compactBody({
+    name: input.name,
+    headline: input.headline,
+    location: input.location,
+    emails: input.emails,
+  });
+  const hasContactFields = Object.keys(contactBody).length > 0;
+  const hasTags = Array.isArray(input.tags) && input.tags.length > 0;
+  const performAsQuery = buildQuery({ perform_as: input.performAs });
+
+  if (hasContactFields) {
+    // Official docs: contact fields live on PUT /contacts/:contact, not on a
+    // generic PUT /opportunities/:opportunity (that route is undocumented).
+    const opportunityRaw = await client.getJSON(`/opportunities/${id}`);
+    const envelope = opportunityRaw as { data?: { contact?: unknown } } | null;
+    const contactId =
+      envelope && typeof envelope === "object" && envelope.data != null
+        ? envelope.data.contact
+        : undefined;
+    if (typeof contactId !== "string" || contactId.length === 0) {
+      throw new Error("opportunity has no contact id; cannot update contact fields");
+    }
+    await client.putJSON(`/contacts/${assertSafePathSegment(contactId, "contactId")}${performAsQuery}`, contactBody);
+  }
+
+  if (hasTags) {
+    // Tags are mutated via addTags / removeTags; there is no PUT that sets them.
+    await client.postJSON(`/opportunities/${id}/addTags${performAsQuery}`, { tags: input.tags });
+  }
+
   return { opportunity: null };
 }
 
@@ -609,8 +629,27 @@ export async function executeOffersGetSync(
     fetch: input.fetch,
     operation: "offers.get",
   });
-  const raw = await client.getJSON(`/opportunities/${opportunityId}/offers/${offerId}`);
-  return parseOfferGetResponse(raw);
+  // Official Offers reference lists only "List all offers" and "Download offer
+  // file" — there is no GET /offers/{offerId}. Re-implement as list + filter.
+  let offset: string | undefined;
+  for (;;) {
+    const path =
+      `/opportunities/${opportunityId}/offers` +
+      buildQuery({
+        limit: "100",
+        offset,
+      });
+    const raw = await client.getJSON(path);
+    const parsed = parseOffersResponse(raw);
+    const match = parsed.offers.find((offer) => offer.id === `lev-offer:${offerId}`);
+    if (match) {
+      return { offer: match };
+    }
+    if (!parsed.hasNext || parsed.next == null || parsed.next === "") {
+      return { offer: null };
+    }
+    offset = parsed.next;
+  }
 }
 
 export interface ExecutePostingsListSyncInput extends LeverAuthInput {
