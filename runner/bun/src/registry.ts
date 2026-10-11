@@ -1469,6 +1469,7 @@ import {
   listImages as tiktokAdsListImages,
   listCustomAudiences as tiktokAdsListCustomAudiences,
 } from "../../connectors/tiktok-ads/src/actions";
+import * as ttRt from "../../connectors/tiktok-ads/src/runtime";
 import { executeCampaignsListSync as listTikTokCampaigns, executeAdGroupsListSync as listTikTokAdGroups, executeAdsListSync as listTikTokAds } from "../../connectors/tiktok-ads/src/sync";
 import xeroManifest from "../../connectors/xero/manifest.json";
 import { healthcheck as xeroHealthcheck } from "../../connectors/xero/src/healthcheck";
@@ -3134,7 +3135,7 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
       "creatives.list": linkedinAdsListCreatives,
       "analytics.report.get": linkedinAdsGetAnalyticsReport,
     },
-    "tiktok-ads": {
+    "tiktok-ads": ttRt.wrapActions({
       "analytics.report.get": tiktokAdsGetAnalyticsReport,
       "advertisers.list": tiktokAdsListAdvertisers,
       "advertisers.get": tiktokAdsGetAdvertiser,
@@ -3157,7 +3158,7 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
       "videos.list": tiktokAdsListVideos,
       "images.list": tiktokAdsListImages,
       "custom_audiences.list": tiktokAdsListCustomAudiences,
-    },
+    }),
     "zoho-books": {
       "contacts.get": zohoBooksGetContact,
       "contacts.create": zohoBooksCreateContact,
