@@ -1,8 +1,44 @@
 import { createConnectorHttpClient } from "../../../bun/src/http";
 import manifest from "../manifest.json";
 
-const RESTLI_PROTOCOL_VERSION = "2.0.0";
-export const LINKEDIN_VERSION = "202608";
+export const RESTLI_PROTOCOL_VERSION = "2.0.0";
+/**
+ * LinkedIn Marketing API version pinned for every versioned /rest/ call
+ * (Marketing September 2026, Active, sunset 2027-09-15). Local to this connector:
+ * no cross-connector import, and no caller input can change it.
+ */
+export const LINKEDIN_VERSION = "202609";
+const API_ORIGIN = "https://api.linkedin.com";
+
+/** True when the path or api.linkedin.com URL is on the versioned /rest/ base path. */
+export function isVersionedPath(pathOrUrl: string): boolean {
+  if (pathOrUrl.startsWith("/")) return pathOrUrl.startsWith("/rest/");
+  try {
+    const url = new URL(pathOrUrl);
+    return url.origin === API_ORIGIN && url.pathname.startsWith("/rest/");
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Rest.li headers for one api.linkedin.com call (local copy of the linkedin
+ * connector's withRestliHeaders): X-Restli-Protocol-Version 2.0.0 always, and
+ * LinkedIn-Version on /rest/ paths only, never on /v2/. Applied last over any
+ * caller headers, matched case-insensitively, so a caller can neither drop or
+ * change the pin on /rest/ nor leak it onto /v2/.
+ */
+export function withRestliHeaders(pathOrUrl: string, headers: Record<string, string>): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const [key, value] of Object.entries(headers)) {
+    const lower = key.toLowerCase();
+    if (lower === "linkedin-version" || lower === "x-restli-protocol-version") continue;
+    out[key] = value;
+  }
+  out["X-Restli-Protocol-Version"] = RESTLI_PROTOCOL_VERSION;
+  if (isVersionedPath(pathOrUrl)) out["LinkedIn-Version"] = LINKEDIN_VERSION;
+  return out;
+}
 
 export type LinkedInAdsRateLimitResult =
   | { limited: true; retryAfterSeconds: number }
@@ -52,19 +88,20 @@ export function createLinkedInAdsClient(options: LinkedInAdsClientOptions) {
 
   return {
     async fetchJSON(path: string, init: RequestInit = {}): Promise<{ status: number; headers: Record<string, string>; body: unknown }> {
-      const url = path.startsWith("http") ? path : `https://api.linkedin.com${path}`;
-      const headers: Record<string, string> = {
-        Authorization: `Bearer ${options.accessToken}`,
-        "X-Restli-Protocol-Version": RESTLI_PROTOCOL_VERSION,
-        "LinkedIn-Version": LINKEDIN_VERSION,
-      };
-      if (init.body != null && init.body !== "") headers["Content-Type"] = "application/json";
+      const url = path.startsWith("http") ? path : `${API_ORIGIN}${path}`;
+      const merged: Record<string, string> = { Authorization: `Bearer ${options.accessToken}` };
+      if (init.body != null && init.body !== "") merged["Content-Type"] = "application/json";
       const extra = init.headers;
-      if (extra && typeof extra === "object" && !Array.isArray(extra)) {
+      if (extra instanceof Headers) {
+        extra.forEach((value, key) => { merged[key] = value; });
+      } else if (Array.isArray(extra)) {
+        for (const [key, value] of extra) merged[key] = String(value);
+      } else if (extra && typeof extra === "object") {
         for (const [key, value] of Object.entries(extra as Record<string, string>)) {
-          if (value != null) headers[key] = String(value);
+          if (value != null) merged[key] = String(value);
         }
       }
+      const headers = withRestliHeaders(url, merged);
       const response = await httpClient.fetchText(url, { ...init, headers });
       let body: unknown;
       try { body = response.body === "" ? null : JSON.parse(response.body); } catch { body = response.body; }

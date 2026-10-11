@@ -1,4 +1,7 @@
 import { createLinkedInAdsClient } from "./http";
+import { enc, qs } from "./restli";
+
+type Pairs = Array<[string, string]>;
 
 type Input = Record<string, unknown>;
 type ActionResult = Record<string, unknown> | Promise<Record<string, unknown>>;
@@ -84,14 +87,9 @@ function nextStart(body: Record<string, unknown>): number | null {
 function pagingCount(body: Record<string, unknown>): number {
   return isRecord(body.paging) && typeof body.paging.count === "number" ? body.paging.count : 0;
 }
-function versionHeaders(input: Input): Record<string, string> | undefined {
-  const version = optionalString(input.linkedin_version);
-  if (!version) return undefined;
-  if (!/^\d{6}$/.test(version)) throw new Error("linkedin_version must be YYYYMM");
-  return { "LinkedIn-Version": version };
-}
-
-function optionalPaging(input: Input, params: URLSearchParams): void {
+// Index-paged finders only (leadForms, conversions, dmpSegments, organizationAcls,
+// organizations, posts, events still document start/count in 202609).
+function optionalPaging(input: Input, params: Pairs): void {
   const count = input.count ?? input.page_size;
   const start = input.start ?? (typeof input.page_token === "string" && /^\d+$/.test(input.page_token) ? Number(input.page_token) : undefined);
   for (const [key, value] of [["start", start], ["count", count]] as const) {
@@ -99,11 +97,11 @@ function optionalPaging(input: Input, params: URLSearchParams): void {
     if (typeof value !== "number" || !Number.isInteger(value) || value < 0 || value > (key === "count" ? 1000 : 1_000_000)) {
       throw new Error(`${key} must be a non-negative integer${key === "count" ? " no greater than 1000" : ""}`);
     }
-    params.set(key, String(value));
+    params.push([key, String(value)]);
   }
   if (typeof input.page_token === "string" && input.page_token !== "" && !/^\d+$/.test(input.page_token)) {
     if (input.page_token.length > 512) throw new Error("page_token is too long");
-    params.set("pageToken", input.page_token);
+    params.push(["pageToken", enc(input.page_token)]);
   }
 }
 function toUrn(value: string, field: string, prefix: string): string {
@@ -119,29 +117,40 @@ function personUrn(value: string, field = "roleAssignee"): string {
 function sponsoredAccountUrn(value: string, field = "account"): string {
   return toUrn(value, field, "urn:li:sponsoredAccount:");
 }
+/** Rest.li 2.0 List(...) with every leaf encoded once and the delimiters raw. */
 function encodeRestliList(values: string[]): string {
-  return `List(${values.join(",")})`;
+  return `List(${values.map(enc).join(",")})`;
 }
-function applyTimeIntervals(input: Input, params: URLSearchParams): void {
+/**
+ * Rest.li 2.0 record timeIntervals=(timeRange:(start:..,end:..),timeGranularityType:DAY)
+ * (organization page / follower / share statistics, "Restli 2.0" samples). The dotted
+ * timeIntervals.timeRange.start form is the Rest.li 1.0 syntax.
+ */
+function applyTimeIntervals(input: Input, params: Pairs): void {
   const raw = input.timeIntervals;
   if (raw === undefined) return;
   if (!isRecord(raw)) throw new Error("timeIntervals must be an object");
+  const parts: string[] = [];
+  const range = raw.timeRange;
+  if (range !== undefined) {
+    if (!isRecord(range)) throw new Error("timeIntervals.timeRange must be an object");
+    const bounds: string[] = [];
+    for (const key of ["start", "end"] as const) {
+      const value = range[key];
+      if (value === undefined) continue;
+      if (typeof value !== "number" || !Number.isSafeInteger(value) || value < 0) {
+        throw new Error(`timeIntervals.timeRange.${key} must be a Unix timestamp in milliseconds`);
+      }
+      bounds.push(`${key}:${value}`);
+    }
+    if (bounds.length > 0) parts.push(`timeRange:(${bounds.join(",")})`);
+  }
   const gran = raw.timeGranularityType;
   if (gran !== undefined) {
     if (gran !== "DAY" && gran !== "MONTH") throw new Error("timeIntervals.timeGranularityType must be DAY or MONTH");
-    params.set("timeIntervals.timeGranularityType", gran);
+    parts.push(`timeGranularityType:${gran}`);
   }
-  const range = raw.timeRange;
-  if (range === undefined) return;
-  if (!isRecord(range)) throw new Error("timeIntervals.timeRange must be an object");
-  for (const key of ["start", "end"] as const) {
-    const value = range[key];
-    if (value === undefined) continue;
-    if (typeof value !== "number" || !Number.isSafeInteger(value) || value < 0) {
-      throw new Error(`timeIntervals.timeRange.${key} must be a Unix timestamp in milliseconds`);
-    }
-    params.set(`timeIntervals.timeRange.${key}`, String(value));
-  }
+  if (parts.length > 0) params.push(["timeIntervals", `(${parts.join(",")})`]);
 }
 function requiredStringArray(value: unknown, field: string, min = 1, max = 50): string[] {
   if (!Array.isArray(value) || value.length < min || value.length > max) {
@@ -262,8 +271,8 @@ export function getNetworkSize(value: unknown): ActionResult {
   if (edgeType !== "COMPANY_FOLLOWED_BY_MEMBER") throw new Error("edge_type must be COMPANY_FOLLOWED_BY_MEMBER");
   const validated = { organization_urn: organizationUrnValue, edge_type: edgeType };
   if (!hasLiveAuth(value)) return result("organizations.network_size.get", { firstDegreeSize: null, networkSize: null, validated });
-  const params = new URLSearchParams({ edgeType });
-  return send(value, "organizations.network_size.get", `/rest/networkSizes/${encodeURIComponent(organizationUrnValue)}?${params}`, { method: "GET" }).then((response) => {
+  const params: Pairs = [["edgeType", edgeType]];
+  return send(value, "organizations.network_size.get", `/rest/networkSizes/${enc(organizationUrnValue)}?${qs(params)}`, { method: "GET" }).then((response) => {
     if (!ok(response.status) || !isRecord(response.body)) throw upstreamError(response.status, response.headers);
     return result("organizations.network_size.get", { firstDegreeSize: response.body.firstDegreeSize ?? null, networkSize: response.body });
   });
@@ -273,25 +282,25 @@ export function listOrganizationAcls(value: unknown): ActionResult {
   if (!record(value)) throw new Error("organizations.acls.list input must be an object");
   const q = requiredString(value, "q");
   if (q !== "organization" && q !== "roleAssignee") throw new Error("q must be organization or roleAssignee");
-  const params = new URLSearchParams({ q });
+  const params: Pairs = [["q", q]];
   if (q === "organization") {
-    params.set("organization", organizationUrn(requiredString(value, "organization"), "organization"));
+    params.push(["organization", enc(organizationUrn(requiredString(value, "organization"), "organization"))]);
   } else if (optionalString(value.organization)) {
-    params.set("organization", organizationUrn(String(value.organization), "organization"));
+    params.push(["organization", enc(organizationUrn(String(value.organization), "organization"))]);
   }
   const role = optionalString(value.role);
   if (role) {
     if (!ACL_ROLES.has(role)) throw new Error("role is not a supported organization ACL role");
-    params.set("role", role);
+    params.push(["role", role]);
   }
   const state = optionalString(value.state);
   if (state) {
     if (!ACL_STATES.has(state)) throw new Error("state must be APPROVED, REJECTED, REQUESTED, or REVOKED");
-    params.set("state", state);
+    params.push(["state", state]);
   }
   optionalPaging(value, params);
   if (!hasLiveAuth(value)) return result("organizations.acls.list", { acls: [], validated: { q } });
-  return send(value, "organizations.acls.list", `/rest/organizationAcls?${params}`, { method: "GET" }).then((response) => {
+  return send(value, "organizations.acls.list", `/rest/organizationAcls?${qs(params)}`, { method: "GET", headers: { "X-RestLi-Method": "FINDER" } }).then((response) => {
     if (!ok(response.status) || !isRecord(response.body)) throw upstreamError(response.status, response.headers);
     return result("organizations.acls.list", { acls: elements(response.body), nextStart: nextStart(response.body), count: pagingCount(response.body) });
   });
@@ -300,10 +309,10 @@ export function listOrganizationAcls(value: unknown): ActionResult {
 export function getOrganizationPageStatistics(value: unknown): ActionResult {
   if (!record(value)) throw new Error("organizations.page_statistics.get input must be an object");
   const organization = organizationUrn(requiredString(value, "organization", ["organizationUrn"]), "organization");
-  const params = new URLSearchParams({ q: "organization", organization });
+  const params: Pairs = [["q", "organization"], ["organization", enc(organization)]];
   applyTimeIntervals(value, params);
   if (!hasLiveAuth(value)) return result("organizations.page_statistics.get", { pageStatistics: [], validated: { organization } });
-  return send(value, "organizations.page_statistics.get", `/rest/organizationPageStatistics?${params}`, { method: "GET" }).then((response) => {
+  return send(value, "organizations.page_statistics.get", `/rest/organizationPageStatistics?${qs(params)}`, { method: "GET", headers: { "X-RestLi-Method": "FINDER" } }).then((response) => {
     if (!ok(response.status) || !isRecord(response.body)) throw upstreamError(response.status, response.headers);
     return result("organizations.page_statistics.get", { pageStatistics: elements(response.body) });
   });
@@ -312,10 +321,10 @@ export function getOrganizationPageStatistics(value: unknown): ActionResult {
 export function getOrgFollowerStatistics(value: unknown): ActionResult {
   if (!record(value)) throw new Error("organizations.follower_statistics.get input must be an object");
   const organizationalEntity = organizationUrn(requiredString(value, "organizationalEntity", ["organization"]), "organizationalEntity");
-  const params = new URLSearchParams({ q: "organizationalEntity", organizationalEntity });
+  const params: Pairs = [["q", "organizationalEntity"], ["organizationalEntity", enc(organizationalEntity)]];
   applyTimeIntervals(value, params);
   if (!hasLiveAuth(value)) return result("organizations.follower_statistics.get", { followerStatistics: [], validated: { organizationalEntity } });
-  return send(value, "organizations.follower_statistics.get", `/rest/organizationalEntityFollowerStatistics?${params}`, { method: "GET" }).then((response) => {
+  return send(value, "organizations.follower_statistics.get", `/rest/organizationalEntityFollowerStatistics?${qs(params)}`, { method: "GET", headers: { "X-RestLi-Method": "FINDER" } }).then((response) => {
     if (!ok(response.status) || !isRecord(response.body)) throw upstreamError(response.status, response.headers);
     return result("organizations.follower_statistics.get", { followerStatistics: elements(response.body) });
   });
@@ -324,14 +333,14 @@ export function getOrgFollowerStatistics(value: unknown): ActionResult {
 export function getOrgShareStatistics(value: unknown): ActionResult {
   if (!record(value)) throw new Error("organizations.share_statistics.get input must be an object");
   const organizationalEntity = organizationUrn(requiredString(value, "organizationalEntity", ["organization"]), "organizationalEntity");
-  const params = new URLSearchParams({ q: "organizationalEntity", organizationalEntity });
+  const params: Pairs = [["q", "organizationalEntity"], ["organizationalEntity", enc(organizationalEntity)]];
   const shares = value.shares === undefined ? undefined : requiredStringArray(value.shares, "shares");
   const ugcPosts = value.ugcPosts === undefined ? undefined : requiredStringArray(value.ugcPosts, "ugcPosts");
-  if (shares) params.set("shares", encodeRestliList(shares.map((item) => toUrn(item, "shares", "urn:li:share:"))));
-  if (ugcPosts) params.set("ugcPosts", encodeRestliList(ugcPosts.map((item) => toUrn(item, "ugcPosts", "urn:li:ugcPost:"))));
+  if (shares) params.push(["shares", encodeRestliList(shares.map((item) => toUrn(item, "shares", "urn:li:share:")))]);
+  if (ugcPosts) params.push(["ugcPosts", encodeRestliList(ugcPosts.map((item) => toUrn(item, "ugcPosts", "urn:li:ugcPost:")))]);
   if (!shares && !ugcPosts) applyTimeIntervals(value, params);
   if (!hasLiveAuth(value)) return result("organizations.share_statistics.get", { shareStatistics: [], validated: { organizationalEntity } });
-  return send(value, "organizations.share_statistics.get", `/rest/organizationalEntityShareStatistics?${params}`, { method: "GET" }).then((response) => {
+  return send(value, "organizations.share_statistics.get", `/rest/organizationalEntityShareStatistics?${qs(params)}`, { method: "GET", headers: { "X-RestLi-Method": "FINDER" } }).then((response) => {
     if (!ok(response.status) || !isRecord(response.body)) throw upstreamError(response.status, response.headers);
     return result("organizations.share_statistics.get", { shareStatistics: elements(response.body) });
   });
@@ -340,10 +349,10 @@ export function getOrgShareStatistics(value: unknown): ActionResult {
 export function listConversionRules(value: unknown): ActionResult {
   if (!record(value)) throw new Error("conversion_rules.list input must be an object");
   const account = sponsoredAccountUrn(requiredString(value, "account", ["accountId"]), "account");
-  const params = new URLSearchParams({ q: "account", account });
+  const params: Pairs = [["q", "account"], ["account", enc(account)]];
   optionalPaging(value, params);
   if (!hasLiveAuth(value)) return result("conversion_rules.list", { conversionRules: [], validated: { account } });
-  return send(value, "conversion_rules.list", `/rest/conversions?${params}`, { method: "GET" }).then((response) => {
+  return send(value, "conversion_rules.list", `/rest/conversions?${qs(params)}`, { method: "GET", headers: { "X-RestLi-Method": "FINDER" } }).then((response) => {
     if (!ok(response.status) || !isRecord(response.body)) throw upstreamError(response.status, response.headers);
     return result("conversion_rules.list", { conversionRules: elements(response.body), nextStart: nextStart(response.body), count: pagingCount(response.body) });
   });
@@ -351,20 +360,19 @@ export function listConversionRules(value: unknown): ActionResult {
 
 export function listDmpSegments(value: unknown): ActionResult {
   if (!record(value)) throw new Error("dmp_segments.list input must be an object");
-  const params = new URLSearchParams();
+  const params: Pairs = [];
   const ids = value.ids === undefined ? undefined : requiredStringArray(value.ids, "ids").map((id) => boundedId(id, "ids"));
   const account = optionalString(value.account);
-  if (ids) params.set("ids", encodeRestliList(ids));
+  if (ids) params.push(["ids", encodeRestliList(ids)]);
   else {
     const q = optionalString(value.q) ?? "account";
     if (q !== "account") throw new Error("q must be account when listing DMP segments");
     if (!account) throw new Error("account is required");
-    params.set("q", q);
-    params.set("account", sponsoredAccountUrn(account, "account"));
+    params.push(["q", q], ["account", enc(sponsoredAccountUrn(account, "account"))]);
     optionalPaging(value, params);
   }
   if (!hasLiveAuth(value)) return result("dmp_segments.list", { dmpSegments: [], validated: { account, ids } });
-  return send(value, "dmp_segments.list", `/rest/dmpSegments?${params}`, { method: "GET" }).then((response) => {
+  return send(value, "dmp_segments.list", `/rest/dmpSegments?${qs(params)}`, { method: "GET", headers: { "X-RestLi-Method": ids ? "BATCH_GET" : "FINDER" } }).then((response) => {
     if (!ok(response.status) || !isRecord(response.body)) throw upstreamError(response.status, response.headers);
     return result("dmp_segments.list", { dmpSegments: elements(response.body), nextStart: nextStart(response.body), count: pagingCount(response.body) });
   });
@@ -381,24 +389,25 @@ function numericIds(value: unknown, field: string): string[] {
 
 export function listOrganizations(value: unknown): ActionResult {
   if (!record(value)) throw new Error("organizations.list input must be an object");
-  const params = new URLSearchParams();
-  if (value.ids !== undefined) {
-    params.set("ids", encodeRestliList(numericIds(value.ids, "ids")));
+  const params: Pairs = [];
+  const batch = value.ids !== undefined;
+  if (batch) {
+    params.push(["ids", encodeRestliList(numericIds(value.ids, "ids"))]);
   } else {
     const q = requiredString(value, "q");
     if (q !== "vanityName" && q !== "parentOrganization") throw new Error("q must be vanityName or parentOrganization");
-    params.set("q", q);
+    params.push(["q", q]);
     if (q === "vanityName") {
       const vanityName = requiredString(value, "vanityName");
       if (!/^[A-Za-z0-9][A-Za-z0-9-]{0,99}$/.test(vanityName)) throw new Error("vanityName must be a LinkedIn vanity slug");
-      params.set("vanityName", vanityName);
+      params.push(["vanityName", enc(vanityName)]);
     } else {
-      params.set("parent", organizationUrn(requiredString(value, "parent"), "parent"));
+      params.push(["parent", enc(organizationUrn(requiredString(value, "parent"), "parent"))]);
     }
     optionalPaging(value, params);
   }
   if (!hasLiveAuth(value)) return result("organizations.list", { organizations: [], validated: {} });
-  return send(value, "organizations.list", `/rest/organizations?${params}`, { method: "GET" }).then((response) => {
+  return send(value, "organizations.list", `/rest/organizations?${qs(params)}`, { method: "GET", headers: { "X-RestLi-Method": batch ? "BATCH_GET" : "FINDER" } }).then((response) => {
     if (!ok(response.status) || !isRecord(response.body)) throw upstreamError(response.status, response.headers);
     return result("organizations.list", { organizations: elements(response.body), nextStart: nextStart(response.body), count: pagingCount(response.body) });
   });
@@ -407,9 +416,10 @@ export function listOrganizations(value: unknown): ActionResult {
 export function lookupOrganizations(value: unknown): ActionResult {
   if (!record(value)) throw new Error("organizations.lookup input must be an object");
   const ids = numericIds(value.ids, "ids");
-  const params = new URLSearchParams({ ids: encodeRestliList(ids) });
+  const params: Pairs = [["ids", encodeRestliList(ids)]];
   if (!hasLiveAuth(value)) return result("organizations.lookup", { organizations: [], validated: { ids } });
-  return send(value, "organizations.lookup", `/rest/organizationsLookup?${params}`, { method: "GET", headers: versionHeaders(value) }).then((response) => {
+  // One pinned LinkedIn-Version for every call; the former linkedin_version override is gone.
+  return send(value, "organizations.lookup", `/rest/organizationsLookup?${qs(params)}`, { method: "GET", headers: { "X-RestLi-Method": "BATCH_GET" } }).then((response) => {
     if (!ok(response.status) || !isRecord(response.body)) throw upstreamError(response.status, response.headers);
     const results = isRecord(response.body.results) ? Object.values(response.body.results).filter(isRecord) : elements(response.body);
     return result("organizations.lookup", { organizations: results, results: response.body.results ?? null });
@@ -418,35 +428,36 @@ export function lookupOrganizations(value: unknown): ActionResult {
 
 export function listPosts(value: unknown): ActionResult {
   if (!record(value)) throw new Error("posts.list input must be an object");
-  const params = new URLSearchParams();
-  if (value.ids !== undefined) {
+  const params: Pairs = [];
+  const batch = value.ids !== undefined;
+  if (batch) {
     const ids = requiredStringArray(value.ids, "ids");
-    params.set("ids", encodeRestliList(ids.map((id) => {
+    params.push(["ids", encodeRestliList(ids.map((id) => {
       if (id.startsWith("urn:li:ugcPost:")) return toUrn(id, "ids", "urn:li:ugcPost:");
       if (id.startsWith("urn:li:share:")) return toUrn(id, "ids", "urn:li:share:");
       throw new Error("ids must be share or ugcPost URNs");
-    })));
+    }))]);
   } else {
     const q = requiredString(value, "q");
     if (q !== "author" && q !== "dscAdAccount") throw new Error("q must be author or dscAdAccount");
-    params.set("q", q);
+    params.push(["q", q]);
     if (q === "author") {
       const author = requiredString(value, "author");
-      if (author.startsWith("urn:li:person:")) params.set("author", personUrn(author, "author"));
-      else params.set("author", organizationUrn(author, "author"));
+      params.push(["author", enc(author.startsWith("urn:li:person:") ? personUrn(author, "author") : organizationUrn(author, "author"))]);
     } else {
       const account = requiredString(value, "dscAdAccount", ["author"]);
-      params.set("dscAdAccount", sponsoredAccountUrn(account, "dscAdAccount"));
+      params.push(["dscAdAccount", enc(sponsoredAccountUrn(account, "dscAdAccount"))]);
     }
     const sortBy = optionalString(value.sort_by) ?? optionalString(value.sortBy);
     if (sortBy) {
       if (sortBy !== "LAST_MODIFIED" && sortBy !== "CREATED") throw new Error("sort_by must be LAST_MODIFIED or CREATED");
-      params.set("sortBy", sortBy);
+      params.push(["sortBy", sortBy]);
     }
     optionalPaging(value, params);
   }
   if (!hasLiveAuth(value)) return result("posts.list", { posts: [], validated: {} });
-  return send(value, "posts.list", `/rest/posts?${params}`, { method: "GET", headers: versionHeaders(value) }).then((response) => {
+  // One pinned LinkedIn-Version for every call; the former linkedin_version override is gone.
+  return send(value, "posts.list", `/rest/posts?${qs(params)}`, { method: "GET", headers: { "X-RestLi-Method": batch ? "BATCH_GET" : "FINDER" } }).then((response) => {
     if (!ok(response.status) || !isRecord(response.body)) throw upstreamError(response.status, response.headers);
     return result("posts.list", { posts: elements(response.body), nextStart: nextStart(response.body), count: pagingCount(response.body) });
   });
@@ -495,27 +506,28 @@ export function searchEvents(value: unknown): ActionResult {
   const organizer = organizerRaw.startsWith("urn:li:person:") ? personUrn(organizerRaw, "organizer") : organizationUrn(organizerRaw, "organizer");
   const q = optionalString(value.q) ?? "eventsByOrganizer";
   if (q !== "eventsByOrganizer" && q !== "organizerLeadGenFormEnabledEvents") throw new Error("q must be eventsByOrganizer or organizerLeadGenFormEnabledEvents");
-  const params = new URLSearchParams({ q, organizer });
+  const params: Pairs = [["q", q], ["organizer", enc(organizer)]];
   const sortOrder = optionalString(value.sortOrder);
   if (sortOrder) {
     if (sortOrder !== "START_TIME_ASC" && sortOrder !== "END_TIME_DESC") throw new Error("sortOrder is not supported");
-    params.set("sortOrder", sortOrder);
+    params.push(["sortOrder", sortOrder]);
   }
   const entryCriteria = optionalString(value.entryCriteria);
   if (entryCriteria) {
     if (entryCriteria !== "PUBLIC" && entryCriteria !== "GATED") throw new Error("entryCriteria must be PUBLIC or GATED");
-    params.set("entryCriteria", entryCriteria);
+    params.push(["entryCriteria", entryCriteria]);
   }
   const lifeCycleState = optionalString(value.lifeCycleState);
   if (lifeCycleState) {
     if (!["UPCOMING", "ONGOING", "PAST"].includes(lifeCycleState)) throw new Error("lifeCycleState must be UPCOMING, ONGOING, or PAST");
-    params.set("lifeCycleState", lifeCycleState);
+    // Rest.li 2.0 record, not URL-encoded (Events API: timeBasedFilter=(lifeCycleState:PAST)).
+    params.push(["timeBasedFilter", `(lifeCycleState:${lifeCycleState})`]);
   }
   const excludeCancelled = optionalBoolean(value.excludeCancelled, "excludeCancelled");
-  if (excludeCancelled !== undefined) params.set("excludeCancelled", String(excludeCancelled));
+  if (excludeCancelled !== undefined) params.push(["excludeCancelled", String(excludeCancelled)]);
   optionalPaging(value, params);
   if (!hasLiveAuth(value)) return result("events.search", { events: [], validated: { organizer, q } });
-  return send(value, "events.search", `/rest/events?${params}`, { method: "GET" }).then((response) => {
+  return send(value, "events.search", `/rest/events?${qs(params)}`, { method: "GET", headers: { "X-RestLi-Method": "FINDER" } }).then((response) => {
     if (!ok(response.status) || !isRecord(response.body)) throw upstreamError(response.status, response.headers);
     return result("events.search", { events: elements(response.body), nextStart: nextStart(response.body), count: pagingCount(response.body) });
   });
@@ -531,7 +543,7 @@ export function updateLeadForm(value: unknown): ActionResult {
   if (encoded.length > 32_000) throw new Error("patch is too large");
   const patch = { $set: value.patch.$set };
   if (!hasLiveAuth(value)) return result("lead_forms.update", { leadForm: null, leadFormId: formId, validated: { form_id: formId, patch } });
-  return send(value, "lead_forms.update", `/rest/leadForms/${encodeURIComponent(formId)}`, {
+  return send(value, "lead_forms.update", `/rest/leadForms/${enc(formId)}`, {
     method: "POST",
     headers: { "X-RestLi-Method": "PARTIAL_UPDATE" },
     body: JSON.stringify({ patch }),
@@ -552,7 +564,8 @@ export function updateOrganizationAcl(value: unknown): ActionResult {
   const roleAssignee = personUrn(requiredString(value, "roleAssignee"), "roleAssignee");
   const body = { role, state, organization, roleAssignee };
   if (!hasLiveAuth(value)) return result("organizations.acls.update", { acl: null, validated: body });
-  const path = `/rest/organizationAcls/(organization:${encodeURIComponent(organization)},role:${role},roleAssignee:${encodeURIComponent(roleAssignee)})`;
+  // Compound key as documented: raw (key:value) structure, URN leaves encoded once.
+  const path = `/rest/organizationAcls/(organization:${enc(organization)},role:${role},roleAssignee:${enc(roleAssignee)})`;
   return send(value, "organizations.acls.update", path, { method: "PUT", body: JSON.stringify(body) }).then((response) => {
     if (!ok(response.status)) throw upstreamError(response.status, response.headers);
     const acl = isRecord(response.body) ? response.body : body;

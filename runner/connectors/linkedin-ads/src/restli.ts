@@ -2,16 +2,59 @@ export function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+/**
+ * Rest.li 2.0 leaf encoding. Percent-encodes one value exactly once, including
+ * the Rest.li delimiters ( ) , : that encodeURIComponent would leave raw for
+ * parentheses, so a URN leaf becomes urn%3Ali%3AsponsoredAccount%3A123 and can
+ * never be mistaken for structure. Use it for path keys and for every leaf
+ * inside List(...) and (key:value) records; the structure itself stays raw.
+ * https://learn.microsoft.com/en-us/linkedin/shared/api-guide/concepts/protocol-version
+ */
 export function enc(value: string): string {
-  return encodeURIComponent(value);
+  return encodeURIComponent(value).replace(/[!'()*]/g, (char) => `%${char.charCodeAt(0).toString(16).toUpperCase()}`);
 }
 
+/**
+ * Joins already-serialized Rest.li 2.0 query pairs. Keys are encoded; values
+ * are emitted as built (raw structure, leaves encoded once by enc()). Never use
+ * URLSearchParams here: it would encode the structure and re-encode the leaves.
+ */
 export function qs(pairs: Array<[string, string]>): string {
   return pairs.filter(([, value]) => value !== "").map(([key, value]) => `${enc(key)}=${value}`).join("&");
 }
 
 export function restliList(values: string[]): string {
   return `List(${values.map(enc).join(",")})`;
+}
+
+/**
+ * Normalizes a caller-built Rest.li expression (targetingCriteria): any raw
+ * urn:li:... leaf is encoded once, already-encoded leaves are kept, and a
+ * double-encoded value (%25) is refused so nothing reaches the wire as %253A.
+ */
+export function restliExpression(value: string, field: string): string {
+  if (/%25/i.test(value)) throw new Error(`${field} must not be double-encoded`);
+  const normalized = value.replace(/urn:li:[A-Za-z0-9_]+:[A-Za-z0-9_.~-]+/g, (urn) => enc(urn));
+  return assertRestli(normalized, field);
+}
+
+/** Opaque cursor from metadata.nextPageToken, encoded once for the query string. */
+export function pageTokenValue(value: unknown, field = "pageToken"): string | undefined {
+  if (value === undefined || value === "") return undefined;
+  if (typeof value !== "string" || !/^[A-Za-z0-9_.~+/=-]{1,512}$/.test(value)) {
+    throw new Error(`${field} must be the nextPageToken string LinkedIn returned`);
+  }
+  return enc(value);
+}
+
+/**
+ * Cursor-paged finders (adAccounts, adCampaignGroups, adCampaigns, creatives)
+ * ignore index paging since 202401, so a caller start offset past 0 cannot be
+ * honored and is refused rather than silently re-reading page one.
+ */
+export function rejectIndexStart(value: unknown): void {
+  if (value === undefined || value === 0) return;
+  throw new Error("start is not supported by this cursor-paged LinkedIn finder; pass pageToken from the previous response");
 }
 
 const SAFE_RESTLI = /^[A-Za-z0-9._:%(),=-]{1,8000}$/;
@@ -45,10 +88,10 @@ export function sponsoredAccount(value: string): string {
   return `urn:li:sponsoredAccount:${resourceId(value, ["urn:li:sponsoredAccount:"])}`;
 }
 
-export function pageSize(value: unknown, field = "pageSize"): string | undefined {
+export function pageSize(value: unknown, field = "pageSize", max = 1000): string | undefined {
   if (value === undefined) return undefined;
-  if (typeof value !== "number" || !Number.isInteger(value) || value < 1 || value > 1000) {
-    throw new Error(`${field} must be an integer from 1 to 1000`);
+  if (typeof value !== "number" || !Number.isInteger(value) || value < 1 || value > max) {
+    throw new Error(`${field} must be an integer from 1 to ${max}`);
   }
   return String(value);
 }

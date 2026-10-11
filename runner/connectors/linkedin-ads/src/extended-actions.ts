@@ -1,7 +1,6 @@
 import { createLinkedInAdsClient } from "./http";
 import {
   asId,
-  assertRestli,
   assertToken,
   enc,
   isRecord,
@@ -10,6 +9,7 @@ import {
   pageStart,
   qs,
   resourceId,
+  restliExpression,
   restliList,
   sponsoredAccount,
   stringList,
@@ -91,7 +91,7 @@ export function getAudienceCounts(value: unknown): ActionResult {
   const input = requireRecord(value, "audience_counts.get");
   const targeting = input.targetingCriteria ?? input.targeting_criteria;
   if (typeof targeting !== "string" || targeting.trim() === "") throw new Error("targetingCriteria is required");
-  const targetingCriteria = assertRestli(targeting.trim(), "targetingCriteria");
+  const targetingCriteria = restliExpression(targeting.trim(), "targetingCriteria");
   const validated = { targetingCriteria };
   if (!hasLiveAuth(input)) return result("audience_counts.get", { audienceCounts: [], validated });
   const path = `/rest/audienceCounts?${qs([["q", "targetingCriteriaV2"], ["targetingCriteria", targetingCriteria]])}`;
@@ -167,7 +167,7 @@ export function getSupplyForecasts(value: unknown): ActionResult {
   if (!CAMPAIGN_TYPES.has(campaignType)) throw new Error("campaignType must be SPONSORED_UPDATES, SPONSORED_INMAILS, or DYNAMIC");
   const targetingRaw = input.targetingCriteria ?? input.targeting_criteria;
   if (typeof targetingRaw !== "string" || targetingRaw.trim() === "") throw new Error("targetingCriteria is required");
-  const targetingCriteria = assertRestli(targetingRaw.trim(), "targetingCriteria");
+  const targetingCriteria = restliExpression(targetingRaw.trim(), "targetingCriteria");
   const pairs: Array<[string, string]> = [
     ["q", "criteriaV2"],
     ["account", account],

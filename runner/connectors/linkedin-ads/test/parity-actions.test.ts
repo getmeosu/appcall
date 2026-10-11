@@ -219,10 +219,10 @@ describe("organizations.page_statistics.get", () => {
       timeIntervals: { timeGranularityType: "DAY", timeRange: { start: 1704067200000, end: 1704153600000 } },
       fetch: mockFetch(200, pageStatistics, (call) => { bounded = call.url; }),
     });
-    const boundedUrl = new URL(bounded);
-    expect(boundedUrl.searchParams.get("timeIntervals.timeGranularityType")).toBe("DAY");
-    expect(boundedUrl.searchParams.get("timeIntervals.timeRange.start")).toBe("1704067200000");
-    expect(boundedUrl.searchParams.get("timeIntervals.timeRange.end")).toBe("1704153600000");
+    // Rest.li 2.0 record form (the dotted timeIntervals.* params are Rest.li 1.0).
+    expect(bounded).toContain("organization=urn%3Ali%3Aorganization%3A2414183");
+    expect(bounded).toContain("timeIntervals=(timeRange:(start:1704067200000,end:1704153600000),timeGranularityType:DAY)");
+    expect(bounded).not.toContain("timeIntervals.");
   });
 });
 
