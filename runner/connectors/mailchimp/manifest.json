@@ -1,7 +1,7 @@
 {
   "key": "mailchimp",
   "name": "Mailchimp",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "runtime": "bun",
   "categories": [
     "email-marketing"
@@ -11,12 +11,21 @@
     "scopes": [],
     "setup": {
       "mode": "oauth2",
-      "fields": []
+      "fields": [
+        {
+          "key": "host",
+          "label": "Mailchimp API host",
+          "description": "Bare hostname only \u2014 no scheme, no path, no trailing slash. Use the data-center host from your API key suffix or OAuth metadata, for example us1.api.mailchimp.com.",
+          "required": true,
+          "secret": false
+        }
+      ]
     }
   },
   "network": {
     "allowedHosts": [
-      "*.api.mailchimp.com"
+      "*.api.mailchimp.com",
+      "{{host}}"
     ]
   },
   "operations": {
@@ -95,7 +104,35 @@
           }
         }
       },
-      "sideEffect": "write"
+      "sideEffect": "write",
+      "request": {
+        "method": "POST",
+        "path": "/lists/{{listId}}/members",
+        "success": [
+          200
+        ],
+        "parameters": [
+          {
+            "wireName": "listId",
+            "inputName": "listId",
+            "in": "path",
+            "style": "simple",
+            "explode": false,
+            "allowReserved": false
+          }
+        ],
+        "body": {
+          "email_address": "{{email}}",
+          "status": "{{status}}",
+          "merge_fields": {
+            "FNAME": "{{firstName}}",
+            "LNAME": "{{lastName}}"
+          }
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
     },
     "healthcheck": {
       "kind": "action",
@@ -118,7 +155,14 @@
           }
         }
       },
-      "sideEffect": "read"
+      "sideEffect": "read",
+      "request": {
+        "method": "GET",
+        "path": "/",
+        "success": [
+          200
+        ]
+      }
     },
     "lists.members.get": {
       "kind": "action",
@@ -162,7 +206,32 @@
           }
         }
       },
-      "sideEffect": "read"
+      "sideEffect": "read",
+      "request": {
+        "method": "GET",
+        "path": "/lists/{{listId}}/members/{{email}}",
+        "success": [
+          200
+        ],
+        "parameters": [
+          {
+            "wireName": "listId",
+            "inputName": "listId",
+            "in": "path",
+            "style": "simple",
+            "explode": false,
+            "allowReserved": false
+          },
+          {
+            "wireName": "email",
+            "inputName": "email",
+            "in": "path",
+            "style": "simple",
+            "explode": false,
+            "allowReserved": false
+          }
+        ]
+      }
     },
     "lists.members.update": {
       "kind": "action",
@@ -222,7 +291,40 @@
           }
         }
       },
-      "sideEffect": "write"
+      "sideEffect": "write",
+      "request": {
+        "method": "PATCH",
+        "path": "/lists/{{listId}}/members/{{email}}",
+        "success": [
+          200
+        ],
+        "parameters": [
+          {
+            "wireName": "listId",
+            "inputName": "listId",
+            "in": "path",
+            "style": "simple",
+            "explode": false,
+            "allowReserved": false
+          },
+          {
+            "wireName": "email",
+            "inputName": "email",
+            "in": "path",
+            "style": "simple",
+            "explode": false,
+            "allowReserved": false
+          }
+        ],
+        "body": {
+          "email_address": "{{email}}",
+          "status": "{{status}}",
+          "merge_fields": "{{mergeFields}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
     },
     "lists.members.upsert": {
       "kind": "action",
@@ -282,7 +384,41 @@
           }
         }
       },
-      "sideEffect": "write"
+      "sideEffect": "write",
+      "request": {
+        "method": "PUT",
+        "path": "/lists/{{listId}}/members/{{email}}",
+        "success": [
+          200
+        ],
+        "parameters": [
+          {
+            "wireName": "listId",
+            "inputName": "listId",
+            "in": "path",
+            "style": "simple",
+            "explode": false,
+            "allowReserved": false
+          },
+          {
+            "wireName": "email",
+            "inputName": "email",
+            "in": "path",
+            "style": "simple",
+            "explode": false,
+            "allowReserved": false
+          }
+        ],
+        "body": {
+          "email_address": "{{email}}",
+          "status_if_new": "{{status}}",
+          "status": "{{status}}",
+          "merge_fields": "{{mergeFields}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
     },
     "lists.members.delete": {
       "kind": "action",
@@ -326,7 +462,32 @@
           }
         }
       },
-      "sideEffect": "write"
+      "sideEffect": "write",
+      "request": {
+        "method": "DELETE",
+        "path": "/lists/{{listId}}/members/{{email}}",
+        "success": [
+          204
+        ],
+        "parameters": [
+          {
+            "wireName": "listId",
+            "inputName": "listId",
+            "in": "path",
+            "style": "simple",
+            "explode": false,
+            "allowReserved": false
+          },
+          {
+            "wireName": "email",
+            "inputName": "email",
+            "in": "path",
+            "style": "simple",
+            "explode": false,
+            "allowReserved": false
+          }
+        ]
+      }
     },
     "lists.members.tags.add": {
       "kind": "action",
@@ -378,7 +539,38 @@
           }
         }
       },
-      "sideEffect": "write"
+      "sideEffect": "write",
+      "request": {
+        "method": "POST",
+        "path": "/lists/{{listId}}/members/{{email}}/tags",
+        "success": [
+          204
+        ],
+        "parameters": [
+          {
+            "wireName": "listId",
+            "inputName": "listId",
+            "in": "path",
+            "style": "simple",
+            "explode": false,
+            "allowReserved": false
+          },
+          {
+            "wireName": "email",
+            "inputName": "email",
+            "in": "path",
+            "style": "simple",
+            "explode": false,
+            "allowReserved": false
+          }
+        ],
+        "body": {
+          "tags": "{{tags}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
     },
     "lists.create": {
       "kind": "action",
@@ -465,7 +657,34 @@
           }
         }
       },
-      "sideEffect": "write"
+      "sideEffect": "write",
+      "request": {
+        "method": "POST",
+        "path": "/lists",
+        "success": [
+          200
+        ],
+        "body": {
+          "name": "{{name}}",
+          "permission_reminder": "{{permissionReminder}}",
+          "email_type_option": "{{emailTypeOption}}",
+          "contact": {
+            "company": "{{contactCompany}}",
+            "address1": "{{contactAddress1}}",
+            "city": "{{contactCity}}",
+            "country": "{{contactCountry}}"
+          },
+          "campaign_defaults": {
+            "from_name": "{{fromName}}",
+            "from_email": "{{fromEmail}}",
+            "subject": "{{subject}}",
+            "language": "{{language}}"
+          }
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
     },
     "lists.get": {
       "kind": "action",
@@ -504,7 +723,24 @@
           }
         }
       },
-      "sideEffect": "read"
+      "sideEffect": "read",
+      "request": {
+        "method": "GET",
+        "path": "/lists/{{listId}}",
+        "success": [
+          200
+        ],
+        "parameters": [
+          {
+            "wireName": "listId",
+            "inputName": "listId",
+            "in": "path",
+            "style": "simple",
+            "explode": false,
+            "allowReserved": false
+          }
+        ]
+      }
     },
     "campaigns.create": {
       "kind": "action",
@@ -572,7 +808,30 @@
           }
         }
       },
-      "sideEffect": "write"
+      "sideEffect": "write",
+      "request": {
+        "method": "POST",
+        "path": "/campaigns",
+        "success": [
+          200
+        ],
+        "body": {
+          "type": "{{type}}",
+          "recipients": {
+            "list_id": "{{listId}}"
+          },
+          "settings": {
+            "subject_line": "{{subjectLine}}",
+            "title": "{{title}}",
+            "from_name": "{{fromName}}",
+            "reply_to": "{{replyTo}}",
+            "preview_text": "{{previewText}}"
+          }
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
     },
     "campaigns.get": {
       "kind": "action",
@@ -611,7 +870,24 @@
           }
         }
       },
-      "sideEffect": "read"
+      "sideEffect": "read",
+      "request": {
+        "method": "GET",
+        "path": "/campaigns/{{campaignId}}",
+        "success": [
+          200
+        ],
+        "parameters": [
+          {
+            "wireName": "campaignId",
+            "inputName": "campaignId",
+            "in": "path",
+            "style": "simple",
+            "explode": false,
+            "allowReserved": false
+          }
+        ]
+      }
     },
     "campaigns.send": {
       "kind": "action",
@@ -650,7 +926,24 @@
           }
         }
       },
-      "sideEffect": "write"
+      "sideEffect": "write",
+      "request": {
+        "method": "POST",
+        "path": "/campaigns/{{campaignId}}/actions/send",
+        "success": [
+          204
+        ],
+        "parameters": [
+          {
+            "wireName": "campaignId",
+            "inputName": "campaignId",
+            "in": "path",
+            "style": "simple",
+            "explode": false,
+            "allowReserved": false
+          }
+        ]
+      }
     },
     "campaigns.unschedule": {
       "kind": "action",
@@ -688,7 +981,24 @@
           }
         }
       },
-      "sideEffect": "write"
+      "sideEffect": "write",
+      "request": {
+        "method": "POST",
+        "path": "/campaigns/{{campaignId}}/actions/unschedule",
+        "success": [
+          204
+        ],
+        "parameters": [
+          {
+            "wireName": "campaignId",
+            "inputName": "campaignId",
+            "in": "path",
+            "style": "simple",
+            "explode": false,
+            "allowReserved": false
+          }
+        ]
+      }
     },
     "campaigns.schedule": {
       "kind": "action",
@@ -731,7 +1041,30 @@
           }
         }
       },
-      "sideEffect": "write"
+      "sideEffect": "write",
+      "request": {
+        "method": "POST",
+        "path": "/campaigns/{{campaignId}}/actions/schedule",
+        "success": [
+          200
+        ],
+        "parameters": [
+          {
+            "wireName": "campaignId",
+            "inputName": "campaignId",
+            "in": "path",
+            "style": "simple",
+            "explode": false,
+            "allowReserved": false
+          }
+        ],
+        "body": {
+          "schedule_time": "{{scheduleTime}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
     },
     "campaigns.delete": {
       "kind": "action",
@@ -769,7 +1102,24 @@
           }
         }
       },
-      "sideEffect": "write"
+      "sideEffect": "write",
+      "request": {
+        "method": "DELETE",
+        "path": "/campaigns/{{campaignId}}",
+        "success": [
+          204
+        ],
+        "parameters": [
+          {
+            "wireName": "campaignId",
+            "inputName": "campaignId",
+            "in": "path",
+            "style": "simple",
+            "explode": false,
+            "allowReserved": false
+          }
+        ]
+      }
     },
     "campaigns.replicate": {
       "kind": "action",
@@ -807,7 +1157,24 @@
           }
         }
       },
-      "sideEffect": "write"
+      "sideEffect": "write",
+      "request": {
+        "method": "POST",
+        "path": "/campaigns/{{campaignId}}/actions/replicate",
+        "success": [
+          200
+        ],
+        "parameters": [
+          {
+            "wireName": "campaignId",
+            "inputName": "campaignId",
+            "in": "path",
+            "style": "simple",
+            "explode": false,
+            "allowReserved": false
+          }
+        ]
+      }
     },
     "lists.update": {
       "kind": "action",
@@ -853,7 +1220,31 @@
           }
         }
       },
-      "sideEffect": "write"
+      "sideEffect": "write",
+      "request": {
+        "method": "PATCH",
+        "path": "/lists/{{listId}}",
+        "success": [
+          200
+        ],
+        "parameters": [
+          {
+            "wireName": "listId",
+            "inputName": "listId",
+            "in": "path",
+            "style": "simple",
+            "explode": false,
+            "allowReserved": false
+          }
+        ],
+        "body": {
+          "name": "{{name}}",
+          "permission_reminder": "{{permissionReminder}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
     },
     "lists.delete": {
       "kind": "action",
@@ -891,7 +1282,24 @@
           }
         }
       },
-      "sideEffect": "write"
+      "sideEffect": "write",
+      "request": {
+        "method": "DELETE",
+        "path": "/lists/{{listId}}",
+        "success": [
+          204
+        ],
+        "parameters": [
+          {
+            "wireName": "listId",
+            "inputName": "listId",
+            "in": "path",
+            "style": "simple",
+            "explode": false,
+            "allowReserved": false
+          }
+        ]
+      }
     },
     "members.notes.create": {
       "kind": "action",
@@ -939,7 +1347,38 @@
           }
         }
       },
-      "sideEffect": "write"
+      "sideEffect": "write",
+      "request": {
+        "method": "POST",
+        "path": "/lists/{{listId}}/members/{{email}}/notes",
+        "success": [
+          200
+        ],
+        "parameters": [
+          {
+            "wireName": "listId",
+            "inputName": "listId",
+            "in": "path",
+            "style": "simple",
+            "explode": false,
+            "allowReserved": false
+          },
+          {
+            "wireName": "email",
+            "inputName": "email",
+            "in": "path",
+            "style": "simple",
+            "explode": false,
+            "allowReserved": false
+          }
+        ],
+        "body": {
+          "note": "{{note}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
     },
     "templates.list": {
       "kind": "action",
@@ -978,7 +1417,14 @@
           }
         }
       },
-      "sideEffect": "read"
+      "sideEffect": "read",
+      "request": {
+        "method": "GET",
+        "path": "/templates",
+        "success": [
+          200
+        ]
+      }
     },
     "templates.get": {
       "kind": "action",
@@ -1016,7 +1462,24 @@
           }
         }
       },
-      "sideEffect": "read"
+      "sideEffect": "read",
+      "request": {
+        "method": "GET",
+        "path": "/templates/{{templateId}}",
+        "success": [
+          200
+        ],
+        "parameters": [
+          {
+            "wireName": "templateId",
+            "inputName": "templateId",
+            "in": "path",
+            "style": "simple",
+            "explode": false,
+            "allowReserved": false
+          }
+        ]
+      }
     },
     "reports.summary": {
       "kind": "action",
@@ -1054,7 +1517,24 @@
           }
         }
       },
-      "sideEffect": "read"
+      "sideEffect": "read",
+      "request": {
+        "method": "GET",
+        "path": "/reports/{{campaignId}}",
+        "success": [
+          200
+        ],
+        "parameters": [
+          {
+            "wireName": "campaignId",
+            "inputName": "campaignId",
+            "in": "path",
+            "style": "simple",
+            "explode": false,
+            "allowReserved": false
+          }
+        ]
+      }
     },
     "reports.opens": {
       "kind": "action",
@@ -1092,7 +1572,24 @@
           }
         }
       },
-      "sideEffect": "read"
+      "sideEffect": "read",
+      "request": {
+        "method": "GET",
+        "path": "/reports/{{campaignId}}/open-details",
+        "success": [
+          200
+        ],
+        "parameters": [
+          {
+            "wireName": "campaignId",
+            "inputName": "campaignId",
+            "in": "path",
+            "style": "simple",
+            "explode": false,
+            "allowReserved": false
+          }
+        ]
+      }
     },
     "reports.clicks": {
       "kind": "action",
@@ -1130,7 +1627,24 @@
           }
         }
       },
-      "sideEffect": "read"
+      "sideEffect": "read",
+      "request": {
+        "method": "GET",
+        "path": "/reports/{{campaignId}}/click-details",
+        "success": [
+          200
+        ],
+        "parameters": [
+          {
+            "wireName": "campaignId",
+            "inputName": "campaignId",
+            "in": "path",
+            "style": "simple",
+            "explode": false,
+            "allowReserved": false
+          }
+        ]
+      }
     },
     "reports.unsubscribed": {
       "kind": "action",
@@ -1168,7 +1682,24 @@
           }
         }
       },
-      "sideEffect": "read"
+      "sideEffect": "read",
+      "request": {
+        "method": "GET",
+        "path": "/reports/{{campaignId}}/unsubscribed",
+        "success": [
+          200
+        ],
+        "parameters": [
+          {
+            "wireName": "campaignId",
+            "inputName": "campaignId",
+            "in": "path",
+            "style": "simple",
+            "explode": false,
+            "allowReserved": false
+          }
+        ]
+      }
     },
     "automations.list": {
       "kind": "action",
@@ -1198,7 +1729,14 @@
           }
         }
       },
-      "sideEffect": "read"
+      "sideEffect": "read",
+      "request": {
+        "method": "GET",
+        "path": "/automations",
+        "success": [
+          200
+        ]
+      }
     },
     "automations.get": {
       "kind": "action",
@@ -1236,7 +1774,24 @@
           }
         }
       },
-      "sideEffect": "read"
+      "sideEffect": "read",
+      "request": {
+        "method": "GET",
+        "path": "/automations/{{automationId}}",
+        "success": [
+          200
+        ],
+        "parameters": [
+          {
+            "wireName": "automationId",
+            "inputName": "automationId",
+            "in": "path",
+            "style": "simple",
+            "explode": false,
+            "allowReserved": false
+          }
+        ]
+      }
     },
     "webhook.subscribe": {
       "kind": "webhook",
@@ -1424,6 +1979,9 @@
         "body": {
           "include_stages": "{{include_stages}}",
           "since_timestamp": "{{since_timestamp}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
         }
       },
       "enforceOutputSchema": true,
@@ -1722,6 +2280,9 @@
           "merge_fields": "{{merge_fields}}",
           "tags": "{{tags}}",
           "update_existing": "{{update_existing}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
         }
       },
       "enforceOutputSchema": true,
@@ -2163,6 +2724,9 @@
           "sms_channel": "{{sms_channel}}",
           "merge_fields": "{{merge_fields}}",
           "tags": "{{tags}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
         }
       },
       "enforceOutputSchema": true,
@@ -2417,6 +2981,9 @@
           "recipients": "{{recipients}}",
           "settings": "{{settings}}",
           "trigger_settings": "{{trigger_settings}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
         }
       },
       "enforceOutputSchema": true,
@@ -2430,7 +2997,7 @@
       "maxResponseBytes": 1048576,
       "sideEffect": "write",
       "title": "Archive automation",
-      "description": "Archive automation Archiving will permanently end your automation and keep the report data. You’ll be able to replicate your archived automation, but you can’t restart it.",
+      "description": "Archive automation Archiving will permanently end your automation and keep the report data. You\u2019ll be able to replicate your archived automation, but you can\u2019t restart it.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -2670,6 +3237,9 @@
         ],
         "body": {
           "email_address": "{{email_address}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
         }
       },
       "enforceOutputSchema": true,
@@ -2735,6 +3305,9 @@
         ],
         "body": {
           "email_address": "{{email_address}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
         }
       },
       "enforceOutputSchema": true,
@@ -3412,6 +3985,9 @@
         "body": {
           "settings": "{{settings}}",
           "delay": "{{delay}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
         }
       },
       "enforceOutputSchema": true,
@@ -3467,6 +4043,9 @@
         "body": {
           "url": "{{url}}",
           "enabled": "{{enabled}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
         }
       },
       "enforceOutputSchema": true,
@@ -3783,6 +4362,9 @@
         "body": {
           "url": "{{url}}",
           "enabled": "{{enabled}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
         }
       },
       "enforceOutputSchema": true,
@@ -3836,6 +4418,9 @@
         ],
         "body": {
           "operations": "{{operations}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
         }
       },
       "enforceOutputSchema": true,
@@ -4133,6 +4718,9 @@
         ],
         "body": {
           "name": "{{name}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
         }
       },
       "enforceOutputSchema": true,
@@ -4445,6 +5033,9 @@
         ],
         "body": {
           "name": "{{name}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
         }
       },
       "enforceOutputSchema": true,
@@ -4569,6 +5160,9 @@
         ],
         "body": {
           "shortcut_type": "{{shortcut_type}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
         }
       },
       "enforceOutputSchema": true,
@@ -4644,6 +5238,9 @@
           "block_id": "{{block_id}}",
           "message": "{{message}}",
           "is_complete": "{{is_complete}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
         }
       },
       "enforceOutputSchema": true,
@@ -4827,6 +5424,9 @@
         "body": {
           "test_emails": "{{test_emails}}",
           "send_type": "{{send_type}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
         }
       },
       "enforceOutputSchema": true,
@@ -5085,7 +5685,7 @@
           },
           "member_id": {
             "type": "string",
-            "description": "Retrieve campaigns sent to a particular list member. Member ID is The MD5 hash of the lowercase version of the list member’s email address."
+            "description": "Retrieve campaigns sent to a particular list member. Member ID is The MD5 hash of the lowercase version of the list member\u2019s email address."
           },
           "sort_field": {
             "type": "string",
@@ -5654,6 +6254,9 @@
           "tracking": "{{tracking}}",
           "rss_opts": "{{rss_opts}}",
           "social_card": "{{social_card}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
         }
       },
       "enforceOutputSchema": true,
@@ -5746,6 +6349,9 @@
           "template": "{{template}}",
           "archive": "{{archive}}",
           "variate_contents": "{{variate_contents}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
         }
       },
       "enforceOutputSchema": true,
@@ -5833,6 +6439,9 @@
           "block_id": "{{block_id}}",
           "message": "{{message}}",
           "is_complete": "{{is_complete}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
         }
       },
       "enforceOutputSchema": true,
@@ -5889,6 +6498,9 @@
         "body": {
           "foreign_id": "{{foreign_id}}",
           "domain": "{{domain}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
         }
       },
       "enforceOutputSchema": true,
@@ -6638,7 +7250,7 @@
       "maxResponseBytes": 1048576,
       "sideEffect": "read",
       "title": "Get conversation",
-      "description": "Get conversation Get details about an individual conversation. Conversations has been deprecated in favor of Inbox and these endpoints don't include Inbox data. Past Conversations are still available via this endpoint, but new campaign replies and other Inbox messages aren’t available using this endpoint.",
+      "description": "Get conversation Get details about an individual conversation. Conversations has been deprecated in favor of Inbox and these endpoints don't include Inbox data. Past Conversations are still available via this endpoint, but new campaign replies and other Inbox messages aren\u2019t available using this endpoint.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -6729,7 +7341,7 @@
       "maxResponseBytes": 1048576,
       "sideEffect": "read",
       "title": "Get message",
-      "description": "Get message Get an individual message in a conversation. Conversations has been deprecated in favor of Inbox and these endpoints don't include Inbox data. Past Conversations are still available via this endpoint, but new campaign replies and other Inbox messages aren’t available using this endpoint.",
+      "description": "Get message Get an individual message in a conversation. Conversations has been deprecated in favor of Inbox and these endpoints don't include Inbox data. Past Conversations are still available via this endpoint, but new campaign replies and other Inbox messages aren\u2019t available using this endpoint.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -6833,7 +7445,7 @@
       "maxResponseBytes": 1048576,
       "sideEffect": "read",
       "title": "List conversations",
-      "description": "List conversations Get a list of conversations for the account. Conversations has been deprecated in favor of Inbox and these endpoints don't include Inbox data. Past Conversations are still available via this endpoint, but new campaign replies and other Inbox messages aren’t available using this endpoint.",
+      "description": "List conversations Get a list of conversations for the account. Conversations has been deprecated in favor of Inbox and these endpoints don't include Inbox data. Past Conversations are still available via this endpoint, but new campaign replies and other Inbox messages aren\u2019t available using this endpoint.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -6978,7 +7590,7 @@
       "maxResponseBytes": 1048576,
       "sideEffect": "read",
       "title": "List messages",
-      "description": "List messages Get messages from a specific conversation. Conversations has been deprecated in favor of Inbox and these endpoints don't include Inbox data. Past Conversations are still available via this endpoint, but new campaign replies and other Inbox messages aren’t available using this endpoint.",
+      "description": "List messages Get messages from a specific conversation. Conversations has been deprecated in favor of Inbox and these endpoints don't include Inbox data. Past Conversations are still available via this endpoint, but new campaign replies and other Inbox messages aren\u2019t available using this endpoint.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -7112,7 +7724,7 @@
       "maxResponseBytes": 1048576,
       "sideEffect": "write",
       "title": "Customer Journeys API trigger for a contact",
-      "description": "Customer Journeys API trigger for a contact A step trigger in an Automation flow. To use it, create a starting point or step from the Automation flow builder in the app using the Customer Journey API condition. We’ll provide a url during the process that includes the {journey_id} and {step_id}. You’ll then be able to use this endpoint to trigger the condition for the posted contact.",
+      "description": "Customer Journeys API trigger for a contact A step trigger in an Automation flow. To use it, create a starting point or step from the Automation flow builder in the app using the Customer Journey API condition. We\u2019ll provide a url during the process that includes the {journey_id} and {step_id}. You\u2019ll then be able to use this endpoint to trigger the condition for the posted contact.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -7174,6 +7786,9 @@
         ],
         "body": {
           "email_address": "{{email_address}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
         }
       },
       "enforceOutputSchema": true,
@@ -7225,7 +7840,7 @@
           },
           "money_format": {
             "type": "string",
-            "description": "The currency format for the store. For example: `$`, `£`, etc."
+            "description": "The currency format for the store. For example: `$`, `\u00a3`, etc."
           },
           "primary_locale": {
             "type": "string",
@@ -7287,6 +7902,9 @@
           "timezone": "{{timezone}}",
           "phone": "{{phone}}",
           "address": "{{address}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
         }
       },
       "enforceOutputSchema": true,
@@ -7395,6 +8013,9 @@
           "order_total": "{{order_total}}",
           "tax_total": "{{tax_total}}",
           "lines": "{{lines}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
         }
       },
       "enforceOutputSchema": true,
@@ -7496,6 +8117,9 @@
           "first_name": "{{first_name}}",
           "last_name": "{{last_name}}",
           "address": "{{address}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
         }
       },
       "enforceOutputSchema": true,
@@ -7591,6 +8215,9 @@
           "id": "{{id}}",
           "url": "{{url}}",
           "variant_ids": "{{variant_ids}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
         }
       },
       "enforceOutputSchema": true,
@@ -7693,6 +8320,9 @@
           "product_variant_id": "{{product_variant_id}}",
           "quantity": "{{quantity}}",
           "price": "{{price}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
         }
       },
       "enforceOutputSchema": true,
@@ -7805,6 +8435,9 @@
           "quantity": "{{quantity}}",
           "price": "{{price}}",
           "discount": "{{discount}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
         }
       },
       "enforceOutputSchema": true,
@@ -8004,6 +8637,9 @@
           "tracking_number": "{{tracking_number}}",
           "tracking_carrier": "{{tracking_carrier}}",
           "tracking_url": "{{tracking_url}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
         }
       },
       "enforceOutputSchema": true,
@@ -8129,6 +8765,9 @@
           "variants": "{{variants}}",
           "images": "{{images}}",
           "published_at_foreign": "{{published_at_foreign}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
         }
       },
       "enforceOutputSchema": true,
@@ -8239,6 +8878,9 @@
           "enabled": "{{enabled}}",
           "created_at_foreign": "{{created_at_foreign}}",
           "updated_at_foreign": "{{updated_at_foreign}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
         }
       },
       "enforceOutputSchema": true,
@@ -8367,6 +9009,9 @@
           "enabled": "{{enabled}}",
           "created_at_foreign": "{{created_at_foreign}}",
           "updated_at_foreign": "{{updated_at_foreign}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
         }
       },
       "enforceOutputSchema": true,
@@ -8486,6 +9131,9 @@
           "image_url": "{{image_url}}",
           "backorders": "{{backorders}}",
           "visibility": "{{visibility}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
         }
       },
       "enforceOutputSchema": true,
@@ -12074,7 +12722,7 @@
           },
           "money_format": {
             "type": "string",
-            "description": "The currency format for the store. For example: `$`, `£`, etc."
+            "description": "The currency format for the store. For example: `$`, `\u00a3`, etc."
           },
           "primary_locale": {
             "type": "string",
@@ -12141,6 +12789,9 @@
           "timezone": "{{timezone}}",
           "phone": "{{phone}}",
           "address": "{{address}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
         }
       },
       "enforceOutputSchema": true,
@@ -12252,6 +12903,9 @@
           "order_total": "{{order_total}}",
           "tax_total": "{{tax_total}}",
           "lines": "{{lines}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
         }
       },
       "enforceOutputSchema": true,
@@ -12365,6 +13019,9 @@
           "first_name": "{{first_name}}",
           "last_name": "{{last_name}}",
           "address": "{{address}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
         }
       },
       "enforceOutputSchema": true,
@@ -12462,6 +13119,9 @@
           "first_name": "{{first_name}}",
           "last_name": "{{last_name}}",
           "address": "{{address}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
         }
       },
       "enforceOutputSchema": true,
@@ -12568,6 +13228,9 @@
           "id": "{{id}}",
           "url": "{{url}}",
           "variant_ids": "{{variant_ids}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
         }
       },
       "enforceOutputSchema": true,
@@ -12673,6 +13336,9 @@
           "product_variant_id": "{{product_variant_id}}",
           "quantity": "{{quantity}}",
           "price": "{{price}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
         }
       },
       "enforceOutputSchema": true,
@@ -12783,6 +13449,9 @@
           "quantity": "{{quantity}}",
           "price": "{{price}}",
           "discount": "{{discount}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
         }
       },
       "enforceOutputSchema": true,
@@ -12991,6 +13660,9 @@
           "tracking_number": "{{tracking_number}}",
           "tracking_carrier": "{{tracking_carrier}}",
           "tracking_url": "{{tracking_url}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
         }
       },
       "enforceOutputSchema": true,
@@ -13193,6 +13865,9 @@
           "tracking_number": "{{tracking_number}}",
           "tracking_carrier": "{{tracking_carrier}}",
           "tracking_url": "{{tracking_url}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
         }
       },
       "enforceOutputSchema": true,
@@ -13323,6 +13998,9 @@
           "variants": "{{variants}}",
           "images": "{{images}}",
           "published_at_foreign": "{{published_at_foreign}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
         }
       },
       "enforceOutputSchema": true,
@@ -13459,6 +14137,9 @@
           "variants": "{{variants}}",
           "images": "{{images}}",
           "published_at_foreign": "{{published_at_foreign}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
         }
       },
       "enforceOutputSchema": true,
@@ -13574,6 +14255,9 @@
           "enabled": "{{enabled}}",
           "created_at_foreign": "{{created_at_foreign}}",
           "updated_at_foreign": "{{updated_at_foreign}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
         }
       },
       "enforceOutputSchema": true,
@@ -13705,6 +14389,9 @@
           "enabled": "{{enabled}}",
           "created_at_foreign": "{{created_at_foreign}}",
           "updated_at_foreign": "{{updated_at_foreign}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
         }
       },
       "enforceOutputSchema": true,
@@ -13837,6 +14524,9 @@
           "image_url": "{{image_url}}",
           "backorders": "{{backorders}}",
           "visibility": "{{visibility}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
         }
       },
       "enforceOutputSchema": true,
@@ -13962,6 +14652,9 @@
           "image_url": "{{image_url}}",
           "backorders": "{{backorders}}",
           "visibility": "{{visibility}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
         }
       },
       "enforceOutputSchema": true,
@@ -14251,6 +14944,9 @@
           "folder_id": "{{folder_id}}",
           "name": "{{name}}",
           "file_data": "{{file_data}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
         }
       },
       "enforceOutputSchema": true,
@@ -14301,6 +14997,9 @@
         ],
         "body": {
           "name": "{{name}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
         }
       },
       "enforceOutputSchema": true,
@@ -15194,6 +15893,9 @@
         "body": {
           "folder_id": "{{folder_id}}",
           "name": "{{name}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
         }
       },
       "enforceOutputSchema": true,
@@ -15259,6 +15961,9 @@
         ],
         "body": {
           "name": "{{name}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
         }
       },
       "enforceOutputSchema": true,
@@ -15362,6 +16067,9 @@
           "type": "{{type}}",
           "template_id": "{{template_id}}",
           "tracking": "{{tracking}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
         }
       },
       "enforceOutputSchema": true,
@@ -15918,6 +16626,9 @@
           "store_id": "{{store_id}}",
           "list_id": "{{list_id}}",
           "tracking": "{{tracking}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
         }
       },
       "enforceOutputSchema": true,
@@ -16152,6 +16863,9 @@
         "body": {
           "tags": "{{tags}}",
           "is_syncing": "{{is_syncing}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
         }
       },
       "enforceOutputSchema": true,
@@ -16242,6 +16956,9 @@
           "properties": "{{properties}}",
           "is_syncing": "{{is_syncing}}",
           "occurred_at": "{{occurred_at}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
         }
       },
       "enforceOutputSchema": true,
@@ -16279,7 +16996,7 @@
               "radio",
               "hidden"
             ],
-            "description": "Determines how this category’s interests appear on signup forms."
+            "description": "Determines how this category\u2019s interests appear on signup forms."
           }
         },
         "additionalProperties": false,
@@ -16324,6 +17041,9 @@
           "title": "{{title}}",
           "display_order": "{{display_order}}",
           "type": "{{type}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
         }
       },
       "enforceOutputSchema": true,
@@ -16407,6 +17127,9 @@
         "body": {
           "name": "{{name}}",
           "display_order": "{{display_order}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
         }
       },
       "enforceOutputSchema": true,
@@ -16514,6 +17237,9 @@
           "members": "{{members}}",
           "sync_tags": "{{sync_tags}}",
           "update_existing": "{{update_existing}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
         }
       },
       "enforceOutputSchema": true,
@@ -16592,6 +17318,9 @@
         ],
         "body": {
           "email_address": "{{email_address}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
         }
       },
       "enforceOutputSchema": true,
@@ -16711,6 +17440,9 @@
           "display_order": "{{display_order}}",
           "options": "{{options}}",
           "help_text": "{{help_text}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
         }
       },
       "enforceOutputSchema": true,
@@ -16793,6 +17525,9 @@
         "body": {
           "title": "{{title}}",
           "list_id": "{{list_idBody}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
         }
       },
       "enforceOutputSchema": true,
@@ -16871,6 +17606,9 @@
           "name": "{{name}}",
           "static_segment": "{{static_segment}}",
           "options": "{{options}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
         }
       },
       "enforceOutputSchema": true,
@@ -16959,6 +17697,9 @@
         "body": {
           "members_to_add": "{{members_to_add}}",
           "members_to_remove": "{{members_to_remove}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
         }
       },
       "enforceOutputSchema": true,
@@ -17041,6 +17782,9 @@
           "header": "{{header}}",
           "contents": "{{contents}}",
           "styles": "{{styles}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
         }
       },
       "enforceOutputSchema": true,
@@ -17114,6 +17858,9 @@
         "body": {
           "title": "{{title}}",
           "sections": "{{sections}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
         }
       },
       "enforceOutputSchema": true,
@@ -17188,6 +17935,9 @@
           "url": "{{url}}",
           "events": "{{events}}",
           "sources": "{{sources}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
         }
       },
       "enforceOutputSchema": true,
@@ -21808,7 +22558,7 @@
               "radio",
               "hidden"
             ],
-            "description": "Determines how this category’s interests appear on signup forms."
+            "description": "Determines how this category\u2019s interests appear on signup forms."
           }
         },
         "additionalProperties": false,
@@ -21860,6 +22610,9 @@
           "title": "{{title}}",
           "display_order": "{{display_order}}",
           "type": "{{type}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
         }
       },
       "enforceOutputSchema": true,
@@ -21955,6 +22708,9 @@
         "body": {
           "name": "{{name}}",
           "display_order": "{{display_order}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
         }
       },
       "enforceOutputSchema": true,
@@ -22068,6 +22824,9 @@
           "display_order": "{{display_order}}",
           "options": "{{options}}",
           "help_text": "{{help_text}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
         }
       },
       "enforceOutputSchema": true,
@@ -22158,6 +22917,9 @@
         ],
         "body": {
           "note": "{{note}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
         }
       },
       "enforceOutputSchema": true,
@@ -22249,6 +23011,9 @@
           "name": "{{name}}",
           "static_segment": "{{static_segment}}",
           "options": "{{options}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
         }
       },
       "enforceOutputSchema": true,
@@ -22340,6 +23105,9 @@
           "title": "{{title}}",
           "is_piped_to_inbox": "{{is_piped_to_inbox}}",
           "sections": "{{sections}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
         }
       },
       "enforceOutputSchema": true,
@@ -22427,6 +23195,9 @@
           "url": "{{url}}",
           "events": "{{events}}",
           "sources": "{{sources}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
         }
       },
       "enforceOutputSchema": true,
@@ -26124,6 +26895,9 @@
           "folder_id": "{{folder_id}}",
           "segments": "{{segments}}",
           "excluded_segments": "{{excluded_segments}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
         }
       },
       "enforceOutputSchema": true,
@@ -26240,6 +27014,9 @@
         ],
         "body": {
           "schedule_time": "{{schedule_time}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
         }
       },
       "enforceOutputSchema": true,
@@ -26717,6 +27494,9 @@
           "folder_id": "{{folder_id}}",
           "segments": "{{segments}}",
           "excluded_segments": "{{excluded_segments}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
         }
       },
       "enforceOutputSchema": true,
@@ -26790,6 +27570,9 @@
         "body": {
           "message_body": "{{message_body}}",
           "media": "{{media}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
         }
       },
       "enforceOutputSchema": true,
@@ -27050,6 +27833,9 @@
         ],
         "body": {
           "name": "{{name}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
         }
       },
       "enforceOutputSchema": true,
@@ -27362,6 +28148,9 @@
         ],
         "body": {
           "name": "{{name}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
         }
       },
       "enforceOutputSchema": true,
@@ -27423,6 +28212,9 @@
           "name": "{{name}}",
           "folder_id": "{{folder_id}}",
           "html": "{{html}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
         }
       },
       "enforceOutputSchema": true,
@@ -27644,6 +28436,9 @@
           "name": "{{name}}",
           "folder_id": "{{folder_id}}",
           "html": "{{html}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
         }
       },
       "enforceOutputSchema": true,
@@ -27709,6 +28504,9 @@
         ],
         "body": {
           "code": "{{code}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
         }
       },
       "enforceOutputSchema": true,
@@ -27759,6 +28557,9 @@
         ],
         "body": {
           "verification_email": "{{verification_email}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
         }
       },
       "enforceOutputSchema": true,
@@ -27914,6 +28715,772 @@
       "enforceOutputSchema": true,
       "responseFormat": "json",
       "validationMode": "strict-generated"
+    },
+    "segments.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "List Segments",
+      "description": "List saved segments for a Mailchimp audience via GET /segments.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "fields": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "A comma-separated list of fields to return. Reference parameters of sub-objects with dot notation."
+          },
+          "exclude_fields": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "A comma-separated list of fields to exclude. Reference parameters of sub-objects with dot notation."
+          },
+          "count": {
+            "type": "integer",
+            "description": "The number of records to return. Default value is 10. Maximum value is 1000"
+          },
+          "offset": {
+            "type": "integer",
+            "description": "Used for pagination, this is the number of records from a collection to skip. Default value is 0."
+          },
+          "list_id": {
+            "type": "string",
+            "description": "The unique ID for the list (audience) that owns the segments."
+          },
+          "cursor": {
+            "type": "string",
+            "description": "Pagination cursor returned by a previous List Segments response."
+          },
+          "sort_field": {
+            "type": "string",
+            "description": "The field to sort by."
+          },
+          "sort_dir": {
+            "type": "string",
+            "description": "The sort direction: ASC or DESC."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "list_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "null"
+            ]
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/segments",
+        "success": [
+          200
+        ],
+        "parameters": [
+          {
+            "wireName": "fields",
+            "inputName": "fields",
+            "in": "query",
+            "style": "form",
+            "explode": false,
+            "allowReserved": false
+          },
+          {
+            "wireName": "exclude_fields",
+            "inputName": "exclude_fields",
+            "in": "query",
+            "style": "form",
+            "explode": false,
+            "allowReserved": false
+          },
+          {
+            "wireName": "count",
+            "inputName": "count",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "allowReserved": false
+          },
+          {
+            "wireName": "offset",
+            "inputName": "offset",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "allowReserved": false
+          },
+          {
+            "wireName": "list_id",
+            "inputName": "list_id",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "allowReserved": false
+          },
+          {
+            "wireName": "cursor",
+            "inputName": "cursor",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "allowReserved": false
+          },
+          {
+            "wireName": "sort_field",
+            "inputName": "sort_field",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "allowReserved": false
+          },
+          {
+            "wireName": "sort_dir",
+            "inputName": "sort_dir",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "allowReserved": false
+          }
+        ],
+        "query": {
+          "fields": "{{fields}}",
+          "exclude_fields": "{{exclude_fields}}",
+          "count": "{{count}}",
+          "offset": "{{offset}}",
+          "list_id": "{{list_id}}",
+          "cursor": "{{cursor}}",
+          "sort_field": "{{sort_field}}",
+          "sort_dir": "{{sort_dir}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated"
+    },
+    "segments.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Get Segment",
+      "description": "Get a saved Mailchimp segment by ID via GET /segments/{segment_id}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "segment_id": {
+            "type": "string",
+            "description": "The unique ID for the segment."
+          },
+          "fields": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "A comma-separated list of fields to return."
+          },
+          "exclude_fields": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "A comma-separated list of fields to exclude."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "segment_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "null"
+            ]
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/segments/{{segment_id}}",
+        "success": [
+          200
+        ],
+        "parameters": [
+          {
+            "wireName": "segment_id",
+            "inputName": "segment_id",
+            "in": "path",
+            "style": "simple",
+            "explode": false,
+            "allowReserved": false
+          },
+          {
+            "wireName": "fields",
+            "inputName": "fields",
+            "in": "query",
+            "style": "form",
+            "explode": false,
+            "allowReserved": false
+          },
+          {
+            "wireName": "exclude_fields",
+            "inputName": "exclude_fields",
+            "in": "query",
+            "style": "form",
+            "explode": false,
+            "allowReserved": false
+          }
+        ],
+        "query": {
+          "fields": "{{fields}}",
+          "exclude_fields": "{{exclude_fields}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated"
+    },
+    "segments.create": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Add Segment",
+      "description": "Create a saved Mailchimp segment via POST /segments.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "The name of the segment."
+          },
+          "list_id": {
+            "type": "string",
+            "description": "The unique ID for the list (audience) that owns the segment."
+          },
+          "definition": {
+            "type": "object",
+            "description": "Segment definition. The root node is a group with match and conditions."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "list_id",
+          "definition"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "null"
+            ]
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/segments",
+        "success": [
+          200
+        ],
+        "body": {
+          "name": "{{name}}",
+          "list_id": "{{list_id}}",
+          "definition": "{{definition}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated"
+    },
+    "segments.update": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Update Segment",
+      "description": "Update a saved Mailchimp segment via PATCH /segments/{segment_id}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "segment_id": {
+            "type": "string",
+            "description": "The unique ID for the segment."
+          },
+          "name": {
+            "type": "string",
+            "description": "The name of the segment."
+          },
+          "definition": {
+            "type": "object",
+            "description": "Updated segment definition."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "segment_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "null"
+            ]
+          }
+        }
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/segments/{{segment_id}}",
+        "success": [
+          200
+        ],
+        "parameters": [
+          {
+            "wireName": "segment_id",
+            "inputName": "segment_id",
+            "in": "path",
+            "style": "simple",
+            "explode": false,
+            "allowReserved": false
+          }
+        ],
+        "body": {
+          "name": "{{name}}",
+          "definition": "{{definition}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated"
+    },
+    "segments.delete": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Delete Segment",
+      "description": "Delete a saved Mailchimp segment via DELETE /segments/{segment_id}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "segment_id": {
+            "type": "string",
+            "description": "The unique ID for the segment."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "segment_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "null"
+          }
+        }
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/segments/{{segment_id}}",
+        "success": [
+          204
+        ],
+        "parameters": [
+          {
+            "wireName": "segment_id",
+            "inputName": "segment_id",
+            "in": "path",
+            "style": "simple",
+            "explode": false,
+            "allowReserved": false
+          }
+        ]
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated"
+    },
+    "segments.count": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Get Segment Member Count",
+      "description": "Get the member count for a saved Mailchimp segment via GET /segments/{segment_id}/count.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "segment_id": {
+            "type": "string",
+            "description": "The unique ID for the segment."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "segment_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "null"
+            ]
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/segments/{{segment_id}}/count",
+        "success": [
+          200
+        ],
+        "parameters": [
+          {
+            "wireName": "segment_id",
+            "inputName": "segment_id",
+            "in": "path",
+            "style": "simple",
+            "explode": false,
+            "allowReserved": false
+          }
+        ]
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated"
+    },
+    "segments.snapshots.create": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Snapshot a Segment",
+      "description": "Create a snapshot of a saved Mailchimp segment via POST /segments/{segment_id}/snapshots.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "segment_id": {
+            "type": "string",
+            "description": "The unique ID for the segment."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "segment_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "null"
+            ]
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/segments/{{segment_id}}/snapshots",
+        "success": [
+          200
+        ],
+        "parameters": [
+          {
+            "wireName": "segment_id",
+            "inputName": "segment_id",
+            "in": "path",
+            "style": "simple",
+            "explode": false,
+            "allowReserved": false
+          }
+        ]
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated"
+    },
+    "segments.snapshots.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Get Segment Snapshot",
+      "description": "Get a Mailchimp segment snapshot via GET /segments/{segment_id}/snapshots/{snapshot_id}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "segment_id": {
+            "type": "string",
+            "description": "The unique ID for the segment."
+          },
+          "snapshot_id": {
+            "type": "string",
+            "description": "The unique ID for the segment snapshot."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "segment_id",
+          "snapshot_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "null"
+            ]
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/segments/{{segment_id}}/snapshots/{{snapshot_id}}",
+        "success": [
+          200
+        ],
+        "parameters": [
+          {
+            "wireName": "segment_id",
+            "inputName": "segment_id",
+            "in": "path",
+            "style": "simple",
+            "explode": false,
+            "allowReserved": false
+          },
+          {
+            "wireName": "snapshot_id",
+            "inputName": "snapshot_id",
+            "in": "path",
+            "style": "simple",
+            "explode": false,
+            "allowReserved": false
+          }
+        ]
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated"
+    },
+    "segments.snapshots.members": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Get Snapshot Member Contact IDs",
+      "description": "List contact IDs in a Mailchimp segment snapshot via GET /segments/{segment_id}/snapshots/{snapshot_id}/members.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "segment_id": {
+            "type": "string",
+            "description": "The unique ID for the segment."
+          },
+          "fields": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "A comma-separated list of fields to return."
+          },
+          "exclude_fields": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "A comma-separated list of fields to exclude."
+          },
+          "snapshot_id": {
+            "type": "string",
+            "description": "The unique ID for the segment snapshot."
+          },
+          "count": {
+            "type": "integer",
+            "description": "The number of records to return."
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Maximum number of contact IDs to return."
+          },
+          "cursor": {
+            "type": "string",
+            "description": "Pagination cursor returned by a previous snapshot members response."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "segment_id",
+          "snapshot_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "null"
+            ]
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/segments/{{segment_id}}/snapshots/{{snapshot_id}}/members",
+        "success": [
+          200
+        ],
+        "parameters": [
+          {
+            "wireName": "segment_id",
+            "inputName": "segment_id",
+            "in": "path",
+            "style": "simple",
+            "explode": false,
+            "allowReserved": false
+          },
+          {
+            "wireName": "snapshot_id",
+            "inputName": "snapshot_id",
+            "in": "path",
+            "style": "simple",
+            "explode": false,
+            "allowReserved": false
+          },
+          {
+            "wireName": "fields",
+            "inputName": "fields",
+            "in": "query",
+            "style": "form",
+            "explode": false,
+            "allowReserved": false
+          },
+          {
+            "wireName": "exclude_fields",
+            "inputName": "exclude_fields",
+            "in": "query",
+            "style": "form",
+            "explode": false,
+            "allowReserved": false
+          },
+          {
+            "wireName": "count",
+            "inputName": "count",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "allowReserved": false
+          },
+          {
+            "wireName": "limit",
+            "inputName": "limit",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "allowReserved": false
+          },
+          {
+            "wireName": "cursor",
+            "inputName": "cursor",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "allowReserved": false
+          }
+        ],
+        "query": {
+          "fields": "{{fields}}",
+          "exclude_fields": "{{exclude_fields}}",
+          "count": "{{count}}",
+          "limit": "{{limit}}",
+          "cursor": "{{cursor}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated"
     }
   },
   "models": [
@@ -27923,10 +29490,11 @@
     "template",
     "report",
     "automation",
-    "note"
+    "note",
+    "segment"
   ],
   "http": {
-    "baseUrl": "https://us1.api.mailchimp.com/3.0",
+    "baseUrl": "https://{{host}}/3.0",
     "auth": {
       "field": "apiKey",
       "in": "header",
@@ -27937,8 +29505,7 @@
       }
     },
     "headers": {
-      "Accept": "application/json",
-      "Content-Type": "application/json"
+      "Accept": "application/json"
     },
     "errors": {
       "rateLimitStatuses": [
@@ -27954,6 +29521,12 @@
         "errors.0.message",
         "error"
       ]
+    }
+  },
+  "provenance": {
+    "source": {
+      "url": "https://github.com/oomol-lab/open-connector",
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"
     }
   }
 }

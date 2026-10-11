@@ -222690,7 +222690,7 @@
   },
   {
     "key": "callingly",
-    "digest": "332c26e860a4acc70fa9ceae14b5e83e4759951f1312fd77eae4263a9c0eec8c",
+    "digest": "004430bb9d87295bd7d1fc9d86b264f218f2fff75c0284fe8ffd2acb8a0f930d",
     "public": true,
     "egress": true,
     "operations": [
@@ -222705,41 +222705,51 @@
         "tool": true,
         "inputSchema": {
           "type": "object",
+          "additionalProperties": false,
           "properties": {
+            "account_id": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Client account ID under which the agent will be created."
+            },
+            "email": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Agent's email address."
+            },
             "fname": {
               "type": "string",
-              "description": "Agent first name.",
-              "minLength": 1
+              "minLength": 1,
+              "description": "Agent's first name."
             },
             "lname": {
               "type": "string",
-              "description": "Agent last name.",
-              "minLength": 1
+              "minLength": 1,
+              "description": "Agent's last name."
             },
             "phone_number": {
               "type": "string",
-              "description": "Agent phone number.",
-              "minLength": 1
+              "minLength": 1,
+              "description": "Agent's phone number in E.164 format."
             },
             "timezone": {
               "type": "string",
-              "description": "IANA timezone."
-            },
-            "account_id": {
-              "type": "integer",
-              "description": "Agency client account ID.",
-              "minimum": 1
+              "minLength": 1,
+              "description": "Agent's timezone, IANA format (e.g. America/Phoenix)."
             },
             "ext": {
               "type": "string",
-              "description": "Phone extension."
+              "minLength": 1,
+              "description": "Agent's phone extension if applicable."
             }
           },
-          "additionalProperties": false,
           "required": [
+            "account_id",
+            "email",
             "fname",
             "lname",
-            "phone_number"
+            "phone_number",
+            "timezone"
           ]
         },
         "outputSchema": {
@@ -222747,12 +222757,54 @@
           "required": [
             "data"
           ],
+          "additionalProperties": false,
           "properties": {
             "data": {
               "type": "object"
             }
+          }
+        }
+      },
+      {
+        "key": "agents.delete",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": true,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Unique identifier of the agent to delete."
+            },
+            "account_id": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Client account ID that the agent belongs to."
+            }
           },
-          "additionalProperties": false
+          "required": [
+            "id",
+            "account_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "success"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "success": {
+              "type": "boolean"
+            }
+          }
         }
       },
       {
@@ -222766,26 +222818,29 @@
         "tool": true,
         "inputSchema": {
           "type": "object",
+          "additionalProperties": false,
           "properties": {
             "account_id": {
               "type": "integer",
-              "description": "Agency client account ID.",
-              "minimum": 1
+              "minimum": 1,
+              "description": "Filter users by client account ID (required for agency partners)."
             }
-          },
-          "additionalProperties": false
+          }
         },
         "outputSchema": {
           "type": "object",
           "required": [
             "data"
           ],
+          "additionalProperties": false,
           "properties": {
             "data": {
-              "type": "array"
+              "type": [
+                "array",
+                "object"
+              ]
             }
-          },
-          "additionalProperties": false
+          }
         }
       },
       {
@@ -222799,16 +222854,16 @@
         "tool": true,
         "inputSchema": {
           "type": "object",
+          "additionalProperties": false,
           "properties": {
-            "agentId": {
+            "id": {
               "type": "integer",
-              "description": "Agent ID.",
-              "minimum": 1
+              "minimum": 1,
+              "description": "Unique identifier of the agent. Obtain this from List Users."
             }
           },
-          "additionalProperties": false,
           "required": [
-            "agentId"
+            "id"
           ]
         },
         "outputSchema": {
@@ -222816,12 +222871,107 @@
           "required": [
             "data"
           ],
+          "additionalProperties": false,
           "properties": {
             "data": {
-              "type": "array"
+              "type": [
+                "array",
+                "object"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "key": "agents.schedule.update",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Unique identifier of the agent whose schedule is being updated."
+            },
+            "schedule": {
+              "type": "array",
+              "minItems": 1,
+              "description": "DaySchedule objects defining weekly availability (Sunday=0 through Saturday=6).",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "label",
+                  "day",
+                  "is_available",
+                  "times"
+                ],
+                "properties": {
+                  "label": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "Day label, e.g. Monday."
+                  },
+                  "day": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 6,
+                    "description": "Zero-based day index (Sunday=0)."
+                  },
+                  "is_available": {
+                    "type": "boolean",
+                    "description": "Whether the agent is available this day."
+                  },
+                  "times": {
+                    "type": "array",
+                    "description": "Availability windows for the day.",
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "start": {
+                          "type": "string",
+                          "minLength": 1,
+                          "description": "Window start, HH:MM:SS or allday."
+                        },
+                        "end": {
+                          "type": "string",
+                          "minLength": 1,
+                          "description": "Window end, HH:MM:SS."
+                        }
+                      }
+                    }
+                  }
+                }
+              }
             }
           },
-          "additionalProperties": false
+          "required": [
+            "id",
+            "schedule"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": [
+                "array",
+                "object"
+              ]
+            }
+          }
         }
       },
       {
@@ -222835,36 +222985,59 @@
         "tool": true,
         "inputSchema": {
           "type": "object",
+          "additionalProperties": false,
           "properties": {
-            "agentId": {
+            "id": {
               "type": "integer",
-              "description": "Agent ID.",
-              "minimum": 1
+              "minimum": 1,
+              "description": "Unique identifier of the agent to update."
+            },
+            "account_id": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Client account ID under which the agent exists."
             },
             "fname": {
               "type": "string",
-              "description": "Agent first name."
+              "minLength": 1,
+              "description": "Agent's first name."
             },
             "lname": {
               "type": "string",
-              "description": "Agent last name."
+              "minLength": 1,
+              "description": "Agent's last name."
             },
             "phone_number": {
               "type": "string",
-              "description": "Agent phone number."
+              "minLength": 1,
+              "description": "Agent's phone number, in E.164 or local format."
+            },
+            "ext": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Agent's phone extension if applicable."
             },
             "timezone": {
               "type": "string",
-              "description": "IANA timezone."
+              "minLength": 1,
+              "description": "Agent's timezone, IANA format (e.g. America/Phoenix)."
             },
             "donotdisturb": {
               "type": "integer",
-              "description": "Do-not-disturb flag (0 or 1)."
+              "enum": [
+                0,
+                1
+              ],
+              "description": "Do-not-disturb flag: 1 to enable, 0 to disable."
+            },
+            "donotdisturb_until": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Datetime until which do-not-disturb is active, required if donotdisturb=1."
             }
           },
-          "additionalProperties": false,
           "required": [
-            "agentId"
+            "id"
           ]
         },
         "outputSchema": {
@@ -222872,12 +223045,12 @@
           "required": [
             "data"
           ],
+          "additionalProperties": false,
           "properties": {
             "data": {
               "type": "object"
             }
-          },
-          "additionalProperties": false
+          }
         }
       },
       {
@@ -222891,48 +223064,71 @@
         "tool": true,
         "inputSchema": {
           "type": "object",
+          "additionalProperties": false,
           "properties": {
+            "account_id": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Callingly account ID. Retrieve this using List Teams."
+            },
             "team_id": {
               "type": "integer",
-              "description": "Team that will take the call.",
-              "minimum": 1
+              "minimum": 1,
+              "description": "Team that will handle the call. Must belong to account_id."
             },
             "first_name": {
               "type": "string",
-              "description": "Lead first name.",
-              "minLength": 1
+              "minLength": 1,
+              "description": "Lead's first name."
             },
             "last_name": {
               "type": "string",
-              "description": "Lead last name."
+              "minLength": 1,
+              "description": "Lead's last name."
             },
             "phone_number": {
               "type": "string",
-              "description": "Lead phone number.",
-              "minLength": 1
+              "minLength": 1,
+              "description": "Lead's phone number in E.164 format."
             },
             "email": {
               "type": "string",
-              "description": "Lead email."
+              "minLength": 1,
+              "description": "Lead's email address."
             },
             "company": {
               "type": "string",
-              "description": "Lead company."
+              "minLength": 1,
+              "description": "Lead's company name."
+            },
+            "category": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Category to classify the call."
             },
             "source": {
               "type": "string",
-              "description": "Lead source."
+              "minLength": 1,
+              "description": "Source where the lead originated from."
             },
-            "account_id": {
+            "crm_id": {
               "type": "integer",
-              "description": "Agency client account ID.",
-              "minimum": 1
+              "minimum": 1,
+              "description": "External CRM identifier for the lead."
+            },
+            "scheduled_at": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Optional scheduled timestamp for the call."
             }
           },
-          "additionalProperties": false,
           "required": [
+            "account_id",
             "team_id",
-            "phone_number"
+            "first_name",
+            "last_name",
+            "phone_number",
+            "email"
           ]
         },
         "outputSchema": {
@@ -222940,15 +223136,12 @@
           "required": [
             "data"
           ],
+          "additionalProperties": false,
           "properties": {
             "data": {
-              "type": [
-                "array",
-                "object"
-              ]
+              "type": "object"
             }
-          },
-          "additionalProperties": false
+          }
         }
       },
       {
@@ -222962,16 +223155,16 @@
         "tool": true,
         "inputSchema": {
           "type": "object",
+          "additionalProperties": false,
           "properties": {
-            "callId": {
+            "call_id": {
               "type": "integer",
-              "description": "Call ID.",
-              "minimum": 1
+              "minimum": 1,
+              "description": "Unique numeric identifier of the call. Obtain this from List Calls."
             }
           },
-          "additionalProperties": false,
           "required": [
-            "callId"
+            "call_id"
           ]
         },
         "outputSchema": {
@@ -222979,12 +223172,12 @@
           "required": [
             "data"
           ],
+          "additionalProperties": false,
           "properties": {
             "data": {
               "type": "object"
             }
-          },
-          "additionalProperties": false
+          }
         }
       },
       {
@@ -222998,47 +223191,91 @@
         "tool": true,
         "inputSchema": {
           "type": "object",
+          "additionalProperties": false,
           "properties": {
             "start": {
               "type": "string",
-              "description": "Start datetime."
+              "minLength": 1,
+              "description": "Start date for filtering calls (YYYY-MM-DD)."
             },
             "end": {
               "type": "string",
-              "description": "End datetime."
+              "minLength": 1,
+              "description": "End date for filtering calls (YYYY-MM-DD)."
             },
             "team_id": {
               "type": "integer",
-              "description": "Filter by team ID.",
-              "minimum": 1
-            },
-            "limit": {
-              "type": "integer",
-              "description": "Page size.",
-              "minimum": 1
+              "minimum": 1,
+              "description": "Filter calls by team ID."
             },
             "page": {
               "type": "integer",
-              "description": "Page number.",
-              "minimum": 1
+              "minimum": 1,
+              "description": "Page number for pagination."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Number of records per page."
             }
-          },
-          "additionalProperties": false
+          }
         },
         "outputSchema": {
           "type": "object",
           "required": [
             "data"
           ],
+          "additionalProperties": false,
           "properties": {
             "data": {
-              "type": [
-                "array",
-                "object"
-              ]
+              "type": "object"
+            }
+          }
+        }
+      },
+      {
+        "key": "clients.activate",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "client_id": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Unique identifier of the client account to modify."
+            },
+            "is_active": {
+              "type": "integer",
+              "enum": [
+                0,
+                1
+              ],
+              "description": "Set to 1 to activate the client account or 0 to deactivate it."
             }
           },
-          "additionalProperties": false
+          "required": [
+            "client_id",
+            "is_active"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          }
         }
       },
       {
@@ -223052,40 +223289,46 @@
         "tool": true,
         "inputSchema": {
           "type": "object",
+          "additionalProperties": false,
           "properties": {
+            "email": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Client's email address."
+            },
             "fname": {
               "type": "string",
-              "description": "Client first name.",
-              "minLength": 1
+              "minLength": 1,
+              "description": "Client's first name."
             },
             "lname": {
               "type": "string",
-              "description": "Client last name.",
-              "minLength": 1
-            },
-            "email": {
-              "type": "string",
-              "description": "Client email.",
-              "minLength": 1
+              "minLength": 1,
+              "description": "Client's last name."
             },
             "company": {
               "type": "string",
-              "description": "Client company."
-            },
-            "phone_number": {
-              "type": "string",
-              "description": "Client phone number."
+              "minLength": 1,
+              "description": "Client's company name."
             },
             "password": {
               "type": "string",
-              "description": "Initial password."
+              "minLength": 1,
+              "description": "Password for the client's account."
+            },
+            "phone_number": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Client's phone number in E.164 format."
             }
           },
-          "additionalProperties": false,
           "required": [
+            "email",
             "fname",
             "lname",
-            "email"
+            "company",
+            "password",
+            "phone_number"
           ]
         },
         "outputSchema": {
@@ -223093,39 +223336,78 @@
           "required": [
             "data"
           ],
+          "additionalProperties": false,
           "properties": {
             "data": {
               "type": "object"
             }
+          }
+        }
+      },
+      {
+        "key": "clients.delete",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": true,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Positive integer ID of the client to delete."
+            }
           },
-          "additionalProperties": false
+          "required": [
+            "id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "success"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "success": {
+              "type": "boolean"
+            }
+          }
         }
       },
       {
         "key": "clients.list",
         "kind": "action",
         "timeoutMs": 15000,
-        "maxInputBytes": 4096,
+        "maxInputBytes": 65536,
         "maxResponseBytes": 5242880,
         "read": true,
         "destructive": false,
         "tool": true,
         "inputSchema": {
           "type": "object",
-          "properties": {},
-          "additionalProperties": false
+          "additionalProperties": false,
+          "properties": {}
         },
         "outputSchema": {
           "type": "object",
           "required": [
             "data"
           ],
+          "additionalProperties": false,
           "properties": {
             "data": {
-              "type": "array"
+              "type": [
+                "array",
+                "object"
+              ]
             }
-          },
-          "additionalProperties": false
+          }
         }
       },
       {
@@ -223138,15 +223420,12 @@
         "destructive": false,
         "tool": true,
         "inputSchema": {
-          "type": "object",
+          "additionalProperties": false,
           "properties": {},
-          "additionalProperties": false
+          "type": "object"
         },
         "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
+          "additionalProperties": false,
           "properties": {
             "data": {
               "type": [
@@ -223155,7 +223434,10 @@
               ]
             }
           },
-          "additionalProperties": false
+          "required": [
+            "data"
+          ],
+          "type": "object"
         }
       },
       {
@@ -223169,33 +223451,29 @@
         "tool": true,
         "inputSchema": {
           "type": "object",
+          "additionalProperties": false,
           "properties": {
-            "leadId": {
+            "id": {
               "type": "integer",
-              "description": "Lead ID.",
-              "minimum": 1
+              "minimum": 1,
+              "description": "Positive integer ID of the lead to delete."
             }
           },
-          "additionalProperties": false,
           "required": [
-            "leadId"
+            "id"
           ]
         },
         "outputSchema": {
           "type": "object",
           "required": [
-            "deleted",
-            "leadId"
+            "data"
           ],
+          "additionalProperties": false,
           "properties": {
-            "deleted": {
-              "type": "boolean"
-            },
-            "leadId": {
-              "type": "integer"
+            "data": {
+              "type": "object"
             }
-          },
-          "additionalProperties": false
+          }
         }
       },
       {
@@ -223208,29 +223486,29 @@
         "destructive": false,
         "tool": true,
         "inputSchema": {
-          "type": "object",
+          "additionalProperties": false,
           "properties": {
             "leadId": {
-              "type": "integer",
-              "minimum": 1
+              "minimum": 1,
+              "type": "integer"
             }
           },
           "required": [
             "leadId"
           ],
-          "additionalProperties": false
+          "type": "object"
         },
         "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
+          "additionalProperties": false,
           "properties": {
             "data": {
               "type": "object"
             }
           },
-          "additionalProperties": false
+          "required": [
+            "data"
+          ],
+          "type": "object"
         }
       },
       {
@@ -223243,32 +223521,37 @@
         "destructive": false,
         "tool": true,
         "inputSchema": {
-          "type": "object",
+          "additionalProperties": false,
           "properties": {
-            "start": {
-              "type": "string",
-              "minLength": 1
+            "accountId": {
+              "minimum": 1,
+              "type": "integer"
             },
             "end": {
-              "type": "string",
-              "minLength": 1
+              "minLength": 1,
+              "type": "string"
             },
             "phone_number": {
-              "type": "string",
-              "minLength": 1
+              "minLength": 1,
+              "type": "string"
             },
-            "accountId": {
-              "type": "integer",
-              "minimum": 1
+            "start": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "page": {
+              "minimum": 1,
+              "type": "integer"
+            },
+            "limit": {
+              "minimum": 1,
+              "type": "integer"
             }
           },
-          "additionalProperties": false
+          "type": "object"
         },
         "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
+          "additionalProperties": false,
           "properties": {
             "data": {
               "type": [
@@ -223277,7 +223560,10 @@
               ]
             }
           },
-          "additionalProperties": false
+          "required": [
+            "data"
+          ],
+          "type": "object"
         }
       },
       {
@@ -223291,88 +223577,77 @@
         "tool": true,
         "inputSchema": {
           "type": "object",
+          "additionalProperties": false,
           "properties": {
-            "leadId": {
+            "id": {
               "type": "integer",
-              "description": "Lead ID.",
-              "minimum": 1
-            },
-            "fname": {
-              "type": "string",
-              "description": "First name."
-            },
-            "lname": {
-              "type": "string",
-              "description": "Last name."
+              "minimum": 1,
+              "description": "Unique identifier of the lead to update."
             },
             "email": {
               "type": "string",
-              "description": "Email address."
+              "minLength": 1,
+              "description": "Email address of the lead."
             },
-            "phone_number": {
+            "fname": {
               "type": "string",
-              "description": "Phone number."
+              "minLength": 1,
+              "description": "First name of the lead."
+            },
+            "lname": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Last name of the lead."
+            },
+            "stage": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Current stage in the pipeline."
+            },
+            "result": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Outcome/result after call or follow-up."
+            },
+            "source": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Origin/source of the lead."
             },
             "status": {
               "type": "string",
-              "description": "Lead status."
+              "minLength": 1,
+              "description": "Current status of the lead."
             },
             "company": {
               "type": "string",
-              "description": "Company name."
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "leadId"
-          ]
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        }
-      },
-      {
-        "key": "sms.create",
-        "kind": "action",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "read": false,
-        "destructive": false,
-        "tool": true,
-        "inputSchema": {
-          "type": "object",
-          "properties": {
+              "minLength": 1,
+              "description": "Company name associated with the lead."
+            },
+            "is_blocked": {
+              "type": "integer",
+              "enum": [
+                0,
+                1
+              ],
+              "description": "Flag to block the lead: 1 to block, 0 to unblock."
+            },
+            "is_stopped": {
+              "type": "integer",
+              "enum": [
+                0,
+                1
+              ],
+              "description": "Flag to stop automated calls: 1 to enable, 0 to disable."
+            },
             "phone_number": {
               "type": "string",
-              "description": "Destination phone number.",
-              "minLength": 1
-            },
-            "sms_number": {
-              "type": "string",
-              "description": "Callingly SMS sender number.",
-              "minLength": 1
-            },
-            "message": {
-              "type": "string",
-              "description": "SMS body.",
-              "minLength": 1
+              "minLength": 1,
+              "description": "Phone number of the lead in E.164 format."
             }
           },
-          "additionalProperties": false,
           "required": [
-            "phone_number",
-            "sms_number",
-            "message"
+            "id"
           ]
         },
         "outputSchema": {
@@ -223380,12 +223655,12 @@
           "required": [
             "data"
           ],
+          "additionalProperties": false,
           "properties": {
             "data": {
               "type": "object"
             }
-          },
-          "additionalProperties": false
+          }
         }
       },
       {
@@ -223399,16 +223674,16 @@
         "tool": true,
         "inputSchema": {
           "type": "object",
+          "additionalProperties": false,
           "properties": {
-            "teamId": {
+            "id": {
               "type": "integer",
-              "description": "Team ID.",
-              "minimum": 1
+              "minimum": 1,
+              "description": "Unique numeric ID of the team. Use List Teams to retrieve team IDs."
             }
           },
-          "additionalProperties": false,
           "required": [
-            "teamId"
+            "id"
           ]
         },
         "outputSchema": {
@@ -223416,15 +223691,152 @@
           "required": [
             "data"
           ],
+          "additionalProperties": false,
           "properties": {
             "data": {
-              "type": [
-                "array",
-                "object"
-              ]
+              "type": "object"
+            }
+          }
+        }
+      },
+      {
+        "key": "teams.agents.remove",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": true,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "team_id": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Unique identifier of the team to remove the agent from."
+            },
+            "agent_id": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Unique identifier of the agent to remove from the team."
             }
           },
-          "additionalProperties": false
+          "required": [
+            "team_id",
+            "agent_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "success"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "success": {
+              "type": "boolean"
+            }
+          }
+        }
+      },
+      {
+        "key": "teams.agents.update",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Unique identifier of the team to update."
+            },
+            "agents": {
+              "type": "array",
+              "description": "Agent IDs to assign. Replaces all current agents. Empty list removes all.",
+              "items": {
+                "type": "integer",
+                "minimum": 1
+              }
+            }
+          },
+          "required": [
+            "id",
+            "agents"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      {
+        "key": "teams.agents.update_settings",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "team_id": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Unique identifier of the team containing the agent."
+            },
+            "agent_id": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Unique identifier of the agent whose settings to update."
+            },
+            "priority": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Calling priority (1 = highest)."
+            },
+            "cap": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Maximum number of calls the agent can receive."
+            }
+          },
+          "required": [
+            "team_id",
+            "agent_id",
+            "priority"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          }
         }
       },
       {
@@ -223438,37 +223850,103 @@
         "tool": true,
         "inputSchema": {
           "type": "object",
+          "additionalProperties": false,
           "properties": {
             "name": {
               "type": "string",
-              "description": "Team display name.",
-              "minLength": 1
+              "minLength": 1,
+              "description": "Name of the team."
             },
             "account_id": {
               "type": "integer",
-              "description": "Agency client account ID.",
-              "minimum": 1
+              "minimum": 1,
+              "description": "Account ID under which to create the team."
+            },
+            "delay": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Delay in seconds before dialing team members."
+            },
+            "retries": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Number of retry attempts per agent."
+            },
+            "is_retry": {
+              "type": "integer",
+              "enum": [
+                0,
+                1
+              ],
+              "description": "Enable per-agent retries: 1 to enable, 0 to disable."
+            },
+            "language": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Language code for team messages (e.g. en)."
             },
             "call_mode": {
               "type": "string",
-              "description": "Call routing mode.",
+              "minLength": 1,
+              "description": "Call distribution mode. Only simultaneous is supported currently.",
               "enum": [
-                "simultaneous",
-                "round_robin"
+                "simultaneous"
               ]
             },
             "is_record": {
               "type": "integer",
-              "description": "Whether calls are recorded (0 or 1)."
+              "enum": [
+                0,
+                1
+              ],
+              "description": "Whether calls should be recorded: 1 to record, 0 otherwise."
             },
-            "language": {
+            "whispertext": {
               "type": "string",
-              "description": "Whisper language code."
+              "minLength": 1,
+              "description": "Pre-call whisper message template."
+            },
+            "lead_retries": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Number of retries at the lead level."
+            },
+            "is_reschedule": {
+              "type": "integer",
+              "enum": [
+                0,
+                1
+              ],
+              "description": "Enable rescheduling on no-answer: 1 to enable, 0 to disable."
+            },
+            "is_retry_lead": {
+              "type": "integer",
+              "enum": [
+                0,
+                1
+              ],
+              "description": "Enable lead-level retries: 1 to enable, 0 to disable."
+            },
+            "retry_schedule": {
+              "type": "array",
+              "description": "Schedule for per-agent retries in minutes.",
+              "items": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "lead_retry_schedule": {
+              "type": "array",
+              "description": "Schedule for lead-level retries in minutes.",
+              "items": {
+                "type": "integer",
+                "minimum": 0
+              }
             }
           },
-          "additionalProperties": false,
           "required": [
-            "name"
+            "name",
+            "account_id"
           ]
         },
         "outputSchema": {
@@ -223476,12 +223954,12 @@
           "required": [
             "data"
           ],
+          "additionalProperties": false,
           "properties": {
             "data": {
               "type": "object"
             }
-          },
-          "additionalProperties": false
+          }
         }
       },
       {
@@ -223494,29 +223972,29 @@
         "destructive": false,
         "tool": true,
         "inputSchema": {
-          "type": "object",
+          "additionalProperties": false,
           "properties": {
             "teamId": {
-              "type": "integer",
-              "minimum": 1
+              "minimum": 1,
+              "type": "integer"
             }
           },
           "required": [
             "teamId"
           ],
-          "additionalProperties": false
+          "type": "object"
         },
         "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
+          "additionalProperties": false,
           "properties": {
             "data": {
               "type": "object"
             }
           },
-          "additionalProperties": false
+          "required": [
+            "data"
+          ],
+          "type": "object"
         }
       },
       {
@@ -223529,20 +224007,17 @@
         "destructive": false,
         "tool": true,
         "inputSchema": {
-          "type": "object",
+          "additionalProperties": false,
           "properties": {
             "accountId": {
-              "type": "integer",
-              "minimum": 1
+              "minimum": 1,
+              "type": "integer"
             }
           },
-          "additionalProperties": false
+          "type": "object"
         },
         "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
+          "additionalProperties": false,
           "properties": {
             "data": {
               "type": [
@@ -223551,11 +224026,14 @@
               ]
             }
           },
-          "additionalProperties": false
+          "required": [
+            "data"
+          ],
+          "type": "object"
         }
       },
       {
-        "key": "teams.update",
+        "key": "webhooks.create",
         "kind": "action",
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
@@ -223565,29 +224043,90 @@
         "tool": true,
         "inputSchema": {
           "type": "object",
+          "additionalProperties": false,
           "properties": {
-            "teamId": {
-              "type": "integer",
-              "description": "Team ID.",
-              "minimum": 1
-            },
             "name": {
               "type": "string",
-              "description": "Updated team name.",
-              "minLength": 1
+              "minLength": 1,
+              "description": "A descriptive name for the webhook."
             },
-            "call_mode": {
+            "event": {
               "type": "string",
-              "description": "Call routing mode."
+              "minLength": 1,
+              "description": "Event that triggers this webhook.",
+              "enum": [
+                "call_completed",
+                "lead_created",
+                "lead_updated"
+              ]
             },
-            "is_record": {
+            "target_url": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The callback URL to receive the webhook."
+            },
+            "field": {
+              "type": "string",
+              "minLength": 1,
+              "description": "For lead_created or lead_updated: field to watch for changes.",
+              "enum": [
+                "lead_owner",
+                "result",
+                "stage",
+                "status",
+                "tags"
+              ]
+            },
+            "filter": {
+              "type": "string",
+              "minLength": 1,
+              "description": "For lead_created or lead_updated: value the watched field must match."
+            },
+            "team_id": {
               "type": "integer",
-              "description": "Whether calls are recorded (0 or 1)."
+              "minimum": 1,
+              "description": "For outbound call_completed events: team ID to filter on."
+            },
+            "direction": {
+              "type": "string",
+              "minLength": 1,
+              "description": "For call_completed events: outbound or inbound.",
+              "enum": [
+                "outbound",
+                "inbound"
+              ]
+            },
+            "number_id": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "For inbound call_completed events: number ID to filter on."
+            },
+            "call_status": {
+              "type": "string",
+              "minLength": 1,
+              "description": "For call_completed events: status filter.",
+              "enum": [
+                "completed",
+                "missed",
+                "offline"
+              ]
+            },
+            "call_lead_status": {
+              "type": "string",
+              "minLength": 1,
+              "description": "For call_completed events: lead outcome filter.",
+              "enum": [
+                "contacted",
+                "missed",
+                "removed",
+                "voicemail"
+              ]
             }
           },
-          "additionalProperties": false,
           "required": [
-            "teamId"
+            "name",
+            "event",
+            "target_url"
           ]
         },
         "outputSchema": {
@@ -223595,12 +224134,48 @@
           "required": [
             "data"
           ],
+          "additionalProperties": false,
           "properties": {
             "data": {
               "type": "object"
             }
+          }
+        }
+      },
+      {
+        "key": "webhooks.delete",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": true,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Unique identifier of the webhook to delete."
+            }
           },
-          "additionalProperties": false
+          "required": [
+            "id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          }
         }
       },
       {
@@ -223614,16 +224189,16 @@
         "tool": true,
         "inputSchema": {
           "type": "object",
+          "additionalProperties": false,
           "properties": {
-            "webhookId": {
+            "id": {
               "type": "integer",
-              "description": "Webhook ID.",
-              "minimum": 1
+              "minimum": 1,
+              "description": "Unique identifier of the webhook to retrieve."
             }
           },
-          "additionalProperties": false,
           "required": [
-            "webhookId"
+            "id"
           ]
         },
         "outputSchema": {
@@ -223631,39 +224206,161 @@
           "required": [
             "data"
           ],
+          "additionalProperties": false,
           "properties": {
             "data": {
               "type": "object"
             }
-          },
-          "additionalProperties": false
+          }
         }
       },
       {
         "key": "webhooks.list",
         "kind": "action",
         "timeoutMs": 15000,
-        "maxInputBytes": 4096,
+        "maxInputBytes": 65536,
         "maxResponseBytes": 5242880,
         "read": true,
         "destructive": false,
         "tool": true,
         "inputSchema": {
           "type": "object",
-          "properties": {},
-          "additionalProperties": false
+          "additionalProperties": false,
+          "properties": {
+            "account_id": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Filter webhooks by client account ID (required for agency partners)."
+            }
+          }
         },
         "outputSchema": {
           "type": "object",
           "required": [
             "data"
           ],
+          "additionalProperties": false,
           "properties": {
             "data": {
-              "type": "array"
+              "type": [
+                "array",
+                "object"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "key": "webhooks.update",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Unique identifier of the webhook to update."
+            },
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "description": "New descriptive name for the webhook."
+            },
+            "event": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Event type that triggers the webhook.",
+              "enum": [
+                "call_completed",
+                "lead_created",
+                "lead_updated"
+              ]
+            },
+            "field": {
+              "type": "string",
+              "minLength": 1,
+              "description": "For lead_created/lead_updated: the lead field to watch.",
+              "enum": [
+                "lead_owner",
+                "result",
+                "stage",
+                "status",
+                "tags"
+              ]
+            },
+            "filter": {
+              "type": "string",
+              "minLength": 1,
+              "description": "For lead_created/lead_updated: value the watched field must match."
+            },
+            "team_id": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "For outbound call_completed events: filter by team ID."
+            },
+            "number_id": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "For inbound call_completed events: filter by number ID."
+            },
+            "target_url": {
+              "type": "string",
+              "minLength": 1,
+              "description": "New callback URL to receive webhook payloads."
+            },
+            "call_status": {
+              "type": "string",
+              "minLength": 1,
+              "description": "For call_completed events: filter by call status.",
+              "enum": [
+                "completed",
+                "missed",
+                "offline"
+              ]
+            },
+            "call_direction": {
+              "type": "string",
+              "minLength": 1,
+              "description": "For call_completed events: filter by call direction.",
+              "enum": [
+                "outbound",
+                "inbound"
+              ]
+            },
+            "call_lead_status": {
+              "type": "string",
+              "minLength": 1,
+              "description": "For call_completed events: filter by lead outcome.",
+              "enum": [
+                "contacted",
+                "missed",
+                "removed",
+                "voicemail"
+              ]
             }
           },
-          "additionalProperties": false
+          "required": [
+            "id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          }
         }
       }
     ]
@@ -578479,7 +579176,7 @@
   },
   {
     "key": "mailchimp",
-    "digest": "32538595e9d275dd2bc400402002fcdfeb56c07656a5b26493de43f2d606ed29",
+    "digest": "cfc89d67da1ad7dc8e35cb8fc77a5141561b5106e88674be0fd62dde0d5f52a7",
     "public": true,
     "egress": true,
     "operations": [
@@ -593963,6 +594660,447 @@
           "additionalProperties": false,
           "required": [
             "query"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": [
+                "object",
+                "null"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "key": "segments.count",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 1048576,
+        "maxResponseBytes": 1048576,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "segment_id": {
+              "type": "string",
+              "description": "The unique ID for the segment."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "segment_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": [
+                "object",
+                "null"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "key": "segments.create",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 1048576,
+        "maxResponseBytes": 1048576,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "description": "The name of the segment."
+            },
+            "list_id": {
+              "type": "string",
+              "description": "The unique ID for the list (audience) that owns the segment."
+            },
+            "definition": {
+              "type": "object",
+              "description": "Segment definition. The root node is a group with match and conditions."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "name",
+            "list_id",
+            "definition"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": [
+                "object",
+                "null"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "key": "segments.delete",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 1048576,
+        "maxResponseBytes": 1048576,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "segment_id": {
+              "type": "string",
+              "description": "The unique ID for the segment."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "segment_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "null"
+            }
+          }
+        }
+      },
+      {
+        "key": "segments.get",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 1048576,
+        "maxResponseBytes": 1048576,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "segment_id": {
+              "type": "string",
+              "description": "The unique ID for the segment."
+            },
+            "fields": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "A comma-separated list of fields to return."
+            },
+            "exclude_fields": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "A comma-separated list of fields to exclude."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "segment_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": [
+                "object",
+                "null"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "key": "segments.list",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 1048576,
+        "maxResponseBytes": 1048576,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "fields": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "A comma-separated list of fields to return. Reference parameters of sub-objects with dot notation."
+            },
+            "exclude_fields": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "A comma-separated list of fields to exclude. Reference parameters of sub-objects with dot notation."
+            },
+            "count": {
+              "type": "integer",
+              "description": "The number of records to return. Default value is 10. Maximum value is 1000"
+            },
+            "offset": {
+              "type": "integer",
+              "description": "Used for pagination, this is the number of records from a collection to skip. Default value is 0."
+            },
+            "list_id": {
+              "type": "string",
+              "description": "The unique ID for the list (audience) that owns the segments."
+            },
+            "cursor": {
+              "type": "string",
+              "description": "Pagination cursor returned by a previous List Segments response."
+            },
+            "sort_field": {
+              "type": "string",
+              "description": "The field to sort by."
+            },
+            "sort_dir": {
+              "type": "string",
+              "description": "The sort direction: ASC or DESC."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "list_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": [
+                "object",
+                "null"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "key": "segments.snapshots.create",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 1048576,
+        "maxResponseBytes": 1048576,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "segment_id": {
+              "type": "string",
+              "description": "The unique ID for the segment."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "segment_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": [
+                "object",
+                "null"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "key": "segments.snapshots.get",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 1048576,
+        "maxResponseBytes": 1048576,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "segment_id": {
+              "type": "string",
+              "description": "The unique ID for the segment."
+            },
+            "snapshot_id": {
+              "type": "string",
+              "description": "The unique ID for the segment snapshot."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "segment_id",
+            "snapshot_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": [
+                "object",
+                "null"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "key": "segments.snapshots.members",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 1048576,
+        "maxResponseBytes": 1048576,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "segment_id": {
+              "type": "string",
+              "description": "The unique ID for the segment."
+            },
+            "fields": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "A comma-separated list of fields to return."
+            },
+            "exclude_fields": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "A comma-separated list of fields to exclude."
+            },
+            "snapshot_id": {
+              "type": "string",
+              "description": "The unique ID for the segment snapshot."
+            },
+            "count": {
+              "type": "integer",
+              "description": "The number of records to return."
+            },
+            "limit": {
+              "type": "integer",
+              "description": "Maximum number of contact IDs to return."
+            },
+            "cursor": {
+              "type": "string",
+              "description": "Pagination cursor returned by a previous snapshot members response."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "segment_id",
+            "snapshot_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": [
+                "object",
+                "null"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "key": "segments.update",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 1048576,
+        "maxResponseBytes": 1048576,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "segment_id": {
+              "type": "string",
+              "description": "The unique ID for the segment."
+            },
+            "name": {
+              "type": "string",
+              "description": "The name of the segment."
+            },
+            "definition": {
+              "type": "object",
+              "description": "Updated segment definition."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "segment_id"
           ]
         },
         "outputSchema": {
@@ -651845,7 +652983,7 @@
   },
   {
     "key": "nusii-proposals",
-    "digest": "0cc411767eef0833bb2ccdd2651f551b1652851838d60259a1100d04ec1660f2",
+    "digest": "e9255cfa9d234cc1b4dcff43eb16d1b95a977a2d99cad947925d00f2917d5dc3",
     "public": true,
     "egress": true,
     "operations": [
@@ -651859,21 +652997,21 @@
         "destructive": false,
         "tool": true,
         "inputSchema": {
-          "type": "object",
+          "additionalProperties": false,
           "properties": {},
-          "additionalProperties": false
+          "type": "object"
         },
         "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
+          "additionalProperties": false,
           "properties": {
             "data": {
               "type": "object"
             }
           },
-          "additionalProperties": false
+          "required": [
+            "data"
+          ],
+          "type": "object"
         }
       },
       {
@@ -651881,51 +653019,101 @@
         "kind": "action",
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
+        "maxResponseBytes": 1048576,
         "read": false,
         "destructive": false,
         "tool": true,
         "inputSchema": {
-          "type": "object",
+          "additionalProperties": false,
           "properties": {
-            "name": {
-              "type": "string",
+            "address": {
+              "description": "Client street address.",
               "minLength": 1,
-              "description": "Client first name."
-            },
-            "email": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Client email."
+              "type": "string"
             },
             "business": {
-              "type": "string",
+              "description": "Client company name.",
               "minLength": 1,
-              "description": "Business name."
+              "type": "string"
+            },
+            "city": {
+              "description": "Client city.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "country": {
+              "description": "Client country name.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "currency": {
+              "description": "Client currency. Defaults to the account currency or USD.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "email": {
+              "description": "Client email address.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "locale": {
+              "description": "Client language preference for proposals.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "name": {
+              "description": "Client first name.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "pdf_page_size": {
+              "description": "PDF page size preference. Default A4.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "postcode": {
+              "description": "Client postal code.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "state": {
+              "description": "Client state name.",
+              "minLength": 1,
+              "type": "string"
             },
             "surname": {
-              "type": "string",
+              "description": "Client last name.",
               "minLength": 1,
-              "description": "Client surname."
+              "type": "string"
+            },
+            "telephone": {
+              "description": "Client phone number.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "web": {
+              "description": "Client website.",
+              "minLength": 1,
+              "type": "string"
             }
           },
-          "additionalProperties": false,
           "required": [
-            "name",
-            "email"
-          ]
+            "email",
+            "name"
+          ],
+          "type": "object"
         },
         "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
+          "additionalProperties": false,
           "properties": {
             "data": {
               "type": "object"
             }
           },
-          "additionalProperties": false
+          "required": [
+            "data"
+          ],
+          "type": "object"
         }
       },
       {
@@ -651933,35 +653121,35 @@
         "kind": "action",
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
+        "maxResponseBytes": 1048576,
         "read": false,
         "destructive": true,
         "tool": true,
         "inputSchema": {
-          "type": "object",
+          "additionalProperties": false,
           "properties": {
             "id": {
-              "type": "string",
+              "description": "Client ID.",
               "minLength": 1,
-              "description": "Resource ID."
+              "type": "string"
             }
           },
-          "additionalProperties": false,
           "required": [
             "id"
-          ]
+          ],
+          "type": "object"
         },
         "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
+          "additionalProperties": false,
           "properties": {
             "data": {
               "type": "object"
             }
           },
-          "additionalProperties": false
+          "required": [
+            "data"
+          ],
+          "type": "object"
         }
       },
       {
@@ -651974,29 +653162,29 @@
         "destructive": false,
         "tool": true,
         "inputSchema": {
-          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "minLength": 1,
+              "type": "string"
+            }
+          },
           "required": [
             "id"
           ],
-          "properties": {
-            "id": {
-              "type": "string",
-              "minLength": 1
-            }
-          },
-          "additionalProperties": false
+          "type": "object"
         },
         "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
+          "additionalProperties": false,
           "properties": {
             "data": {
               "type": "object"
             }
           },
-          "additionalProperties": false
+          "required": [
+            "data"
+          ],
+          "type": "object"
         }
       },
       {
@@ -652009,30 +653197,30 @@
         "destructive": false,
         "tool": true,
         "inputSchema": {
-          "type": "object",
+          "additionalProperties": false,
           "properties": {
             "page": {
-              "type": "integer",
-              "minimum": 1
+              "minimum": 1,
+              "type": "integer"
             },
             "per": {
-              "type": "integer",
-              "minimum": 1
+              "minimum": 1,
+              "type": "integer"
             }
           },
-          "additionalProperties": false
+          "type": "object"
         },
         "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
+          "additionalProperties": false,
           "properties": {
             "data": {
               "type": "object"
             }
           },
-          "additionalProperties": false
+          "required": [
+            "data"
+          ],
+          "type": "object"
         }
       },
       {
@@ -652040,50 +653228,113 @@
         "kind": "action",
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
+        "maxResponseBytes": 1048576,
         "read": false,
         "destructive": false,
         "tool": true,
         "inputSchema": {
-          "type": "object",
+          "additionalProperties": false,
           "properties": {
+            "client": {
+              "additionalProperties": false,
+              "description": "Client fields to update.",
+              "properties": {
+                "address": {
+                  "description": "Client street address.",
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "business": {
+                  "description": "Client company name.",
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "city": {
+                  "description": "Client city.",
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "country": {
+                  "description": "Client country name.",
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "currency": {
+                  "description": "Client currency. Defaults to the account currency or USD.",
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "email": {
+                  "description": "Client email address.",
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "locale": {
+                  "description": "Client language preference for proposals.",
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "name": {
+                  "description": "Client first name.",
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "pdf_page_size": {
+                  "description": "PDF page size preference. Default A4.",
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "postcode": {
+                  "description": "Client postal code.",
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "state": {
+                  "description": "Client state name.",
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "surname": {
+                  "description": "Client last name.",
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "telephone": {
+                  "description": "Client phone number.",
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "web": {
+                  "description": "Client website.",
+                  "minLength": 1,
+                  "type": "string"
+                }
+              },
+              "type": "object"
+            },
             "id": {
-              "type": "string",
+              "description": "Client ID.",
               "minLength": 1,
-              "description": "Client ID."
-            },
-            "name": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Client first name."
-            },
-            "email": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Client email."
-            },
-            "business": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Business name."
+              "type": "string"
             }
           },
-          "additionalProperties": false,
           "required": [
+            "client",
             "id"
-          ]
+          ],
+          "type": "object"
         },
         "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
+          "additionalProperties": false,
           "properties": {
             "data": {
               "type": "object"
             }
           },
-          "additionalProperties": false
+          "required": [
+            "data"
+          ],
+          "type": "object"
         }
       },
       {
@@ -652096,21 +653347,357 @@
         "destructive": false,
         "tool": true,
         "inputSchema": {
-          "type": "object",
+          "additionalProperties": false,
           "properties": {},
-          "additionalProperties": false
+          "type": "object"
         },
         "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
+          "additionalProperties": false,
           "properties": {
             "data": {
               "type": "object"
             }
           },
-          "additionalProperties": false
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        }
+      },
+      {
+        "key": "line_items.create",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "amount": {
+              "description": "Cost amount in cents (for example 10000 for $100.00).",
+              "type": "integer"
+            },
+            "cost_type": {
+              "description": "Cost structure. Defaults to fixed.",
+              "enum": [
+                "fixed",
+                "recurring",
+                "per",
+                "range"
+              ],
+              "type": "string"
+            },
+            "name": {
+              "description": "Descriptive name/body of the line item.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "per_type": {
+              "description": "Unit type when cost_type is per.",
+              "enum": [
+                "year",
+                "month",
+                "week",
+                "day",
+                "hour",
+                "item",
+                "unit"
+              ],
+              "type": "string"
+            },
+            "position": {
+              "description": "Order of the line item within the section.",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "quantity": {
+              "description": "Multiplier for per-type costs. Total = quantity \u00d7 amount.",
+              "minimum": 1,
+              "type": "integer"
+            },
+            "recurring_type": {
+              "description": "Recurrence when cost_type is recurring.",
+              "enum": [
+                "yearly",
+                "semiannually",
+                "trimester",
+                "monthly",
+                "weekly",
+                "daily",
+                "hourly"
+              ],
+              "type": "string"
+            },
+            "section_id": {
+              "description": "Section ID to create the line item in.",
+              "type": "integer"
+            }
+          },
+          "required": [
+            "section_id"
+          ],
+          "type": "object"
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        }
+      },
+      {
+        "key": "line_items.delete",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
+        "read": false,
+        "destructive": true,
+        "tool": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "description": "Line item ID.",
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "id"
+          ],
+          "type": "object"
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        }
+      },
+      {
+        "key": "line_items.list",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "page": {
+              "description": "Page number for pagination. Default 1.",
+              "minimum": 1,
+              "type": "integer"
+            },
+            "per": {
+              "description": "Results per page. Default 25.",
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          "type": "object"
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        }
+      },
+      {
+        "key": "line_items.list_for_section",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "section_id": {
+              "description": "Section ID whose line items to list.",
+              "type": "integer"
+            }
+          },
+          "required": [
+            "section_id"
+          ],
+          "type": "object"
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        }
+      },
+      {
+        "key": "line_items.update",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "amount": {
+              "description": "Cost amount in cents (for example 10000 for $100.00).",
+              "type": "integer"
+            },
+            "cost_type": {
+              "description": "Cost structure. Defaults to fixed.",
+              "enum": [
+                "fixed",
+                "recurring",
+                "per",
+                "range"
+              ],
+              "type": "string"
+            },
+            "id": {
+              "description": "Line item ID.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "name": {
+              "description": "Descriptive name/body of the line item.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "per_type": {
+              "description": "Unit type when cost_type is per.",
+              "enum": [
+                "year",
+                "month",
+                "week",
+                "day",
+                "hour",
+                "item",
+                "unit"
+              ],
+              "type": "string"
+            },
+            "position": {
+              "description": "Order of the line item within the section.",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "quantity": {
+              "description": "Multiplier for per-type costs. Total = quantity \u00d7 amount.",
+              "minimum": 1,
+              "type": "integer"
+            },
+            "recurring_type": {
+              "description": "Recurrence when cost_type is recurring.",
+              "enum": [
+                "yearly",
+                "semiannually",
+                "trimester",
+                "monthly",
+                "weekly",
+                "daily",
+                "hourly"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "id"
+          ],
+          "type": "object"
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        }
+      },
+      {
+        "key": "proposal_activities.list",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "client_id": {
+              "description": "Filter activities for a client ID.",
+              "type": "integer"
+            },
+            "page": {
+              "description": "Page number for pagination. Default 1.",
+              "minimum": 1,
+              "type": "integer"
+            },
+            "per": {
+              "description": "Results per page. Default 25.",
+              "minimum": 1,
+              "type": "integer"
+            },
+            "proposal_id": {
+              "description": "Filter activities for a proposal ID.",
+              "type": "integer"
+            }
+          },
+          "type": "object"
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
         }
       },
       {
@@ -652118,35 +653705,35 @@
         "kind": "action",
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
+        "maxResponseBytes": 1048576,
         "read": false,
         "destructive": false,
         "tool": true,
         "inputSchema": {
-          "type": "object",
+          "additionalProperties": false,
           "properties": {
             "id": {
-              "type": "string",
+              "description": "Proposal ID.",
               "minLength": 1,
-              "description": "Resource ID."
+              "type": "string"
             }
           },
-          "additionalProperties": false,
           "required": [
             "id"
-          ]
+          ],
+          "type": "object"
         },
         "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
+          "additionalProperties": false,
           "properties": {
             "data": {
               "type": "object"
             }
           },
-          "additionalProperties": false
+          "required": [
+            "data"
+          ],
+          "type": "object"
         }
       },
       {
@@ -652154,45 +653741,81 @@
         "kind": "action",
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
+        "maxResponseBytes": 1048576,
         "read": false,
         "destructive": false,
         "tool": true,
         "inputSchema": {
-          "type": "object",
+          "additionalProperties": false,
           "properties": {
-            "title": {
-              "type": "string",
+            "client_email": {
+              "description": "Client email. Creates a client when none exists. Ignored when client_id is set.",
               "minLength": 1,
-              "description": "Proposal title."
+              "type": "string"
             },
             "client_id": {
-              "type": "string",
+              "description": "Associated client identifier.",
+              "type": "integer"
+            },
+            "display_date": {
+              "description": "Date displayed on the proposal in ISO 8601 format.",
               "minLength": 1,
-              "description": "Client ID."
+              "type": "string"
+            },
+            "document_section_title": {
+              "description": "Documents section heading. Defaults to Documents.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "exclude_total": {
+              "description": "Hide the proposal total. Defaults to false.",
+              "type": "boolean"
+            },
+            "exclude_total_in_pdf": {
+              "description": "Hide the total in the PDF. Defaults to false.",
+              "type": "boolean"
+            },
+            "expires_at": {
+              "description": "Proposal expiration date in ISO 8601 format.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "prepared_by_id": {
+              "description": "User ID of the person who prepared the proposal.",
+              "type": "integer"
+            },
+            "report": {
+              "description": "Convert the proposal to report format. Defaults to false.",
+              "type": "boolean"
             },
             "template_id": {
-              "type": "string",
+              "description": "Copy sections from this template into the new proposal.",
+              "type": "integer"
+            },
+            "theme": {
+              "description": "Proposal visual theme.",
               "minLength": 1,
-              "description": "Template ID."
+              "type": "string"
+            },
+            "title": {
+              "description": "Proposal title.",
+              "minLength": 1,
+              "type": "string"
             }
           },
-          "additionalProperties": false,
-          "required": [
-            "title"
-          ]
+          "type": "object"
         },
         "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
+          "additionalProperties": false,
           "properties": {
             "data": {
               "type": "object"
             }
           },
-          "additionalProperties": false
+          "required": [
+            "data"
+          ],
+          "type": "object"
         }
       },
       {
@@ -652200,35 +653823,35 @@
         "kind": "action",
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
+        "maxResponseBytes": 1048576,
         "read": false,
         "destructive": true,
         "tool": true,
         "inputSchema": {
-          "type": "object",
+          "additionalProperties": false,
           "properties": {
             "id": {
-              "type": "string",
+              "description": "Proposal ID.",
               "minLength": 1,
-              "description": "Resource ID."
+              "type": "string"
             }
           },
-          "additionalProperties": false,
           "required": [
             "id"
-          ]
+          ],
+          "type": "object"
         },
         "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
+          "additionalProperties": false,
           "properties": {
             "data": {
               "type": "object"
             }
           },
-          "additionalProperties": false
+          "required": [
+            "data"
+          ],
+          "type": "object"
         }
       },
       {
@@ -652236,35 +653859,35 @@
         "kind": "action",
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
+        "maxResponseBytes": 1048576,
         "read": true,
         "destructive": false,
         "tool": true,
         "inputSchema": {
-          "type": "object",
+          "additionalProperties": false,
           "properties": {
             "id": {
-              "type": "string",
+              "description": "Proposal ID.",
               "minLength": 1,
-              "description": "Resource ID."
+              "type": "string"
             }
           },
-          "additionalProperties": false,
           "required": [
             "id"
-          ]
+          ],
+          "type": "object"
         },
         "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
+          "additionalProperties": false,
           "properties": {
             "data": {
               "type": "object"
             }
           },
-          "additionalProperties": false
+          "required": [
+            "data"
+          ],
+          "type": "object"
         }
       },
       {
@@ -652277,105 +653900,47 @@
         "destructive": false,
         "tool": true,
         "inputSchema": {
-          "type": "object",
+          "additionalProperties": false,
           "properties": {
+            "archived": {
+              "type": "boolean"
+            },
             "page": {
-              "type": "integer",
-              "minimum": 1
+              "minimum": 1,
+              "type": "integer"
             },
             "per": {
-              "type": "integer",
-              "minimum": 1
+              "minimum": 1,
+              "type": "integer"
+            },
+            "recipient_email": {
+              "minLength": 1,
+              "type": "string"
             },
             "status": {
-              "type": "string",
               "enum": [
                 "draft",
                 "pending",
                 "accepted",
                 "rejected",
                 "clarification"
-              ]
-            },
-            "archived": {
-              "type": "boolean"
-            },
-            "recipient_email": {
-              "type": "string",
-              "minLength": 1
+              ],
+              "type": "string"
             }
           },
-          "additionalProperties": false
+          "type": "object"
         },
         "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        }
-      },
-      {
-        "key": "proposals.send",
-        "kind": "action",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "read": false,
-        "destructive": false,
-        "tool": true,
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "id": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Proposal ID."
-            },
-            "subject": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Email subject."
-            },
-            "email": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Recipient email."
-            },
-            "message": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Email body."
-            },
-            "sender_email": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Sender email."
-            }
-          },
           "additionalProperties": false,
-          "required": [
-            "id",
-            "subject",
-            "email"
-          ]
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
           "properties": {
             "data": {
               "type": "object"
             }
           },
-          "additionalProperties": false
+          "required": [
+            "data"
+          ],
+          "type": "object"
         }
       },
       {
@@ -652383,45 +653948,89 @@
         "kind": "action",
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
+        "maxResponseBytes": 1048576,
         "read": false,
         "destructive": false,
         "tool": true,
         "inputSchema": {
-          "type": "object",
+          "additionalProperties": false,
           "properties": {
-            "id": {
-              "type": "string",
+            "client_email": {
+              "description": "Client email. Creates a client when none exists. Ignored when client_id is set.",
               "minLength": 1,
-              "description": "Proposal ID."
-            },
-            "title": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Proposal title."
+              "type": "string"
             },
             "client_id": {
-              "type": "string",
+              "description": "Associated client identifier.",
+              "type": "integer"
+            },
+            "display_date": {
+              "description": "Date displayed on the proposal in ISO 8601 format.",
               "minLength": 1,
-              "description": "Client ID."
+              "type": "string"
+            },
+            "document_section_title": {
+              "description": "Documents section heading. Defaults to Documents.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "exclude_total": {
+              "description": "Hide the proposal total. Defaults to false.",
+              "type": "boolean"
+            },
+            "exclude_total_in_pdf": {
+              "description": "Hide the total in the PDF. Defaults to false.",
+              "type": "boolean"
+            },
+            "expires_at": {
+              "description": "Proposal expiration date in ISO 8601 format.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "id": {
+              "description": "Proposal ID.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "prepared_by_id": {
+              "description": "User ID of the person who prepared the proposal.",
+              "type": "integer"
+            },
+            "report": {
+              "description": "Convert the proposal to report format. Defaults to false.",
+              "type": "boolean"
+            },
+            "template_id": {
+              "description": "Copy sections from this template into the new proposal.",
+              "type": "integer"
+            },
+            "theme": {
+              "description": "Proposal visual theme.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "title": {
+              "description": "Proposal title.",
+              "minLength": 1,
+              "type": "string"
             }
           },
-          "additionalProperties": false,
           "required": [
             "id"
-          ]
+          ],
+          "type": "object"
         },
         "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
+          "additionalProperties": false,
           "properties": {
             "data": {
               "type": "object"
             }
           },
-          "additionalProperties": false
+          "required": [
+            "data"
+          ],
+          "type": "object"
         }
       },
       {
@@ -652429,54 +654038,115 @@
         "kind": "action",
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
+        "maxResponseBytes": 1048576,
         "read": false,
         "destructive": false,
         "tool": true,
         "inputSchema": {
-          "type": "object",
+          "additionalProperties": false,
           "properties": {
-            "title": {
-              "type": "string",
+            "body": {
+              "description": "Section content.",
               "minLength": 1,
-              "description": "Section title."
+              "type": "string"
+            },
+            "include_total": {
+              "description": "Display a subtotal within the section. Defaults to false.",
+              "type": "boolean"
+            },
+            "name": {
+              "description": "Internal section identifier.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "optional": {
+              "description": "When true, the client can choose the price package.",
+              "type": "boolean"
+            },
+            "page_break": {
+              "description": "Insert a PDF page break before the section.",
+              "type": "boolean"
+            },
+            "position": {
+              "description": "Display order in the proposal or template.",
+              "minimum": 0,
+              "type": "integer"
             },
             "proposal_id": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Proposal ID."
+              "description": "Proposal identifier. Provide proposal_id or template_id.",
+              "type": "integer"
+            },
+            "reusable": {
+              "description": "When true, the section can be reused on other proposals.",
+              "type": "boolean"
             },
             "section_type": {
-              "type": "string",
+              "description": "Section type. Defaults to text.",
               "enum": [
                 "text",
                 "cost"
               ],
-              "description": "Section type."
+              "type": "string"
             },
-            "body": {
-              "type": "string",
+            "template_id": {
+              "description": "Template identifier. Provide proposal_id or template_id.",
+              "type": "integer"
+            },
+            "title": {
+              "description": "Section heading.",
               "minLength": 1,
-              "description": "HTML body."
+              "type": "string"
             }
           },
-          "additionalProperties": false,
-          "required": [
-            "title",
-            "proposal_id"
-          ]
+          "type": "object"
         },
         "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
+          "additionalProperties": false,
           "properties": {
             "data": {
               "type": "object"
             }
           },
-          "additionalProperties": false
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        }
+      },
+      {
+        "key": "sections.delete",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
+        "read": false,
+        "destructive": true,
+        "tool": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "description": "Section ID.",
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "id"
+          ],
+          "type": "object"
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
         }
       },
       {
@@ -652484,35 +654154,35 @@
         "kind": "action",
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
+        "maxResponseBytes": 1048576,
         "read": true,
         "destructive": false,
         "tool": true,
         "inputSchema": {
-          "type": "object",
+          "additionalProperties": false,
           "properties": {
             "id": {
-              "type": "string",
+              "description": "Section ID.",
               "minLength": 1,
-              "description": "Resource ID."
+              "type": "string"
             }
           },
-          "additionalProperties": false,
           "required": [
             "id"
-          ]
+          ],
+          "type": "object"
         },
         "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
+          "additionalProperties": false,
           "properties": {
             "data": {
               "type": "object"
             }
           },
-          "additionalProperties": false
+          "required": [
+            "data"
+          ],
+          "type": "object"
         }
       },
       {
@@ -652520,73 +654190,137 @@
         "kind": "action",
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
+        "maxResponseBytes": 1048576,
         "read": true,
         "destructive": false,
         "tool": true,
         "inputSchema": {
-          "type": "object",
+          "additionalProperties": false,
           "properties": {
+            "include_line_items": {
+              "description": "When true, include complete line item data.",
+              "type": "boolean"
+            },
             "page": {
-              "type": "integer",
-              "description": "Page number.",
-              "minimum": 1
+              "description": "Page number for pagination. Default 1.",
+              "minimum": 1,
+              "type": "integer"
             },
             "per": {
-              "type": "integer",
-              "description": "Page size.",
-              "minimum": 1
+              "description": "Results per page. Default 25.",
+              "minimum": 1,
+              "type": "integer"
+            },
+            "proposal_id": {
+              "description": "Filter sections by proposal ID.",
+              "type": "integer"
+            },
+            "template_id": {
+              "description": "Filter sections by template ID.",
+              "type": "integer"
             }
           },
-          "additionalProperties": false
+          "type": "object"
         },
         "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
+          "additionalProperties": false,
           "properties": {
             "data": {
               "type": "object"
             }
           },
-          "additionalProperties": false
+          "required": [
+            "data"
+          ],
+          "type": "object"
         }
       },
       {
-        "key": "templates.get",
+        "key": "sections.update",
         "kind": "action",
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "read": true,
+        "maxResponseBytes": 1048576,
+        "read": false,
         "destructive": false,
         "tool": true,
         "inputSchema": {
-          "type": "object",
+          "additionalProperties": false,
           "properties": {
-            "id": {
-              "type": "string",
+            "body": {
+              "description": "Section content.",
               "minLength": 1,
-              "description": "Resource ID."
+              "type": "string"
+            },
+            "id": {
+              "description": "Section ID.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "include_total": {
+              "description": "Display a subtotal within the section. Defaults to false.",
+              "type": "boolean"
+            },
+            "name": {
+              "description": "Internal section identifier.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "optional": {
+              "description": "When true, the client can choose the price package.",
+              "type": "boolean"
+            },
+            "page_break": {
+              "description": "Insert a PDF page break before the section.",
+              "type": "boolean"
+            },
+            "position": {
+              "description": "Display order in the proposal or template.",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "proposal_id": {
+              "description": "Proposal identifier. Provide proposal_id or template_id.",
+              "type": "integer"
+            },
+            "reusable": {
+              "description": "When true, the section can be reused on other proposals.",
+              "type": "boolean"
+            },
+            "section_type": {
+              "description": "Section type. Defaults to text.",
+              "enum": [
+                "text",
+                "cost"
+              ],
+              "type": "string"
+            },
+            "template_id": {
+              "description": "Template identifier. Provide proposal_id or template_id.",
+              "type": "integer"
+            },
+            "title": {
+              "description": "Section heading.",
+              "minLength": 1,
+              "type": "string"
             }
           },
-          "additionalProperties": false,
           "required": [
             "id"
-          ]
+          ],
+          "type": "object"
         },
         "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
+          "additionalProperties": false,
           "properties": {
             "data": {
               "type": "object"
             }
           },
-          "additionalProperties": false
+          "required": [
+            "data"
+          ],
+          "type": "object"
         }
       },
       {
@@ -652599,33 +654333,33 @@
         "destructive": false,
         "tool": true,
         "inputSchema": {
-          "type": "object",
+          "additionalProperties": false,
           "properties": {
             "page": {
-              "type": "integer",
-              "minimum": 1
+              "minimum": 1,
+              "type": "integer"
             },
             "per": {
-              "type": "integer",
-              "minimum": 1
+              "minimum": 1,
+              "type": "integer"
             },
             "public_templates": {
               "type": "boolean"
             }
           },
-          "additionalProperties": false
+          "type": "object"
         },
         "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
+          "additionalProperties": false,
           "properties": {
             "data": {
               "type": "object"
             }
           },
-          "additionalProperties": false
+          "required": [
+            "data"
+          ],
+          "type": "object"
         }
       },
       {
@@ -652633,37 +654367,26 @@
         "kind": "action",
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
+        "maxResponseBytes": 1048576,
         "read": true,
         "destructive": false,
         "tool": true,
         "inputSchema": {
-          "type": "object",
-          "properties": {
-            "page": {
-              "type": "integer",
-              "description": "Page number.",
-              "minimum": 1
-            },
-            "per": {
-              "type": "integer",
-              "description": "Page size.",
-              "minimum": 1
-            }
-          },
-          "additionalProperties": false
+          "additionalProperties": false,
+          "properties": {},
+          "type": "object"
         },
         "outputSchema": {
-          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "array"
+            }
+          },
           "required": [
             "data"
           ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
+          "type": "object"
         }
       },
       {
@@ -652671,37 +654394,155 @@
         "kind": "action",
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
+        "maxResponseBytes": 1048576,
         "read": true,
         "destructive": false,
         "tool": true,
         "inputSchema": {
-          "type": "object",
+          "additionalProperties": false,
           "properties": {
             "page": {
-              "type": "integer",
-              "description": "Page number.",
-              "minimum": 1
+              "description": "Page number for pagination. Default 1.",
+              "minimum": 1,
+              "type": "integer"
             },
             "per": {
-              "type": "integer",
-              "description": "Page size.",
-              "minimum": 1
+              "description": "Results per page. Default 25.",
+              "minimum": 1,
+              "type": "integer"
             }
           },
-          "additionalProperties": false
+          "type": "object"
         },
         "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
+          "additionalProperties": false,
           "properties": {
             "data": {
               "type": "object"
             }
           },
-          "additionalProperties": false
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        }
+      },
+      {
+        "key": "webhook_endpoints.create",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "events": {
+              "description": "Event names to subscribe to.",
+              "items": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "minItems": 1,
+              "type": "array"
+            },
+            "target_url": {
+              "description": "Destination URL for webhook deliveries.",
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "events",
+            "target_url"
+          ],
+          "type": "object"
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        }
+      },
+      {
+        "key": "webhook_endpoints.delete",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
+        "read": false,
+        "destructive": true,
+        "tool": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "description": "Webhook endpoint ID.",
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "id"
+          ],
+          "type": "object"
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        }
+      },
+      {
+        "key": "webhook_endpoints.get",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "description": "Webhook endpoint ID.",
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "id"
+          ],
+          "type": "object"
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
         }
       },
       {
@@ -652709,37 +654550,37 @@
         "kind": "action",
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
+        "maxResponseBytes": 1048576,
         "read": true,
         "destructive": false,
         "tool": true,
         "inputSchema": {
-          "type": "object",
+          "additionalProperties": false,
           "properties": {
             "page": {
-              "type": "integer",
-              "description": "Page number.",
-              "minimum": 1
+              "description": "Page number for pagination. Default 1.",
+              "minimum": 1,
+              "type": "integer"
             },
             "per": {
-              "type": "integer",
-              "description": "Page size.",
-              "minimum": 1
+              "description": "Results per page. Default 25.",
+              "minimum": 1,
+              "type": "integer"
             }
           },
-          "additionalProperties": false
+          "type": "object"
         },
         "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
+          "additionalProperties": false,
           "properties": {
             "data": {
               "type": "object"
             }
           },
-          "additionalProperties": false
+          "required": [
+            "data"
+          ],
+          "type": "object"
         }
       }
     ]

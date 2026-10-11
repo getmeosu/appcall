@@ -16,23 +16,35 @@ export function extractDataCenter(apiKey: string): string {
   return match ? match[1] : "us1";
 }
 
-export type MailchimpClientOptions = { apiKey: string; fetch?: typeof fetch; operation?: string };
+export type MailchimpClientOptions = { apiKey: string; host?: string; fetch?: typeof fetch; operation?: string };
+
+function mailchimpHost(options: MailchimpClientOptions): string {
+  const raw = typeof options.host === "string" && options.host.trim() ? options.host.trim() : `${extractDataCenter(options.apiKey)}.api.mailchimp.com`;
+  return raw.replace(/^https?:\/\//i, "").replace(/\/.*$/, "");
+}
 
 export function createMailchimpClient(options: MailchimpClientOptions) {
-  const dc = extractDataCenter(options.apiKey);
+  const host = mailchimpHost(options);
   const operation = options.operation ?? "contacts.list";
   const maxResponseBytes = (manifest.operations as Record<string, { maxResponseBytes?: number }>)[operation]?.maxResponseBytes ?? 5242880;
+  const allowedHosts = (manifest.network.allowedHosts as string[]).map((entry) => entry.replaceAll("{{host}}", host));
   const httpClient = createConnectorHttpClient({
-    allowedHosts: manifest.network.allowedHosts as string[],
+    allowedHosts,
     maxResponseBytes,
     fetch: options.fetch,
   });
   const encoded = btoa(`anystring:${options.apiKey}`);
   return {
     async fetchJSON(path: string, init: RequestInit = {}): Promise<{ status: number; headers: Record<string, string>; body: unknown }> {
-      const response = await httpClient.fetchText(`https://${dc}.api.mailchimp.com/3.0${path}`, {
+      const headers: Record<string, string> = {
+        Authorization: `Basic ${encoded}`,
+        Accept: "application/json",
+        ...(init.body ? { "Content-Type": "application/json" } : {}),
+        ...(init.headers as Record<string, string> | undefined),
+      };
+      const response = await httpClient.fetchText(`https://${host}/3.0${path}`, {
         ...init,
-        headers: { Authorization: `Basic ${encoded}`, "Content-Type": "application/json", ...(init.headers as Record<string, string>) },
+        headers,
       });
       let body: unknown;
       try { body = JSON.parse(response.body); } catch { body = response.body; }

@@ -1,21 +1,20 @@
 # Callingly
 
-Read-only international **Callingly REST API** recipe. Create a bearer token under Settings > API Keys and store it as `apiKey`. Requests send `Authorization: Bearer <token>` and `Accept: application/json` to `https://api.callingly.com`.
+International **Callingly REST API** recipe covering origin healthcheck plus every Composio `CALLINGLY_*` HTTP tool (29 tools, 30 operations; healthcheck is an authenticated `GET /v1/teams` probe and is not a Composio slug).
+
+Create a bearer token under Settings > API Keys and store it as `apiKey`. Requests send `Authorization: Bearer <token>` and `Accept: application/json` to `https://api.callingly.com`.
 
 ## Operations
 
-- `healthcheck`: `GET /v1/teams` with empty input (cheap authenticated probe; pinned credential validator).
-- `teams.list`: `GET /v1/teams` with optional `accountId` (sent as `account_id` for agency-scoped client accounts).
-- `teams.get`: `GET /v1/teams/{teamId}`; `teamId` is a required positive integer.
-- `leads.list`: `GET /v1/leads` with optional `start`, `end`, `phone_number`, and `accountId` (as `account_id`).
-- `leads.get`: `GET /v1/leads/{leadId}`; `leadId` is a required positive integer.
+- Auth: `healthcheck` (`GET /v1/teams`).
+- Teams: `teams.list`, `teams.get`, `teams.create`.
+- Team agents: `teams.agents.list`, `teams.agents.update`, `teams.agents.update_settings`, `teams.agents.remove`.
+- Leads: `leads.list`, `leads.get`, `leads.update`, `leads.delete`.
+- Calls: `calls.list`, `calls.get`, `calls.create`.
+- Clients: `clients.list`, `clients.create`, `clients.delete`, `clients.activate`.
+- Agents: `agents.list`, `agents.create`, `agents.update`, `agents.delete`, `agents.schedule.get`, `agents.schedule.update`.
+- Webhooks: `webhooks.list`, `webhooks.get`, `webhooks.create`, `webhooks.update`, `webhooks.delete` (outbound registration; Composio triggers = 0).
 
-Successful responses are raw provider JSON under AppCall `data`. List-teams and list-leads bodies are JSON arrays, so `outputSchema.data` allows array or object. Create-call, SMS, lead mutation, and other writes are omitted.
+Successful JSON responses are raw Callingly JSON under AppCall `data`. List endpoints that return JSON arrays use `outputSchema.data` as array or object. Undocumented DELETE bodies (`agents.delete`, `clients.delete`, `teams.agents.remove`) map to `{success: true}`. `webhooks.create` maps Composio `direction` to official `call_direction`. Optional query/body fields are omitted when unset. The upstream user-agent is not sent.
 
-## Adaptations
-
-Pinned source and official docs agree on `https://api.callingly.com`, `Authorization: Bearer`, and `Accept: application/json`. Native category is `messaging` (source Communication/Productivity are not in the Rust CATEGORIES allowlist). Healthcheck uses the validator's `GET /v1/teams` rather than a search. The upstream user-agent is not sent.
-
-## License and evidence
-
-Upstream definitions are attributed to [oomol-lab/open-connector](https://github.com/oomol-lab/open-connector) (Apache-2.0) at `33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a`. Fixtures are independently derived from official docs plus pinned source and are fixture-only; live smoke is unverified.
+Source attribution: oomol-lab/open-connector at `33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a` (Apache License 2.0). Official docs: https://help.callingly.com/article/38-callingly-api-documentation. Fixtures are independently derived and do not represent live provider access. Live smoke remains unverified.
