@@ -2,10 +2,10 @@ import { describe, expect, test } from "bun:test";
 import manifest from "../manifest.json";
 
 describe("google-ads connector manifest", () => {
-  test("manifest declares key, runtime, auth, and version 0.4.0", () => {
+  test("manifest declares key, runtime, auth, and version 0.4.1", () => {
     expect(manifest.key).toBe("google-ads");
     expect(manifest.runtime).toBe("bun");
-    expect(manifest.version).toBe("0.4.0");
+    expect(manifest.version).toBe("0.4.1");
     expect(manifest.auth.type).toBe("oauth2");
     expect(manifest.auth.scopes).toContain("https://www.googleapis.com/auth/adwords");
     const fields = manifest.auth.setup.fields as Array<{ key: string; required: boolean }>;
@@ -74,27 +74,51 @@ describe("google-ads connector manifest", () => {
     }
   });
 
-  test("wires mutate EffectPolicy Reconcile to companion gets", () => {
-    const wiring: Array<[string, string]> = [
-      ["campaigns.mutate", "campaigns.get"],
-      ["ad_groups.mutate", "ad_groups.get"],
-      ["ads.mutate", "ads.get"],
-      ["keywords.mutate", "keywords.get"],
-      ["budgets.mutate", "budgets.get"],
-      ["conversion_actions.mutate", "conversion_actions.get"],
-    ];
-    for (const [mutate, get] of wiring) {
-      const op = manifest.operations[mutate as keyof typeof manifest.operations] as {
-        kind: string;
-        sideEffect: string;
-        effectPolicy: string;
-        reconcile: string;
-      };
+  test("ADS-EFFECT-1: no mutate / mixed-batch op carries effect keys", () => {
+    // Google Ads *:mutate calls can mix create, update and remove in one
+    // operations array, so they must omit effectPolicy, reconcile and observe.
+    const mixed = Object.entries(manifest.operations).filter(([id, spec]) => {
+      const s = spec as { inputSchema?: { properties?: Record<string, { type?: unknown }> } };
+      const ops = s.inputSchema?.properties?.operations;
+      return /mutate/i.test(id) || (ops !== undefined && (ops.type === "array" || (Array.isArray(ops.type) && ops.type.includes("array"))));
+    });
+    const ids = mixed.map(([id]) => id).sort();
+    for (const id of [
+      "campaigns.mutate",
+      "ad_groups.mutate",
+      "ads.mutate",
+      "keywords.mutate",
+      "budgets.mutate",
+      "conversion_actions.mutate",
+      "labels.mutate",
+      "customer_lists.mutateMembers",
+    ]) {
+      expect(ids).toContain(id);
+    }
+    for (const [id, spec] of mixed) {
+      const op = spec as Record<string, unknown>;
+      expect({ id, sideEffect: op.sideEffect }).toEqual({ id, sideEffect: "write" });
+      expect({ id, effectPolicy: op.effectPolicy, reconcile: op.reconcile, observe: op.observe }).toEqual({
+        id,
+        effectPolicy: undefined,
+        reconcile: undefined,
+        observe: undefined,
+      });
+    }
+  });
+
+  test("former Reconcile companion gets remain read actions", () => {
+    for (const get of [
+      "campaigns.get",
+      "ad_groups.get",
+      "ads.get",
+      "keywords.get",
+      "budgets.get",
+      "conversion_actions.get",
+    ]) {
+      const op = manifest.operations[get as keyof typeof manifest.operations] as Record<string, unknown>;
       expect(op.kind).toBe("action");
-      expect(op.sideEffect).toBe("write");
-      expect(op.effectPolicy).toBe("Reconcile");
-      expect(op.reconcile).toBe(get);
-      expect(manifest.operations[get as keyof typeof manifest.operations].kind).toBe("action");
+      expect(op.sideEffect).toBe("read");
     }
   });
 
@@ -138,20 +162,11 @@ describe("google-ads connector manifest", () => {
     expect(schema.required).toContain("customerId");
   });
 
-  test("tip campaigns.mutate still Reconciles to campaigns.get", () => {
-    const op = manifest.operations["campaigns.mutate"] as {
-      effectPolicy: string;
-      reconcile: string;
-    };
-    expect(op.effectPolicy).toBe("Reconcile");
-    expect(op.reconcile).toBe("campaigns.get");
-  });
-
   test("manifest expands beyond the thin 4-op stub", () => {
     expect(Object.keys(manifest.operations).length).toBeGreaterThanOrEqual(20);
   });
 
-  test("manifest stays at 44 ops on v0.4.0", () => {
+  test("manifest stays at 44 ops on v0.4.1", () => {
     expect(Object.keys(manifest.operations).length).toBe(44);
   });
 
