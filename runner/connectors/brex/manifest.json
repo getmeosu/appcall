@@ -1,17 +1,7 @@
 {
-  "key": "brex",
-  "name": "Brex",
-  "version": "0.2.0",
-  "runtime": "bun",
-  "visibility": "public",
-  "categories": [
-    "banking-data"
-  ],
   "auth": {
-    "type": "api_key",
     "scopes": [],
     "setup": {
-      "mode": "api_key",
       "fields": [
         {
           "key": "apiKey",
@@ -19,62 +9,2055 @@
           "required": true,
           "secret": true
         }
-      ]
+      ],
+      "mode": "api_key"
+    },
+    "type": "api_key"
+  },
+  "categories": [
+    "banking-data"
+  ],
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
     }
   },
-  "network": {
-    "allowedHosts": [
-      "api.brex.com"
-    ]
-  },
-  "models": [
-    "user",
-    "company",
-    "cardAccount",
-    "department",
-    "location",
-    "title",
-    "card",
-    "transaction",
-    "cashAccount"
-  ],
   "http": {
-    "baseUrl": "https://api.brex.com",
     "auth": {
       "field": "apiKey",
       "in": "header",
       "name": "Authorization",
       "value": "Bearer {{apiKey}}"
     },
-    "headers": {
-      "Accept": "application/json"
-    },
+    "baseUrl": "https://api.brex.com",
     "errors": {
-      "rateLimitStatuses": [
-        429
-      ],
-      "retryAfterHeader": "retry-after",
       "defaultRetryAfterSeconds": 30,
       "messagePaths": [
         "message",
         "type",
         "code",
         "error"
-      ]
+      ],
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after"
+    },
+    "headers": {
+      "Accept": "application/json"
     }
   },
+  "key": "brex",
+  "models": [
+    "user",
+    "company",
+    "cardAccount",
+    "card",
+    "department",
+    "location",
+    "title",
+    "legalEntity",
+    "budget",
+    "spendLimit",
+    "expense",
+    "transaction",
+    "vendor",
+    "transfer",
+    "webhook",
+    "referral",
+    "field",
+    "trip",
+    "cashAccount"
+  ],
+  "name": "Brex",
+  "network": {
+    "allowedHosts": [
+      "api.brex.com"
+    ]
+  },
   "operations": {
-    "healthcheck": {
+    "cardAccounts.list": {
+      "description": "List Brex card accounts for the connected company, with optional cursor pagination.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "cursor": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Pagination cursor from a previous response."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000,
+            "description": "Maximum number of card accounts to return."
+          }
+        },
+        "type": "object"
+      },
       "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": [
+              "array",
+              "object"
+            ]
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/accounts/card",
+        "success": [
+          200
+        ],
+        "query": {
+          "cursor": "{{cursor}}",
+          "limit": "{{limit}}"
+        }
+      },
+      "responseFormat": "json",
       "sideEffect": "read",
-      "timeoutMs": 10000,
+      "timeoutMs": 15000,
+      "title": "List card accounts",
+      "validationMode": "strict-generated"
+    },
+    "company.get": {
+      "description": "Retrieve the Brex company associated with the user token.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {},
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/company",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get company",
+      "validationMode": "strict-generated"
+    },
+    "healthcheck": {
+      "description": "Validate the Brex user token by retrieving the authenticated user.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {},
+        "type": "object"
+      },
+      "kind": "action",
       "maxInputBytes": 4096,
       "maxResponseBytes": 65536,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/users/me",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
       "title": "Healthcheck",
-      "description": "Validate the Brex user token by retrieving the authenticated user.",
+      "validationMode": "strict-generated"
+    },
+    "users.list": {
+      "description": "List Brex users with optional email, remote display ID, and cursor pagination.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "cursor": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "email": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "limit": {
+            "maximum": 1000,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "remoteDisplayId": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/users",
+        "query": {
+          "cursor": "{{cursor}}",
+          "limit": "{{limit}}",
+          "email": "{{email}}",
+          "remote_display_id": "{{remoteDisplayId}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List users",
+      "validationMode": "strict-generated"
+    },
+    "webhookGroups.members.add": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Add webhook group members",
+      "description": "Add webhook subscription members to a webhook group. Partner accounts only.",
       "inputSchema": {
         "type": "object",
-        "properties": {},
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Webhook group ID starting with wg_."
+          },
+          "members": {
+            "type": "array",
+            "description": "Webhook subscriptions to add.",
+            "items": {
+              "type": "object"
+            }
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "members"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/webhooks/groups/{{id}}/add_members",
+        "success": [
+          200,
+          201
+        ],
+        "body": {
+          "members": "{{members}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "budgets.archive": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Archive budget",
+      "description": "Archive a budget so it cannot be used for future expenses. This cannot be undone.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "budget_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "ID of the budget to archive."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "budget_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v2/budgets/{{budget_id}}/archive",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "spendLimits.archive": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Archive spend limit",
+      "description": "Archive a spend limit so it cannot authorize new transactions.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Spend limit ID to archive."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v2/spend_limits/{{id}}/archive",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "budgets.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create budget",
+      "description": "Create a nested budget under an existing parent budget.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Budget name."
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Budget description."
+          },
+          "budget_amount": {
+            "type": "object",
+            "description": "Budget amount and currency.",
+            "properties": {
+              "amount": {
+                "type": "integer",
+                "description": "Amount in the smallest currency unit."
+              },
+              "currency": {
+                "type": "string",
+                "minLength": 1,
+                "description": "ISO 4217 currency code."
+              }
+            },
+            "additionalProperties": true
+          },
+          "owner_user_ids": {
+            "type": "array",
+            "description": "User IDs who own this budget.",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "parent_budget_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Parent budget ID."
+          },
+          "period_recurrence_type": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Budget period recurrence type.",
+            "enum": [
+              "WEEKLY",
+              "MONTHLY",
+              "QUARTERLY",
+              "YEARLY",
+              "ONE_TIME"
+            ]
+          },
+          "idempotency_key": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Idempotency key. Reuse the same value when retrying."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "description",
+          "budget_amount",
+          "parent_budget_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v2/budgets",
+        "success": [
+          200
+        ],
+        "body": {
+          "name": "{{name}}",
+          "description": "{{description}}",
+          "amount": "{{budget_amount}}",
+          "owner_user_ids": "{{owner_user_ids}}",
+          "parent_budget_id": "{{parent_budget_id}}",
+          "period_recurrence_type": "{{period_recurrence_type}}"
+        },
+        "headers": {
+          "Content-Type": "application/json",
+          "Idempotency-Key": "{{idempotency_key}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "spendLimits.v1.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create spend limit (budget v1)",
+      "description": "Create a spend limit using the v1 budgets API (GET/POST /v1/budgets).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Spend limit name."
+          },
+          "limit": {
+            "type": "object",
+            "description": "Spending limit amount and currency.",
+            "properties": {
+              "amount": {
+                "type": "integer",
+                "description": "Amount in the smallest currency unit."
+              },
+              "currency": {
+                "type": "string",
+                "minLength": 1,
+                "description": "ISO 4217 currency code."
+              }
+            },
+            "additionalProperties": true
+          },
+          "end_date": {
+            "type": "string",
+            "minLength": 1,
+            "description": "UTC end date YYYY-MM-DD."
+          },
+          "entity_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Optional entity ID."
+          },
+          "policy_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Optional policy ID."
+          },
+          "limit_type": {
+            "type": "string",
+            "minLength": 1,
+            "description": "HARD blocks spend; SOFT warns.",
+            "enum": [
+              "HARD",
+              "SOFT"
+            ]
+          },
+          "spend_type": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Which cards may spend from this limit.",
+            "enum": [
+              "BUDGET_PROVISIONED_CARDS_ONLY",
+              "NON_BUDGET_PROVISIONED_CARDS_ALLOWED"
+            ]
+          },
+          "start_date": {
+            "type": "string",
+            "minLength": 1,
+            "description": "UTC start date YYYY-MM-DD."
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "description": "What the spend limit is used for."
+          },
+          "period_type": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Period type.",
+            "enum": [
+              "WEEKLY",
+              "MONTHLY",
+              "QUARTERLY",
+              "YEARLY",
+              "ONE_TIME"
+            ]
+          },
+          "owner_user_ids": {
+            "type": "array",
+            "description": "Owner user IDs.",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "idempotency_key": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Idempotency key. Reuse the same value when retrying."
+          },
+          "member_user_ids": {
+            "type": "array",
+            "description": "Member user IDs.",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "limit_visibility": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Whether members can view the limit.",
+            "enum": [
+              "SHARED",
+              "PRIVATE"
+            ]
+          },
+          "parent_budget_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Parent budget ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "limit",
+          "limit_type",
+          "spend_type",
+          "description",
+          "period_type",
+          "limit_visibility",
+          "parent_budget_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/budgets",
+        "success": [
+          200
+        ],
+        "body": {
+          "name": "{{name}}",
+          "limit": "{{limit}}",
+          "end_date": "{{end_date}}",
+          "entity_id": "{{entity_id}}",
+          "policy_id": "{{policy_id}}",
+          "limit_type": "{{limit_type}}",
+          "spend_type": "{{spend_type}}",
+          "start_date": "{{start_date}}",
+          "description": "{{description}}",
+          "period_type": "{{period_type}}",
+          "owner_user_ids": "{{owner_user_ids}}",
+          "member_user_ids": "{{member_user_ids}}",
+          "limit_visibility": "{{limit_visibility}}",
+          "parent_budget_id": "{{parent_budget_id}}"
+        },
+        "headers": {
+          "Content-Type": "application/json",
+          "Idempotency-Key": "{{idempotency_key}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "cards.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create card",
+      "description": "Create a virtual or physical card and assign it to a user.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "card_name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Display name for the card."
+          },
+          "card_type": {
+            "type": "string",
+            "minLength": 1,
+            "description": "VIRTUAL or PHYSICAL.",
+            "enum": [
+              "VIRTUAL",
+              "PHYSICAL"
+            ]
+          },
+          "limit_type": {
+            "type": "string",
+            "minLength": 1,
+            "description": "CARD for vendor cards; USER inherits the user limit.",
+            "enum": [
+              "CARD",
+              "USER"
+            ]
+          },
+          "owner_user_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "User ID of the card owner."
+          },
+          "spend_controls": {
+            "type": "object",
+            "description": "Spend controls. Required when limit_type is CARD."
+          },
+          "idempotency_key": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Idempotency key. Reuse the same value when retrying."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "card_name",
+          "owner_user_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v2/cards",
+        "success": [
+          200
+        ],
+        "body": {
+          "owner": {
+            "type": "USER",
+            "user_id": "{{owner_user_id}}"
+          },
+          "card_name": "{{card_name}}",
+          "card_type": "{{card_type}}",
+          "limit_type": "{{limit_type}}",
+          "spend_controls": "{{spend_controls}}"
+        },
+        "headers": {
+          "Content-Type": "application/json",
+          "Idempotency-Key": "{{idempotency_key}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "departments.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create department",
+      "description": "Create a new department.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Department name."
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Department description."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v2/departments",
+        "success": [
+          200
+        ],
+        "body": {
+          "name": "{{name}}",
+          "description": "{{description}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "referrals.documents.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create referral document upload",
+      "description": "Create a pre-signed S3 upload URL for a referral supporting document.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Referral ID."
+          },
+          "type": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Document type.",
+            "enum": [
+              "ARTICLES_OF_INCORPORATION",
+              "IRS_EIN_CONFIRMATION",
+              "IRS_EIN_APPLICATION",
+              "CERTIFICATE_GOOD_STANDING"
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "type"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/referrals/{{id}}/document_upload",
+        "success": [
+          200
+        ],
+        "body": {
+          "type": "{{type}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "expenses.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create expense",
+      "description": "Create an expense on the expenses collection. Public Expenses API documents list/get/update; this posts memo, amount, and owner.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "memo": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Expense memo."
+          },
+          "amount": {
+            "type": "object",
+            "description": "Expense amount and currency.",
+            "properties": {
+              "amount": {
+                "type": "integer",
+                "description": "Amount in the smallest currency unit."
+              },
+              "currency": {
+                "type": "string",
+                "minLength": 1,
+                "description": "ISO 4217 currency code."
+              }
+            },
+            "additionalProperties": true
+          },
+          "owner_user_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "User ID of the expense owner."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "memo",
+          "amount",
+          "owner_user_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/expenses",
+        "success": [
+          200,
+          201
+        ],
+        "body": {
+          "memo": "{{memo}}",
+          "amount": "{{amount}}",
+          "owner_user_id": "{{owner_user_id}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "fields.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create custom field",
+      "description": "Create a custom field for accounting or ERP metadata.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Field name."
+          },
+          "group": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Field group.",
+            "enum": [
+              "ACCOUNTING",
+              "ERP"
+            ]
+          },
+          "remote_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Remote/external ID."
+          },
+          "is_disabled": {
+            "type": "boolean",
+            "description": "Whether the field is disabled."
+          },
+          "integration_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Integration ID for ERP fields."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "group"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/fields",
+        "success": [
+          200
+        ],
+        "body": {
+          "name": "{{name}}",
+          "group": "{{group}}",
+          "remote_id": "{{remote_id}}",
+          "is_disabled": "{{is_disabled}}",
+          "integration_id": "{{integration_id}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "fieldValues.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create field values",
+      "description": "Bulk-create custom field values (up to 1000 per request).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "description": "Field values to create.",
+            "items": {
+              "type": "object"
+            }
+          },
+          "field_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Custom field ID."
+          },
+          "idempotency_key": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Idempotency key. Reuse the same value when retrying."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "items",
+          "field_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/fields/{{field_id}}/values",
+        "success": [
+          200
+        ],
+        "body": {
+          "items": "{{items}}"
+        },
+        "headers": {
+          "Content-Type": "application/json",
+          "Idempotency-Key": "{{idempotency_key}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "locations.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create location",
+      "description": "Create a new location.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Location name."
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Location description."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v2/locations",
+        "success": [
+          200
+        ],
+        "body": {
+          "name": "{{name}}",
+          "description": "{{description}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "referrals.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create referral",
+      "description": "Create a Brex onboarding referral and receive a personalized application link.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "business": {
+            "type": "object",
+            "description": "Business details to prefill."
+          },
+          "applicant": {
+            "type": "object",
+            "description": "Prospect email, first name, and last name."
+          },
+          "referral_code": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Referral code that attributes credit."
+          },
+          "contact_preference": {
+            "type": "string",
+            "minLength": 1,
+            "description": "EMAIL_OUTBOUND or NO_OUTBOUND."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "applicant",
+          "referral_code"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/referrals",
+        "success": [
+          200
+        ],
+        "body": {
+          "business": "{{business}}",
+          "applicant": "{{applicant}}",
+          "referral_code": "{{referral_code}}",
+          "contact_preference": "{{contact_preference}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "spendLimits.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create spend limit",
+      "description": "Create a v2 spend limit with authorization settings and an expense policy.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Spend limit name."
+          },
+          "end_date": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Expiry date YYYY-MM-DD."
+          },
+          "spend_type": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Spending type.",
+            "enum": [
+              "NON_BUDGET_PROVISIONED_CARDS_ALLOWED",
+              "BUDGET_PROVISIONED_CARDS_ONLY",
+              "NON_BUDGET_PROVISIONED_CARDS_ONLY"
+            ]
+          },
+          "start_date": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Start date YYYY-MM-DD."
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Description."
+          },
+          "department_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Department ID for attribution."
+          },
+          "owner_user_ids": {
+            "type": "array",
+            "description": "Owner user IDs.",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "idempotency_key": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Idempotency key. Reuse the same value when retrying."
+          },
+          "legal_entity_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Legal entity ID."
+          },
+          "member_user_ids": {
+            "type": "array",
+            "description": "Member user IDs.",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "parent_budget_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Parent budget ID."
+          },
+          "expense_policy_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Expense policy ID."
+          },
+          "transaction_limit": {
+            "type": "object",
+            "description": "Per-transaction limit.",
+            "properties": {
+              "amount": {
+                "type": "integer",
+                "description": "Amount in the smallest currency unit."
+              },
+              "currency": {
+                "type": "string",
+                "minLength": 1,
+                "description": "ISO 4217 currency code."
+              }
+            },
+            "additionalProperties": true
+          },
+          "expense_visibility": {
+            "type": "string",
+            "minLength": 1,
+            "description": "PRIVATE or PUBLIC.",
+            "enum": [
+              "PRIVATE",
+              "PUBLIC"
+            ]
+          },
+          "authorization_settings": {
+            "type": "object",
+            "description": "Authorization settings including limit amount and type."
+          },
+          "limit_increase_setting": {
+            "type": "string",
+            "minLength": 1,
+            "description": "ENABLED or DISABLED.",
+            "enum": [
+              "ENABLED",
+              "DISABLED"
+            ]
+          },
+          "period_recurrence_type": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Period recurrence.",
+            "enum": [
+              "PER_MONTH",
+              "PER_QUARTER",
+              "PER_YEAR",
+              "ONE_TIME"
+            ]
+          },
+          "authorization_visibility": {
+            "type": "string",
+            "minLength": 1,
+            "description": "PRIVATE or PUBLIC.",
+            "enum": [
+              "PRIVATE",
+              "PUBLIC"
+            ]
+          },
+          "limit_approval_policy_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Limit increase approval policy ID."
+          },
+          "auto_transfer_cards_setting": {
+            "type": "string",
+            "minLength": 1,
+            "description": "ENABLED or DISABLED.",
+            "enum": [
+              "ENABLED",
+              "DISABLED"
+            ]
+          },
+          "auto_create_limit_cards_setting": {
+            "type": "string",
+            "minLength": 1,
+            "description": "ENABLED or DISABLED.",
+            "enum": [
+              "ENABLED",
+              "DISABLED"
+            ]
+          },
+          "limit_increase_request_policy_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Limit increase request policy ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "spend_type",
+          "expense_policy_id",
+          "expense_visibility",
+          "authorization_settings",
+          "limit_increase_setting",
+          "period_recurrence_type",
+          "authorization_visibility",
+          "auto_transfer_cards_setting",
+          "auto_create_limit_cards_setting"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v2/spend_limits",
+        "success": [
+          200
+        ],
+        "body": {
+          "name": "{{name}}",
+          "end_date": "{{end_date}}",
+          "spend_type": "{{spend_type}}",
+          "start_date": "{{start_date}}",
+          "description": "{{description}}",
+          "department_id": "{{department_id}}",
+          "owner_user_ids": "{{owner_user_ids}}",
+          "legal_entity_id": "{{legal_entity_id}}",
+          "member_user_ids": "{{member_user_ids}}",
+          "parent_budget_id": "{{parent_budget_id}}",
+          "expense_policy_id": "{{expense_policy_id}}",
+          "transaction_limit": "{{transaction_limit}}",
+          "expense_visibility": "{{expense_visibility}}",
+          "authorization_settings": "{{authorization_settings}}",
+          "limit_increase_setting": "{{limit_increase_setting}}",
+          "period_recurrence_type": "{{period_recurrence_type}}",
+          "authorization_visibility": "{{authorization_visibility}}",
+          "limit_approval_policy_id": "{{limit_approval_policy_id}}",
+          "auto_transfer_cards_setting": "{{auto_transfer_cards_setting}}",
+          "auto_create_limit_cards_setting": "{{auto_create_limit_cards_setting}}",
+          "limit_increase_request_policy_id": "{{limit_increase_request_policy_id}}"
+        },
+        "headers": {
+          "Content-Type": "application/json",
+          "Idempotency-Key": "{{idempotency_key}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "titles.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create job title",
+      "description": "Create a new job title.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Job title name."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v2/titles",
+        "success": [
+          200
+        ],
+        "body": {
+          "name": "{{name}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "users.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create user",
+      "description": "Invite a new employee user to the Brex account.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Email address."
+          },
+          "last_name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Last name."
+          },
+          "first_name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "First name."
+          },
+          "manager_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Manager user ID."
+          },
+          "department_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Department ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "email",
+          "last_name",
+          "first_name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v2/users",
+        "success": [
+          200
+        ],
+        "body": {
+          "email": "{{email}}",
+          "last_name": "{{last_name}}",
+          "first_name": "{{first_name}}",
+          "manager_id": "{{manager_id}}",
+          "department_id": "{{department_id}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "vendors.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create vendor",
+      "description": "Create a vendor for payment operations. Company name must be unique.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Vendor email."
+          },
+          "phone": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Vendor phone."
+          },
+          "company_name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique vendor name."
+          },
+          "payment_accounts": {
+            "type": "array",
+            "description": "Payment accounts (ACH, wire, or check).",
+            "items": {
+              "type": "object"
+            }
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "company_name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/vendors",
+        "success": [
+          200
+        ],
+        "body": {
+          "email": "{{email}}",
+          "phone": "{{phone}}",
+          "company_name": "{{company_name}}",
+          "payment_accounts": "{{payment_accounts}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "webhookGroups.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create webhook group",
+      "description": "Create a webhook group for targeting subscriptions. Partner accounts only.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Webhook group name."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/webhooks/groups",
+        "success": [
+          200
+        ],
+        "body": {
+          "name": "{{name}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "webhooks.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create webhook subscription",
+      "description": "Register a webhook endpoint for Brex events.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "minLength": 1,
+            "description": "HTTPS URL that receives webhook POST events."
+          },
+          "group_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Optional webhook group ID (partners)."
+          },
+          "event_types": {
+            "type": "array",
+            "description": "Event types to subscribe to.",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "idempotency_key": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Idempotency key. Reuse the same value when retrying."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "url",
+          "event_types",
+          "idempotency_key"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/webhooks",
+        "success": [
+          200
+        ],
+        "body": {
+          "url": "{{url}}",
+          "group_id": "{{group_id}}",
+          "event_types": "{{event_types}}"
+        },
+        "headers": {
+          "Content-Type": "application/json",
+          "Idempotency-Key": "{{idempotency_key}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "fields.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Delete field",
+      "description": "Permanently delete a custom field by Brex ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Field ID to delete."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/v1/fields/{{id}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "fieldValues.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Delete field values",
+      "description": "Bulk-delete custom field values. Each item must identify exactly one of brex_id, value_id, or remote_id.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "description": "Values to delete.",
+            "items": {
+              "type": "object"
+            }
+          },
+          "field_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Field ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "items",
+          "field_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/v1/fields/{{field_id}}/values",
+        "success": [
+          200
+        ],
+        "body": {
+          "items": "{{items}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "vendors.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Delete vendor",
+      "description": "Delete a vendor by ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Vendor ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/v1/vendors/{{id}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "cash.statements.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get primary cash account statements",
+      "description": "List finalized statements for the primary cash account. Fetches GET /v2/accounts/cash/primary then GET /v2/accounts/cash/{id}/statements.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000,
+            "description": "Maximum number of records to return."
+          },
+          "cursor": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Pagination cursor from a previous response."
+          }
+        },
         "additionalProperties": false
       },
       "outputSchema": {
@@ -84,7 +2067,1215 @@
         ],
         "properties": {
           "data": {
-            "type": "object"
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/accounts/cash/primary",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "budgets.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get budget",
+      "description": "Get a budget by ID from the v2 Budgets API.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "budget_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Budget ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "budget_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/budgets/{{budget_id}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "cards.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get card",
+      "description": "Get a card by ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "card_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Card ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "card_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/cards/{{card_id}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "cardExpenses.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get card expense",
+      "description": "Get a card expense by ID (deprecated card-expenses path; prefer expenses.get).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "expand": {
+            "type": "array",
+            "description": "Fields to expand: location, department, merchant, receipts.download_uris, user, budget, payment.",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "expense_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Card expense ID."
+          },
+          "load_custom_fields": {
+            "type": "boolean",
+            "description": "Include custom fields."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "expense_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/expenses/card/{{expense_id}}",
+        "success": [
+          200
+        ],
+        "query": {
+          "expand[]": "{{expand}}",
+          "load_custom_fields": "{{load_custom_fields}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "cards.pan.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get card number",
+      "description": "Get PAN, CVV, and expiration for a card.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "card_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Card ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "card_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/cards/{{card_id}}/pan",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "transactions.card.primary.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List primary card transactions",
+      "description": "List settled transactions across all card accounts.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000,
+            "description": "Maximum number of records to return."
+          },
+          "cursor": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Pagination cursor from a previous response."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/transactions/card/primary",
+        "success": [
+          200
+        ],
+        "query": {
+          "limit": "{{limit}}",
+          "cursor": "{{cursor}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "cash.accounts.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List cash accounts",
+      "description": "List cash (deposit) accounts including balances and status.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000,
+            "description": "Maximum number of records to return."
+          },
+          "cursor": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Pagination cursor from a previous response."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/accounts/cash",
+        "success": [
+          200
+        ],
+        "query": {
+          "limit": "{{limit}}",
+          "cursor": "{{cursor}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "departments.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get department",
+      "description": "Get a department by ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Department ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/departments/{{id}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "expenses.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get expense",
+      "description": "Get an expense by ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Expense ID."
+          },
+          "expand": {
+            "type": "array",
+            "description": "Expandable fields.",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "load_custom_fields": {
+            "type": "boolean",
+            "description": "Include custom fields."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/expenses/{{id}}",
+        "success": [
+          200
+        ],
+        "query": {
+          "expand[]": "{{expand}}",
+          "load_custom_fields": "{{load_custom_fields}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "fields.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get field",
+      "description": "Get a custom field by Brex ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Field ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/fields/{{id}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "fieldValues.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get field value",
+      "description": "Get a custom field value by field ID and value ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "brex_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Field value ID."
+          },
+          "field_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Field ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "brex_id",
+          "field_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/fields/{{field_id}}/values/{{brex_id}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "legalEntities.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get legal entity",
+      "description": "Get a legal entity by ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Legal entity ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/legal_entities/{{id}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "locations.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get location",
+      "description": "Get a location by ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Location ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/locations/{{id}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "referrals.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get referral",
+      "description": "Get a referral by ID, including signup URL and status.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Referral ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/referrals/{{id}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "spendLimits.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get spend limit",
+      "description": "Get a v2 spend limit by ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Spend limit ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/spend_limits/{{id}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "spendLimits.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List spend limits",
+      "description": "List v2 spend limits.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000,
+            "description": "Maximum number of records to return."
+          },
+          "cursor": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Pagination cursor from a previous response."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/spend_limits",
+        "success": [
+          200
+        ],
+        "query": {
+          "limit": "{{limit}}",
+          "cursor": "{{cursor}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "titles.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get job title",
+      "description": "Get a job title by ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Title ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/titles/{{id}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "transactions.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get transaction by ID",
+      "description": "Find a settled card transaction by ID by listing primary card transactions and matching id.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "transaction_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Transaction ID, typically pste_…."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000,
+            "description": "Maximum number of records to return."
+          },
+          "cursor": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Pagination cursor from a previous response."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "transaction_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/transactions/card/primary",
+        "success": [
+          200
+        ],
+        "query": {
+          "limit": "{{limit}}",
+          "cursor": "{{cursor}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "transactions.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List card transactions",
+      "description": "List settled primary card transactions. posted_at_start is sent to Brex; posted_at_end is accepted for clients that filter locally.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000,
+            "description": "Maximum number of records to return."
+          },
+          "cursor": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Pagination cursor from a previous response."
+          },
+          "posted_at_end": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Client-side end date YYYY-MM-DD."
+          },
+          "posted_at_start": {
+            "type": "string",
+            "minLength": 1,
+            "description": "RFC 3339 or YYYY-MM-DD start filter sent as posted_at_start."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/transactions/card/primary",
+        "success": [
+          200
+        ],
+        "query": {
+          "limit": "{{limit}}",
+          "cursor": "{{cursor}}",
+          "posted_at_start": "{{posted_at_start}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "transactions.list.by_amount": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List transactions by amount range",
+      "description": "List primary card transactions and keep those whose USD amount (cents/100) is inside min_amount..max_amount and posted_at_date is inside the given dates.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000,
+            "description": "Maximum number of records to return."
+          },
+          "cursor": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Pagination cursor from a previous response."
+          },
+          "max_amount": {
+            "type": "number",
+            "description": "Maximum amount in USD."
+          },
+          "min_amount": {
+            "type": "number",
+            "description": "Minimum amount in USD."
+          },
+          "posted_at_end": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Inclusive end date YYYY-MM-DD."
+          },
+          "posted_at_start": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Inclusive start date YYYY-MM-DD."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "max_amount",
+          "min_amount",
+          "posted_at_end",
+          "posted_at_start"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/transactions/card/primary",
+        "success": [
+          200
+        ],
+        "query": {
+          "limit": "{{limit}}",
+          "cursor": "{{cursor}}",
+          "posted_at_start": "{{posted_at_start}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "transactions.list.by_description": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Search transactions by description",
+      "description": "List primary card transactions and keep those whose description contains the search text (case-insensitive) inside the posted date range.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000,
+            "description": "Maximum number of records to return."
+          },
+          "cursor": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Pagination cursor from a previous response."
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Case-insensitive partial description match."
+          },
+          "posted_at_end": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Inclusive end date YYYY-MM-DD."
+          },
+          "posted_at_start": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Inclusive start date YYYY-MM-DD."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "description",
+          "posted_at_end",
+          "posted_at_start"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/transactions/card/primary",
+        "success": [
+          200
+        ],
+        "query": {
+          "limit": "{{limit}}",
+          "cursor": "{{cursor}}",
+          "posted_at_start": "{{posted_at_start}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "users.limit.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get user spend limit",
+      "description": "Get the monthly spend limit for a user (GET /v2/users/{id}/limit).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "User ID starting with cuuser_."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/users/{{id}}/limit",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "users.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get user profile",
+      "description": "Get the current user (omit user_id or pass me) or GET /v2/users/{id}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "user_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "User ID, or me for the authenticated user."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
           }
         },
         "additionalProperties": false
@@ -100,18 +3291,27 @@
       "validationMode": "strict-generated",
       "responseFormat": "json"
     },
-    "company.get": {
+    "vendors.get": {
       "kind": "action",
       "sideEffect": "read",
       "timeoutMs": 15000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
-      "title": "Get company",
-      "description": "Retrieve the Brex company associated with the user token.",
+      "title": "Get vendor",
+      "description": "Get a vendor by ID.",
       "inputSchema": {
         "type": "object",
-        "properties": {},
-        "additionalProperties": false
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Vendor ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ]
       },
       "outputSchema": {
         "type": "object",
@@ -120,14 +3320,17 @@
         ],
         "properties": {
           "data": {
-            "type": "object"
+            "type": [
+              "object",
+              "array"
+            ]
           }
         },
         "additionalProperties": false
       },
       "request": {
         "method": "GET",
-        "path": "/v2/company",
+        "path": "/v1/vendors/{{id}}",
         "success": [
           200
         ]
@@ -136,77 +3339,125 @@
       "validationMode": "strict-generated",
       "responseFormat": "json"
     },
-    "users.list": {
+    "webhookGroups.get": {
       "kind": "action",
       "sideEffect": "read",
       "timeoutMs": 15000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
-      "title": "List users",
-      "description": "List Brex users with optional email, remote display ID, and cursor pagination.",
+      "title": "Get webhook group",
+      "description": "Get a webhook group by ID. Partner accounts only.",
       "inputSchema": {
         "type": "object",
         "properties": {
-          "cursor": {
+          "id": {
             "type": "string",
-            "minLength": 1
-          },
+            "minLength": 1,
+            "description": "Webhook group ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/webhooks/groups/{{id}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "webhooks.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get webhook subscription",
+      "description": "Get a webhook subscription by ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Webhook subscription ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/webhooks/{{id}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "budgetPrograms.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List budget programs",
+      "description": "List budget programs.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
           "limit": {
             "type": "integer",
             "minimum": 1,
-            "maximum": 1000
+            "maximum": 1000,
+            "description": "Maximum number of records to return."
           },
-          "email": {
+          "cursor": {
             "type": "string",
-            "minLength": 1
-          },
-          "remoteDisplayId": {
-            "type": "string",
-            "minLength": 1
+            "minLength": 1,
+            "description": "Pagination cursor from a previous response."
           }
         },
-        "additionalProperties": false
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "GET",
-        "path": "/v2/users",
-        "query": {
-          "cursor": "{{cursor}}",
-          "limit": "{{limit}}",
-          "email": "{{email}}",
-          "remote_display_id": "{{remoteDisplayId}}"
-        },
-        "success": [
-          200
-        ]
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "cardAccounts.list": {
-      "kind": "action",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "title": "List card accounts",
-      "description": "List Brex card accounts for the connected company.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {},
         "additionalProperties": false
       },
       "outputSchema": {
@@ -217,8 +3468,8 @@
         "properties": {
           "data": {
             "type": [
-              "array",
-              "object"
+              "object",
+              "array"
             ]
           }
         },
@@ -226,35 +3477,43 @@
       },
       "request": {
         "method": "GET",
-        "path": "/v2/accounts/card",
+        "path": "/v1/budget_programs",
         "success": [
           200
-        ]
+        ],
+        "query": {
+          "limit": "{{limit}}",
+          "cursor": "{{cursor}}"
+        }
       },
       "enforceOutputSchema": true,
       "validationMode": "strict-generated",
       "responseFormat": "json"
     },
-    "users.get": {
+    "budgets.list": {
       "kind": "action",
       "sideEffect": "read",
       "timeoutMs": 15000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
-      "title": "Get user",
-      "description": "Retrieve a Brex user by ID via GET /v2/users/{id}.",
+      "title": "List budgets",
+      "description": "List v2 budgets.",
       "inputSchema": {
         "type": "object",
         "properties": {
-          "userId": {
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000,
+            "description": "Maximum number of records to return."
+          },
+          "cursor": {
             "type": "string",
-            "minLength": 1
+            "minLength": 1,
+            "description": "Pagination cursor from a previous response."
           }
         },
-        "additionalProperties": false,
-        "required": [
-          "userId"
-        ]
+        "additionalProperties": false
       },
       "outputSchema": {
         "type": "object",
@@ -263,17 +3522,140 @@
         ],
         "properties": {
           "data": {
-            "type": "object"
+            "type": [
+              "object",
+              "array"
+            ]
           }
         },
         "additionalProperties": false
       },
       "request": {
         "method": "GET",
-        "path": "/v2/users/{{userId}}",
+        "path": "/v2/budgets",
         "success": [
           200
-        ]
+        ],
+        "query": {
+          "limit": "{{limit}}",
+          "cursor": "{{cursor}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "cards.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List cards",
+      "description": "List cards, optionally filtered by user_id.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000,
+            "description": "Maximum number of records to return."
+          },
+          "cursor": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Pagination cursor from a previous response."
+          },
+          "user_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter cards by owner user ID."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/cards",
+        "success": [
+          200
+        ],
+        "query": {
+          "limit": "{{limit}}",
+          "cursor": "{{cursor}}",
+          "user_id": "{{user_id}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "card.statements.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List primary card statements",
+      "description": "List finalized statements for the primary card account.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000,
+            "description": "Maximum number of records to return."
+          },
+          "cursor": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Pagination cursor from a previous response."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/accounts/card/primary/statements",
+        "success": [
+          200
+        ],
+        "query": {
+          "limit": "{{limit}}",
+          "cursor": "{{cursor}}"
+        }
       },
       "enforceOutputSchema": true,
       "validationMode": "strict-generated",
@@ -286,22 +3668,20 @@
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
       "title": "List departments",
-      "description": "List Brex departments with optional name filter and cursor pagination.",
+      "description": "List departments.",
       "inputSchema": {
         "type": "object",
         "properties": {
-          "cursor": {
-            "type": "string",
-            "minLength": 1
-          },
           "limit": {
             "type": "integer",
             "minimum": 1,
-            "maximum": 1000
+            "maximum": 1000,
+            "description": "Maximum number of records to return."
           },
-          "name": {
+          "cursor": {
             "type": "string",
-            "minLength": 1
+            "minLength": 1,
+            "description": "Pagination cursor from a previous response."
           }
         },
         "additionalProperties": false
@@ -313,7 +3693,10 @@
         ],
         "properties": {
           "data": {
-            "type": "object"
+            "type": [
+              "object",
+              "array"
+            ]
           }
         },
         "additionalProperties": false
@@ -325,35 +3708,136 @@
           200
         ],
         "query": {
-          "cursor": "{{cursor}}",
           "limit": "{{limit}}",
-          "name": "{{name}}"
+          "cursor": "{{cursor}}"
         }
       },
       "enforceOutputSchema": true,
       "validationMode": "strict-generated",
       "responseFormat": "json"
     },
-    "departments.get": {
+    "expenses.list": {
       "kind": "action",
       "sideEffect": "read",
       "timeoutMs": 15000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
-      "title": "Get department",
-      "description": "Retrieve a Brex department by ID via GET /v2/departments/{id}.",
+      "title": "List expenses",
+      "description": "List expenses with documented filters and cursor pagination.",
       "inputSchema": {
         "type": "object",
         "properties": {
-          "departmentId": {
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000,
+            "description": "Maximum number of records to return."
+          },
+          "cursor": {
             "type": "string",
-            "minLength": 1
+            "minLength": 1,
+            "description": "Pagination cursor from a previous response."
+          },
+          "expand": {
+            "type": "array",
+            "description": "Expandable fields.",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "status": {
+            "type": "array",
+            "description": "Expense statuses.",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "user_id": {
+            "type": "array",
+            "description": "Owner user IDs.",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "budget_id": {
+            "type": "array",
+            "description": "Budget IDs.",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "expense_type": {
+            "type": "array",
+            "description": "Expense types.",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "payment_status": {
+            "type": "array",
+            "description": "Payment statuses.",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "updated_at_end": {
+            "type": "string",
+            "minLength": 1,
+            "description": "RFC 3339 updated_at end."
+          },
+          "purchased_at_end": {
+            "type": "string",
+            "minLength": 1,
+            "description": "RFC 3339 purchased_at end."
+          },
+          "updated_at_start": {
+            "type": "string",
+            "minLength": 1,
+            "description": "RFC 3339 updated_at start."
+          },
+          "parent_expense_id": {
+            "type": "array",
+            "description": "Parent expense IDs.",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "load_custom_fields": {
+            "type": "boolean",
+            "description": "Include custom fields."
+          },
+          "purchased_at_start": {
+            "type": "string",
+            "minLength": 1,
+            "description": "RFC 3339 purchased_at start."
+          },
+          "spending_entity_id": {
+            "type": "array",
+            "description": "Spending entity IDs.",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "payment_posted_at_end": {
+            "type": "string",
+            "minLength": 1,
+            "description": "RFC 3339 payment_posted_at end."
+          },
+          "payment_posted_at_start": {
+            "type": "string",
+            "minLength": 1,
+            "description": "RFC 3339 payment_posted_at start."
           }
         },
-        "additionalProperties": false,
-        "required": [
-          "departmentId"
-        ]
+        "additionalProperties": false
       },
       "outputSchema": {
         "type": "object",
@@ -362,45 +3846,104 @@
         ],
         "properties": {
           "data": {
-            "type": "object"
+            "type": [
+              "object",
+              "array"
+            ]
           }
         },
         "additionalProperties": false
       },
       "request": {
         "method": "GET",
-        "path": "/v2/departments/{{departmentId}}",
+        "path": "/v1/expenses",
         "success": [
           200
-        ]
+        ],
+        "query": {
+          "limit": "{{limit}}",
+          "cursor": "{{cursor}}",
+          "expand[]": "{{expand}}",
+          "status": "{{status}}",
+          "user_id": "{{user_id}}",
+          "budget_id": "{{budget_id}}",
+          "expense_type": "{{expense_type}}",
+          "payment_status": "{{payment_status}}",
+          "updated_at_end": "{{updated_at_end}}",
+          "purchased_at_end": "{{purchased_at_end}}",
+          "updated_at_start": "{{updated_at_start}}",
+          "parent_expense_id": "{{parent_expense_id}}",
+          "load_custom_fields": "{{load_custom_fields}}",
+          "purchased_at_start": "{{purchased_at_start}}",
+          "spending_entity_id": "{{spending_entity_id}}",
+          "payment_posted_at_end": "{{payment_posted_at_end}}",
+          "payment_posted_at_start": "{{payment_posted_at_start}}"
+        }
       },
       "enforceOutputSchema": true,
       "validationMode": "strict-generated",
       "responseFormat": "json"
     },
-    "departments.create": {
+    "fieldValues.list": {
       "kind": "action",
-      "sideEffect": "write",
+      "sideEffect": "read",
       "timeoutMs": 15000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
-      "title": "Create department",
-      "description": "Create a Brex department via POST /v2/departments.",
+      "title": "List field values",
+      "description": "List values for a custom field.",
       "inputSchema": {
         "type": "object",
         "properties": {
-          "name": {
-            "type": "string",
-            "minLength": 1
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000,
+            "description": "Maximum number of records to return."
           },
-          "description": {
+          "value": {
             "type": "string",
-            "minLength": 1
+            "minLength": 1,
+            "description": "Filter by value string."
+          },
+          "cursor": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Pagination cursor from a previous response."
+          },
+          "brex_id": {
+            "type": "array",
+            "description": "Filter by field-value Brex IDs.",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "field_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Field ID."
+          },
+          "value_id": {
+            "type": "array",
+            "description": "Filter by value IDs.",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "remote_id": {
+            "type": "array",
+            "description": "Filter by remote IDs.",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
           }
         },
         "additionalProperties": false,
         "required": [
-          "name"
+          "field_id"
         ]
       },
       "outputSchema": {
@@ -410,23 +3953,82 @@
         ],
         "properties": {
           "data": {
-            "type": "object"
+            "type": [
+              "object",
+              "array"
+            ]
           }
         },
         "additionalProperties": false
       },
       "request": {
-        "method": "POST",
-        "path": "/v2/departments",
+        "method": "GET",
+        "path": "/v1/fields/{{field_id}}/values",
         "success": [
           200
         ],
-        "body": {
-          "name": "{{name}}",
-          "description": "{{description}}"
+        "query": {
+          "limit": "{{limit}}",
+          "value": "{{value}}",
+          "cursor": "{{cursor}}",
+          "brex_id": "{{brex_id}}",
+          "value_id": "{{value_id}}",
+          "remote_id": "{{remote_id}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "legalEntities.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List legal entities",
+      "description": "List legal entities.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000,
+            "description": "Maximum number of records to return."
+          },
+          "cursor": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Pagination cursor from a previous response."
+          }
         },
-        "headers": {
-          "Content-Type": "application/json"
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/legal_entities",
+        "success": [
+          200
+        ],
+        "query": {
+          "limit": "{{limit}}",
+          "cursor": "{{cursor}}"
         }
       },
       "enforceOutputSchema": true,
@@ -440,22 +4042,20 @@
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
       "title": "List locations",
-      "description": "List Brex locations with optional name filter and cursor pagination.",
+      "description": "List locations.",
       "inputSchema": {
         "type": "object",
         "properties": {
-          "cursor": {
-            "type": "string",
-            "minLength": 1
-          },
           "limit": {
             "type": "integer",
             "minimum": 1,
-            "maximum": 1000
+            "maximum": 1000,
+            "description": "Maximum number of records to return."
           },
-          "name": {
+          "cursor": {
             "type": "string",
-            "minLength": 1
+            "minLength": 1,
+            "description": "Pagination cursor from a previous response."
           }
         },
         "additionalProperties": false
@@ -467,7 +4067,10 @@
         ],
         "properties": {
           "data": {
-            "type": "object"
+            "type": [
+              "object",
+              "array"
+            ]
           }
         },
         "additionalProperties": false
@@ -479,35 +4082,38 @@
           200
         ],
         "query": {
-          "cursor": "{{cursor}}",
           "limit": "{{limit}}",
-          "name": "{{name}}"
+          "cursor": "{{cursor}}"
         }
       },
       "enforceOutputSchema": true,
       "validationMode": "strict-generated",
       "responseFormat": "json"
     },
-    "locations.get": {
+    "referrals.list": {
       "kind": "action",
       "sideEffect": "read",
       "timeoutMs": 15000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
-      "title": "Get location",
-      "description": "Retrieve a Brex location by ID via GET /v2/locations/{id}.",
+      "title": "List referrals",
+      "description": "List active referrals (expired referrals are omitted).",
       "inputSchema": {
         "type": "object",
         "properties": {
-          "locationId": {
+          "cursor": {
             "type": "string",
-            "minLength": 1
+            "minLength": 1,
+            "description": "Pagination cursor from a previous response."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000,
+            "description": "Maximum number of records to return."
           }
         },
-        "additionalProperties": false,
-        "required": [
-          "locationId"
-        ]
+        "additionalProperties": false
       },
       "outputSchema": {
         "type": "object",
@@ -516,71 +4122,23 @@
         ],
         "properties": {
           "data": {
-            "type": "object"
+            "type": [
+              "object",
+              "array"
+            ]
           }
         },
         "additionalProperties": false
       },
       "request": {
         "method": "GET",
-        "path": "/v2/locations/{{locationId}}",
-        "success": [
-          200
-        ]
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "locations.create": {
-      "kind": "action",
-      "sideEffect": "write",
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "title": "Create location",
-      "description": "Create a Brex location via POST /v2/locations.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "name": {
-            "type": "string",
-            "minLength": 1
-          },
-          "description": {
-            "type": "string",
-            "minLength": 1
-          }
-        },
-        "additionalProperties": false,
-        "required": [
-          "name"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "POST",
-        "path": "/v2/locations",
+        "path": "/v1/referrals",
         "success": [
           200
         ],
-        "body": {
-          "name": "{{name}}",
-          "description": "{{description}}"
-        },
-        "headers": {
-          "Content-Type": "application/json"
+        "query": {
+          "cursor": "{{cursor}}",
+          "limit": "{{limit}}"
         }
       },
       "enforceOutputSchema": true,
@@ -593,23 +4151,21 @@
       "timeoutMs": 15000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
-      "title": "List titles",
-      "description": "List Brex titles with optional name filter and cursor pagination.",
+      "title": "List job titles",
+      "description": "List job titles.",
       "inputSchema": {
         "type": "object",
         "properties": {
-          "cursor": {
-            "type": "string",
-            "minLength": 1
-          },
           "limit": {
             "type": "integer",
             "minimum": 1,
-            "maximum": 1000
+            "maximum": 1000,
+            "description": "Maximum number of records to return."
           },
-          "name": {
+          "cursor": {
             "type": "string",
-            "minLength": 1
+            "minLength": 1,
+            "description": "Pagination cursor from a previous response."
           }
         },
         "additionalProperties": false
@@ -621,7 +4177,10 @@
         ],
         "properties": {
           "data": {
-            "type": "object"
+            "type": [
+              "object",
+              "array"
+            ]
           }
         },
         "additionalProperties": false
@@ -633,88 +4192,38 @@
           200
         ],
         "query": {
-          "cursor": "{{cursor}}",
           "limit": "{{limit}}",
-          "name": "{{name}}"
+          "cursor": "{{cursor}}"
         }
       },
       "enforceOutputSchema": true,
       "validationMode": "strict-generated",
       "responseFormat": "json"
     },
-    "titles.get": {
+    "transfers.list": {
       "kind": "action",
       "sideEffect": "read",
       "timeoutMs": 15000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
-      "title": "Get title",
-      "description": "Retrieve a Brex title by ID via GET /v2/titles/{id}.",
+      "title": "List transfers",
+      "description": "List ACH, wire, and check transfers.",
       "inputSchema": {
         "type": "object",
         "properties": {
-          "titleId": {
-            "type": "string",
-            "minLength": 1
-          }
-        },
-        "additionalProperties": false,
-        "required": [
-          "titleId"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "GET",
-        "path": "/v2/titles/{{titleId}}",
-        "success": [
-          200
-        ]
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "cards.list": {
-      "kind": "action",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "title": "List cards",
-      "description": "List Brex cards for a user via GET /v2/cards. userId is required.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "userId": {
-            "type": "string",
-            "minLength": 1
-          },
-          "cursor": {
-            "type": "string",
-            "minLength": 1
-          },
           "limit": {
             "type": "integer",
             "minimum": 1,
-            "maximum": 1000
+            "maximum": 1000,
+            "description": "Maximum number of records to return."
+          },
+          "cursor": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Pagination cursor from a previous response."
           }
         },
-        "additionalProperties": false,
-        "required": [
-          "userId"
-        ]
+        "additionalProperties": false
       },
       "outputSchema": {
         "type": "object",
@@ -723,47 +4232,58 @@
         ],
         "properties": {
           "data": {
-            "type": "object"
+            "type": [
+              "object",
+              "array"
+            ]
           }
         },
         "additionalProperties": false
       },
       "request": {
         "method": "GET",
-        "path": "/v2/cards",
+        "path": "/v1/transfers",
         "success": [
           200
         ],
         "query": {
-          "user_id": "{{userId}}",
-          "cursor": "{{cursor}}",
-          "limit": "{{limit}}"
+          "limit": "{{limit}}",
+          "cursor": "{{cursor}}"
         }
       },
       "enforceOutputSchema": true,
       "validationMode": "strict-generated",
       "responseFormat": "json"
     },
-    "cards.get": {
+    "trips.list": {
       "kind": "action",
       "sideEffect": "read",
       "timeoutMs": 15000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
-      "title": "Get card",
-      "description": "Retrieve a Brex card by ID via GET /v2/cards/{id}.",
+      "title": "List trips",
+      "description": "List Brex Travel trips.",
       "inputSchema": {
         "type": "object",
         "properties": {
-          "cardId": {
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000,
+            "description": "Maximum number of records to return."
+          },
+          "cursor": {
             "type": "string",
-            "minLength": 1
+            "minLength": 1,
+            "description": "Pagination cursor from a previous response."
+          },
+          "last_updated_after": {
+            "type": "string",
+            "minLength": 1,
+            "description": "ISO 8601 timestamp filter."
           }
         },
-        "additionalProperties": false,
-        "required": [
-          "cardId"
-        ]
+        "additionalProperties": false
       },
       "outputSchema": {
         "type": "object",
@@ -772,41 +4292,116 @@
         ],
         "properties": {
           "data": {
-            "type": "object"
+            "type": [
+              "object",
+              "array"
+            ]
           }
         },
         "additionalProperties": false
       },
       "request": {
         "method": "GET",
-        "path": "/v2/cards/{{cardId}}",
+        "path": "/v1/trips",
         "success": [
           200
-        ]
+        ],
+        "query": {
+          "limit": "{{limit}}",
+          "cursor": "{{cursor}}",
+          "last_updated_after": "{{last_updated_after}}"
+        }
       },
       "enforceOutputSchema": true,
       "validationMode": "strict-generated",
       "responseFormat": "json"
     },
-    "cards.lock": {
+    "vendors.list": {
       "kind": "action",
-      "sideEffect": "write",
+      "sideEffect": "read",
       "timeoutMs": 15000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
-      "title": "Lock card",
-      "description": "Lock a Brex card via POST /v2/cards/{id}/lock.",
+      "title": "List vendors",
+      "description": "List vendors.",
       "inputSchema": {
         "type": "object",
         "properties": {
-          "cardId": {
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000,
+            "description": "Maximum number of records to return."
+          },
+          "cursor": {
             "type": "string",
-            "minLength": 1
+            "minLength": 1,
+            "description": "Pagination cursor from a previous response."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/vendors",
+        "success": [
+          200
+        ],
+        "query": {
+          "limit": "{{limit}}",
+          "cursor": "{{cursor}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "webhookGroups.members.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List webhook group members",
+      "description": "List members of a webhook group.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Webhook group ID."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000,
+            "description": "Maximum number of records to return."
+          },
+          "cursor": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Pagination cursor from a previous response."
           }
         },
         "additionalProperties": false,
         "required": [
-          "cardId"
+          "id"
         ]
       },
       "outputSchema": {
@@ -816,30 +4411,92 @@
         ],
         "properties": {
           "data": {
-            "type": "object"
+            "type": [
+              "object",
+              "array"
+            ]
           }
         },
         "additionalProperties": false
       },
       "request": {
-        "method": "POST",
-        "path": "/v2/cards/{{cardId}}/lock",
+        "method": "GET",
+        "path": "/v1/webhooks/groups/{{id}}/members",
         "success": [
           200
-        ]
+        ],
+        "query": {
+          "limit": "{{limit}}",
+          "cursor": "{{cursor}}"
+        }
       },
       "enforceOutputSchema": true,
       "validationMode": "strict-generated",
       "responseFormat": "json"
     },
-    "cashAccounts.list": {
+    "webhookGroups.list": {
       "kind": "action",
       "sideEffect": "read",
       "timeoutMs": 15000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
-      "title": "List cash accounts",
-      "description": "List Brex cash accounts for the connected company via GET /v2/accounts/cash.",
+      "title": "List webhook groups",
+      "description": "List webhook groups. Partner accounts only.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000,
+            "description": "Maximum number of records to return."
+          },
+          "cursor": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Pagination cursor from a previous response."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/webhooks/groups",
+        "success": [
+          200
+        ],
+        "query": {
+          "limit": "{{limit}}",
+          "cursor": "{{cursor}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "webhooks.secrets.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List webhook secrets",
+      "description": "List webhook signing secrets used to validate incoming webhooks.",
       "inputSchema": {
         "type": "object",
         "properties": {},
@@ -853,8 +4510,8 @@
         "properties": {
           "data": {
             "type": [
-              "array",
-              "object"
+              "object",
+              "array"
             ]
           }
         },
@@ -862,7 +4519,7 @@
       },
       "request": {
         "method": "GET",
-        "path": "/v2/accounts/cash",
+        "path": "/v1/webhooks/secrets",
         "success": [
           200
         ]
@@ -871,37 +4528,27 @@
       "validationMode": "strict-generated",
       "responseFormat": "json"
     },
-    "transactions.card.list": {
+    "webhooks.list": {
       "kind": "action",
       "sideEffect": "read",
       "timeoutMs": 15000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
-      "title": "List card transactions",
-      "description": "List Brex card transactions via GET /v2/transactions/card with optional user, posted-at window, and cursor pagination.",
+      "title": "List webhook subscriptions",
+      "description": "List registered webhook subscriptions.",
       "inputSchema": {
         "type": "object",
         "properties": {
-          "cursor": {
-            "type": "string",
-            "minLength": 1
-          },
           "limit": {
             "type": "integer",
             "minimum": 1,
-            "maximum": 1000
+            "maximum": 1000,
+            "description": "Maximum number of records to return."
           },
-          "userId": {
+          "cursor": {
             "type": "string",
-            "minLength": 1
-          },
-          "postedAtStart": {
-            "type": "string",
-            "minLength": 1
-          },
-          "postedAtEnd": {
-            "type": "string",
-            "minLength": 1
+            "minLength": 1,
+            "description": "Pagination cursor from a previous response."
           }
         },
         "additionalProperties": false
@@ -913,48 +4560,49 @@
         ],
         "properties": {
           "data": {
-            "type": "object"
+            "type": [
+              "object",
+              "array"
+            ]
           }
         },
         "additionalProperties": false
       },
       "request": {
         "method": "GET",
-        "path": "/v2/transactions/card",
+        "path": "/v1/webhooks",
         "success": [
           200
         ],
         "query": {
-          "cursor": "{{cursor}}",
           "limit": "{{limit}}",
-          "user_id": "{{userId}}",
-          "posted_at_start": "{{postedAtStart}}",
-          "posted_at_end": "{{postedAtEnd}}"
+          "cursor": "{{cursor}}"
         }
       },
       "enforceOutputSchema": true,
       "validationMode": "strict-generated",
       "responseFormat": "json"
     },
-    "transactions.card.get": {
+    "receipts.match": {
       "kind": "action",
-      "sideEffect": "read",
+      "sideEffect": "write",
       "timeoutMs": 15000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
-      "title": "Get card transaction",
-      "description": "Retrieve a Brex card transaction by ID via GET /v2/transactions/card/{id}.",
+      "title": "Create receipt match",
+      "description": "Create a receipt-match upload and return a pre-signed S3 URI.",
       "inputSchema": {
         "type": "object",
         "properties": {
-          "transactionId": {
+          "receipt_name": {
             "type": "string",
-            "minLength": 1
+            "minLength": 1,
+            "description": "Receipt file name including extension."
           }
         },
         "additionalProperties": false,
         "required": [
-          "transactionId"
+          "receipt_name"
         ]
       },
       "outputSchema": {
@@ -964,52 +4612,58 @@
         ],
         "properties": {
           "data": {
-            "type": "object"
+            "type": [
+              "object",
+              "array"
+            ]
           }
         },
         "additionalProperties": false
       },
       "request": {
-        "method": "GET",
-        "path": "/v2/transactions/card/{{transactionId}}",
+        "method": "POST",
+        "path": "/v1/expenses/card/receipt_match",
         "success": [
-          200
-        ]
+          201
+        ],
+        "body": {
+          "receipt_name": "{{receipt_name}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
       },
       "enforceOutputSchema": true,
       "validationMode": "strict-generated",
       "responseFormat": "json"
     },
-    "transactions.cash.list": {
+    "receipts.upload": {
       "kind": "action",
-      "sideEffect": "read",
+      "sideEffect": "write",
       "timeoutMs": 15000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
-      "title": "List cash transactions",
-      "description": "List Brex cash transactions via GET /v2/transactions/cash with optional posted-at window and cursor pagination.",
+      "title": "Create receipt upload",
+      "description": "Create a receipt upload for a card expense and return a pre-signed S3 URL.",
       "inputSchema": {
         "type": "object",
         "properties": {
-          "cursor": {
+          "expense_id": {
             "type": "string",
-            "minLength": 1
+            "minLength": 1,
+            "description": "Card expense ID."
           },
-          "limit": {
-            "type": "integer",
-            "minimum": 1,
-            "maximum": 1000
-          },
-          "postedAtStart": {
+          "receipt_name": {
             "type": "string",
-            "minLength": 1
-          },
-          "postedAtEnd": {
-            "type": "string",
-            "minLength": 1
+            "minLength": 1,
+            "description": "Receipt file name including extension."
           }
         },
-        "additionalProperties": false
+        "additionalProperties": false,
+        "required": [
+          "expense_id",
+          "receipt_name"
+        ]
       },
       "outputSchema": {
         "type": "object",
@@ -1018,22 +4672,1241 @@
         ],
         "properties": {
           "data": {
-            "type": "object"
+            "type": [
+              "object",
+              "array"
+            ]
           }
         },
         "additionalProperties": false
       },
       "request": {
-        "method": "GET",
-        "path": "/v2/transactions/cash",
+        "method": "POST",
+        "path": "/v1/expenses/card/{{expense_id}}/receipt_upload",
+        "success": [
+          201,
+          200
+        ],
+        "body": {
+          "receipt_name": "{{receipt_name}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "users.limit.set": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Set user spend limit",
+      "description": "Set the monthly spend limit for a user (POST /v2/users/{id}/limit).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "User ID."
+          },
+          "monthly_limit": {
+            "type": "object",
+            "description": "Monthly limit. Omit or null to clear.",
+            "properties": {
+              "amount": {
+                "type": "integer",
+                "description": "Amount in the smallest currency unit."
+              },
+              "currency": {
+                "type": "string",
+                "minLength": 1,
+                "description": "ISO 4217 currency code."
+              }
+            },
+            "additionalProperties": true
+          },
+          "idempotency_key": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Idempotency key. Reuse the same value when retrying."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v2/users/{{id}}/limit",
         "success": [
           200
         ],
-        "query": {
-          "cursor": "{{cursor}}",
+        "body": {
+          "monthly_limit": "{{monthly_limit}}"
+        },
+        "headers": {
+          "Content-Type": "application/json",
+          "Idempotency-Key": "{{idempotency_key}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "cards.transfer": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Transfer card",
+      "description": "Transfer a card to a different user by updating the card owner.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "card_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Card ID."
+          },
+          "new_owner_user_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "New owner user ID."
+          },
+          "idempotency_key": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Idempotency key. Reuse the same value when retrying."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "card_id",
+          "new_owner_user_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/v2/cards/{{card_id}}",
+        "success": [
+          200
+        ],
+        "body": {
+          "owner": {
+            "type": "USER",
+            "user_id": "{{new_owner_user_id}}"
+          }
+        },
+        "headers": {
+          "Content-Type": "application/json",
+          "Idempotency-Key": "{{idempotency_key}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "budgets.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Update budget",
+      "description": "Update a v2 budget. Only provided fields are changed.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "New name."
+          },
+          "amount": {
+            "type": "object",
+            "description": "Budget amount.",
+            "properties": {
+              "amount": {
+                "type": "integer",
+                "description": "Amount in the smallest currency unit."
+              },
+              "currency": {
+                "type": "string",
+                "minLength": 1,
+                "description": "ISO 4217 currency code."
+              }
+            },
+            "additionalProperties": true
+          },
+          "budget_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Budget ID."
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "description": "New description."
+          },
+          "owner_user_ids": {
+            "type": "array",
+            "description": "Replacement owner user IDs.",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "idempotency_key": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Idempotency key. Reuse the same value when retrying."
+          },
+          "parent_budget_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Parent budget ID."
+          },
+          "period_recurrence_type": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Period recurrence type."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "budget_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/v2/budgets/{{budget_id}}",
+        "success": [
+          200
+        ],
+        "body": {
+          "name": "{{name}}",
+          "amount": "{{amount}}",
+          "description": "{{description}}",
+          "owner_user_ids": "{{owner_user_ids}}",
+          "parent_budget_id": "{{parent_budget_id}}",
+          "period_recurrence_type": "{{period_recurrence_type}}"
+        },
+        "headers": {
+          "Content-Type": "application/json",
+          "Idempotency-Key": "{{idempotency_key}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "spendLimits.v1.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Update spend limit (budget v1)",
+      "description": "Update a v1 spend limit (PUT /v1/budgets/{id}).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Spend limit ID."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Name."
+          },
+          "limit": {
+            "type": "object",
+            "description": "Limit amount.",
+            "properties": {
+              "amount": {
+                "type": "integer",
+                "description": "Amount in the smallest currency unit."
+              },
+              "currency": {
+                "type": "string",
+                "minLength": 1,
+                "description": "ISO 4217 currency code."
+              }
+            },
+            "additionalProperties": true
+          },
+          "end_date": {
+            "type": "string",
+            "minLength": 1,
+            "description": "End date YYYY-MM-DD."
+          },
+          "limit_type": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Limit type."
+          },
+          "spend_type": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Spend type."
+          },
+          "start_date": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Start date YYYY-MM-DD."
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Description."
+          },
+          "period_type": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Period type."
+          },
+          "owner_user_ids": {
+            "type": "array",
+            "description": "Owner user IDs.",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "idempotency_key": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Idempotency key. Reuse the same value when retrying."
+          },
+          "member_user_ids": {
+            "type": "array",
+            "description": "Member user IDs.",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "limit_visibility": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Visibility."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/v1/budgets/{{id}}",
+        "success": [
+          200
+        ],
+        "body": {
+          "name": "{{name}}",
           "limit": "{{limit}}",
-          "posted_at_start": "{{postedAtStart}}",
-          "posted_at_end": "{{postedAtEnd}}"
+          "end_date": "{{end_date}}",
+          "limit_type": "{{limit_type}}",
+          "spend_type": "{{spend_type}}",
+          "start_date": "{{start_date}}",
+          "description": "{{description}}",
+          "period_type": "{{period_type}}",
+          "owner_user_ids": "{{owner_user_ids}}",
+          "member_user_ids": "{{member_user_ids}}",
+          "limit_visibility": "{{limit_visibility}}"
+        },
+        "headers": {
+          "Content-Type": "application/json",
+          "Idempotency-Key": "{{idempotency_key}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "cards.limits.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Update card limits",
+      "description": "Update spend_controls on a vendor card (limit_type=CARD).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "card_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Card ID."
+          },
+          "spend_controls": {
+            "type": "object",
+            "description": "New spend control settings."
+          },
+          "idempotency_key": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Idempotency key. Reuse the same value when retrying."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "card_id",
+          "spend_controls"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/v2/cards/{{card_id}}",
+        "success": [
+          200
+        ],
+        "body": {
+          "spend_controls": "{{spend_controls}}"
+        },
+        "headers": {
+          "Content-Type": "application/json",
+          "Idempotency-Key": "{{idempotency_key}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "cards.update_status": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Update card status",
+      "description": "Lock, unlock, or terminate a card via POST /v2/cards/{id}/lock|unlock|terminate.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Target status.",
+            "enum": [
+              "LOCKED",
+              "ACTIVE",
+              "TERMINATED"
+            ]
+          },
+          "card_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Card ID."
+          },
+          "lock_reason": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Reason when locking.",
+            "enum": [
+              "CARD_DAMAGED",
+              "CARD_LOST",
+              "CARD_NOT_RECEIVED",
+              "DO_NOT_NEED_PHYSICAL_CARD",
+              "DO_NOT_NEED_VIRTUAL_CARD",
+              "OTHER"
+            ]
+          },
+          "lock_description": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Optional lock description."
+          },
+          "idempotency_key": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Idempotency key. Reuse the same value when retrying."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "status",
+          "card_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v2/cards/{{card_id}}/lock",
+        "success": [
+          200
+        ],
+        "body": {
+          "reason": "{{lock_reason}}",
+          "description": "{{lock_description}}"
+        },
+        "headers": {
+          "Content-Type": "application/json",
+          "Idempotency-Key": "{{idempotency_key}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "expenses.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Update expense",
+      "description": "Update a card expense memo, category, location, or department.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "memo": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Expense memo."
+          },
+          "category": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Expense category."
+          },
+          "expense_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Expense ID."
+          },
+          "location_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Location ID."
+          },
+          "department_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Department ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "expense_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/v1/expenses/card/{{expense_id}}",
+        "success": [
+          200
+        ],
+        "body": {
+          "memo": "{{memo}}",
+          "category": "{{category}}",
+          "location_id": "{{location_id}}",
+          "department_id": "{{department_id}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "fields.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Update field",
+      "description": "Update a custom field name or disabled flag.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Field ID."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Field name."
+          },
+          "is_disabled": {
+            "type": "boolean",
+            "description": "Whether the field is disabled."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/v1/fields/{{id}}",
+        "success": [
+          200
+        ],
+        "body": {
+          "name": "{{name}}",
+          "is_disabled": "{{is_disabled}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "fieldValues.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Update field values",
+      "description": "Bulk-update custom field values.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "description": "Values to update.",
+            "items": {
+              "type": "object"
+            }
+          },
+          "field_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Field ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "items",
+          "field_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/v1/fields/{{field_id}}/values",
+        "success": [
+          200
+        ],
+        "body": {
+          "items": "{{items}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "spendLimits.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Update spend limit",
+      "description": "Update a v2 spend limit. At least one optional field should be sent.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Spend limit ID."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Name."
+          },
+          "status": {
+            "type": "string",
+            "minLength": 1,
+            "description": "ACTIVE or INACTIVE."
+          },
+          "end_date": {
+            "type": "string",
+            "minLength": 1,
+            "description": "End date YYYY-MM-DD."
+          },
+          "spend_type": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Spend type."
+          },
+          "start_date": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Start date YYYY-MM-DD."
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Description."
+          },
+          "department_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Department ID."
+          },
+          "owner_user_ids": {
+            "type": "array",
+            "description": "Owner user IDs.",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "idempotency_key": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Idempotency key. Reuse the same value when retrying."
+          },
+          "legal_entity_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Legal entity ID."
+          },
+          "member_user_ids": {
+            "type": "array",
+            "description": "Member user IDs.",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "expense_policy_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Expense policy ID."
+          },
+          "transaction_limit": {
+            "type": "object",
+            "description": "Per-transaction limit.",
+            "properties": {
+              "amount": {
+                "type": "integer",
+                "description": "Amount in the smallest currency unit."
+              },
+              "currency": {
+                "type": "string",
+                "minLength": 1,
+                "description": "ISO 4217 currency code."
+              }
+            },
+            "additionalProperties": true
+          },
+          "expense_visibility": {
+            "type": "string",
+            "minLength": 1,
+            "description": "PRIVATE or PUBLIC."
+          },
+          "authorization_settings": {
+            "type": "object",
+            "description": "Authorization settings."
+          },
+          "limit_increase_setting": {
+            "type": "string",
+            "minLength": 1,
+            "description": "ENABLED or DISABLED."
+          },
+          "period_recurrence_type": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Period recurrence."
+          },
+          "authorization_visibility": {
+            "type": "string",
+            "minLength": 1,
+            "description": "PRIVATE or PUBLIC."
+          },
+          "limit_approval_policy_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Approval policy ID."
+          },
+          "merchant_category_controls": {
+            "type": "object",
+            "description": "Merchant category controls."
+          },
+          "auto_transfer_cards_setting": {
+            "type": "string",
+            "minLength": 1,
+            "description": "ENABLED or DISABLED."
+          },
+          "auto_create_limit_cards_setting": {
+            "type": "string",
+            "minLength": 1,
+            "description": "ENABLED or DISABLED."
+          },
+          "limit_increase_request_policy_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Increase-request policy ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/v2/spend_limits/{{id}}",
+        "success": [
+          200
+        ],
+        "body": {
+          "name": "{{name}}",
+          "status": "{{status}}",
+          "end_date": "{{end_date}}",
+          "spend_type": "{{spend_type}}",
+          "start_date": "{{start_date}}",
+          "description": "{{description}}",
+          "department_id": "{{department_id}}",
+          "owner_user_ids": "{{owner_user_ids}}",
+          "legal_entity_id": "{{legal_entity_id}}",
+          "member_user_ids": "{{member_user_ids}}",
+          "expense_policy_id": "{{expense_policy_id}}",
+          "transaction_limit": "{{transaction_limit}}",
+          "expense_visibility": "{{expense_visibility}}",
+          "authorization_settings": "{{authorization_settings}}",
+          "limit_increase_setting": "{{limit_increase_setting}}",
+          "period_recurrence_type": "{{period_recurrence_type}}",
+          "authorization_visibility": "{{authorization_visibility}}",
+          "limit_approval_policy_id": "{{limit_approval_policy_id}}",
+          "merchant_category_controls": "{{merchant_category_controls}}",
+          "auto_transfer_cards_setting": "{{auto_transfer_cards_setting}}",
+          "auto_create_limit_cards_setting": "{{auto_create_limit_cards_setting}}",
+          "limit_increase_request_policy_id": "{{limit_increase_request_policy_id}}"
+        },
+        "headers": {
+          "Content-Type": "application/json",
+          "Idempotency-Key": "{{idempotency_key}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "users.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Update user",
+      "description": "Update a user's title, manager, location, or department.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "user_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "User ID."
+          },
+          "title_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Title ID."
+          },
+          "manager_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Manager user ID."
+          },
+          "location_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Location ID."
+          },
+          "department_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Department ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "user_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/v2/users/{{user_id}}",
+        "success": [
+          200
+        ],
+        "body": {
+          "title_id": "{{title_id}}",
+          "manager_id": "{{manager_id}}",
+          "location_id": "{{location_id}}",
+          "department_id": "{{department_id}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "vendors.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Update vendor",
+      "description": "Update vendor contact and payment details.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Vendor ID."
+          },
+          "email": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Email."
+          },
+          "phone": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Phone."
+          },
+          "company_name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Company name."
+          },
+          "idempotency_key": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Idempotency key. Reuse the same value when retrying."
+          },
+          "beneficiary_name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Beneficiary name."
+          },
+          "payment_accounts": {
+            "type": "array",
+            "description": "Payment accounts.",
+            "items": {
+              "type": "object"
+            }
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/v1/vendors/{{id}}",
+        "success": [
+          200
+        ],
+        "body": {
+          "email": "{{email}}",
+          "phone": "{{phone}}",
+          "company_name": "{{company_name}}",
+          "beneficiary_name": "{{beneficiary_name}}",
+          "payment_accounts": "{{payment_accounts}}"
+        },
+        "headers": {
+          "Content-Type": "application/json",
+          "Idempotency-Key": "{{idempotency_key}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "webhooks.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Update webhook subscription",
+      "description": "Update webhook URL, event types, status, or group.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Webhook subscription ID."
+          },
+          "url": {
+            "type": "string",
+            "minLength": 1,
+            "description": "HTTPS webhook URL."
+          },
+          "status": {
+            "type": "string",
+            "minLength": 1,
+            "description": "ACTIVE or INACTIVE.",
+            "enum": [
+              "ACTIVE",
+              "INACTIVE"
+            ]
+          },
+          "group_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Optional webhook group ID."
+          },
+          "event_types": {
+            "type": "array",
+            "description": "Event types.",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "url",
+          "status",
+          "event_types"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/v1/webhooks/{{id}}",
+        "success": [
+          200
+        ],
+        "body": {
+          "url": "{{url}}",
+          "status": "{{status}}",
+          "group_id": "{{group_id}}",
+          "event_types": "{{event_types}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
         }
       },
       "enforceOutputSchema": true,
@@ -1041,18 +5914,13 @@
       "responseFormat": "json"
     }
   },
-  "evidence": {
-    "fixture": {
-      "status": "supplied"
-    },
-    "live": {
-      "status": "unverified"
-    }
-  },
   "provenance": {
     "source": {
-      "url": "https://github.com/oomol-lab/open-connector",
-      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
+      "url": "https://github.com/oomol-lab/open-connector"
     }
-  }
+  },
+  "runtime": "bun",
+  "version": "0.2.0",
+  "visibility": "public"
 }
