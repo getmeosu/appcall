@@ -232,6 +232,37 @@ describe("Reconcile observe projection: synthetic connector", () => {
     ).toThrow(/requires tenant/);
   });
 
+  test("reconcileInput maps an action key onto the observe key (FIX-G12C: organizationId -> id)", async () => {
+    const recorder: Record<string, unknown[]> = {};
+    const follow = {
+      ...updateAction,
+      reconcileInput: { id: "thingId" },
+      inputSchema: { type: "object", required: ["thingId"], properties: { thingId: { type: "string" } }, additionalProperties: false },
+    };
+    const registry = syntheticRegistry({ "things.update": follow, "things.get": closedObserve }, recorder);
+    const result = registry.executeAction("projection-demo", "things.update", { thingId: "O_1", accessToken: "s" });
+    if (!result.ok) throw new Error(`unexpected failure ${JSON.stringify(result)}`);
+    expect(await Promise.resolve(result.output)).toEqual({ observed: { accessToken: "s", id: "O_1" } });
+    expect(recorder["things.get"]).toEqual([{ accessToken: "s", id: "O_1" }]);
+  });
+
+  test("without reconcileInput the same pairing cannot load (closed observe needs id)", () => {
+    const follow = {
+      ...updateAction,
+      inputSchema: { type: "object", required: ["thingId"], properties: { thingId: { type: "string" } }, additionalProperties: false },
+    };
+    expect(() => syntheticRegistry({ "things.update": follow, "things.get": closedObserve }, {})).toThrow(/requires id/);
+  });
+
+  test("reconcileInput naming a key the action does not declare still cannot load", () => {
+    const follow = {
+      ...updateAction,
+      reconcileInput: { id: "nope" },
+      inputSchema: { type: "object", required: ["thingId"], properties: { thingId: { type: "string" } }, additionalProperties: false },
+    };
+    expect(() => syntheticRegistry({ "things.update": follow, "things.get": closedObserve }, {})).toThrow(/requires id/);
+  });
+
   test("Reconcile naming an undeclared observe does not load", () => {
     expect(() => syntheticRegistry({ "things.update": { ...updateAction, reconcile: "things.missing" } }, {})).toThrow(
       /not declared/,
@@ -291,8 +322,12 @@ describe("effect pairing scan (all connector manifests)", () => {
           problems.push(`${manifest.key} ${name}: reconcile ${target} is not a read/sync`);
         }
         const actionProps = new Set(Object.keys(op.inputSchema?.properties ?? {}));
+        const mapping = (op.reconcileInput ?? {}) as Record<string, string>;
         const missing = (observe.inputSchema?.required ?? []).filter(
-          (key) => !actionProps.has(key) && !(policy === "Idempotent" && key === "id"),
+          (key) =>
+            !actionProps.has(key)
+            && !(policy === "Idempotent" && key === "id")
+            && !(typeof mapping[key] === "string" && actionProps.has(mapping[key]!)),
         );
         if (missing.length === 0) continue;
         const line = `${manifest.key} ${name} -> ${target} [${missing.join(",")}]`;

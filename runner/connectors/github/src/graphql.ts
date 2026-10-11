@@ -5,10 +5,22 @@ import { createGitHubClient, parseGitHubRateLimit, type GitHubClient } from "./h
 export type GraphqlError = {
   ok: false;
   error: {
-    code: "CONNECTOR_UPSTREAM_ERROR" | "CONNECTOR_RATE_LIMITED";
+    code: "CONNECTOR_UPSTREAM_ERROR" | "CONNECTOR_RATE_LIMITED" | "CONNECTOR_CAPABILITY_MISSING";
     message: string;
     retryAfterSeconds?: number;
-  };
+  } & Partial<CapabilityMissingFields>;
+};
+
+/** meta-ads-g3 precedent (src/g3.ts handleError): per-op scope missing → re-consent on first use. */
+export type CapabilityMissingFields = {
+  status: number;
+  reason: "permission_missing";
+  missingScopes: string[];
+  requiredScopes: string[];
+  reconsentRequired: true;
+  providerCode: unknown;
+  providerSubcode: unknown;
+  providerError: unknown;
 };
 
 export type GraphqlOk = { ok: true; data: Record<string, unknown> };
@@ -42,18 +54,30 @@ export function createGraphqlTransport(options: {
     async request(
       document: string,
       variables: Record<string, unknown> = {},
-      opts: { allowNotFound?: boolean } = {},
+      opts: GqlRequestOptions = {},
     ): Promise<GraphqlResult | { ok: true; data: Record<string, unknown>; notFound: true }> {
       return gqlRequest(client, document, variables, opts);
     },
   };
 }
 
+export type GqlRequestOptions = {
+  allowNotFound?: boolean;
+  /**
+   * FIX-G12C: per-op OAuth scopes (manifest requiredScopes; never added to auth.scopes).
+   * When set, INSUFFICIENT_SCOPES or a 403/404 whose X-Accepted-OAuth-Scopes are not all in
+   * X-OAuth-Scopes maps to CONNECTOR_CAPABILITY_MISSING (reason permission_missing).
+   */
+  requiredScopes?: readonly string[];
+  /** Op id used in the CAPABILITY_MISSING message. */
+  operation?: string;
+};
+
 export async function gqlRequest(
   client: GitHubClient,
   document: string,
   variables: Record<string, unknown> = {},
-  opts: { allowNotFound?: boolean } = {},
+  opts: GqlRequestOptions = {},
 ): Promise<GraphqlResult | { ok: true; data: Record<string, unknown>; notFound: true }> {
   const response = await client.graphql(document, variables);
   const headers = lowerHeaders(response.headers);
@@ -65,22 +89,27 @@ export async function gqlRequest(
     return upstream("GitHub authentication failed.");
   }
 
+  const bodyErrors =
+    isRecord(response.body) && Array.isArray(response.body.errors) ? response.body.errors.filter(isRecord) : [];
+  if (bodyErrors.some((error) => error.type === "RATE_LIMITED")) {
+    return rateLimited(headers);
+  }
+
+  const capability = capabilityMissing(response.status, headers, response.body, bodyErrors, opts);
+  if (capability) return capability;
+
   if (!isRecord(response.body)) {
     return upstream("GitHub rejected the GraphQL request.");
   }
 
-  const errors = Array.isArray(response.body.errors) ? response.body.errors.filter(isRecord) : [];
-  if (errors.some((error) => error.type === "RATE_LIMITED")) {
-    return rateLimited(headers);
-  }
-
+  const errors = bodyErrors;
   const insufficient = errors.find((error) => error.type === "INSUFFICIENT_SCOPES");
   if (insufficient) {
-    const message =
+    return upstream(
       typeof insufficient.message === "string" && insufficient.message.trim().length > 0
         ? insufficient.message
-        : "GitHub token is missing required OAuth scopes.";
-    return upstream(message);
+        : "GitHub token is missing required OAuth scopes.",
+    );
   }
 
   const data = isRecord(response.body.data) ? response.body.data : null;
@@ -187,6 +216,57 @@ function rateLimited(headers: Record<string, string>): GraphqlError {
       code: "CONNECTOR_RATE_LIMITED",
       message: "GitHub rate limit exceeded.",
       retryAfterSeconds,
+    },
+  };
+}
+
+/** Scopes named in a comma-separated GitHub scope header; null when the header is absent. */
+export function parseScopeHeader(value: string | undefined): string[] | null {
+  if (value === undefined) return null;
+  return value
+    .split(",")
+    .map((scope) => scope.trim())
+    .filter((scope) => scope.length > 0);
+}
+
+/** missing = X-Accepted-OAuth-Scopes − X-OAuth-Scopes; null when either header is absent. */
+export function missingScopesFromHeaders(headers: Record<string, string>): string[] | null {
+  const lowered = lowerHeaders(headers);
+  const accepted = parseScopeHeader(lowered["x-accepted-oauth-scopes"]);
+  const granted = parseScopeHeader(lowered["x-oauth-scopes"]);
+  if (accepted === null || granted === null) return null;
+  const have = new Set(granted);
+  return accepted.filter((scope) => !have.has(scope));
+}
+
+function capabilityMissing(
+  status: number,
+  headers: Record<string, string>,
+  body: unknown,
+  errors: Record<string, unknown>[],
+  opts: GqlRequestOptions,
+): GraphqlError | null {
+  const scopes = [...(opts.requiredScopes ?? [])];
+  if (scopes.length === 0) return null;
+  const insufficient = errors.find((error) => error.type === "INSUFFICIENT_SCOPES");
+  const headerMissing = status === 403 || status === 404 ? missingScopesFromHeaders(headers) : null;
+  const headerSignal = headerMissing !== null && headerMissing.length > 0;
+  if (!insufficient && !headerSignal) return null;
+  const missing = headerSignal ? headerMissing! : scopes;
+  const label = opts.operation ?? "operation";
+  return {
+    ok: false,
+    error: {
+      code: "CONNECTOR_CAPABILITY_MISSING",
+      message: `GitHub ${label} is missing permission ${missing.join(", ")}. Reconnect GitHub to re-consent with ${missing.join(", ")} (not part of the default connect scopes).`,
+      status,
+      reason: "permission_missing",
+      missingScopes: missing,
+      requiredScopes: scopes,
+      reconsentRequired: true,
+      providerCode: insufficient ? "INSUFFICIENT_SCOPES" : null,
+      providerSubcode: null,
+      providerError: insufficient ? errors : isRecord(body) ? body : null,
     },
   };
 }

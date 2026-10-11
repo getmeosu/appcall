@@ -862,6 +862,23 @@ import {
   validateListGraphqlSecurityVulnerabilitiesInput,
 } from "./gap_g11";
 
+import type { GraphqlError } from "./graphql";
+import {
+  createGapG12cClient,
+  validateCreateUserListInput,
+  validateDeleteUserListInput,
+  validateFollowOrganizationInput,
+  validateGetEnterpriseAdminInvitationInput,
+  validateGetEnterpriseMemberInvitationInput,
+  validateListGraphqlSponsorablesInput,
+  validateSearchGraphqlInput,
+  validateSetUserInteractionLimitInput,
+  validateUnfollowOrganizationInput,
+  validateUpdateUserListInput,
+  validateUpdateUserListsForItemInput,
+  validateUpdateUserStatusInput,
+} from "./gap_g12c";
+
 import {
   createGapG12Client,
   validateAddProjectCollaboratorInput,
@@ -10819,3 +10836,140 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+// ─── FIX-G12C: G12 GraphQL ops via src/graphql.ts gqlRequest ─────────────────
+
+// CONNECTOR_CAPABILITY_MISSING keeps the meta-ads-g3 shape: an Error carrying ok, code,
+// status, reason, missingScopes, requiredScopes, reconsentRequired, provider* fields.
+function throwGitHubGraphql(result: GraphqlError): never {
+  if (result.error.code === "CONNECTOR_CAPABILITY_MISSING") {
+    throw Object.assign(new Error(result.error.message), { ok: false, ...result.error });
+  }
+  throwGitHub(result);
+}
+
+function liveGapG12cClient(input: Record<string, unknown>) {
+  return createGapG12cClient({
+    accessToken: input.accessToken as string,
+    fetch: typeof input.fetch === "function" ? (input.fetch as typeof fetch) : undefined,
+  });
+}
+
+export function searchGraphql(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG12cClient(input).search(input).then((result) => {
+      if (!result.ok) throwGitHubGraphql(result);
+      return { connector: "github", action: "graphql.search", source: "connector", items: result.items, pageInfo: result.pageInfo, ...result.counts };
+    });
+  }
+  return { connector: "github", action: "graphql.search", source: "connector", validated: validateSearchGraphqlInput(input) };
+}
+
+export function listGraphqlSponsorables(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG12cClient(input).listSponsorables(input).then((result) => {
+      if (!result.ok) throwGitHubGraphql(result);
+      return { connector: "github", action: "graphql.sponsorables.list", source: "connector", items: result.items, pageInfo: result.pageInfo, ...(result.totalCount !== undefined ? { totalCount: result.totalCount } : {}) };
+    });
+  }
+  return { connector: "github", action: "graphql.sponsorables.list", source: "connector", validated: validateListGraphqlSponsorablesInput(input) };
+}
+
+export function getEnterpriseMemberInvitation(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG12cClient(input).getMemberInvitation(input).then((result) => {
+      if (!result.ok) throwGitHubGraphql(result);
+      return { connector: "github", action: "graphql.enterprise.member_invitation.get", source: "connector", found: result.found, invitation: result.invitation };
+    });
+  }
+  return { connector: "github", action: "graphql.enterprise.member_invitation.get", source: "connector", validated: validateGetEnterpriseMemberInvitationInput(input) };
+}
+
+export function getEnterpriseAdminInvitation(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG12cClient(input).getAdminInvitation(input).then((result) => {
+      if (!result.ok) throwGitHubGraphql(result);
+      return { connector: "github", action: "graphql.enterprise.admin_invitation.get", source: "connector", found: result.found, invitation: result.invitation };
+    });
+  }
+  return { connector: "github", action: "graphql.enterprise.admin_invitation.get", source: "connector", validated: validateGetEnterpriseAdminInvitationInput(input) };
+}
+
+export function followOrganizationGraphql(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG12cClient(input).followOrganization(input).then((result) => {
+      if (!result.ok) throwGitHubGraphql(result);
+      return { connector: "github", action: "graphql.organizations.follow", source: "connector", organization: result.organization };
+    });
+  }
+  return { connector: "github", action: "graphql.organizations.follow", source: "connector", validated: validateFollowOrganizationInput(input) };
+}
+
+export function unfollowOrganizationGraphql(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG12cClient(input).unfollowOrganization(input).then((result) => {
+      if (!result.ok) throwGitHubGraphql(result);
+      return { connector: "github", action: "graphql.organizations.unfollow", source: "connector", organization: result.organization };
+    });
+  }
+  return { connector: "github", action: "graphql.organizations.unfollow", source: "connector", validated: validateUnfollowOrganizationInput(input) };
+}
+
+export function updateUserStatusGraphql(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG12cClient(input).updateUserStatus(input).then((result) => {
+      if (!result.ok) throwGitHubGraphql(result);
+      return { connector: "github", action: "graphql.user_status.update", source: "connector", status: result.status };
+    });
+  }
+  return { connector: "github", action: "graphql.user_status.update", source: "connector", validated: validateUpdateUserStatusInput(input) };
+}
+
+export function setUserInteractionLimitGraphql(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG12cClient(input).setUserInteractionLimit(input).then((result) => {
+      if (!result.ok) throwGitHubGraphql(result);
+      return { connector: "github", action: "graphql.interaction_limits.set_user", source: "connector", user: result.user, limit: result.limit };
+    });
+  }
+  return { connector: "github", action: "graphql.interaction_limits.set_user", source: "connector", validated: validateSetUserInteractionLimitInput(input) };
+}
+
+export function createUserListGraphql(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG12cClient(input).createUserList(input).then((result) => {
+      if (!result.ok) throwGitHubGraphql(result);
+      return { connector: "github", action: "graphql.user_lists.create", source: "connector", list: result.list };
+    });
+  }
+  return { connector: "github", action: "graphql.user_lists.create", source: "connector", validated: validateCreateUserListInput(input) };
+}
+
+export function updateUserListGraphql(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG12cClient(input).updateUserList(input).then((result) => {
+      if (!result.ok) throwGitHubGraphql(result);
+      return { connector: "github", action: "graphql.user_lists.update", source: "connector", list: result.list };
+    });
+  }
+  return { connector: "github", action: "graphql.user_lists.update", source: "connector", validated: validateUpdateUserListInput(input) };
+}
+
+export function deleteUserListGraphql(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG12cClient(input).deleteUserList(input).then((result) => {
+      if (!result.ok) throwGitHubGraphql(result);
+      return { connector: "github", action: "graphql.user_lists.delete", source: "connector", deleted: result.deleted, listId: result.listId, user: result.user };
+    });
+  }
+  return { connector: "github", action: "graphql.user_lists.delete", source: "connector", validated: validateDeleteUserListInput(input) };
+}
+
+export function updateUserListsForItemGraphql(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG12cClient(input).updateUserListsForItem(input).then((result) => {
+      if (!result.ok) throwGitHubGraphql(result);
+      return { connector: "github", action: "graphql.user_lists.items.update", source: "connector", lists: result.lists, item: result.item };
+    });
+  }
+  return { connector: "github", action: "graphql.user_lists.items.update", source: "connector", validated: validateUpdateUserListsForItemInput(input) };
+}
