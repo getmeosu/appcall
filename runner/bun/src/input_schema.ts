@@ -13,8 +13,10 @@
 // Semantics mirror the control plane validator
 // (crates/appcall-connectors/src/schema.rs + appcall-actions validate_input),
 // so input the control plane accepts is never rejected here:
-//   - The same strict schema subset (declarative/strict-schema.ts), with
-//     annotation keywords tolerated.
+//   - The same strict schema subset (declarative/strict-schema.ts), including
+//     bounded anyOf/allOf/oneOf, with annotation keywords tolerated. Shared
+//     accept/reject cases in crates/appcall-connectors/tests/schema_parity.json
+//     run through both validators.
 //   - Credential fields the control plane injects (auth.setup fields, routes,
 //     derive, http.auth.field, accessToken; unipile account_id) and the
 //     test-only `fetch` override are exempt at the top level unless the schema
@@ -39,29 +41,6 @@ const CONNECTOR_RUNTIME_INPUT_KEYS: Readonly<Record<string, readonly string[]>> 
 };
 const SYNC_RUNTIME_INPUT_KEYS = ["cursor"];
 
-// Narrow, documented allowlist: these operations' inputSchemas use JSON Schema
-// combinators (anyOf/allOf/oneOf) outside the shared strict subset. Only the
-// combinator branches are left unenforced here; type, properties, required, and
-// additionalProperties are still checked. (The control plane's check_schema
-// rejects these schemas as UnsupportedSchema, so these ops cannot currently be
-// dispatched through it; that is a pre-existing manifest/validator gap, kept
-// out of this change and reported separately.)
-export const INPUT_SCHEMA_COMBINATOR_ALLOWLIST: Readonly<Record<string, readonly string[]>> = {
-  github: [
-    "deployments.create",
-    "deployments.get",
-    "discussions.comments.create",
-    "discussions.comments.list",
-    "discussions.comments.update",
-    "discussions.get",
-    "discussions.update",
-    "environments.get",
-    "releases.assets.get",
-  ],
-};
-
-const COMBINATORS = ["anyOf", "allOf", "oneOf"];
-
 export function runtimeInputKeys(manifest: { key: string; auth?: unknown; http?: unknown }, kind: unknown): Set<string> {
   const keys = new Set<string>(RUNTIME_INPUT_KEYS);
   for (const key of CONNECTOR_RUNTIME_INPUT_KEYS[manifest.key] ?? []) keys.add(key);
@@ -81,16 +60,6 @@ export function runtimeInputKeys(manifest: { key: string; auth?: unknown; http?:
   return keys;
 }
 
-function withoutCombinators(schema: unknown): unknown {
-  if (Array.isArray(schema)) return schema.map(withoutCombinators);
-  if (!isRecord(schema)) return schema;
-  return Object.fromEntries(
-    Object.entries(schema)
-      .filter(([key]) => !COMBINATORS.includes(key))
-      .map(([key, value]) => [key, key === "enum" ? value : withoutCombinators(value)]),
-  );
-}
-
 type Prepared = { schema: Record<string, unknown>; credentialKeys: ReadonlySet<string> };
 
 // InputValidators resolves the validator for a dispatch. Every inputSchema is
@@ -108,12 +77,11 @@ export function buildInputValidators(
   const prepared = new Map<string, Map<string, Prepared>>();
   for (const manifest of manifests) {
     const operations = isRecord(manifest.operations) ? manifest.operations : {};
-    const allowlisted = new Set(INPUT_SCHEMA_COMBINATOR_ALLOWLIST[manifest.key] ?? []);
     const keysByKind = new Map<unknown, ReadonlySet<string>>();
     const byOperation = new Map<string, Prepared>();
     for (const [operation, spec] of Object.entries(operations)) {
       if (!isRecord(spec) || !isRecord(spec.inputSchema)) continue;
-      const schema = (allowlisted.has(operation) ? withoutCombinators(spec.inputSchema) : spec.inputSchema) as Record<string, unknown>;
+      const schema = spec.inputSchema;
       try {
         assertStrictSchema(schema, 0, { nodes: 0 }, true);
       } catch (error) {
