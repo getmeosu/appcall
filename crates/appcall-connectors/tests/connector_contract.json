@@ -154569,10 +154569,64 @@
   },
   {
     "key": "bolna",
-    "digest": "6726ea3716f9110cfbd06f1d9fcfc2431631b01bb86bbe757a9f1c044358a549",
+    "digest": "3df6326098da6928892a75e4bc35f51703d408b7c9e73b6a53de513028f18376",
     "public": true,
     "egress": true,
     "operations": [
+      {
+        "key": "agents.copy",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "agent_id": {
+              "description": "UUID of the existing Bolna agent to copy.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "agent_name": {
+              "description": "Display name for the copied agent.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "is_api_request": {
+              "description": "Flag indicating this is an API request.",
+              "type": "boolean"
+            },
+            "sub_account_id": {
+              "description": "Optional sub-account identifier for multi-tenant scoping.",
+              "type": "string"
+            },
+            "user_id": {
+              "description": "Optional user identifier for multi-tenant scoping.",
+              "type": "string"
+            }
+          },
+          "required": [
+            "agent_id",
+            "agent_name"
+          ],
+          "type": "object"
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        }
+      },
       {
         "key": "agents.create",
         "kind": "action",
@@ -154583,34 +154637,113 @@
         "destructive": false,
         "tool": true,
         "inputSchema": {
-          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "agent_config": {
+              "additionalProperties": true,
+              "description": "Complete agent configuration. Required fields include agent_name and tasks.",
+              "type": "object"
+            },
+            "agent_prompts": {
+              "additionalProperties": true,
+              "description": "Prompt configurations keyed by task, e.g. task_1.system_prompt.",
+              "type": "object"
+            }
+          },
           "required": [
             "agent_config",
             "agent_prompts"
           ],
-          "additionalProperties": false,
-          "properties": {
-            "agent_config": {
-              "type": "object",
-              "description": "Agent configuration including agent_name and tasks."
-            },
-            "agent_prompts": {
-              "type": "object",
-              "description": "Prompts keyed by task, for example task_1.system_prompt."
-            }
-          }
+          "type": "object"
         },
         "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
+          "additionalProperties": false,
           "properties": {
             "data": {
               "type": "object"
             }
           },
-          "additionalProperties": false
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        }
+      },
+      {
+        "key": "agents.create_template",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "about_business": {
+              "description": "Description of the business domain and purpose.",
+              "type": "string"
+            },
+            "agent_name": {
+              "description": "Name for the template agent.",
+              "type": "string"
+            },
+            "agent_type": {
+              "description": "Type or category of the agent template, e.g. support, sales, other.",
+              "type": "string"
+            },
+            "business_name": {
+              "description": "Name of the business for the template agent.",
+              "type": "string"
+            },
+            "is_api_request": {
+              "description": "Optional API-request flag as a string boolean.",
+              "type": "string"
+            },
+            "prompt": {
+              "description": "System prompt or instructions that define agent behavior.",
+              "type": "string"
+            },
+            "return_prompt": {
+              "description": "Return the generated prompt in the response.",
+              "type": "boolean"
+            },
+            "service_details": {
+              "description": "Details about the services the agent can discuss.",
+              "type": "string"
+            },
+            "template_agent": {
+              "description": "Identifier or name of the base template.",
+              "type": "string"
+            },
+            "transcript": {
+              "description": "Enable transcript recording for this agent.",
+              "type": "boolean"
+            },
+            "user_id": {
+              "description": "Optional user ID to associate with the template agent.",
+              "type": "string"
+            },
+            "variable_dict": {
+              "additionalProperties": true,
+              "description": "Custom string variables substituted in the template.",
+              "type": "object"
+            }
+          },
+          "type": "object"
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
         }
       },
       {
@@ -154623,30 +154756,30 @@
         "destructive": true,
         "tool": true,
         "inputSchema": {
-          "type": "object",
-          "required": [
-            "agent_id"
-          ],
           "additionalProperties": false,
           "properties": {
             "agent_id": {
-              "type": "string",
+              "description": "UUID of the agent to delete.",
               "minLength": 1,
-              "description": "Agent ID."
+              "type": "string"
             }
-          }
+          },
+          "required": [
+            "agent_id"
+          ],
+          "type": "object"
         },
         "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
+          "additionalProperties": false,
           "properties": {
             "data": {
               "type": "object"
             }
           },
-          "additionalProperties": false
+          "required": [
+            "data"
+          ],
+          "type": "object"
         }
       },
       {
@@ -154659,29 +154792,137 @@
         "destructive": false,
         "tool": true,
         "inputSchema": {
-          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "agent_id": {
+              "minLength": 1,
+              "type": "string"
+            }
+          },
           "required": [
             "agent_id"
           ],
-          "properties": {
-            "agent_id": {
-              "type": "string",
-              "minLength": 1
-            }
-          },
-          "additionalProperties": false
+          "type": "object"
         },
         "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
+          "additionalProperties": false,
           "properties": {
             "data": {
               "type": "object"
             }
           },
-          "additionalProperties": false
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        }
+      },
+      {
+        "key": "agents.get_v1",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "agent_uuid": {
+              "description": "UUID of the Bolna voice agent to retrieve.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "agent_version_id": {
+              "description": "Optional version identifier to retrieve a specific agent version.",
+              "type": "string"
+            },
+            "is_api_request": {
+              "description": "Flag indicating this is an API request (string boolean).",
+              "type": "string"
+            },
+            "sub_account_id": {
+              "description": "Optional sub-account identifier for multi-tenant scoping.",
+              "type": "string"
+            },
+            "user_id": {
+              "description": "Optional user identifier for multi-tenant scoping.",
+              "type": "string"
+            }
+          },
+          "required": [
+            "agent_uuid"
+          ],
+          "type": "object"
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        }
+      },
+      {
+        "key": "agents.import",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "agent_id": {
+              "description": "UUID of the agent to import.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "agent_name": {
+              "description": "Optional name for the imported agent.",
+              "type": "string"
+            },
+            "agent_version_id": {
+              "description": "Optional version UUID to import; latest if omitted.",
+              "type": "string"
+            },
+            "is_api_request": {
+              "description": "Flag indicating this is an API request.",
+              "type": "boolean"
+            },
+            "sub_account_id": {
+              "description": "Optional sub-account identifier for multi-tenant scoping.",
+              "type": "string"
+            },
+            "user_id": {
+              "description": "Optional user identifier for multi-tenant scoping.",
+              "type": "string"
+            }
+          },
+          "required": [
+            "agent_id"
+          ],
+          "type": "object"
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
         }
       },
       {
@@ -154694,25 +154935,77 @@
         "destructive": false,
         "tool": true,
         "inputSchema": {
-          "type": "object",
+          "additionalProperties": false,
           "properties": {},
-          "additionalProperties": false
+          "type": "object"
         },
         "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
+          "additionalProperties": false,
           "properties": {
             "data": {
               "type": "array"
             }
           },
-          "additionalProperties": false
+          "required": [
+            "data"
+          ],
+          "type": "object"
         }
       },
       {
-        "key": "agents.stop",
+        "key": "agents.list_paginated",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "is_api_request": {
+              "description": "Flag indicating this is an API request (string boolean).",
+              "type": "string"
+            },
+            "page_number": {
+              "description": "1-based page number.",
+              "maximum": 9999,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "page_size": {
+              "description": "Number of agents to return per page.",
+              "maximum": 1000,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "sub_account_id": {
+              "description": "Optional sub-account identifier for multi-tenant scoping.",
+              "type": "string"
+            },
+            "user_id": {
+              "description": "Optional user identifier for multi-tenant scoping.",
+              "type": "string"
+            }
+          },
+          "type": "object"
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "array"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        }
+      },
+      {
+        "key": "agents.patch_v1",
         "kind": "action",
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
@@ -154721,30 +155014,100 @@
         "destructive": false,
         "tool": true,
         "inputSchema": {
-          "type": "object",
-          "required": [
-            "agent_id"
-          ],
           "additionalProperties": false,
           "properties": {
-            "agent_id": {
-              "type": "string",
+            "agent_config": {
+              "additionalProperties": true,
+              "description": "Partial agent configuration to patch.",
+              "type": "object"
+            },
+            "agent_prompts": {
+              "additionalProperties": true,
+              "description": "Partial agent prompts configuration to patch.",
+              "type": "object"
+            },
+            "agent_uuid": {
+              "description": "UUID of the agent to update.",
               "minLength": 1,
-              "description": "Agent ID."
+              "type": "string"
+            },
+            "is_api_request": {
+              "description": "Flag indicating this is an API request.",
+              "type": "boolean"
+            },
+            "sub_account_id": {
+              "description": "Optional sub-account identifier for multi-tenant scoping.",
+              "type": "string"
+            },
+            "user_id": {
+              "description": "Optional user identifier for multi-tenant scoping.",
+              "type": "string"
             }
-          }
+          },
+          "required": [
+            "agent_uuid"
+          ],
+          "type": "object"
         },
         "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
+          "additionalProperties": false,
           "properties": {
             "data": {
               "type": "object"
             }
           },
-          "additionalProperties": false
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        }
+      },
+      {
+        "key": "agents.stop_calls",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "agent_id": {
+              "description": "UUID of the agent whose queued or scheduled calls should be stopped.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "is_api_request": {
+              "description": "Flag indicating this is an API request.",
+              "type": "boolean"
+            },
+            "sub_account_id": {
+              "description": "Optional sub-account identifier for multi-tenant scoping.",
+              "type": "string"
+            },
+            "user_id": {
+              "description": "Optional user identifier for multi-tenant scoping.",
+              "type": "string"
+            }
+          },
+          "required": [
+            "agent_id"
+          ],
+          "type": "object"
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
         }
       },
       {
@@ -154757,38 +155120,126 @@
         "destructive": false,
         "tool": true,
         "inputSchema": {
-          "type": "object",
-          "required": [
-            "agent_id"
-          ],
           "additionalProperties": false,
           "properties": {
-            "agent_id": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Agent ID."
-            },
             "agent_config": {
-              "type": "object",
-              "description": "Partial agent_config update."
+              "additionalProperties": true,
+              "description": "Complete agent configuration including agent_name and tasks.",
+              "type": "object"
+            },
+            "agent_id": {
+              "description": "UUID of the agent to update.",
+              "minLength": 1,
+              "type": "string"
             },
             "agent_prompts": {
-              "type": "object",
-              "description": "Partial prompt update."
+              "additionalProperties": true,
+              "description": "Prompt configurations keyed by task, e.g. task_1.system_prompt.",
+              "type": "object"
+            },
+            "is_api_request": {
+              "description": "Flag indicating this is an API request.",
+              "type": "boolean"
+            },
+            "sub_account_id": {
+              "description": "Optional sub-account identifier for multi-tenant scoping.",
+              "type": "string"
+            },
+            "user_id": {
+              "description": "Optional user identifier for multi-tenant scoping.",
+              "type": "string"
             }
-          }
+          },
+          "required": [
+            "agent_id",
+            "agent_config",
+            "agent_prompts"
+          ],
+          "type": "object"
         },
         "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
+          "additionalProperties": false,
           "properties": {
             "data": {
               "type": "object"
             }
           },
-          "additionalProperties": false
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        }
+      },
+      {
+        "key": "batches.create",
+        "kind": "action",
+        "timeoutMs": 60000,
+        "maxInputBytes": 6291456,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "agent_id": {
+              "description": "UUID of the agent to use for the batch campaign.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "contentBase64": {
+              "description": "Base64-encoded CSV contents.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "contentType": {
+              "description": "MIME type of the uploaded file. Defaults to text/csv.",
+              "type": "string"
+            },
+            "fileName": {
+              "description": "CSV file name. Must include contact_number in E.164 format.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "from_phone_number": {
+              "description": "Caller ID in E.164 format when initiating batch calls.",
+              "type": "string"
+            },
+            "from_phone_numbers": {
+              "description": "Originating phone numbers in E.164 format.",
+              "items": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "retry_config": {
+              "description": "JSON string containing retry configuration for failed calls.",
+              "type": "string"
+            },
+            "webhook_url": {
+              "description": "URL that receives the batch payload when processing finishes.",
+              "type": "string"
+            }
+          },
+          "required": [
+            "agent_id",
+            "fileName",
+            "contentBase64"
+          ],
+          "type": "object"
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
         }
       },
       {
@@ -154801,30 +155252,30 @@
         "destructive": true,
         "tool": true,
         "inputSchema": {
-          "type": "object",
-          "required": [
-            "batch_id"
-          ],
           "additionalProperties": false,
           "properties": {
             "batch_id": {
-              "type": "string",
+              "description": "Batch identifier (UUID or 32-character hex).",
               "minLength": 1,
-              "description": "Batch ID."
+              "type": "string"
             }
-          }
+          },
+          "required": [
+            "batch_id"
+          ],
+          "type": "object"
         },
         "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
+          "additionalProperties": false,
           "properties": {
             "data": {
               "type": "object"
             }
           },
-          "additionalProperties": false
+          "required": [
+            "data"
+          ],
+          "type": "object"
         }
       },
       {
@@ -154837,41 +155288,42 @@
         "destructive": false,
         "tool": true,
         "inputSchema": {
-          "type": "object",
-          "required": [
-            "batch_id"
-          ],
           "additionalProperties": false,
           "properties": {
             "batch_id": {
-              "type": "string",
+              "description": "Batch identifier (UUID or 32-character hex).",
               "minLength": 1,
-              "description": "Batch ID."
+              "type": "string"
             },
             "page_number": {
-              "type": "integer",
-              "description": "Page number starting at 1.",
-              "minimum": 1
+              "description": "1-based page number.",
+              "maximum": 9999,
+              "minimum": 1,
+              "type": "integer"
             },
             "page_size": {
-              "type": "integer",
-              "description": "Results per page.",
+              "description": "Number of results per page (maximum 50).",
+              "maximum": 50,
               "minimum": 1,
-              "maximum": 1000
+              "type": "integer"
             }
-          }
+          },
+          "required": [
+            "batch_id"
+          ],
+          "type": "object"
         },
         "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
+          "additionalProperties": false,
           "properties": {
             "data": {
               "type": "object"
             }
           },
-          "additionalProperties": false
+          "required": [
+            "data"
+          ],
+          "type": "object"
         }
       },
       {
@@ -154884,30 +155336,30 @@
         "destructive": false,
         "tool": true,
         "inputSchema": {
-          "type": "object",
-          "required": [
-            "batch_id"
-          ],
           "additionalProperties": false,
           "properties": {
             "batch_id": {
-              "type": "string",
+              "description": "Batch identifier in 32-character hex or UUID format.",
               "minLength": 1,
-              "description": "Batch ID."
+              "type": "string"
             }
-          }
+          },
+          "required": [
+            "batch_id"
+          ],
+          "type": "object"
         },
         "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
+          "additionalProperties": false,
           "properties": {
             "data": {
               "type": "object"
             }
           },
-          "additionalProperties": false
+          "required": [
+            "data"
+          ],
+          "type": "object"
         }
       },
       {
@@ -154920,30 +155372,30 @@
         "destructive": false,
         "tool": true,
         "inputSchema": {
-          "type": "object",
-          "required": [
-            "agent_id"
-          ],
           "additionalProperties": false,
           "properties": {
             "agent_id": {
-              "type": "string",
+              "description": "UUID of the agent whose batches to retrieve.",
               "minLength": 1,
-              "description": "Agent ID."
+              "type": "string"
             }
-          }
+          },
+          "required": [
+            "agent_id"
+          ],
+          "type": "object"
         },
         "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
+          "additionalProperties": false,
           "properties": {
             "data": {
               "type": "array"
             }
           },
-          "additionalProperties": false
+          "required": [
+            "data"
+          ],
+          "type": "object"
         }
       },
       {
@@ -154956,36 +155408,40 @@
         "destructive": false,
         "tool": true,
         "inputSchema": {
-          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "batch_id": {
+              "description": "UUID of the batch to schedule.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "bypass_call_guardrails": {
+              "description": "Skip time validation for all calls in this batch.",
+              "type": "boolean"
+            },
+            "scheduled_at": {
+              "description": "Scheduled execution time in ISO 8601 with a numeric UTC offset (not Z).",
+              "minLength": 1,
+              "type": "string"
+            }
+          },
           "required": [
             "batch_id",
             "scheduled_at"
           ],
-          "additionalProperties": false,
-          "properties": {
-            "batch_id": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Batch ID."
-            },
-            "scheduled_at": {
-              "type": "string",
-              "minLength": 1,
-              "description": "ISO-8601 start time with a numeric UTC offset such as +00:00."
-            }
-          }
+          "type": "object"
         },
         "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
+          "additionalProperties": false,
           "properties": {
             "data": {
               "type": "object"
             }
           },
-          "additionalProperties": false
+          "required": [
+            "data"
+          ],
+          "type": "object"
         }
       },
       {
@@ -154998,30 +155454,30 @@
         "destructive": false,
         "tool": true,
         "inputSchema": {
-          "type": "object",
-          "required": [
-            "batch_id"
-          ],
           "additionalProperties": false,
           "properties": {
             "batch_id": {
-              "type": "string",
+              "description": "Batch identifier (UUID or 32-character hex).",
               "minLength": 1,
-              "description": "Batch ID."
+              "type": "string"
             }
-          }
+          },
+          "required": [
+            "batch_id"
+          ],
+          "type": "object"
         },
         "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
+          "additionalProperties": false,
           "properties": {
             "data": {
               "type": "object"
             }
           },
-          "additionalProperties": false
+          "required": [
+            "data"
+          ],
+          "type": "object"
         }
       },
       {
@@ -155034,81 +155490,105 @@
         "destructive": false,
         "tool": true,
         "inputSchema": {
-          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "agent_data": {
+              "additionalProperties": true,
+              "description": "Per-call overrides such as voice_id or language.",
+              "type": "object"
+            },
+            "agent_id": {
+              "description": "UUID of the Bolna agent that initiates the outbound call.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "bypass_call_guardrails": {
+              "description": "Skip time-window guardrails and dial immediately.",
+              "type": "boolean"
+            },
+            "from_phone_number": {
+              "description": "Optional caller ID in E.164 format.",
+              "type": "string"
+            },
+            "recipient_phone_number": {
+              "description": "Recipient phone number in E.164 format, including the + prefix.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "retry_config": {
+              "additionalProperties": true,
+              "description": "Auto-retry configuration for failed calls.",
+              "type": "object"
+            },
+            "scheduled_at": {
+              "description": "Optional ISO 8601 timestamp to schedule the call.",
+              "type": "string"
+            },
+            "user_data": {
+              "additionalProperties": true,
+              "description": "Custom variables referenced in the agent prompt template.",
+              "type": "object"
+            }
+          },
           "required": [
             "agent_id",
             "recipient_phone_number"
           ],
-          "additionalProperties": false,
-          "properties": {
-            "agent_id": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Agent ID that places the call."
-            },
-            "recipient_phone_number": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Recipient phone number in E.164 format."
-            },
-            "from_phone_number": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Optional originating E.164 number."
-            },
-            "user_data": {
-              "type": "object",
-              "description": "Optional prompt variables for this call."
-            }
-          }
+          "type": "object"
         },
         "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
+          "additionalProperties": false,
           "properties": {
             "data": {
               "type": "object"
             }
           },
-          "additionalProperties": false
+          "required": [
+            "data"
+          ],
+          "type": "object"
         }
       },
       {
-        "key": "calls.stop",
+        "key": "executions.agent.get",
         "kind": "action",
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
         "maxResponseBytes": 5242880,
-        "read": false,
+        "read": true,
         "destructive": false,
         "tool": true,
         "inputSchema": {
-          "type": "object",
-          "required": [
-            "execution_id"
-          ],
           "additionalProperties": false,
           "properties": {
-            "execution_id": {
-              "type": "string",
+            "agent_id": {
+              "description": "UUID of the agent.",
               "minLength": 1,
-              "description": "Execution ID of the call to stop."
+              "type": "string"
+            },
+            "execution_id": {
+              "description": "UUID of the execution.",
+              "minLength": 1,
+              "type": "string"
             }
-          }
+          },
+          "required": [
+            "agent_id",
+            "execution_id"
+          ],
+          "type": "object"
         },
         "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
+          "additionalProperties": false,
           "properties": {
             "data": {
               "type": "object"
             }
           },
-          "additionalProperties": false
+          "required": [
+            "data"
+          ],
+          "type": "object"
         }
       },
       {
@@ -155121,29 +155601,29 @@
         "destructive": false,
         "tool": true,
         "inputSchema": {
-          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "execution_id": {
+              "minLength": 1,
+              "type": "string"
+            }
+          },
           "required": [
             "execution_id"
           ],
-          "properties": {
-            "execution_id": {
-              "type": "string",
-              "minLength": 1
-            }
-          },
-          "additionalProperties": false
+          "type": "object"
         },
         "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
+          "additionalProperties": false,
           "properties": {
             "data": {
               "type": "object"
             }
           },
-          "additionalProperties": false
+          "required": [
+            "data"
+          ],
+          "type": "object"
         }
       },
       {
@@ -155156,78 +155636,94 @@
         "destructive": false,
         "tool": true,
         "inputSchema": {
-          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "agent_id": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "answered_by_voice_mail": {
+              "description": "Filter by whether the call reached voicemail.",
+              "type": "boolean"
+            },
+            "batch_id": {
+              "description": "Filter executions by batch identifier.",
+              "type": "string"
+            },
+            "call_type": {
+              "description": "Filter inbound or outbound calls.",
+              "enum": [
+                "inbound",
+                "outbound"
+              ],
+              "type": "string"
+            },
+            "from": {
+              "description": "Inclusive created_at start (UTC ISO 8601). Must be sent with to.",
+              "type": "string"
+            },
+            "page_number": {
+              "maximum": 9999,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "page_size": {
+              "maximum": 50,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "provider": {
+              "description": "Filter by conversation provider.",
+              "enum": [
+                "plivo",
+                "twilio",
+                "websocket",
+                "web-call"
+              ],
+              "type": "string"
+            },
+            "status": {
+              "description": "Filter executions by call status.",
+              "enum": [
+                "scheduled",
+                "queued",
+                "rescheduled",
+                "ringing",
+                "initiated",
+                "in-progress",
+                "call-disconnected",
+                "completed",
+                "balance-low",
+                "busy",
+                "no-answer",
+                "canceled",
+                "failed",
+                "stopped",
+                "error"
+              ],
+              "type": "string"
+            },
+            "to": {
+              "description": "Inclusive created_at end (UTC ISO 8601). Must be sent with from.",
+              "type": "string"
+            }
+          },
           "required": [
             "agent_id"
           ],
-          "properties": {
-            "agent_id": {
-              "type": "string",
-              "minLength": 1
-            },
-            "page_number": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 9999
-            },
-            "page_size": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 50
-            }
-          },
-          "additionalProperties": false
+          "type": "object"
         },
         "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
+          "additionalProperties": false,
           "properties": {
             "data": {
               "type": "object"
             }
           },
-          "additionalProperties": false
-        }
-      },
-      {
-        "key": "executions.logs.get",
-        "kind": "action",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "read": true,
-        "destructive": false,
-        "tool": true,
-        "inputSchema": {
-          "type": "object",
-          "required": [
-            "execution_id"
-          ],
-          "additionalProperties": false,
-          "properties": {
-            "execution_id": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Execution ID."
-            }
-          }
-        },
-        "outputSchema": {
-          "type": "object",
           "required": [
             "data"
           ],
-          "properties": {
-            "data": {
-              "type": [
-                "object",
-                "array"
-              ]
-            }
-          },
-          "additionalProperties": false
+          "type": "object"
         }
       },
       {
@@ -155240,21 +155736,309 @@
         "destructive": false,
         "tool": true,
         "inputSchema": {
-          "type": "object",
+          "additionalProperties": false,
           "properties": {},
-          "additionalProperties": false
+          "type": "object"
         },
         "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
+          "additionalProperties": false,
           "properties": {
             "data": {
               "type": "object"
             }
           },
-          "additionalProperties": false
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        }
+      },
+      {
+        "key": "inbound.setup",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "agent_id": {
+              "description": "Agent UUID that handles inbound calls. Telephony provider must be Twilio for default routing.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "allow_multiple": {
+              "description": "Allow this Plivo number to be linked to multiple mappings.",
+              "type": "boolean"
+            },
+            "ivr_config": {
+              "additionalProperties": true,
+              "description": "Optional IVR configuration for Plivo phone numbers.",
+              "type": "object"
+            },
+            "phone_number_id": {
+              "description": "Telephone number UUID from the phone number list API.",
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "agent_id",
+            "phone_number_id"
+          ],
+          "type": "object"
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        }
+      },
+      {
+        "key": "knowledgebases.create",
+        "kind": "action",
+        "timeoutMs": 60000,
+        "maxInputBytes": 8388608,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "chunk_size": {
+              "description": "Size of text chunks for vector embeddings.",
+              "maximum": 10000,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "contentBase64": {
+              "description": "Base64-encoded PDF contents.",
+              "type": "string"
+            },
+            "contentType": {
+              "description": "MIME type of the uploaded file. Defaults to application/pdf.",
+              "type": "string"
+            },
+            "fileName": {
+              "description": "PDF file name when uploading a document.",
+              "type": "string"
+            },
+            "is_api_request": {
+              "description": "Flag indicating this is an API request.",
+              "type": "boolean"
+            },
+            "language_support": {
+              "description": "Enable multilingual retrieval across 100+ languages.",
+              "enum": [
+                "multilingual"
+              ],
+              "type": "string"
+            },
+            "overlapping": {
+              "description": "Characters to overlap between consecutive chunks.",
+              "maximum": 5000,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "similarity_top_k": {
+              "description": "Number of similar chunks to retrieve.",
+              "maximum": 100,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "sub_account_id": {
+              "description": "Optional sub-account identifier for multi-tenant scoping.",
+              "type": "string"
+            },
+            "url": {
+              "description": "URL to ingest as the knowledgebase source.",
+              "type": "string"
+            },
+            "user_id": {
+              "description": "Optional user identifier for multi-tenant scoping.",
+              "type": "string"
+            }
+          },
+          "type": "object"
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        }
+      },
+      {
+        "key": "knowledgebases.delete",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": true,
+        "tool": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "is_api_request": {
+              "description": "Flag indicating this is an API request (string boolean).",
+              "type": "string"
+            },
+            "rag_id": {
+              "description": "UUID of the knowledgebase to delete.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "sub_account_id": {
+              "description": "Optional sub-account identifier for multi-tenant scoping.",
+              "type": "string"
+            },
+            "user_id": {
+              "description": "Optional user identifier for multi-tenant scoping.",
+              "type": "string"
+            }
+          },
+          "required": [
+            "rag_id"
+          ],
+          "type": "object"
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        }
+      },
+      {
+        "key": "knowledgebases.get",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "is_api_request": {
+              "description": "Flag indicating this is an API request.",
+              "type": "boolean"
+            },
+            "rag_id": {
+              "description": "UUID of the knowledgebase to retrieve.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "sub_account_id": {
+              "description": "Optional sub-account identifier for multi-tenant scoping.",
+              "type": "string"
+            },
+            "user_id": {
+              "description": "Optional user identifier for multi-tenant scoping.",
+              "type": "string"
+            }
+          },
+          "required": [
+            "rag_id"
+          ],
+          "type": "object"
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        }
+      },
+      {
+        "key": "knowledgebases.list",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "is_api_request": {
+              "description": "Flag indicating this is an API request (string boolean).",
+              "type": "string"
+            },
+            "page_number": {
+              "description": "1-based page number.",
+              "maximum": 9999,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "page_size": {
+              "description": "Number of knowledgebases to return per page.",
+              "maximum": 1000,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "status": {
+              "description": "Status of a knowledgebase.",
+              "enum": [
+                "processing",
+                "processed"
+              ],
+              "type": "string"
+            },
+            "sub_account_id": {
+              "description": "Optional sub-account identifier for multi-tenant scoping.",
+              "type": "string"
+            },
+            "user_id": {
+              "description": "Optional user identifier for multi-tenant scoping.",
+              "type": "string"
+            }
+          },
+          "type": "object"
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "array"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
         }
       },
       {
@@ -155267,21 +156051,21 @@
         "destructive": false,
         "tool": true,
         "inputSchema": {
-          "type": "object",
+          "additionalProperties": false,
           "properties": {},
-          "additionalProperties": false
+          "type": "object"
         },
         "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
+          "additionalProperties": false,
           "properties": {
             "data": {
               "type": "array"
             }
           },
-          "additionalProperties": false
+          "required": [
+            "data"
+          ],
+          "type": "object"
         }
       },
       {
@@ -155294,30 +156078,281 @@
         "destructive": false,
         "tool": true,
         "inputSchema": {
-          "type": "object",
           "additionalProperties": false,
           "properties": {
             "country": {
-              "type": "string",
-              "minLength": 1,
-              "description": "ISO country code such as US or IN."
+              "description": "Country code for the phone number search.",
+              "enum": [
+                "US",
+                "IN"
+              ],
+              "type": "string"
+            },
+            "pattern": {
+              "description": "Optional 3-character prefix used to filter numbers.",
+              "type": "string"
+            },
+            "provider": {
+              "description": "Optional telephony provider filter.",
+              "enum": [
+                "twilio",
+                "plivo",
+                "vobiz"
+              ],
+              "type": "string"
             }
-          }
+          },
+          "required": [
+            "country"
+          ],
+          "type": "object"
         },
         "outputSchema": {
-          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "array"
+            }
+          },
           "required": [
             "data"
           ],
+          "type": "object"
+        }
+      },
+      {
+        "key": "providers.add",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "additionalProperties": false,
           "properties": {
-            "data": {
-              "type": [
-                "object",
-                "array"
-              ]
+            "is_api_request": {
+              "description": "Flag indicating this is an API request.",
+              "type": "boolean"
+            },
+            "provider_name": {
+              "description": "Provider name or key, e.g. twilio, deepgram, elevenlabs, OPENAI_API_KEY.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "provider_value": {
+              "description": "API key or authentication value for the provider.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "sub_account_id": {
+              "description": "Optional sub-account identifier for multi-tenant scoping.",
+              "type": "string"
+            },
+            "user_id": {
+              "description": "Optional user identifier for multi-tenant scoping.",
+              "type": "string"
             }
           },
-          "additionalProperties": false
+          "required": [
+            "provider_name",
+            "provider_value"
+          ],
+          "type": "object"
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        }
+      },
+      {
+        "key": "providers.list",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {},
+          "type": "object"
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "array"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        }
+      },
+      {
+        "key": "providers.remove",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": true,
+        "tool": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "is_api_request": {
+              "description": "Flag indicating this is an API request.",
+              "type": "boolean"
+            },
+            "provider_key_name": {
+              "description": "Unique key name of the provider to remove, e.g. TEST_PROVIDER.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "sub_account_id": {
+              "description": "Optional sub-account identifier for multi-tenant scoping.",
+              "type": "string"
+            },
+            "user_id": {
+              "description": "Optional user identifier for multi-tenant scoping.",
+              "type": "string"
+            }
+          },
+          "required": [
+            "provider_key_name"
+          ],
+          "type": "object"
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        }
+      },
+      {
+        "key": "users.me",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "is_api_request": {
+              "description": "Flag to indicate if this is an API request.",
+              "type": "boolean"
+            },
+            "user_id": {
+              "description": "Optional user ID to fetch information for a specific user.",
+              "type": "string"
+            }
+          },
+          "type": "object"
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        }
+      },
+      {
+        "key": "voices.list",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "is_api_request": {
+              "description": "Flag indicating this is an API request (string boolean).",
+              "type": "string"
+            },
+            "language": {
+              "description": "Optional BCP-47 language code to filter voices.",
+              "type": "string"
+            },
+            "model_id": {
+              "description": "Model UUID from GET /api/v1/voice-config/tts.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "page": {
+              "description": "1-indexed page number.",
+              "maximum": 9999,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "page_size": {
+              "description": "Voices per page, capped at 100.",
+              "maximum": 100,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "provider_id": {
+              "description": "Provider UUID from GET /api/v1/voice-config/tts.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "sub_account_id": {
+              "description": "Optional sub-account identifier for multi-tenant scoping.",
+              "type": "string"
+            },
+            "user_id": {
+              "description": "Optional user identifier for multi-tenant scoping.",
+              "type": "string"
+            }
+          },
+          "required": [
+            "provider_id",
+            "model_id"
+          ],
+          "type": "object"
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
         }
       }
     ]
@@ -353807,7 +354842,7 @@
   },
   {
     "key": "everhour",
-    "digest": "e226a6fc920b42a8fe679f20b42317d4057f327eaea72e7e2960f61cd68a8b74",
+    "digest": "d4fb70fec93b464f527fe0d1d805faa1f867634111b801ea0d22d99c0308138a",
     "public": true,
     "egress": true,
     "operations": [
@@ -353816,39 +354851,40 @@
         "kind": "action",
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
+        "maxResponseBytes": 1048576,
         "read": false,
         "destructive": false,
         "tool": true,
         "inputSchema": {
           "type": "object",
+          "additionalProperties": false,
           "properties": {
             "name": {
               "type": "string",
-              "minLength": 1,
-              "description": "Client name."
+              "description": "The name of the client to create. This is the primary identifier shown in the Everhour UI.",
+              "minLength": 1
+            },
+            "projects": {
+              "type": "array",
+              "description": "Optional list of project IDs (e.g., 'ev:123456789') to associate with this client.",
+              "items": {
+                "type": "string"
+              }
             },
             "businessDetails": {
               "type": "string",
-              "description": "Optional billing details."
+              "description": "Optional business details such as address, contact information, or other metadata for invoicing purposes."
             }
           },
-          "additionalProperties": false,
           "required": [
             "name"
           ]
         },
         "outputSchema": {
           "type": "object",
-          "required": [
-            "data"
-          ],
           "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
+            "data": {}
+          }
         }
       },
       {
@@ -353856,40 +354892,29 @@
         "kind": "action",
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
-        "maxResponseBytes": 65536,
+        "maxResponseBytes": 1048576,
         "read": false,
         "destructive": true,
         "tool": true,
         "inputSchema": {
           "type": "object",
+          "additionalProperties": false,
           "properties": {
-            "clientId": {
-              "type": "integer",
-              "minimum": 1,
-              "description": "clientId to delete."
+            "client_id": {
+              "type": "string",
+              "description": "The unique numeric ID of the client to delete.",
+              "minLength": 1
             }
           },
-          "additionalProperties": false,
           "required": [
-            "clientId"
+            "client_id"
           ]
         },
         "outputSchema": {
           "type": "object",
-          "required": [
-            "deleted",
-            "id"
-          ],
           "properties": {
-            "deleted": {
-              "type": "boolean"
-            },
-            "id": {
-              "type": "integer",
-              "minimum": 1
-            }
-          },
-          "additionalProperties": false
+            "data": {}
+          }
         }
       },
       {
@@ -353897,35 +354922,29 @@
         "kind": "action",
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
+        "maxResponseBytes": 1048576,
         "read": true,
         "destructive": false,
         "tool": true,
         "inputSchema": {
           "type": "object",
+          "additionalProperties": false,
           "properties": {
-            "clientId": {
-              "type": "integer",
-              "minimum": 1,
-              "description": "Client ID."
+            "client_id": {
+              "type": "string",
+              "description": "The unique numeric identifier of the client.",
+              "minLength": 1
             }
           },
-          "additionalProperties": false,
           "required": [
-            "clientId"
+            "client_id"
           ]
         },
         "outputSchema": {
           "type": "object",
-          "required": [
-            "data"
-          ],
           "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
+            "data": {}
+          }
         }
       },
       {
@@ -353933,26 +354952,20 @@
         "kind": "action",
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
+        "maxResponseBytes": 1048576,
         "read": true,
         "destructive": false,
         "tool": true,
         "inputSchema": {
           "type": "object",
-          "properties": {},
-          "additionalProperties": false
+          "additionalProperties": false,
+          "properties": {}
         },
         "outputSchema": {
           "type": "object",
-          "required": [
-            "data"
-          ],
           "properties": {
-            "data": {
-              "type": "array"
-            }
-          },
-          "additionalProperties": false
+            "data": {}
+          }
         }
       },
       {
@@ -353960,43 +354973,122 @@
         "kind": "action",
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
+        "maxResponseBytes": 1048576,
         "read": false,
         "destructive": false,
         "tool": true,
         "inputSchema": {
           "type": "object",
+          "additionalProperties": false,
           "properties": {
-            "clientId": {
+            "id": {
               "type": "integer",
-              "minimum": 1,
-              "description": "Client ID."
+              "description": "Numeric ID of the client to update.",
+              "minimum": 1
             },
             "name": {
               "type": "string",
-              "description": "Client name."
+              "description": "New name for the client."
+            },
+            "status": {
+              "type": "string",
+              "description": "Client status: 'active' or 'archived'.",
+              "enum": [
+                "active",
+                "archived"
+              ]
             },
             "businessDetails": {
               "type": "string",
-              "description": "Optional billing details."
+              "description": "Business details or address information for the client."
             }
           },
-          "additionalProperties": false,
           "required": [
-            "clientId"
+            "id"
           ]
         },
         "outputSchema": {
           "type": "object",
-          "required": [
-            "data"
-          ],
           "properties": {
-            "data": {
-              "type": "object"
+            "data": {}
+          }
+        }
+      },
+      {
+        "key": "expenseCategories.list",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {}
+        },
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "data": {}
+          }
+        }
+      },
+      {
+        "key": "expenses.list",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "to": {
+              "type": "string",
+              "description": "End date for filtering expenses (inclusive). Format: YYYY-MM-DD."
+            },
+            "from": {
+              "type": "string",
+              "description": "Start date for filtering expenses (inclusive). Format: YYYY-MM-DD."
+            },
+            "user": {
+              "type": "integer",
+              "description": "Filter by user ID."
+            },
+            "limit": {
+              "type": "integer",
+              "description": "Maximum number of expenses to return.",
+              "minimum": 1
+            },
+            "offset": {
+              "type": "integer",
+              "description": "Number of expenses to skip.",
+              "minimum": 0
+            },
+            "project": {
+              "type": "string",
+              "description": "Filter by project ID."
+            },
+            "billable": {
+              "type": "boolean",
+              "description": "Filter by billable status."
+            },
+            "category": {
+              "type": "integer",
+              "description": "Filter by expense category ID."
             }
-          },
-          "additionalProperties": false
+          }
+        },
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "data": {}
+          }
         }
       },
       {
@@ -354009,21 +355101,21 @@
         "destructive": false,
         "tool": true,
         "inputSchema": {
-          "type": "object",
+          "additionalProperties": false,
           "properties": {},
-          "additionalProperties": false
+          "type": "object"
         },
         "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
+          "additionalProperties": false,
           "properties": {
             "data": {
               "type": "object"
             }
           },
-          "additionalProperties": false
+          "required": [
+            "data"
+          ],
+          "type": "object"
         }
       },
       {
@@ -354031,26 +355123,20 @@
         "kind": "action",
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
+        "maxResponseBytes": 1048576,
         "read": true,
         "destructive": false,
         "tool": true,
         "inputSchema": {
           "type": "object",
-          "properties": {},
-          "additionalProperties": false
+          "additionalProperties": false,
+          "properties": {}
         },
         "outputSchema": {
           "type": "object",
-          "required": [
-            "data"
-          ],
           "properties": {
-            "data": {
-              "type": "array"
-            }
-          },
-          "additionalProperties": false
+            "data": {}
+          }
         }
       },
       {
@@ -354058,40 +355144,33 @@
         "kind": "action",
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
+        "maxResponseBytes": 1048576,
         "read": false,
         "destructive": false,
         "tool": true,
         "inputSchema": {
           "type": "object",
+          "additionalProperties": false,
           "properties": {
             "name": {
               "type": "string",
-              "minLength": 1,
-              "description": "Project name."
+              "description": "The name of the project.",
+              "minLength": 1
             },
             "client": {
               "type": "integer",
-              "minimum": 1,
-              "description": "Optional client ID."
+              "description": "Numeric ID of the client to associate with the project."
             }
           },
-          "additionalProperties": false,
           "required": [
             "name"
           ]
         },
         "outputSchema": {
           "type": "object",
-          "required": [
-            "data"
-          ],
           "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
+            "data": {}
+          }
         }
       },
       {
@@ -354099,40 +355178,29 @@
         "kind": "action",
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
-        "maxResponseBytes": 65536,
+        "maxResponseBytes": 1048576,
         "read": false,
         "destructive": true,
         "tool": true,
         "inputSchema": {
           "type": "object",
+          "additionalProperties": false,
           "properties": {
-            "projectId": {
+            "project_id": {
               "type": "string",
-              "minLength": 1,
-              "description": "projectId to delete."
+              "description": "Unique identifier of the project to delete. Format is 'ev:{numeric_id}' for native Everhour projects.",
+              "minLength": 1
             }
           },
-          "additionalProperties": false,
           "required": [
-            "projectId"
+            "project_id"
           ]
         },
         "outputSchema": {
           "type": "object",
-          "required": [
-            "deleted",
-            "id"
-          ],
           "properties": {
-            "deleted": {
-              "type": "boolean"
-            },
-            "id": {
-              "type": "string",
-              "minLength": 1
-            }
-          },
-          "additionalProperties": false
+            "data": {}
+          }
         }
       },
       {
@@ -354145,29 +355213,29 @@
         "destructive": false,
         "tool": true,
         "inputSchema": {
-          "type": "object",
+          "additionalProperties": false,
           "properties": {
             "projectId": {
-              "type": "string",
-              "minLength": 1
+              "minLength": 1,
+              "type": "string"
             }
           },
           "required": [
             "projectId"
           ],
-          "additionalProperties": false
+          "type": "object"
         },
         "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
+          "additionalProperties": false,
           "properties": {
             "data": {
               "type": "object"
             }
           },
-          "additionalProperties": false
+          "required": [
+            "data"
+          ],
+          "type": "object"
         }
       },
       {
@@ -354180,34 +355248,42 @@
         "destructive": false,
         "tool": true,
         "inputSchema": {
-          "type": "object",
+          "additionalProperties": false,
           "properties": {
-            "query": {
-              "type": "string",
-              "minLength": 1
-            },
             "limit": {
-              "type": "integer",
-              "minimum": 1
+              "minimum": 1,
+              "type": "integer"
             },
             "platform": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "query": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "status": {
               "type": "string",
-              "minLength": 1
+              "enum": [
+                "open",
+                "archived",
+                "all"
+              ]
             }
           },
-          "additionalProperties": false
+          "type": "object"
         },
         "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
+          "additionalProperties": false,
           "properties": {
             "data": {
               "type": "array"
             }
           },
-          "additionalProperties": false
+          "required": [
+            "data"
+          ],
+          "type": "object"
         }
       },
       {
@@ -354215,47 +355291,177 @@
         "kind": "action",
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
+        "maxResponseBytes": 1048576,
         "read": false,
         "destructive": false,
         "tool": true,
         "inputSchema": {
           "type": "object",
+          "additionalProperties": false,
           "properties": {
-            "projectId": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Project ID, e.g. ev:123."
-            },
             "name": {
               "type": "string",
-              "description": "Project name."
+              "description": "New name of the project."
             },
-            "status": {
+            "note": {
               "type": "string",
+              "description": "Additional notes about the project."
+            },
+            "budget": {
+              "type": "number",
+              "description": "Total budget for the project.",
+              "minimum": 0
+            },
+            "billable": {
+              "type": "boolean",
+              "description": "Whether the project is billable by default."
+            },
+            "budgetType": {
+              "type": "string",
+              "description": "Type of budget: 'hours' or 'amount'.",
               "enum": [
-                "open",
-                "archived"
-              ],
-              "description": "Project status."
+                "hours",
+                "amount"
+              ]
+            },
+            "hourlyRate": {
+              "type": "number",
+              "description": "Hourly rate (required if billingMethod is 'time').",
+              "minimum": 0
+            },
+            "project_id": {
+              "type": "string",
+              "description": "The unique project identifier in format 'ev:XXXXXXXXX'.",
+              "minLength": 1
+            },
+            "budgetReset": {
+              "type": "string",
+              "description": "Budget reset period.",
+              "enum": [
+                "never",
+                "weekly",
+                "monthly"
+              ]
+            },
+            "billingMethod": {
+              "type": "string",
+              "description": "Billing method.",
+              "enum": [
+                "none",
+                "time",
+                "fixedFee"
+              ]
+            },
+            "budgetIncludeExpenses": {
+              "type": "boolean",
+              "description": "Whether to include expenses in the budget."
             }
           },
-          "additionalProperties": false,
           "required": [
-            "projectId"
+            "project_id"
           ]
         },
         "outputSchema": {
           "type": "object",
-          "required": [
-            "data"
-          ],
           "properties": {
-            "data": {
-              "type": "object"
+            "data": {}
+          }
+        }
+      },
+      {
+        "key": "sections.create",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "name": {
+              "type": "string",
+              "description": "Name of the section to be created.",
+              "minLength": 1
+            },
+            "project_id": {
+              "type": "string",
+              "description": "The unique identifier of the project to add the section to.",
+              "minLength": 1
             }
           },
-          "additionalProperties": false
+          "required": [
+            "name",
+            "project_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "data": {}
+          }
+        }
+      },
+      {
+        "key": "sections.delete",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
+        "read": false,
+        "destructive": true,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "section_id": {
+              "type": "string",
+              "description": "Numeric ID of the section to delete.",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "section_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "data": {}
+          }
+        }
+      },
+      {
+        "key": "sections.get",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "sectionId": {
+              "type": "string",
+              "description": "Numeric ID of the section to retrieve.",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "sectionId"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "data": {}
+          }
         }
       },
       {
@@ -354263,35 +355469,50 @@
         "kind": "action",
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
+        "maxResponseBytes": 1048576,
         "read": true,
         "destructive": false,
         "tool": true,
         "inputSchema": {
           "type": "object",
+          "additionalProperties": false,
           "properties": {
             "projectId": {
               "type": "string",
-              "minLength": 1,
-              "description": "Project ID."
+              "description": "The unique identifier of the project to list sections for.",
+              "minLength": 1
             }
           },
-          "additionalProperties": false,
           "required": [
             "projectId"
           ]
         },
         "outputSchema": {
           "type": "object",
-          "required": [
-            "data"
-          ],
           "properties": {
-            "data": {
-              "type": "array"
-            }
-          },
-          "additionalProperties": false
+            "data": {}
+          }
+        }
+      },
+      {
+        "key": "tags.list",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {}
+        },
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "data": {}
+          }
         }
       },
       {
@@ -354299,184 +355520,79 @@
         "kind": "action",
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
+        "maxResponseBytes": 1048576,
         "read": false,
         "destructive": false,
         "tool": true,
         "inputSchema": {
           "type": "object",
+          "additionalProperties": false,
           "properties": {
-            "projectId": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Project ID."
-            },
             "name": {
               "type": "string",
-              "minLength": 1,
-              "description": "Task name."
+              "description": "Name/title of the task to create.",
+              "minLength": 1
+            },
+            "tags": {
+              "type": "array",
+              "description": "List of tag IDs to apply to the task.",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "parent": {
+              "type": "string",
+              "description": "Parent task ID to create this as a subtask."
             },
             "section": {
-              "type": "integer",
-              "minimum": 1,
-              "description": "Optional section ID."
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "projectId",
-            "name"
-          ]
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        }
-      },
-      {
-        "key": "tasks.get",
-        "kind": "action",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "read": true,
-        "destructive": false,
-        "tool": true,
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "taskId": {
               "type": "string",
-              "minLength": 1,
-              "description": "Task ID, e.g. ev:1."
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "taskId"
-          ]
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        }
-      },
-      {
-        "key": "tasks.list",
-        "kind": "action",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "read": true,
-        "destructive": false,
-        "tool": true,
-        "inputSchema": {
-          "type": "object",
-          "properties": {
+              "description": "Section ID to place the task in."
+            },
+            "assignee": {
+              "type": "integer",
+              "description": "User ID to assign the task to."
+            },
+            "estimate": {
+              "type": "integer",
+              "description": "Time estimate for the task in seconds."
+            },
             "projectId": {
               "type": "string",
-              "minLength": 1,
-              "description": "Project ID."
-            },
-            "query": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Optional name filter."
-            },
-            "limit": {
-              "type": "integer",
-              "minimum": 1,
-              "description": "Max tasks to return."
-            },
-            "page": {
-              "type": "integer",
-              "minimum": 1,
-              "description": "Page number."
+              "description": "The Everhour project ID where the task will be created.",
+              "minLength": 1
             }
           },
-          "additionalProperties": false,
           "required": [
+            "name",
             "projectId"
           ]
         },
         "outputSchema": {
           "type": "object",
-          "required": [
-            "data"
-          ],
           "properties": {
-            "data": {
-              "type": "array"
-            }
-          },
-          "additionalProperties": false
+            "data": {}
+          }
         }
       },
       {
-        "key": "time.create",
+        "key": "teams.get",
         "kind": "action",
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "read": false,
+        "maxResponseBytes": 1048576,
+        "read": true,
         "destructive": false,
         "tool": true,
         "inputSchema": {
           "type": "object",
-          "properties": {
-            "taskId": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Task ID."
-            },
-            "time": {
-              "type": "integer",
-              "minimum": 1,
-              "description": "Duration in seconds."
-            },
-            "date": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Date YYYY-MM-DD."
-            },
-            "comment": {
-              "type": "string",
-              "description": "Optional comment."
-            }
-          },
           "additionalProperties": false,
-          "required": [
-            "taskId",
-            "time"
-          ]
+          "properties": {}
         },
         "outputSchema": {
           "type": "object",
-          "required": [
-            "data"
-          ],
           "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
+            "data": {}
+          }
         }
       },
       {
@@ -354489,65 +355605,249 @@
         "destructive": false,
         "tool": true,
         "inputSchema": {
-          "type": "object",
+          "additionalProperties": false,
           "properties": {
             "from": {
-              "type": "string",
-              "minLength": 1
-            },
-            "to": {
-              "type": "string",
-              "minLength": 1
-            },
-            "page": {
-              "type": "integer",
-              "minimum": 1
+              "minLength": 1,
+              "type": "string"
             },
             "limit": {
-              "type": "integer",
-              "minimum": 1
+              "minimum": 1,
+              "type": "integer"
+            },
+            "page": {
+              "minimum": 1,
+              "type": "integer"
+            },
+            "to": {
+              "minLength": 1,
+              "type": "string"
             }
           },
-          "additionalProperties": false
+          "type": "object"
         },
         "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
+          "additionalProperties": false,
           "properties": {
             "data": {
               "type": "array"
             }
           },
-          "additionalProperties": false
+          "required": [
+            "data"
+          ],
+          "type": "object"
         }
       },
       {
-        "key": "timers.current.get",
+        "key": "timecards.clockIn",
         "kind": "action",
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
+        "maxResponseBytes": 1048576,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "user_id": {
+              "type": "integer",
+              "description": "The unique numeric identifier of the user to clock in.",
+              "minimum": 1
+            }
+          },
+          "required": [
+            "user_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "data": {}
+          }
+        }
+      },
+      {
+        "key": "timecards.clockOut",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "user_id": {
+              "type": "integer",
+              "description": "The unique numeric identifier of the user to clock out.",
+              "minimum": 1
+            }
+          },
+          "required": [
+            "user_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "data": {}
+          }
+        }
+      },
+      {
+        "key": "timecards.delete",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
+        "read": false,
+        "destructive": true,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "date": {
+              "type": "string",
+              "description": "The date of the timecard to delete in YYYY-MM-DD format.",
+              "minLength": 1
+            },
+            "user_id": {
+              "type": "integer",
+              "description": "The unique numeric ID of the user whose timecard should be deleted.",
+              "minimum": 1
+            }
+          },
+          "required": [
+            "date",
+            "user_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "data": {}
+          }
+        }
+      },
+      {
+        "key": "timecards.get",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
         "read": true,
         "destructive": false,
         "tool": true,
         "inputSchema": {
           "type": "object",
-          "properties": {},
-          "additionalProperties": false
+          "additionalProperties": false,
+          "properties": {
+            "date": {
+              "type": "string",
+              "description": "Specific date for the timecard entry in YYYY-MM-DD format.",
+              "minLength": 1
+            },
+            "user_id": {
+              "type": "integer",
+              "description": "Team member identifier whose timecard is requested.",
+              "minimum": 1
+            }
+          },
+          "required": [
+            "date",
+            "user_id"
+          ]
         },
         "outputSchema": {
           "type": "object",
-          "required": [
-            "data"
-          ],
           "properties": {
-            "data": {
-              "type": "object"
+            "data": {}
+          }
+        }
+      },
+      {
+        "key": "timecards.list",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "to": {
+              "type": "string",
+              "description": "End date for filtering timecards (format: YYYY-MM-DD)."
+            },
+            "from": {
+              "type": "string",
+              "description": "Start date for filtering timecards (format: YYYY-MM-DD)."
+            }
+          }
+        },
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "data": {}
+          }
+        }
+      },
+      {
+        "key": "timecards.update",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "date": {
+              "type": "string",
+              "description": "Date for the timecard in YYYY-MM-DD format.",
+              "minLength": 1
+            },
+            "clockIn": {
+              "type": "string",
+              "description": "Clock in time in user's local timezone using HH:MM format."
+            },
+            "user_id": {
+              "type": "integer",
+              "description": "Numeric ID of the user whose timecard is being updated.",
+              "minimum": 1
+            },
+            "clockOut": {
+              "type": "string",
+              "description": "Clock out time in user's local timezone using HH:MM format."
+            },
+            "breakTime": {
+              "type": "integer",
+              "description": "Break duration in seconds.",
+              "minimum": 0
             }
           },
-          "additionalProperties": false
+          "required": [
+            "date",
+            "user_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "data": {}
+          }
         }
       },
       {
@@ -354555,66 +355855,101 @@
         "kind": "action",
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
+        "maxResponseBytes": 1048576,
         "read": false,
         "destructive": false,
         "tool": true,
         "inputSchema": {
           "type": "object",
+          "additionalProperties": false,
           "properties": {
-            "taskId": {
+            "task": {
               "type": "string",
-              "minLength": 1,
-              "description": "Task ID to time."
+              "description": "The Everhour task ID to start the timer on. Format: 'ev:<numeric_id>'.",
+              "minLength": 1
             }
           },
-          "additionalProperties": false,
           "required": [
-            "taskId"
+            "task"
           ]
         },
         "outputSchema": {
           "type": "object",
-          "required": [
-            "data"
-          ],
           "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
+            "data": {}
+          }
         }
       },
       {
-        "key": "timers.stop",
+        "key": "timesheets.approval.discard",
         "kind": "action",
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
-        "maxResponseBytes": 65536,
+        "maxResponseBytes": 1048576,
         "read": false,
         "destructive": false,
         "tool": true,
         "inputSchema": {
           "type": "object",
-          "properties": {},
-          "additionalProperties": false
+          "additionalProperties": false,
+          "properties": {
+            "timesheet_id": {
+              "type": "integer",
+              "description": "The unique numeric ID of the timesheet for which to discard the pending approval request.",
+              "minimum": 1
+            }
+          },
+          "required": [
+            "timesheet_id"
+          ]
         },
         "outputSchema": {
           "type": "object",
-          "required": [
-            "deleted",
-            "id"
-          ],
           "properties": {
-            "deleted": {
-              "type": "boolean"
+            "data": {}
+          }
+        }
+      },
+      {
+        "key": "timesheets.approval.request",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "comment": {
+              "type": "string",
+              "description": "Optional text feedback or comment to include with the approval request."
             },
-            "id": {
-              "type": "string"
+            "reviewer": {
+              "type": "integer",
+              "description": "Admin user ID who will review the timesheet submission."
+            },
+            "timesheetId": {
+              "type": "integer",
+              "description": "Unique identifier of the timesheet to request approval for or approve.",
+              "minimum": 1
+            },
+            "sendNotification": {
+              "type": "boolean",
+              "description": "Whether to send a notification to the reviewer when requesting approval."
             }
           },
-          "additionalProperties": false
+          "required": [
+            "timesheetId"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "data": {}
+          }
         }
       },
       {
@@ -354627,21 +355962,301 @@
         "destructive": false,
         "tool": true,
         "inputSchema": {
-          "type": "object",
+          "additionalProperties": false,
           "properties": {},
-          "additionalProperties": false
+          "type": "object"
         },
         "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
+          "additionalProperties": false,
           "properties": {
             "data": {
               "type": "array"
             }
           },
-          "additionalProperties": false
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        }
+      },
+      {
+        "key": "users.timecards.list",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "to": {
+              "type": "string",
+              "description": "End date for filtering timecards (format: YYYY-MM-DD)."
+            },
+            "from": {
+              "type": "string",
+              "description": "Start date for filtering timecards (format: YYYY-MM-DD)."
+            },
+            "user_id": {
+              "type": "integer",
+              "description": "Numeric ID of the user whose timecards to retrieve.",
+              "minimum": 1
+            }
+          },
+          "required": [
+            "user_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "data": {}
+          }
+        }
+      },
+      {
+        "key": "users.timesheets.list",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "limit": {
+              "type": "integer",
+              "description": "Maximum number of weeks to retrieve.",
+              "minimum": 1
+            },
+            "user_id": {
+              "type": "integer",
+              "description": "Unique identifier of the user whose timesheets to retrieve.",
+              "minimum": 1
+            }
+          },
+          "required": [
+            "user_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "data": {}
+          }
+        }
+      },
+      {
+        "key": "webhooks.create",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "events": {
+              "type": "array",
+              "description": "List of events to subscribe to.",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "api:client:created",
+                  "api:client:updated",
+                  "api:project:created",
+                  "api:project:updated",
+                  "api:project:removed",
+                  "api:task:created",
+                  "api:task:updated",
+                  "api:task:removed",
+                  "api:timer:started",
+                  "api:timer:stopped",
+                  "api:time:updated",
+                  "api:section:created",
+                  "api:section:updated",
+                  "api:section:removed",
+                  "api:estimate:updated"
+                ]
+              },
+              "minItems": 1
+            },
+            "project": {
+              "type": "string",
+              "description": "Filter events by project ID. If set, only events from this project will trigger the webhook."
+            },
+            "targetUrl": {
+              "type": "string",
+              "description": "Target URL for webhook delivery. Must be a valid URL that responds to Everhour's validation request.",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "events",
+            "targetUrl"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "data": {}
+          }
+        }
+      },
+      {
+        "key": "webhooks.delete",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
+        "read": false,
+        "destructive": true,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "hook_id": {
+              "type": "integer",
+              "description": "The unique numeric ID of the webhook to delete.",
+              "minimum": 1
+            }
+          },
+          "required": [
+            "hook_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "data": {}
+          }
+        }
+      },
+      {
+        "key": "webhooks.get",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "hook_id": {
+              "type": "integer",
+              "description": "The unique numeric identifier of the webhook.",
+              "minimum": 1
+            }
+          },
+          "required": [
+            "hook_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "data": {}
+          }
+        }
+      },
+      {
+        "key": "webhooks.list",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {}
+        },
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "data": {}
+          }
+        }
+      },
+      {
+        "key": "webhooks.update",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "events": {
+              "type": "array",
+              "description": "List of events to subscribe to.",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "api:client:created",
+                  "api:client:updated",
+                  "api:project:created",
+                  "api:project:updated",
+                  "api:project:removed",
+                  "api:task:created",
+                  "api:task:updated",
+                  "api:task:removed",
+                  "api:timer:started",
+                  "api:timer:stopped",
+                  "api:time:updated",
+                  "api:section:created",
+                  "api:section:updated",
+                  "api:section:removed",
+                  "api:estimate:updated"
+                ]
+              },
+              "minItems": 1
+            },
+            "hook_id": {
+              "type": "integer",
+              "description": "Webhook ID to update.",
+              "minimum": 1
+            },
+            "project": {
+              "type": "string",
+              "description": "Filter events by project ID."
+            },
+            "targetUrl": {
+              "type": "string",
+              "description": "Target URL for webhook delivery.",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "events",
+            "hook_id",
+            "targetUrl"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "data": {}
+          }
         }
       }
     ]
@@ -825893,48 +827508,120 @@
   },
   {
     "key": "stannp",
-    "digest": "84c997b72879b0cdd02d385cf1695e7ea3f444f184a3f27801f86f86126ff4c6",
+    "digest": "735fa47259f788487ef3add1a7ea21ae3bc8ecfb5b95594b10bee04e8e28ceef",
     "public": true,
     "egress": true,
     "operations": [
       {
-        "key": "campaigns.create",
+        "key": "accounts.balance.get",
         "kind": "action",
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
         "maxResponseBytes": 5242880,
-        "read": false,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "addresses.validate",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
         "destructive": false,
         "tool": true,
         "inputSchema": {
           "type": "object",
           "properties": {
-            "name": {
+            "city": {
               "type": "string",
-              "minLength": 1,
-              "description": "Campaign name."
+              "description": "Address city. Required if zipcode is not provided."
             },
-            "type": {
+            "state": {
               "type": "string",
-              "minLength": 1,
-              "description": "Campaign type such as a6-postcard, a5-postcard, or letter."
+              "description": "Two-letter state abbreviation if possible"
             },
-            "groupId": {
-              "type": "integer",
-              "minimum": 1,
-              "description": "Recipient group id."
+            "company": {
+              "type": "string",
+              "description": "Company name"
             },
-            "templateId": {
-              "type": "integer",
-              "minimum": 0,
-              "description": "Template id to copy, or 0 for a blank template."
+            "country": {
+              "type": "string",
+              "description": "ISO 3166-1 Alpha 2 country code (US, GB, CA, FR...)"
+            },
+            "zipcode": {
+              "type": "string",
+              "description": "Address zipcode. Required if city is not provided."
+            },
+            "address1": {
+              "type": "string",
+              "description": "Address line 1"
+            },
+            "address2": {
+              "type": "string",
+              "description": "Address line 2"
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "campaigns.available_dates.get",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "end": {
+              "type": "string",
+              "description": "End date in YYYY-MM-DD format for the date range query",
+              "minLength": 1
+            },
+            "start": {
+              "type": "string",
+              "description": "Start date in YYYY-MM-DD format for the date range query",
+              "minLength": 1
             }
           },
           "additionalProperties": false,
           "required": [
-            "name",
-            "type",
-            "groupId"
+            "end",
+            "start"
           ]
         },
         "outputSchema": {
@@ -825951,26 +827638,116 @@
         }
       },
       {
-        "key": "campaigns.delete",
+        "key": "campaigns.cost.get",
         "kind": "action",
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
         "maxResponseBytes": 5242880,
-        "read": false,
-        "destructive": true,
+        "read": true,
+        "destructive": false,
         "tool": true,
         "inputSchema": {
           "type": "object",
           "properties": {
             "id": {
               "type": "integer",
-              "minimum": 1,
-              "description": "Stannp resource id."
+              "description": "ID of the campaign to get the cost of booking",
+              "minimum": 1
             }
           },
           "additionalProperties": false,
           "required": [
             "id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "campaigns.create",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "back": {
+              "type": "string",
+              "description": "A PDF or JPG file URL for the back image"
+            },
+            "file": {
+              "type": "string",
+              "description": "A PDF file URL or binary for the design artwork"
+            },
+            "name": {
+              "type": "string",
+              "description": "Name your campaign for reference",
+              "minLength": 1
+            },
+            "save": {
+              "type": "boolean",
+              "description": "Save the uploaded file as a new design template"
+            },
+            "size": {
+              "type": "string",
+              "description": "Required when using file or front/back. Example: A4, A5, A6"
+            },
+            "type": {
+              "type": "string",
+              "description": "The type of campaign",
+              "enum": [
+                "a6-postcard",
+                "a5-postcard",
+                "letter"
+              ]
+            },
+            "front": {
+              "type": "string",
+              "description": "A PDF or JPG file URL for the front image"
+            },
+            "addons": {
+              "type": "string",
+              "description": "Addon code if available"
+            },
+            "group_id": {
+              "type": "integer",
+              "description": "A group ID for the recipients",
+              "minimum": 1
+            },
+            "template_id": {
+              "type": "integer",
+              "description": "A template ID to copy. If left out, a blank template is used"
+            },
+            "what_recipients": {
+              "type": "string",
+              "description": "Filter for what recipients to include in the campaign",
+              "enum": [
+                "all",
+                "valid",
+                "not_valid",
+                "int"
+              ]
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "name",
+            "type",
+            "group_id"
           ]
         },
         "outputSchema": {
@@ -825998,15 +827775,15 @@
         "inputSchema": {
           "type": "object",
           "properties": {
-            "campaignId": {
+            "id": {
               "type": "integer",
-              "minimum": 1,
-              "description": "Stannp resource id."
+              "description": "ID of the campaign to retrieve",
+              "minimum": 1
             }
           },
           "additionalProperties": false,
           "required": [
-            "campaignId"
+            "id"
           ]
         },
         "outputSchema": {
@@ -826050,7 +827827,7 @@
         }
       },
       {
-        "key": "groups.add",
+        "key": "campaigns.sample.create",
         "kind": "action",
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
@@ -826061,22 +827838,154 @@
         "inputSchema": {
           "type": "object",
           "properties": {
-            "groupId": {
+            "id": {
               "type": "integer",
-              "minimum": 1,
-              "description": "Group id."
-            },
-            "recipients": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Comma-separated recipient ids."
+              "description": "ID of the campaign to produce a sample for",
+              "minimum": 1
             }
           },
           "additionalProperties": false,
           "required": [
-            "groupId",
-            "recipients"
+            "id"
           ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "contacts.get",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "contact_id": {
+              "type": "string",
+              "description": "The ID of the contact to retrieve",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "contact_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "files.upload",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "file": {
+              "type": "string",
+              "description": "File to upload. Can be a file or a URL string pointing to a remote file."
+            },
+            "folder": {
+              "type": "integer",
+              "description": "A folder ID for placing the file in a specific folder"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "file"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "folders.create",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "description": "The name of the folder you wish to create",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "name"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "folders.list",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
         },
         "outputSchema": {
           "type": "object",
@@ -826105,8 +828014,12 @@
           "properties": {
             "name": {
               "type": "string",
-              "minLength": 1,
-              "description": "Group name."
+              "description": "Name of the group (must be unique within your account)",
+              "minLength": 1
+            },
+            "description": {
+              "type": "string",
+              "description": "Optional description for the group"
             }
           },
           "additionalProperties": false,
@@ -826141,12 +828054,12 @@
           "properties": {
             "id": {
               "type": "integer",
-              "minimum": 1,
-              "description": "Stannp resource id."
+              "description": "ID of the group to delete",
+              "minimum": 1
             },
-            "deleteRecipients": {
+            "delete_recipients": {
               "type": "boolean",
-              "description": "Also delete recipients in the group."
+              "description": "If true, completely delete all recipients in the group. Defaults to false."
             }
           },
           "additionalProperties": false,
@@ -826177,18 +828090,178 @@
         "destructive": false,
         "tool": true,
         "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "limit": {
+              "minimum": 1,
+              "type": "integer"
+            },
+            "offset": {
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          "type": "object"
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        }
+      },
+      {
+        "key": "groups.purge",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": true,
+        "tool": true,
+        "inputSchema": {
           "type": "object",
           "properties": {
-            "offset": {
+            "id": {
               "type": "integer",
-              "minimum": 0
-            },
-            "limit": {
-              "type": "integer",
+              "description": "ID of the group to purge",
               "minimum": 1
+            },
+            "delete_recipients": {
+              "type": "boolean",
+              "description": "If true, completely delete all recipients. Defaults to false."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
             }
           },
           "additionalProperties": false
+        }
+      },
+      {
+        "key": "groups.recalculate",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "group_id": {
+              "type": "integer",
+              "description": "The ID of the group to recalculate",
+              "minimum": 1
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "group_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "groups.recipients.add",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "group_id": {
+              "type": "integer",
+              "description": "ID of the group to add recipients to",
+              "minimum": 1
+            },
+            "recipients": {
+              "type": "string",
+              "description": "Comma-separated list of recipient IDs to add to the group (e.g. '1,2')",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "group_id",
+            "recipients"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "groups.recipients.remove",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "group_id": {
+              "type": "integer",
+              "description": "ID of the group to remove recipients from",
+              "minimum": 1
+            },
+            "recipients": {
+              "type": "string",
+              "description": "Comma-separated recipient IDs to remove from the group",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "group_id",
+            "recipients"
+          ]
         },
         "outputSchema": {
           "type": "object",
@@ -826213,8 +828286,139 @@
         "destructive": false,
         "tool": true,
         "inputSchema": {
-          "type": "object",
+          "additionalProperties": false,
           "properties": {},
+          "type": "object"
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        }
+      },
+      {
+        "key": "letters.create",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "file": {
+              "type": "string",
+              "description": "URL to a PDF/DOC file or base64-encoded file content. Alternative to template."
+            },
+            "tags": {
+              "type": "string",
+              "description": "Comma-separated tags for reference, searchable in reporting"
+            },
+            "test": {
+              "type": "boolean",
+              "description": "If true, produces a sample PDF without dispatching or charging. Defaults to false."
+            },
+            "addons": {
+              "type": "string",
+              "description": "Addon codes to upgrade your letter (e.g. FIRST_CLASS)"
+            },
+            "duplex": {
+              "type": "boolean",
+              "description": "Set to false to print only on the front of each page. Defaults to true."
+            },
+            "template": {
+              "type": "integer",
+              "description": "ID of a template already set up on the platform"
+            },
+            "clearzone": {
+              "type": "boolean",
+              "description": "If true, overlay clear zones with white background. Defaults to true."
+            },
+            "recipient_id": {
+              "type": "string",
+              "description": "ID of an existing recipient in your account. Use this OR recipient_details, not both."
+            },
+            "post_unverified": {
+              "type": "boolean",
+              "description": "If false, the item will not be posted if the recipient address cannot be verified."
+            },
+            "recipient_details": {
+              "type": "object",
+              "description": "Detailed recipient information for creating a new recipient. Use this OR recipient_id, not both.",
+              "additionalProperties": false,
+              "properties": {
+                "title": {
+                  "type": "string",
+                  "description": "Recipient title, such as Mr or Mrs"
+                },
+                "company": {
+                  "type": "string",
+                  "description": "Recipient company name"
+                },
+                "firstname": {
+                  "type": "string",
+                  "description": "Recipient first name"
+                },
+                "lastname": {
+                  "type": "string",
+                  "description": "Recipient last name"
+                },
+                "address1": {
+                  "type": "string",
+                  "description": "First line of recipient address"
+                },
+                "address2": {
+                  "type": "string",
+                  "description": "Second line of recipient address"
+                },
+                "address3": {
+                  "type": "string",
+                  "description": "Third line of recipient address"
+                },
+                "city": {
+                  "type": "string",
+                  "description": "Recipient city"
+                },
+                "county": {
+                  "type": "string",
+                  "description": "Recipient county, province, or state"
+                },
+                "postcode": {
+                  "type": "string",
+                  "description": "Recipient postal code"
+                },
+                "zipcode": {
+                  "type": "string",
+                  "description": "Recipient ZIP code (US alias for postcode)"
+                },
+                "country": {
+                  "type": "string",
+                  "description": "ISO 3166-1 alpha-2 country code"
+                },
+                "email": {
+                  "type": "string",
+                  "description": "Recipient email address"
+                },
+                "phone_number": {
+                  "type": "string",
+                  "description": "Recipient phone number"
+                },
+                "url": {
+                  "type": "string",
+                  "description": "Custom URL merge field for the recipient"
+                }
+              }
+            }
+          },
           "additionalProperties": false
         },
         "outputSchema": {
@@ -826231,39 +828435,40 @@
         }
       },
       {
-        "key": "letters.create",
+        "key": "mailpieces.list",
         "kind": "action",
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
         "maxResponseBytes": 5242880,
-        "read": false,
+        "read": true,
         "destructive": false,
         "tool": true,
         "inputSchema": {
           "type": "object",
           "properties": {
-            "test": {
-              "type": "boolean",
-              "description": "When true, produce a sample without dispatch or charge."
-            },
-            "template": {
-              "type": "integer",
-              "minimum": 1,
-              "description": "Existing template id."
-            },
-            "tags": {
+            "tag": {
               "type": "string",
-              "description": "Comma-separated tags."
+              "description": "Filter by custom tag associated with mailpieces"
             },
-            "recipient": {
-              "type": "object",
-              "description": "Inline recipient address object or existing recipient id wrapper."
+            "status": {
+              "type": "string",
+              "description": "Filter by delivery status (e.g. delivered, returned, printing, local_delivery)"
+            },
+            "enddate": {
+              "type": "string",
+              "description": "End date of the reporting period in YYYY-MM-DD format",
+              "minLength": 1
+            },
+            "startdate": {
+              "type": "string",
+              "description": "Start date of the reporting period in YYYY-MM-DD format",
+              "minLength": 1
             }
           },
           "additionalProperties": false,
           "required": [
-            "template",
-            "recipient"
+            "enddate",
+            "startdate"
           ]
         },
         "outputSchema": {
@@ -826280,26 +828485,66 @@
         }
       },
       {
-        "key": "letters.get",
+        "key": "pdfs.merge",
         "kind": "action",
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
         "maxResponseBytes": 5242880,
-        "read": true,
+        "read": false,
         "destructive": false,
         "tool": true,
         "inputSchema": {
           "type": "object",
           "properties": {
-            "letterId": {
-              "type": "integer",
-              "minimum": 1,
-              "description": "Stannp resource id."
+            "files": {
+              "type": "array",
+              "description": "An array of URLs for the PDF files to merge. Provide at least 2 URLs.",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "minItems": 2
             }
           },
           "additionalProperties": false,
           "required": [
-            "letterId"
+            "files"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "key": "postcards.cancel",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": true,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "integer",
+              "description": "The ID of the postcard to cancel",
+              "minimum": 1
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "id"
           ]
         },
         "outputSchema": {
@@ -826327,27 +828572,122 @@
         "inputSchema": {
           "type": "object",
           "properties": {
-            "test": {
-              "type": "boolean",
-              "description": "When true, produce a sample without dispatch or charge."
-            },
-            "template": {
-              "type": "integer",
-              "minimum": 1,
-              "description": "Existing template id."
+            "back": {
+              "type": "string",
+              "description": "URL or path to back image (JPG or PDF)"
             },
             "size": {
               "type": "string",
-              "description": "Postcard size such as A6 or A5."
+              "description": "Postcard size",
+              "enum": [
+                "4x6",
+                "6x9",
+                "6x11"
+              ]
+            },
+            "tags": {
+              "type": "string",
+              "description": "Tags for tracking and reporting"
+            },
+            "test": {
+              "type": "boolean",
+              "description": "Test mode - generates PDF but does not dispatch"
+            },
+            "front": {
+              "type": "string",
+              "description": "URL or path to front image (JPG or PDF)"
+            },
+            "message": {
+              "type": "string",
+              "description": "Message text to include on the postcard"
+            },
+            "addons": {
+              "type": "string",
+              "description": "Addon codes such as FIRST_CLASS"
+            },
+            "template": {
+              "type": "integer",
+              "description": "ID of a template already set up on the platform"
+            },
+            "clearzone": {
+              "type": "boolean",
+              "description": "If true, overlay clear zones with a white background"
+            },
+            "post_unverified": {
+              "type": "boolean",
+              "description": "If false, do not post when the address cannot be verified"
             },
             "recipient": {
               "type": "object",
-              "description": "Inline recipient address object."
+              "description": "Recipient information including firstname, lastname, address1, city, zipcode, country",
+              "additionalProperties": false,
+              "required": [
+                "firstname",
+                "lastname",
+                "address1",
+                "city",
+                "zipcode",
+                "country"
+              ],
+              "properties": {
+                "title": {
+                  "type": "string",
+                  "description": "Recipient title"
+                },
+                "company": {
+                  "type": "string",
+                  "description": "Recipient company name"
+                },
+                "firstname": {
+                  "type": "string",
+                  "description": "Recipient first name"
+                },
+                "lastname": {
+                  "type": "string",
+                  "description": "Recipient last name"
+                },
+                "address1": {
+                  "type": "string",
+                  "description": "First line of recipient address"
+                },
+                "address2": {
+                  "type": "string",
+                  "description": "Second line of recipient address"
+                },
+                "address3": {
+                  "type": "string",
+                  "description": "Third line of recipient address"
+                },
+                "city": {
+                  "type": "string",
+                  "description": "Recipient city"
+                },
+                "county": {
+                  "type": "string",
+                  "description": "Recipient county or state"
+                },
+                "postcode": {
+                  "type": "string",
+                  "description": "Recipient postal code"
+                },
+                "zipcode": {
+                  "type": "string",
+                  "description": "Recipient ZIP or postal code"
+                },
+                "country": {
+                  "type": "string",
+                  "description": "ISO 3166-1 alpha-2 country code"
+                },
+                "url": {
+                  "type": "string",
+                  "description": "Custom URL merge field for the recipient"
+                }
+              }
             }
           },
           "additionalProperties": false,
           "required": [
-            "template",
+            "size",
             "recipient"
           ]
         },
@@ -826376,55 +828716,71 @@
         "inputSchema": {
           "type": "object",
           "properties": {
-            "firstname": {
-              "type": "string",
-              "description": "First name."
-            },
-            "lastname": {
-              "type": "string",
-              "description": "Last name."
-            },
-            "address1": {
-              "type": "string",
-              "description": "Address line 1."
-            },
             "city": {
               "type": "string",
-              "description": "City."
-            },
-            "zipcode": {
-              "type": "string",
-              "description": "Postal or ZIP code."
-            },
-            "country": {
-              "type": "string",
-              "minLength": 2,
-              "description": "ISO 3166-1 alpha-2 country code."
+              "description": "Recipient city"
             },
             "email": {
               "type": "string",
-              "description": "Email address."
+              "description": "Recipient email address"
             },
-            "groupId": {
-              "type": "integer",
-              "minimum": 1,
-              "description": "Group to add the recipient to."
-            },
-            "onDuplicate": {
+            "company": {
               "type": "string",
-              "enum": [
-                "update",
-                "ignore",
-                "duplicate"
-              ],
-              "description": "Duplicate handling."
+              "description": "Recipient company name"
+            },
+            "country": {
+              "type": "string",
+              "description": "Recipient country code; defaults to GB on the platform if omitted"
+            },
+            "custom1": {
+              "type": "string",
+              "description": "Custom field 1"
+            },
+            "custom2": {
+              "type": "string",
+              "description": "Custom field 2"
+            },
+            "custom3": {
+              "type": "string",
+              "description": "Custom field 3"
+            },
+            "address1": {
+              "type": "string",
+              "description": "First line of recipient address"
+            },
+            "address2": {
+              "type": "string",
+              "description": "Second line of recipient address"
+            },
+            "address3": {
+              "type": "string",
+              "description": "Third line of recipient address"
+            },
+            "group_id": {
+              "type": "string",
+              "description": "The ID of the recipient group to add the recipient to"
+            },
+            "postcode": {
+              "type": "string",
+              "description": "Recipient postcode"
+            },
+            "last_name": {
+              "type": "string",
+              "description": "Recipient last name"
+            },
+            "first_name": {
+              "type": "string",
+              "description": "Recipient first name"
             }
           },
           "additionalProperties": false,
           "required": [
-            "firstname",
+            "city",
             "address1",
-            "country"
+            "group_id",
+            "postcode",
+            "last_name",
+            "first_name"
           ]
         },
         "outputSchema": {
@@ -826454,8 +828810,8 @@
           "properties": {
             "id": {
               "type": "integer",
-              "minimum": 1,
-              "description": "Stannp resource id."
+              "description": "ID of the recipient to delete",
+              "minimum": 1
             }
           },
           "additionalProperties": false,
@@ -826486,17 +828842,61 @@
         "destructive": false,
         "tool": true,
         "inputSchema": {
-          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "recipientId": {
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
           "required": [
             "recipientId"
           ],
+          "type": "object"
+        },
+        "outputSchema": {
+          "additionalProperties": false,
           "properties": {
-            "recipientId": {
-              "type": "integer",
-              "minimum": 1
+            "data": {
+              "type": "object"
             }
           },
-          "additionalProperties": false
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        }
+      },
+      {
+        "key": "recipients.import",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "file": {
+              "type": "string",
+              "description": "Base64-encoded CSV or XLS file content, a file URL, or a binary payload"
+            },
+            "group_id": {
+              "type": "string",
+              "description": "ID of the recipient group to import into"
+            },
+            "update_existing": {
+              "type": "boolean",
+              "description": "Whether to update existing recipients if duplicates are found"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "file",
+            "group_id"
+          ]
         },
         "outputSchema": {
           "type": "object",
@@ -826521,22 +828921,114 @@
         "destructive": false,
         "tool": true,
         "inputSchema": {
-          "type": "object",
+          "additionalProperties": false,
           "properties": {
             "groupId": {
-              "type": "integer",
-              "minimum": 1
-            },
-            "offset": {
-              "type": "integer",
-              "minimum": 0
+              "minimum": 1,
+              "type": "integer"
             },
             "limit": {
+              "minimum": 1,
+              "type": "integer"
+            },
+            "offset": {
+              "minimum": 0,
+              "type": "integer"
+            },
+            "page": {
               "type": "integer",
-              "minimum": 1
+              "minimum": 1,
+              "description": "Page number for paginated results"
+            }
+          },
+          "type": "object"
+        },
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        }
+      },
+      {
+        "key": "reporting.summary.get",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": true,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "end_date": {
+              "type": "string",
+              "description": "End date in YYYY-MM-DD format for the reporting period",
+              "minLength": 1
+            },
+            "start_date": {
+              "type": "string",
+              "description": "Start date in YYYY-MM-DD format for the reporting period",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "end_date",
+            "start_date"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
             }
           },
           "additionalProperties": false
+        }
+      },
+      {
+        "key": "selections.create",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "read": false,
+        "destructive": false,
+        "tool": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "description": "Optional name for the filter selection to help identify it"
+            },
+            "filters": {
+              "type": "string",
+              "description": "Specially formatted filter string: [column_name]:::[operator]:::[value]. Chain with :::AND:::."
+            },
+            "group_id": {
+              "type": "integer",
+              "description": "The ID of the group to associate this selection with",
+              "minimum": 1
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "filters",
+            "group_id"
+          ]
         },
         "outputSchema": {
           "type": "object",
@@ -826562,7 +829054,18 @@
         "tool": true,
         "inputSchema": {
           "type": "object",
-          "properties": {},
+          "properties": {
+            "page": {
+              "type": "integer",
+              "description": "Page number for paginated results",
+              "minimum": 1
+            },
+            "size": {
+              "type": "integer",
+              "description": "Number of records per page",
+              "minimum": 1
+            }
+          },
           "additionalProperties": false
         },
         "outputSchema": {
@@ -826579,7 +829082,7 @@
         }
       },
       {
-        "key": "users.me",
+        "key": "users.me.get",
         "kind": "action",
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
