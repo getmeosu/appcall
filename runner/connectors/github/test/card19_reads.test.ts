@@ -299,6 +299,58 @@ describe("github card-19 reads", () => {
     expect(calls).toHaveLength(2);
   });
 
+  test("sbom download to the pre-signed Location sends no Authorization and no GitHub headers", async () => {
+    const uuid = "dddddddd-bbbb-cccc-dddd-eeeeeeeeeeee";
+    const downloadUrl = `https://objects.githubusercontent.com/github-production-sbom/${uuid}/sbom.json?X-Amz-Signature=sig`;
+    const seen: { url: string; headers: Record<string, string> }[] = [];
+    const fetchSeq = async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      const headers: Record<string, string> = {};
+      new Headers(init?.headers).forEach((value, key) => { headers[key.toLowerCase()] = value; });
+      seen.push({ url, headers });
+      if (url.endsWith("/generate-report")) return json({ sbom_url: `https://api.github.com/repos/o/r/dependency-graph/sbom/fetch-report/${uuid}` }, 201);
+      if (url.includes("/fetch-report/")) return new Response(null, { status: 302, headers: { Location: downloadUrl } });
+      if (url === downloadUrl) return json({ sbom: { SPDXID: "SPDXRef-DOCUMENT" } }, 200);
+      throw new Error(`unexpected ${url}`);
+    };
+    const result = await getRepoDependencyGraphSbom({ accessToken: "tok-secret", owner: "o", repo: "r", fetch: fetchSeq, sleep: async () => {} });
+    expect(result).toMatchObject({ sbom: { sbom: { SPDXID: "SPDXRef-DOCUMENT" } } });
+    for (const call of seen) {
+      if (new URL(call.url).hostname === "api.github.com") {
+        expect(call.headers.authorization, call.url).toBe("Bearer tok-secret");
+        continue;
+      }
+      expect(call.url).toBe(downloadUrl);
+      expect(call.headers.authorization).toBeUndefined();
+      const leaked = Object.keys(call.headers).filter((key) => key.startsWith("x-github") || key === "authorization" || key === "cookie");
+      expect(leaked).toEqual([]);
+      expect(JSON.stringify(call.headers)).not.toContain("tok-secret");
+    }
+    expect(seen.filter((c) => c.url === downloadUrl)).toHaveLength(1);
+  });
+
+  test("sbom download 401 from the pre-signed Location is an upstream error with no auth retry", async () => {
+    const uuid = "eeeeeeee-bbbb-cccc-dddd-eeeeeeeeeeee";
+    const downloadUrl = `https://objects.githubusercontent.com/github-production-sbom/${uuid}/sbom.json`;
+    const downloads: Record<string, string>[] = [];
+    const fetchSeq = async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url.endsWith("/generate-report")) return json({ sbom_url: `https://api.github.com/repos/o/r/dependency-graph/sbom/fetch-report/${uuid}` }, 201);
+      if (url.includes("/fetch-report/")) return new Response(null, { status: 302, headers: { Location: downloadUrl } });
+      if (url === downloadUrl) {
+        const headers: Record<string, string> = {};
+        new Headers(init?.headers).forEach((value, key) => { headers[key.toLowerCase()] = value; });
+        downloads.push(headers);
+        return json({ message: "expired" }, 401);
+      }
+      throw new Error(`unexpected ${url}`);
+    };
+    await expect(getRepoDependencyGraphSbom({ accessToken: "tok", owner: "o", repo: "r", fetch: fetchSeq, sleep: async () => {} }))
+      .rejects.toMatchObject({ code: "CONNECTOR_UPSTREAM_ERROR" });
+    expect(downloads).toHaveLength(1);
+    expect(downloads[0]!.authorization).toBeUndefined();
+  });
+
   test("codeql database get returns the 302 Location and does not follow or return bytes", async () => {
     const calls: string[] = [];
     const fetchRedirect = async (input: RequestInfo | URL, init?: RequestInit) => {
