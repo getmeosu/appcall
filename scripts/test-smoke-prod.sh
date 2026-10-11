@@ -46,6 +46,11 @@ if [ "${1:-}" = "inspect" ]; then
   exit 0
 fi
 
+if [ "${1:-}" = "tag" ]; then
+  printf 'tag=%s %s\n' "$2" "$3" >> "$log"
+  exit 0
+fi
+
 [ "${1:-}" = "compose" ] || exit 0
 shift
 project=unknown
@@ -83,6 +88,9 @@ if [[ "$args" == down\ * ]] && [ "${SMOKE_DOCKER_FAIL_DOWN:-0}" = "1" ]; then
 fi
 
 case "$args" in
+  "config --format json")
+    printf '{"services":{"api":{"image":"%s-api"},"worker":{"image":"%s-worker"},"runner":{"image":"%s-runner"},"db":{"image":"postgres:16"}}}\n' "$project" "$project" "$project"
+    ;;
   "port api 5080")
     printf '127.0.0.1:51890\n'
     ;;
@@ -293,6 +301,10 @@ if grep -q -- '--build' "$prebuilt_log"; then
   printf '%s\n' 'prebuilt images were rebuilt' >&2
   exit 1
 fi
+prebuilt_project=$(sed -n 's/^project=\([^ ]*\) .*$/\1/p' "$prebuilt_log" | head -1)
+[ "$(grep -c "tag=appcall-api:ci ${prebuilt_project}-api" "$prebuilt_log")" -eq 1 ]
+[ "$(grep -c "tag=appcall-api:ci ${prebuilt_project}-worker" "$prebuilt_log")" -eq 1 ]
+[ "$(grep -c "tag=appcall-runner:ci ${prebuilt_project}-runner" "$prebuilt_log")" -eq 1 ]
 
 partial_output="$TEST_ROOT/partial-image.out"
 if KEEP_STACK=1 \

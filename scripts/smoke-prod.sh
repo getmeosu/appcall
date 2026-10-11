@@ -204,17 +204,34 @@ compose exec -T db psql -U appcall -d appcall -v ON_ERROR_STOP=1 <<'SQL'
 SELECT 'CREATE DATABASE anusa_smoke' WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname='anusa_smoke')\gexec
 SQL
 
-# Compose names an untagged build `${PROJECT}-${service}`. Retag the CI
-# images onto those names. api and worker share Dockerfile.api.
+# Ask Compose which image name each service will run, then point those names
+# at the CI archive. api and worker share Dockerfile.api and differ by
+# entrypoint, so both get the API image. Naming stays Compose's decision
+# (`project-service` vs `project_service`).
 if [ -n "${APPCALL_SMOKE_API_IMAGE:-}${APPCALL_SMOKE_RUNNER_IMAGE:-}" ]; then
   if [ -z "${APPCALL_SMOKE_API_IMAGE:-}" ] || [ -z "${APPCALL_SMOKE_RUNNER_IMAGE:-}" ]; then
     fail "set both APPCALL_SMOKE_API_IMAGE and APPCALL_SMOKE_RUNNER_IMAGE"
   fi
   docker_bounded image inspect "$APPCALL_SMOKE_API_IMAGE" >/dev/null
   docker_bounded image inspect "$APPCALL_SMOKE_RUNNER_IMAGE" >/dev/null
-  docker_bounded tag "$APPCALL_SMOKE_API_IMAGE" "${PROJECT}-api"
-  docker_bounded tag "$APPCALL_SMOKE_API_IMAGE" "${PROJECT}-worker"
-  docker_bounded tag "$APPCALL_SMOKE_RUNNER_IMAGE" "${PROJECT}-runner"
+  config_json=$(compose config --format json)
+  APPCALL_SMOKE_API_IMAGE="$APPCALL_SMOKE_API_IMAGE" \
+    APPCALL_SMOKE_RUNNER_IMAGE="$APPCALL_SMOKE_RUNNER_IMAGE" \
+    python3 -c '
+import json, os, subprocess, sys
+services = json.load(sys.stdin)["services"]
+api = os.environ["APPCALL_SMOKE_API_IMAGE"]
+runner = os.environ["APPCALL_SMOKE_RUNNER_IMAGE"]
+tags = (
+    (api, services["api"]["image"]),
+    (api, services["worker"]["image"]),
+    (runner, services["runner"]["image"]),
+)
+for src, dest in tags:
+    if not dest:
+        raise SystemExit("compose service is missing an image name")
+    subprocess.check_call(["docker", "tag", src, dest])
+' <<<"$config_json"
   SKIP_BUILD=1
 fi
 
