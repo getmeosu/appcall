@@ -1,8 +1,7 @@
 import { createConnectorHttpClient } from "../../../bun/src/http";
 import manifest from "../manifest.json";
 import { createKlaviyoClient, isRecord, parseKlaviyoRateLimit } from "./http";
-
-const CLIENT_REVISION = "2026-07-15";
+import { REVISION } from "./revision";
 
 type Failure = { ok: false; code: string; message: string; retryAfterSeconds?: number };
 
@@ -91,7 +90,7 @@ async function publicPost(action: string, path: string, input: Record<string, un
   const response = await http.fetchText(url, {
     method: "POST",
     headers: {
-      revision: CLIENT_REVISION,
+      revision: REVISION,
       accept: "application/vnd.api+json",
       "content-type": "application/vnd.api+json",
     },
@@ -169,7 +168,7 @@ export async function uploadImageFromFile(input: unknown): Promise<Record<string
     method: "POST",
     headers: {
       Authorization: `Klaviyo-API-Key ${record.apiKey}`,
-      revision: CLIENT_REVISION,
+      revision: REVISION,
       accept: "application/vnd.api+json",
     },
     body: form,

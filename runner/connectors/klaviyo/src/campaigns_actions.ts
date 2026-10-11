@@ -35,26 +35,22 @@ export async function createCampaignFromClient(
   const rawData = isRecord(input) && isRecord(input.data) ? input.data : undefined;
   const payload = rawData ? { name: "", channel: "email" as const } : validateCreateCampaignInput(input);
   const client = createKlaviyoClient({ apiKey: options.apiKey, fetch: options.fetch, operation: "campaigns.create" });
-  const attrs: Record<string, unknown> = {
-    name: payload.name,
-    channel: payload.channel,
-  };
-  if (payload.sendTime) attrs.send_time = payload.sendTime;
+  // KV-0 (current REVISION, see ./revision): campaign messages carry their channel and
+  // content under `definition` inside the `campaign-messages` attribute
+  // (hyphen key), the audience goes in `audiences.included`, and a scheduled time
+  // goes in a static `send_strategy`. The caller contract (inputs/outputs) is
+  // unchanged; only the upstream body shape moved.
+  const attrs: Record<string, unknown> = { name: payload.name };
+  if (payload.listId) attrs.audiences = { included: [payload.listId] };
+  if (payload.sendTime) attrs.send_strategy = { method: "static", datetime: payload.sendTime };
 
-  // Build the campaign message sub-object if email details provided
-  const campaignMsg: Record<string, unknown> = {};
-  if (payload.fromEmail) campaignMsg.from_email = payload.fromEmail;
-  if (payload.fromLabel) campaignMsg.from_label = payload.fromLabel;
-  if (payload.subject) campaignMsg.subject = payload.subject;
-  if (Object.keys(campaignMsg).length > 0) attrs.campaign_messages = { data: [{ type: "campaign-message", attributes: campaignMsg }] };
-
-  const relationships: Record<string, unknown> = {};
-  if (payload.listId) {
-    relationships.lists = { data: [{ type: "list", id: payload.listId }] };
-  }
+  const content: Record<string, unknown> = {};
+  if (payload.subject) content.subject = payload.subject;
+  if (payload.fromEmail) content.from_email = payload.fromEmail;
+  if (payload.fromLabel) content.from_label = payload.fromLabel;
+  attrs["campaign-messages"] = { data: [{ type: "campaign-message", attributes: { definition: { channel: payload.channel, content } } }] };
 
   const body: Record<string, unknown> = rawData ? { data: rawData } : { data: { type: "campaign", attributes: attrs } };
-  if (Object.keys(relationships).length > 0) (body.data as Record<string, unknown>).relationships = relationships;
 
   const result = await client.fetchJSON("/campaigns", {
     method: "POST",

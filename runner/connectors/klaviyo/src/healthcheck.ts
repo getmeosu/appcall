@@ -1,8 +1,7 @@
 import { isRecord } from "./http";
 import { ConnectorHttpError, createConnectorHttpClient } from "../../../bun/src/http";
 import manifest from "../manifest.json";
-
-const REVISION = "2024-10-15";
+import { REVISION } from "./revision";
 
 // Static result returned by the no-credential setup-validation path (the
 // connector is registered and reachable as code, but no provider call is made).
@@ -15,7 +14,7 @@ export type ProviderHealthcheckResult = { connector: "klaviyo"; status: "ok"; so
 // present in `input`, and otherwise returns the static connector-owned status.
 //
 //   • input.apiKey → GET https://a.klaviyo.com/api/lists?page[size]=1
-//                    (Authorization: Klaviyo-API-Key <key>, revision: 2024-10-15)
+//                    (Authorization: Klaviyo-API-Key <key>, revision: REVISION from ./revision)
 //   • neither      → static { source: "connector" } (setup-validation path)
 //
 // A `fetch` may be injected via input.fetch for tests (same pattern as actions).

@@ -49,7 +49,7 @@ describe("klaviyo healthcheck", () => {
     expect(headers["Authorization"]).toBe("Klaviyo-API-Key good");
 
     // Verify required revision header is present
-    expect(headers["revision"]).toBe("2024-10-15");
+    expect(headers["revision"]).toBe("2026-07-15");
   });
 
   it("rejects with CONNECTOR_UPSTREAM_ERROR on 401", async () => {
