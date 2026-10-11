@@ -9,9 +9,9 @@
  * candidates.search       → authenticated POST /candidate.search
  * interviews.list         → authenticated POST /interview.list
  * candidates.create       → POST /candidate.create
- *                           (runner EffectPolicy Idempotent → candidates.get)
+ *                           (no effect keys: creates always omit)
  * applications.create     → POST /application.create
- *                           (runner EffectPolicy Idempotent → applications.get)
+ *                           (no effect keys: creates always omit)
  * applications.move       → POST /application.changeStage
  *                           (runner EffectPolicy Reconcile → applications.get)
  * applications.reject     → POST /application.changeStage (Archived + archiveReasonId)
@@ -419,7 +419,7 @@ export async function executeApplicationsHireSync(
 
 // ---------------------------------------------------------------------------
 // candidates.create — POST /candidate.create
-// Runtime owns EffectPolicy Idempotent → candidates.get
+// No effect keys: creates always omit (a retry after a lost response would double-POST).
 // ---------------------------------------------------------------------------
 
 export interface ExecuteCandidatesCreateSyncInput extends AshbyAuthInput {
@@ -445,7 +445,7 @@ export interface ExecuteCandidatesCreateSyncInput extends AshbyAuthInput {
 }
 
 export interface ExecuteCandidatesCreateSyncOutput {
-  /** Raw Ashby results payload; runner Idempotent replaces with candidates.get. */
+  /** Raw Ashby results payload (no runner observe; creates omit effect keys). */
   id?: string;
   [key: string]: unknown;
 }
@@ -481,14 +481,14 @@ export async function executeCandidatesCreateSync(
     fetch: input.fetch,
     operation: "candidates.create",
   });
-  // POST only — runner EffectPolicy Idempotent observes via candidates.get.
+  // POST only — no effect keys; the runner never retries this create.
   const raw = await client.postJSON("/candidate.create", body);
   return unwrapAshbyCreateResults(raw, "candidates.create");
 }
 
 // ---------------------------------------------------------------------------
 // applications.create — POST /application.create
-// Runtime owns EffectPolicy Idempotent → applications.get
+// No effect keys: creates always omit (a retry after a lost response would double-POST).
 // ---------------------------------------------------------------------------
 
 export interface ExecuteApplicationsCreateSyncInput extends AshbyAuthInput {
@@ -508,7 +508,7 @@ export interface ExecuteApplicationsCreateSyncInput extends AshbyAuthInput {
 }
 
 export interface ExecuteApplicationsCreateSyncOutput {
-  /** Raw Ashby results payload; runner Idempotent replaces with applications.get. */
+  /** Raw Ashby results payload (no runner observe; creates omit effect keys). */
   id?: string;
   [key: string]: unknown;
 }
@@ -531,7 +531,7 @@ export async function executeApplicationsCreateSync(
     fetch: input.fetch,
     operation: "applications.create",
   });
-  // POST only — runner EffectPolicy Idempotent observes via applications.get.
+  // POST only — no effect keys; the runner never retries this create.
   const raw = await client.postJSON("/application.create", body);
   return unwrapAshbyCreateResults(raw, "applications.create");
 }

@@ -6,8 +6,8 @@ describe("Ashby manifest", () => {
     expect(manifest.key).toBe("ashby");
   });
 
-  it("has version 0.8.0", () => {
-    expect(manifest.version).toBe("0.8.0");
+  it("has version 0.9.0", () => {
+    expect(manifest.version).toBe("0.9.0");
   });
 
   it("uses bun runtime", () => {
@@ -33,10 +33,11 @@ describe("Ashby manifest", () => {
     expect(manifest.operations.healthcheck.kind).toBe("action");
   });
 
-  it("declares tip+G1+G2 operations", () => {
+  it("declares tip+G1+G2+G3 operations", () => {
     expect(Object.keys(manifest.operations).sort()).toEqual([
       "application_feedback.list",
       "application_feedback.submit",
+      "application_hiring_team_roles.list",
       "applications.change_source",
       "applications.create",
       "applications.get",
@@ -59,6 +60,8 @@ describe("Ashby manifest", () => {
       "candidates.search",
       "candidates.update",
       "close_reasons.list",
+      "communication_templates.list",
+      "departments.get",
       "departments.list",
       "healthcheck",
       "hiring_team.add_member",
@@ -81,16 +84,28 @@ describe("Ashby manifest", () => {
       "jobs.search",
       "jobs.set_status",
       "jobs.update",
+      "locations.get",
+      "locations.list",
+      "offer_processes.start",
+      "offers.create",
       "offers.get",
       "offers.list",
+      "offers.start",
+      "openings.add_job",
+      "openings.add_location",
       "openings.create",
       "openings.get",
       "openings.list",
+      "openings.remove_job",
+      "openings.remove_location",
       "openings.search",
+      "openings.set_archived",
+      "openings.set_state",
       "openings.update",
       "sources.list",
       "users.get",
       "users.list",
+      "users.search",
       "webhook.application_submitted",
       "webhook.candidate_updated",
       "webhook.interview_scheduled",
@@ -120,30 +135,15 @@ describe("Ashby manifest", () => {
     }
   });
 
-  it("wires candidates.create EffectPolicy Idempotent to candidates.get", () => {
-    const create = manifest.operations["candidates.create"] as {
-      kind: string;
-      sideEffect: string;
-      effectPolicy: string;
-      reconcile: string;
-    };
-    expect(create.kind).toBe("action");
-    expect(create.sideEffect).toBe("write");
-    expect(create.effectPolicy).toBe("Idempotent");
-    expect(create.reconcile).toBe("candidates.get");
-  });
-
-  it("wires applications.create EffectPolicy Idempotent to applications.get", () => {
-    const create = manifest.operations["applications.create"] as {
-      kind: string;
-      sideEffect: string;
-      effectPolicy: string;
-      reconcile: string;
-    };
-    expect(create.kind).toBe("action");
-    expect(create.sideEffect).toBe("write");
-    expect(create.effectPolicy).toBe("Idempotent");
-    expect(create.reconcile).toBe("applications.get");
+  it("omits all effect keys on tip candidates.create and applications.create (creates always omit)", () => {
+    for (const key of ["candidates.create", "applications.create"] as const) {
+      const create = manifest.operations[key] as Record<string, unknown>;
+      expect(create.kind).toBe("action");
+      expect(create.sideEffect).toBe("write");
+      expect(create.effectPolicy).toBeUndefined();
+      expect(create.reconcile).toBeUndefined();
+      expect(create.observe).toBeUndefined();
+    }
   });
 
   it("declares interviews.schedule|cancel as write actions", () => {
@@ -184,8 +184,8 @@ describe("Ashby manifest", () => {
     expect(update.reconcile).toBe("candidates.get");
   });
 
-  it("declares 60 operations (G2 +15) and no interview_schedules.get (Ashby-0 cite-drop)", () => {
-    expect(Object.keys(manifest.operations)).toHaveLength(60);
+  it("declares 75 operations (G3 +15) and no interview_schedules.get (Ashby-0 cite-drop)", () => {
+    expect(Object.keys(manifest.operations)).toHaveLength(75);
     expect(manifest.operations["interview_schedules.get"]).toBeUndefined();
   });
 
@@ -303,6 +303,67 @@ describe("Ashby manifest", () => {
       expect(op.kind).toBe("action");
       expect(op.sideEffect).toBe("read");
       expect((op as Record<string, unknown>).effectPolicy).toBeUndefined();
+    }
+  });
+  it("wires G3 opening writes Reconcile → openings.get", () => {
+    for (const key of [
+      "openings.set_archived",
+      "openings.set_state",
+      "openings.add_job",
+      "openings.remove_job",
+      "openings.add_location",
+      "openings.remove_location",
+    ] as const) {
+      const op = manifest.operations[key] as Record<string, unknown>;
+      expect(op.kind).toBe("action");
+      expect(op.sideEffect).toBe("write");
+      expect(op.effectPolicy).toBe("Reconcile");
+      expect(op.reconcile).toBe("openings.get");
+      expect(op.observe).toBeUndefined();
+    }
+  });
+
+  it("omits all effect keys on G3 creates (offers.create, offers.start, offer_processes.start)", () => {
+    for (const key of ["offers.create", "offers.start", "offer_processes.start"] as const) {
+      const op = manifest.operations[key] as Record<string, unknown>;
+      expect(op.kind).toBe("action");
+      expect(op.sideEffect).toBe("write");
+      expect(op.effectPolicy).toBeUndefined();
+      expect(op.reconcile).toBeUndefined();
+      expect(op.observe).toBeUndefined();
+    }
+  });
+
+  it("marks G3 reads as agent-tool actions without effect keys", () => {
+    for (const key of [
+      "locations.list",
+      "locations.get",
+      "departments.get",
+      "users.search",
+      "communication_templates.list",
+      "application_hiring_team_roles.list",
+    ] as const) {
+      const op = manifest.operations[key] as Record<string, unknown>;
+      expect(op.kind).toBe("action");
+      expect(op.sideEffect).toBe("read");
+      expect(op.effectPolicy).toBeUndefined();
+      expect(op.reconcile).toBeUndefined();
+    }
+  });
+
+  it("has no Idempotent op and no create-like op carrying effect keys", () => {
+    const createLike = /\.(create|create_\w+|start|submit)$|^offer_processes\.start$/;
+    for (const [key, raw] of Object.entries(manifest.operations)) {
+      const op = raw as Record<string, unknown>;
+      expect([key, op.effectPolicy]).not.toEqual([key, "Idempotent"]);
+      if (createLike.test(key)) {
+        expect([key, op.effectPolicy, op.reconcile, op.observe]).toEqual([
+          key,
+          undefined,
+          undefined,
+          undefined,
+        ]);
+      }
     }
   });
 });

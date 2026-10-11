@@ -1,7 +1,7 @@
 {
   "key": "ashby",
   "name": "Ashby",
-  "version": "0.8.0",
+  "version": "0.9.0",
   "runtime": "bun",
   "categories": [
     "ats-recruitment"
@@ -98,13 +98,11 @@
     "applications.create": {
       "kind": "action",
       "sideEffect": "write",
-      "effectPolicy": "Idempotent",
-      "reconcile": "applications.get",
       "timeoutMs": 20000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 1048576,
       "title": "Create application",
-      "description": "Consider a candidate for a job via authenticated POST /application.create. Requires candidateId and jobId. EffectPolicy Idempotent observes the created application via applications.get.",
+      "description": "Consider a candidate for a job via authenticated POST /application.create. Requires candidateId and jobId. No effect keys (creates always omit; a retry after a lost response would double-POST).",
       "inputSchema": {
         "type": "object",
         "additionalProperties": false,
@@ -163,13 +161,11 @@
     "candidates.create": {
       "kind": "action",
       "sideEffect": "write",
-      "effectPolicy": "Idempotent",
-      "reconcile": "candidates.get",
       "timeoutMs": 20000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 1048576,
       "title": "Create candidate",
-      "description": "Create a candidate via authenticated POST /candidate.create. Requires name. AppCall websiteUrl maps to Ashby native body field website. EffectPolicy Idempotent observes the created candidate via candidates.get.",
+      "description": "Create a candidate via authenticated POST /candidate.create. Requires name. AppCall websiteUrl maps to Ashby native body field website. No effect keys (creates always omit; a retry after a lost response would double-POST).",
       "inputSchema": {
         "type": "object",
         "additionalProperties": false,
@@ -1719,7 +1715,7 @@
       "maxInputBytes": 65536,
       "maxResponseBytes": 1048576,
       "title": "Get opening",
-      "description": "Fetch an opening via authenticated POST /opening.info. Requires openingId (or id alias for Idempotent observe from openings.create). Observe for openings.create/update. Agent tool.",
+      "description": "Fetch an opening via authenticated POST /opening.info. Requires openingId (id accepted as alias). Returns the raw opening (isArchived, openingState, latestVersion.jobIds/locationIds). Observe for openings.update and G3 opening writes. Agent tool.",
       "inputSchema": {
         "type": "object",
         "additionalProperties": false,
@@ -1887,6 +1883,434 @@
             "description": "Include archived close reasons."
           }
         }
+      }
+    },
+    "openings.set_archived": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Set opening archived",
+      "description": "Archive or unarchive an opening via authenticated POST /opening.setArchived. Requires openingId and archive (boolean). EffectPolicy Reconcile observes via openings.get.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "openingId": {
+            "type": "string",
+            "description": "Opening UUID."
+          },
+          "archive": {
+            "type": "boolean",
+            "description": "true to archive, false to unarchive."
+          }
+        },
+        "required": [
+          "openingId",
+          "archive"
+        ]
+      },
+      "effectPolicy": "Reconcile",
+      "reconcile": "openings.get"
+    },
+    "openings.set_state": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Set opening state",
+      "description": "Set an opening state via authenticated POST /opening.setOpeningState. Requires openingId and openingState (Draft|Approved|Open|Closed). Optional closeReasonId when Closed. EffectPolicy Reconcile observes via openings.get.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "openingId": {
+            "type": "string",
+            "description": "Opening UUID."
+          },
+          "openingState": {
+            "type": "string",
+            "enum": [
+              "Draft",
+              "Approved",
+              "Open",
+              "Closed"
+            ],
+            "description": "Target opening state."
+          },
+          "closeReasonId": {
+            "type": "string",
+            "description": "Close reason UUID when setting Closed."
+          }
+        },
+        "required": [
+          "openingId",
+          "openingState"
+        ]
+      },
+      "effectPolicy": "Reconcile",
+      "reconcile": "openings.get"
+    },
+    "openings.add_job": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Add job to opening",
+      "description": "Attach an existing job to an opening via authenticated POST /opening.addJob. Requires openingId and jobId. EffectPolicy Reconcile observes via openings.get.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "openingId": {
+            "type": "string",
+            "description": "Opening UUID."
+          },
+          "jobId": {
+            "type": "string",
+            "description": "Job UUID to attach."
+          }
+        },
+        "required": [
+          "openingId",
+          "jobId"
+        ]
+      },
+      "effectPolicy": "Reconcile",
+      "reconcile": "openings.get"
+    },
+    "openings.remove_job": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Remove job from opening",
+      "description": "Detach a job from an opening via authenticated POST /opening.removeJob. Requires openingId and jobId. EffectPolicy Reconcile observes via openings.get.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "openingId": {
+            "type": "string",
+            "description": "Opening UUID."
+          },
+          "jobId": {
+            "type": "string",
+            "description": "Job UUID to detach."
+          }
+        },
+        "required": [
+          "openingId",
+          "jobId"
+        ]
+      },
+      "effectPolicy": "Reconcile",
+      "reconcile": "openings.get"
+    },
+    "openings.add_location": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Add location to opening",
+      "description": "Attach an existing location to an opening via authenticated POST /opening.addLocation. Requires openingId and locationId. EffectPolicy Reconcile observes via openings.get.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "openingId": {
+            "type": "string",
+            "description": "Opening UUID."
+          },
+          "locationId": {
+            "type": "string",
+            "description": "Location UUID to attach."
+          }
+        },
+        "required": [
+          "openingId",
+          "locationId"
+        ]
+      },
+      "effectPolicy": "Reconcile",
+      "reconcile": "openings.get"
+    },
+    "openings.remove_location": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Remove location from opening",
+      "description": "Detach a location from an opening via authenticated POST /opening.removeLocation. Requires openingId and locationId. EffectPolicy Reconcile observes via openings.get.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "openingId": {
+            "type": "string",
+            "description": "Opening UUID."
+          },
+          "locationId": {
+            "type": "string",
+            "description": "Location UUID to detach."
+          }
+        },
+        "required": [
+          "openingId",
+          "locationId"
+        ]
+      },
+      "effectPolicy": "Reconcile",
+      "reconcile": "openings.get"
+    },
+    "locations.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "List locations",
+      "description": "List locations via authenticated POST /location.list. Regions are not returned. Optional includeArchived, includeLocationHierarchy, limit, cursor, syncToken. Agent tool.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "includeArchived": {
+            "type": "boolean",
+            "description": "Include archived locations."
+          },
+          "includeLocationHierarchy": {
+            "type": "boolean",
+            "description": "Include location hierarchy nodes."
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Page size (max 100)."
+          },
+          "cursor": {
+            "type": "string",
+            "description": "Opaque pagination cursor."
+          },
+          "syncToken": {
+            "type": "string",
+            "description": "Incremental sync token."
+          }
+        }
+      }
+    },
+    "locations.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get location",
+      "description": "Fetch a location via authenticated POST /location.info. Requires locationId. Agent tool.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "locationId": {
+            "type": "string",
+            "description": "Location UUID."
+          }
+        },
+        "required": [
+          "locationId"
+        ]
+      }
+    },
+    "departments.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get department",
+      "description": "Fetch a department via authenticated POST /department.info. Requires departmentId. Agent tool.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "departmentId": {
+            "type": "string",
+            "description": "Department UUID."
+          }
+        },
+        "required": [
+          "departmentId"
+        ]
+      }
+    },
+    "users.search": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Search users",
+      "description": "Search users by email via authenticated POST /user.search. Requires email. Returns [] when no user matches. Agent tool.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "email": {
+            "type": "string",
+            "description": "User email address."
+          }
+        },
+        "required": [
+          "email"
+        ]
+      }
+    },
+    "offers.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Create offer",
+      "description": "Create an offer via authenticated POST /offer.create from an offer version started with offers.start. Requires offerProcessId, offerFormId and offerForm.fieldSubmissions[{path, value}]. No effect keys (creates always omit; a retry after a lost response would create a second record).",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "offerProcessId": {
+            "type": "string",
+            "description": "Offer process UUID."
+          },
+          "offerFormId": {
+            "type": "string",
+            "description": "Offer form (version) UUID returned by offers.start."
+          },
+          "offerForm": {
+            "type": "object",
+            "description": "Offer form submission.",
+            "properties": {
+              "fieldSubmissions": {
+                "type": "array",
+                "description": "Field values keyed by form field path.",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "path": {
+                      "type": "string",
+                      "description": "Form field path."
+                    },
+                    "value": {
+                      "description": "Field value (type depends on the field)."
+                    }
+                  },
+                  "required": [
+                    "path",
+                    "value"
+                  ]
+                }
+              }
+            },
+            "required": [
+              "fieldSubmissions"
+            ]
+          },
+          "excludeFormDefinition": {
+            "type": "boolean",
+            "description": "Omit formDefinition from the response."
+          }
+        },
+        "required": [
+          "offerProcessId",
+          "offerFormId",
+          "offerForm"
+        ]
+      }
+    },
+    "offers.start": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Start offer",
+      "description": "Start a new offer version for an offer process via authenticated POST /offer.start. Requires offerProcessId. Returns the version id and formDefinition to fill with offers.create. No effect keys (creates always omit; a retry after a lost response would create a second record).",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "offerProcessId": {
+            "type": "string",
+            "description": "Offer process UUID."
+          }
+        },
+        "required": [
+          "offerProcessId"
+        ]
+      }
+    },
+    "offer_processes.start": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Start offer process",
+      "description": "Start an offer process for an application via authenticated POST /offerProcess.start. Requires applicationId. No effect keys (creates always omit; a retry after a lost response would create a second record).",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "applicationId": {
+            "type": "string",
+            "description": "Application UUID."
+          }
+        },
+        "required": [
+          "applicationId"
+        ]
+      }
+    },
+    "communication_templates.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "List communication templates",
+      "description": "List enabled communication templates via authenticated POST /communicationTemplate.list. Optional ownershipFilter. Agent tool.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "ownershipFilter": {
+            "type": "string",
+            "enum": [
+              "org",
+              "personal",
+              "personalAndOrg"
+            ],
+            "description": "Template ownership filter."
+          }
+        }
+      }
+    },
+    "application_hiring_team_roles.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "List application hiring team roles",
+      "description": "List hiring team roles available on applications via authenticated POST /applicationHiringTeamRole.list. No inputs. Agent tool.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
       }
     }
   },

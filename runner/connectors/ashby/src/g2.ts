@@ -4,10 +4,10 @@
  * All POST RPC against api.ashbyhq.com. Auth: tip createAuthClient.
  *
  * Effect keys (/workspace/parity-briefs/ashby-g2-selflock.md):
- * - jobs.create Idempotent → jobs.get
+ * - jobs.create omits effect keys (creates always omit)
  * - jobs.update / jobs.set_status Reconcile → jobs.get
  * - job_postings.update Reconcile → job_postings.get
- * - openings.create Idempotent → openings.get
+ * - openings.create omits effect keys (creates always omit)
  * - openings.update Reconcile → openings.get
  * - other creates omitted (none); reads omit
  */
@@ -138,7 +138,7 @@ export async function executeJobsSearch(input: ExecuteJobsSearchInput) {
 }
 
 // ---------------------------------------------------------------------------
-// 3. jobs.create — POST /job.create · Idempotent → jobs.get
+// 3. jobs.create — POST /job.create · no effect keys (create)
 // ---------------------------------------------------------------------------
 
 export interface ExecuteJobsCreateInput extends AshbyAuthInput {
@@ -405,7 +405,7 @@ export async function executeOpeningsSearch(input: ExecuteOpeningsSearchInput) {
 }
 
 // ---------------------------------------------------------------------------
-// 13. openings.create — POST /opening.create · Idempotent → openings.get
+// 13. openings.create — POST /opening.create · no effect keys (create)
 // ---------------------------------------------------------------------------
 
 export interface ExecuteOpeningsCreateInput extends AshbyAuthInput {
