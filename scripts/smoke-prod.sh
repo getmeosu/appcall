@@ -13,8 +13,10 @@
 #
 # Usage: scripts/smoke-prod.sh (APPCALL_SMOKE_PORT=0 chooses an ephemeral port;
 # KEEP_STACK=1 retains the isolated stack and its temp env/log directory).
-# SKIP_BUILD=1 is only for diagnosing a known existing image; final qualification
-# uses the default build so the tested image contains the current source.
+# SKIP_BUILD=1 skips compose build. CI sets APPCALL_SMOKE_API_IMAGE and
+# APPCALL_SMOKE_RUNNER_IMAGE to the images the image job already built, so
+# this script does not compile Rust a second time. A local qualification
+# leaves both unset and builds from the current source.
 set -euo pipefail
 umask 077
 
@@ -201,6 +203,20 @@ compose_start -d --wait db
 compose exec -T db psql -U appcall -d appcall -v ON_ERROR_STOP=1 <<'SQL'
 SELECT 'CREATE DATABASE anusa_smoke' WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname='anusa_smoke')\gexec
 SQL
+
+# Compose names an untagged build `${PROJECT}-${service}`. Retag the CI
+# images onto those names. api and worker share Dockerfile.api.
+if [ -n "${APPCALL_SMOKE_API_IMAGE:-}${APPCALL_SMOKE_RUNNER_IMAGE:-}" ]; then
+  if [ -z "${APPCALL_SMOKE_API_IMAGE:-}" ] || [ -z "${APPCALL_SMOKE_RUNNER_IMAGE:-}" ]; then
+    fail "set both APPCALL_SMOKE_API_IMAGE and APPCALL_SMOKE_RUNNER_IMAGE"
+  fi
+  docker_bounded image inspect "$APPCALL_SMOKE_API_IMAGE" >/dev/null
+  docker_bounded image inspect "$APPCALL_SMOKE_RUNNER_IMAGE" >/dev/null
+  docker_bounded tag "$APPCALL_SMOKE_API_IMAGE" "${PROJECT}-api"
+  docker_bounded tag "$APPCALL_SMOKE_API_IMAGE" "${PROJECT}-worker"
+  docker_bounded tag "$APPCALL_SMOKE_RUNNER_IMAGE" "${PROJECT}-runner"
+  SKIP_BUILD=1
+fi
 
 step "building + booting the stack (waits on all healthchecks)"
 if [ "${SKIP_BUILD:-0}" = "1" ]; then

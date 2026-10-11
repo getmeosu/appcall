@@ -274,4 +274,38 @@ timeout_retained_dir=$(sed -n 's/^run directory retained at //p' "$cleanup_timeo
 [ -d "$timeout_retained_dir" ]
 [ -f "$timeout_retained_dir/env" ]
 
+prebuilt_log="$TEST_ROOT/docker-prebuilt.log"
+prebuilt_curl="$TEST_ROOT/curl-prebuilt.log"
+: > "$prebuilt_log"
+: > "$prebuilt_curl"
+chmod 600 "$prebuilt_log" "$prebuilt_curl"
+KEEP_STACK=1 \
+  APPCALL_SMOKE_PORT=5096 \
+  APPCALL_SMOKE_API_IMAGE=appcall-api:ci \
+  APPCALL_SMOKE_RUNNER_IMAGE=appcall-runner:ci \
+  TMPDIR="$RUN_TMP" \
+  PATH="$FAKE_BIN:$PATH" \
+  SMOKE_DOCKER_LOG="$prebuilt_log" \
+  SMOKE_CURL_LOG="$prebuilt_curl" \
+  "$SMOKE" >/dev/null
+grep -q 'command=up -d --no-build --wait' "$prebuilt_log"
+if grep -q -- '--build' "$prebuilt_log"; then
+  printf '%s\n' 'prebuilt images were rebuilt' >&2
+  exit 1
+fi
+
+partial_output="$TEST_ROOT/partial-image.out"
+if KEEP_STACK=1 \
+  APPCALL_SMOKE_PORT=5097 \
+  APPCALL_SMOKE_API_IMAGE=appcall-api:ci \
+  TMPDIR="$RUN_TMP" \
+  PATH="$FAKE_BIN:$PATH" \
+  SMOKE_DOCKER_LOG="$DOCKER_LOG" \
+  SMOKE_CURL_LOG="$CURL_LOG" \
+  "$SMOKE" >"$partial_output" 2>&1; then
+  printf '%s\n' 'expected a single prebuilt image to fail' >&2
+  exit 1
+fi
+grep -q 'set both APPCALL_SMOKE_API_IMAGE and APPCALL_SMOKE_RUNNER_IMAGE' "$partial_output"
+
 printf '%s\n' 'smoke-prod safety fixture passed'
