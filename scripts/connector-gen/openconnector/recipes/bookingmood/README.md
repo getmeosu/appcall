@@ -8,7 +8,7 @@ Create an API key from the organization settings page in the Bookingmood admin d
 
 ## Operations
 
-Read, write, search, book, and EventOnly webhook operations for products, bookings, availability, organizations, sites, contacts, invoices, calendar events, webhooks, and booking details. Existing keys `healthcheck`, `products.list`, `bookings.list`, and `availability.get` are unchanged.
+Read, write, search, book, EventOnly webhooks, and Composio-parity list/update/delete/create operations across Bookingmood PostgREST resources. Existing keys are unchanged.
 
 Successful action responses are raw provider JSON under AppCall `data`. Incoming vendor events are declared as `kind: webhook` EventOnly operations.
 

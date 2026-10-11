@@ -1,17 +1,18 @@
-# Asana
+# Asana recipe evidence
 
-**HOLD.** Official Asana REST API documents Personal Access Tokens (Bearer) as well as OAuth, so this is not an OAuth-only edition. Catalog admission extracts action IDs only from `src/providers/asana/actions.ts`, which does not exist; actions live in split `actions-*.ts` files. This lane cannot add a `reviewed-action-ids` row. The recipe is not admitted.
+This prepared recipe retains the pinned OpenConnector source evidence and its
+`HOLD` catalog-admission status. The existing recipe catalog extractor reads
+`src/providers/asana/actions.ts`; the pinned source splits those definitions
+across `actions-*.ts`, so the recipe cannot safely claim source-ID admission
+until that extractor is corrected and independently reviewed.
 
-Documented operations (not admitted) would send `Authorization: Bearer` to `https://app.asana.com/api/1.0`:
+The operation inventory and embedded manifest have been synchronized with the
+prepared AppCall connector (203 operations, version 0.4.0). New operations were
+authored from the official [Asana REST API reference](https://developers.asana.com/reference/rest-api-reference).
+They are REST request declarations; the pinned OpenConnector code was not
+copied into the runner. Fixture data is synthetic and does not establish live
+provider behavior.
 
-- `healthcheck`: `GET /users/me?opt_fields=name,email`
-- `workspaces.list`: `GET /workspaces`
-- `users.get`: `GET /users/{userId}`
-- `projects.get`: `GET /projects/{projectId}`
-- `project-tasks.list`: `GET /projects/{projectId}/tasks`
-
-Native category is `productivity`.
-
-## License and evidence
-
-Upstream definitions are attributed to [oomol-lab/open-connector](https://github.com/oomol-lab/open-connector) (Apache-2.0) at `33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a`. Official docs: https://developers.asana.com/docs/personal-access-token. Fixtures are independently derived and do not represent live provider access.
+The provider uses Bearer authentication for personal access tokens and OAuth
+access tokens. Credential setup uses the `apiToken` secret field. Composio's
+ASANA toolkit is the comparison catalog, not an implementation source.

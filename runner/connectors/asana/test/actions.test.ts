@@ -55,7 +55,14 @@ describe("asana connector surface", () => {
       .filter(([, operation]) => operation.kind === "webhook")
       .map(([key]) => key)
       .sort();
-    expect(webhooks).toEqual(["webhook.story.added", "webhook.task.added", "webhook.task.changed"]);
+    expect(webhooks).toEqual([
+      "webhook.attachment.added",
+      "webhook.story.added",
+      "webhook.tag.added",
+      "webhook.task.added",
+      "webhook.task.changed",
+      "webhook.task.moved",
+    ]);
     for (const key of webhooks) {
       expect(actions[key]).toBeUndefined();
     }
