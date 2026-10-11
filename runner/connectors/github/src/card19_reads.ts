@@ -161,7 +161,7 @@ export function createCard19ReadsClient(options: {
         return upstream(`SBOM download host is not allowlisted: ${location.hostname}`);
       }
 
-      const downloaded = await fetchSbomDownload(fetchImpl, options.accessToken, location.toString());
+      const downloaded = await fetchSbomDownload(fetchImpl, location.toString());
       if (downloaded.status === 200 && isRecord(downloaded.body)) {
         return { ok: true as const, sbom: downloaded.body };
       }
@@ -286,12 +286,11 @@ async function fetchSbomReport(fetchImpl: typeof fetch, accessToken: string, pat
   }, "repos.dependency_graph.sbom.get");
 }
 
-async function fetchSbomDownload(fetchImpl: typeof fetch, accessToken: string, url: string) {
-  const withAuth = await fetchManualJson(fetchImpl, url, {
-    Authorization: `Bearer ${accessToken}`,
-    Accept: "application/json",
-  }, "repos.dependency_graph.sbom.get");
-  if (withAuth.status !== 401) return withAuth;
+async function fetchSbomDownload(fetchImpl: typeof fetch, url: string) {
+  // The Location is a temporary pre-signed URL (objects.githubusercontent.com).
+  // Never send Authorization or any GitHub header (X-GitHub-Api-Version,
+  // X-Github-Next-Global-ID, ...) to it: the signature is the credential.
+  // No retry: a 401/403 here is an upstream error, not a cue to re-auth.
   return fetchManualJson(fetchImpl, url, {
     Accept: "application/json",
   }, "repos.dependency_graph.sbom.get");
