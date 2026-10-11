@@ -6,8 +6,8 @@ describe("Intercom manifest", () => {
     expect(manifest.key).toBe("intercom");
   });
 
-  it("has version 0.6.0", () => {
-    expect(manifest.version).toBe("0.6.0");
+  it("has version 0.7.0", () => {
+    expect(manifest.version).toBe("0.7.0");
   });
 
   it("uses bun runtime", () => {
@@ -49,13 +49,17 @@ describe("Intercom manifest", () => {
       "companies.get",
       "companies.list",
       "companies.list_contacts",
+      "companies.list_notes",
+      "companies.scroll",
       "companies.update",
       "contacts.archive",
       "contacts.attach_company",
+      "contacts.block",
       "contacts.create",
       "contacts.delete",
       "contacts.detach_company",
       "contacts.get",
+      "contacts.get_by_external_id",
       "contacts.list",
       "contacts.list_companies",
       "contacts.list_tags",
@@ -81,6 +85,7 @@ describe("Intercom manifest", () => {
       "notes.get",
       "notes.list",
       "tags.create",
+      "tags.delete",
       "tags.get",
       "tags.list",
       "teams.get",
@@ -194,7 +199,7 @@ describe("Intercom manifest", () => {
 
   it("declares G1 ops with exact request shapes", () => {
     const ops = manifest.operations as Record<string, Record<string, unknown>>;
-    expect(Object.keys(ops)).toHaveLength(51);
+    expect(Object.keys(ops)).toHaveLength(56);
     expect(ops["conversations.reopen"].request).toEqual({
       method: "POST",
       path: "/conversations/{{id}}/parts",
@@ -355,6 +360,65 @@ describe("Intercom manifest", () => {
       expect(ops[key].reconcile).toBeUndefined();
     }
     for (const key of ["conversations.attach_contact", ...Object.keys(omitted)]) {
+      expect(String(ops[key].title ?? "").length).toBeGreaterThan(0);
+      expect(String(ops[key].description ?? "").length).toBeGreaterThan(0);
+      expect(ops[key].enforceOutputSchema).toBe(true);
+      expect(ops[key].validationMode).toBe("strict-generated");
+      expect((ops[key].inputSchema as { additionalProperties?: boolean }).additionalProperties).toBe(false);
+    }
+  });
+
+  it("declares G3 gate-closing ops with exact request shapes", () => {
+    const ops = manifest.operations as Record<string, Record<string, unknown>>;
+    expect(ops["contacts.block"].request).toEqual({ method: "POST", path: "/contacts/{{id}}/block", success: [200] });
+    expect(ops["contacts.get_by_external_id"].request).toEqual({
+      method: "GET",
+      path: "/contacts/find_by_external_id/{{externalId}}",
+      success: [200],
+    });
+    expect(ops["tags.delete"].request).toEqual({
+      method: "DELETE",
+      path: "/tags/{{id}}",
+      success: [200],
+      result: { data: { type: "tag", id: "{{input.id}}", deleted: true } },
+    });
+    expect(ops["companies.list_notes"].request).toEqual({
+      method: "GET",
+      path: "/companies/{{id}}/notes",
+      headers: { "Intercom-Version": "2.15" },
+      success: [200],
+    });
+    expect(ops["companies.scroll"].request).toEqual({
+      method: "GET",
+      path: "/companies/scroll",
+      query: { scroll_param: "{{scrollParam}}" },
+      success: [200],
+    });
+    expect((ops["companies.scroll"].inputSchema as { required?: string[] }).required).toBeUndefined();
+  });
+
+  it("keeps Intercom-Version 2.13 everywhere except the 2.15-only companies.list_notes", () => {
+    expect(manifest.http.headers["Intercom-Version"]).toBe("2.13");
+    const ops = manifest.operations as Record<string, { request?: { headers?: Record<string, string> } }>;
+    const overrides = Object.entries(ops)
+      .filter(([, op]) => op.request?.headers !== undefined)
+      .map(([key, op]) => [key, op.request?.headers]);
+    expect(overrides).toEqual([["companies.list_notes", { "Intercom-Version": "2.15" }]]);
+  });
+
+  it("wires G3 effects: all 5 omit effect keys", () => {
+    const ops = manifest.operations as Record<string, Record<string, unknown>>;
+    const sideEffects: Record<string, string> = {
+      "contacts.block": "destructive",
+      "tags.delete": "destructive",
+      "contacts.get_by_external_id": "read",
+      "companies.list_notes": "read",
+      "companies.scroll": "read",
+    };
+    for (const [key, sideEffect] of Object.entries(sideEffects)) {
+      expect(ops[key].sideEffect).toBe(sideEffect);
+      expect(ops[key].effectPolicy).toBeUndefined();
+      expect(ops[key].reconcile).toBeUndefined();
       expect(String(ops[key].title ?? "").length).toBeGreaterThan(0);
       expect(String(ops[key].description ?? "").length).toBeGreaterThan(0);
       expect(ops[key].enforceOutputSchema).toBe(true);
