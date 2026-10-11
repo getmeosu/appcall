@@ -85,7 +85,7 @@ describe("klaviyo KV-0 campaigns.create body (revision 2026-07-15 shape)", () =>
 
   it("sends no retired 2024-10-15 keys (campaign_messages, top-level channel/send_time, relationships)", async () => {
     const calls: Captured[] = [];
-    await createCampaign({ apiKey: "k", name: "S", channel: "sms", listId: "L2", fetch: capturing(201, createCampaignFixture, calls) });
+    await createCampaign({ apiKey: "k", name: "S", channel: "sms", body: "Hi", listId: "L2", fetch: capturing(201, createCampaignFixture, calls) });
     const body = JSON.parse(String(calls[0].init?.body));
     const attrs = body.data.attributes;
     expect(attrs.campaign_messages).toBeUndefined();

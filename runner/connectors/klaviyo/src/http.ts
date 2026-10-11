@@ -20,6 +20,32 @@ export function extractCursorFromUrl(url: string): string | null {
   return match ? match[1] : null;
 }
 
+// KV-1: Klaviyo's 2026-07-15 OpenAPI declares request bodies and responses as
+// application/vnd.api+json. Caller headers are spread first; Authorization,
+// accept, revision and (for string bodies) Content-Type are then pinned, so a
+// caller cannot override the revision on the wire (any casing is dropped).
+export const JSON_API = "application/vnd.api+json";
+const PINNED = new Set(["authorization", "accept", "revision", "content-type"]);
+export function klaviyoHeaders(apiKey: string, init: RequestInit = {}): Record<string, string> {
+  const caller: Record<string, string> = {};
+  const raw = init.headers;
+  if (raw instanceof Headers) raw.forEach((v, k) => { caller[k] = v; });
+  else if (Array.isArray(raw)) for (const [k, v] of raw as [string, string][]) caller[k] = v;
+  else Object.assign(caller, (raw ?? {}) as Record<string, string>);
+  const hasJsonBody = typeof init.body === "string";
+  const headers: Record<string, string> = {};
+  for (const [k, v] of Object.entries(caller)) {
+    const lower = k.toLowerCase();
+    if (PINNED.has(lower) && (lower !== "content-type" || hasJsonBody)) continue;
+    headers[k] = v;
+  }
+  headers.Authorization = `Klaviyo-API-Key ${apiKey}`;
+  headers.accept = JSON_API;
+  headers.revision = REVISION;
+  if (hasJsonBody) headers["Content-Type"] = JSON_API;
+  return headers;
+}
+
 export type KlaviyoClientOptions = { apiKey: string; fetch?: typeof fetch; operation?: string };
 
 export function createKlaviyoClient(options: KlaviyoClientOptions) {
@@ -29,7 +55,7 @@ export function createKlaviyoClient(options: KlaviyoClientOptions) {
   return {
     async fetchJSON(path: string, init: RequestInit = {}): Promise<{ status: number; headers: Record<string, string>; body: unknown }> {
       const response = await httpClient.fetchText(`https://a.klaviyo.com/api${path}`, {
-        ...init, headers: { Authorization: `Klaviyo-API-Key ${options.apiKey}`, revision: REVISION, "Content-Type": "application/json", ...(init.headers as Record<string, string>) },
+        ...init, headers: klaviyoHeaders(options.apiKey, init),
       });
       let body: unknown;
       try { body = JSON.parse(response.body); } catch { body = response.body; }

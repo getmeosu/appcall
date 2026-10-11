@@ -481,7 +481,7 @@ describe("getSegment action", () => {
 // ─────────────────────────────────────────────────────────────────────────────
 describe("createCampaign action", () => {
   it("validates input without apiKey", async () => {
-    const result = await createCampaign({ name: "Summer Sale", channel: "email" });
+    const result = await createCampaign({ listId: "L1", name: "Summer Sale", channel: "email" });
     expect(result.connector).toBe("klaviyo");
     expect(result.action).toBe("campaigns.create");
     expect((result as any).validated.name).toBe("Summer Sale");
@@ -493,12 +493,12 @@ describe("createCampaign action", () => {
   });
 
   it("throws on invalid channel", async () => {
-    await expect(createCampaign({ name: "X", channel: "push" })).rejects.toThrow("channel must be");
+    await expect(createCampaign({ listId: "L1", name: "X", channel: "push" })).rejects.toThrow("channel must be");
   });
 
   it("creates campaign via mock fetch (201)", async () => {
     const fetch = mockFetch(201, createCampaignFixture);
-    const result = await createCampaign({ apiKey: "test-key", name: "Summer Sale 2024", channel: "email", fetch });
+    const result = await createCampaign({ listId: "L1", apiKey: "test-key", name: "Summer Sale 2024", channel: "email", fetch });
     expect(result.connector).toBe("klaviyo");
     expect((result as any).campaign.name).toBe("Summer Sale 2024");
     expect((result as any).campaign.providerCampaignId).toBe("camp1");
@@ -517,7 +517,7 @@ describe("createCampaign action", () => {
       capturedRevision = ((init?.headers ?? {}) as Record<string, string>)["revision"] ?? "";
       return Promise.resolve(new Response(JSON.stringify(createCampaignFixture), { status: 201, headers: { "content-type": "application/json" } }));
     };
-    await createCampaign({ apiKey: "camp-key", name: "Test", channel: "sms", fetch: capturingFetch as any });
+    await createCampaign({ listId: "L1", apiKey: "camp-key", name: "Test", channel: "sms", body: "Hi", fetch: capturingFetch as any });
     expect(capturedUrl).toContain("a.klaviyo.com");
     expect(capturedUrl).toContain("/campaigns");
     expect(capturedMethod).toBe("POST");
@@ -527,14 +527,14 @@ describe("createCampaign action", () => {
 
   it("throws rate limit error on 429", async () => {
     const fetch = mockFetch(429, {});
-    await expect(createCampaign({ apiKey: "k", name: "C", channel: "email", fetch })).rejects.toMatchObject({
+    await expect(createCampaign({ listId: "L1", apiKey: "k", name: "C", channel: "email", fetch })).rejects.toMatchObject({
       code: "CONNECTOR_RATE_LIMITED",
     });
   });
 
   it("throws upstream error on 500", async () => {
     const fetch = mockFetch(500, {});
-    await expect(createCampaign({ apiKey: "k", name: "C", channel: "email", fetch })).rejects.toMatchObject({
+    await expect(createCampaign({ listId: "L1", apiKey: "k", name: "C", channel: "email", fetch })).rejects.toMatchObject({
       code: "CONNECTOR_UPSTREAM_ERROR",
     });
   });

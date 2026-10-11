@@ -102,7 +102,7 @@ describe("parseContactsResponse", () => {
 describe("normalizeCampaign", () => {
   it("normalizes a campaign with all fields", () => {
     const raw = campaignsListFixture.data[0] as Record<string, unknown>;
-    const campaign = normalizeCampaign(raw);
+    const campaign = normalizeCampaign(raw, campaignsListFixture.included);
     expect(campaign.id).toBe("kl-campaign:c1");
     expect(campaign.provider).toBe("klaviyo");
     expect(campaign.providerCampaignId).toBe("c1");
